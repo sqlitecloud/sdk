@@ -4,6 +4,13 @@
 //  Created by Marco Bambini on 08/02/21.
 //
 
+// TODO:
+// lz4 compression: https://lz4.github.io/lz4/
+// multi-part rowset
+// async callbacks
+// pub-sub
+// thread-safe
+
 #ifndef __SQCLOUD_CLI__
 #define __SQCLOUD_CLI__
 
@@ -26,10 +33,19 @@ typedef struct {
 } SQCloudConfig;
 
 typedef enum {
-    TYPE_OK,
-    TYPE_ERROR,
-    TYPE_ROWSET
+    RESULT_OK,
+    RESULT_ERROR,
+    RESULT_STRING,
+    RESULT_ROWSET,
 } SQCloudResType;
+
+typedef enum {
+    VALUE_INTEGER = 1,
+    VALUE_FLOAT = 2,
+    VALUE_TEXT = 3,
+    VALUE_BLOB = 4,
+    VALUE_NULL = 5
+} SQCloudValueType;
 
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command);
@@ -40,8 +56,19 @@ int SQCloudErrorCode (SQCloudConnection *connection);
 const char *SQCloudErrorMsg (SQCloudConnection *connection);
 
 SQCloudResType SQCloudResultType (SQCloudResult *result);
+uint32_t SQCloudResultLen (SQCloudResult *result);
+char *SQCloudResultBuffer (SQCloudResult *result);
 void SQCloudResultFree (SQCloudResult *result);
 
+SQCloudValueType SQCloudRowSetValueType (SQCloudResult *result, uint32_t row, uint32_t col);
+char *SQCloudRowSetColumnName (SQCloudResult *result, uint32_t col, uint32_t *len);
+uint32_t SQCloudRowSetRows (SQCloudResult *result);
+uint32_t SQCloudRowSetCols (SQCloudResult *result);
+char *SQCloudRowSetValue (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len);
+int32_t SQCloudRowSetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col);
+int64_t SQCloudRowSetInt64Value (SQCloudResult *result, uint32_t row, uint32_t col);
+float SQCloudRowSetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col);
+double SQCloudRowSetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t col);
 void SQCloudRowSetDump (SQCloudResult *result);
 
 #endif

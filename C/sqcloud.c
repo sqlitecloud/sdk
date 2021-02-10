@@ -49,6 +49,7 @@
 #define mem_alloc(_s)                       calloc(1,_s)
 #define mem_malloc(_s)                      malloc(_s)
 #define mem_free(_s)                        free(_s)
+#define MIN(a,b)                            (((a)<(b))?(a):(b))
 
 #define MAX_SOCK_LIST                       6           // maximum number of socket descriptor to try to connect to
                                                         // this change is required to support IPv4/IPv6 connections
@@ -60,11 +61,14 @@
 // MARK: -
 
 struct SQCloudResult {
-    SQCloudResType  tag;
-    char            *buffer;
-    uint32_t        balloc;
-    uint32_t        blen;
+    SQCloudResType  tag;                    // TYPE_STRING, TYPE_ROWSET
     
+    char            *buffer;                // buffer used by the user (it could be a ptr inside rawbuffer)
+    char            *rawbuffer;             // ptr to the buffer to be freed
+    uint32_t        balloc;                 // buffer allocation size
+    uint32_t        blen;                   // buffer real length
+    
+    // used in TYPE_ROWSET
     uint32_t        nrows;
     uint32_t        ncols;
     char            **data;
@@ -77,7 +81,7 @@ struct SQCloudConnection {
     int             errcode;
 } _SQCloudConnection;
 
-static SQCloudResult SQCloudResultOK = {TYPE_OK, NULL, 0, 0, 0};
+static SQCloudResult SQCloudResultOK = {RESULT_OK, NULL, 0, 0, 0};
 
 // MARK: - PRIVATE -
 
@@ -136,6 +140,17 @@ static bool internal_setup_ssl (SQCloudConnection *connection, SQCloudConfig *co
     return true;
 }
 
+static SQCloudValueType internal_type (char *buffer) {
+    switch (buffer[0]) {
+        case '+': return VALUE_TEXT;
+        case ':': return VALUE_INTEGER;
+        case ',': return VALUE_FLOAT;
+        case '_': return VALUE_NULL;
+        case '$': return VALUE_BLOB;
+    }
+    return VALUE_NULL;
+}
+
 static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cstart) {
     uint32_t value = 0;
     
@@ -150,12 +165,55 @@ static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cs
     return 0;
 }
 
+static char *internal_parse_value (char *buffer, uint32_t *len, uint32_t *cellsize) {
+    // handle special NULL value case
+    if (buffer[0] == '_') {
+        *len = 0;
+        if (cellsize) *cellsize = 2;
+        return NULL;
+    }
+    
+    uint32_t cstart = 0;
+    uint32_t blen = internal_parse_number(&buffer[1], 8, &cstart);
+    
+    // handle decimal/float cases
+    if ((buffer[0] == ':') || (buffer[0] == ',')) {
+        *len = cstart - 1;
+        if (cellsize) *cellsize = cstart + 1;
+        return &buffer[1];
+    }
+    
+    *len = blen;
+    if (cellsize) *cellsize = cstart + blen + 1;
+    return &buffer[1+cstart];
+}
+
+static SQCloudResult *internal_rowset_string(SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart) {
+    SQCloudResult *rowset = (SQCloudResult *)mem_alloc(sizeof(SQCloudResult));
+    if (!rowset) {
+        internal_set_error(connection, 1, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
+        return NULL;
+    }
+    
+    rowset->tag = RESULT_ROWSET;
+    rowset->buffer = &buffer[bstart];
+    rowset->rawbuffer = buffer;
+    rowset->blen = blen;
+    rowset->balloc = blen;
+    
+    return rowset;
+}
+
 static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart, uint32_t nrows, uint32_t ncols) {
     SQCloudResult *rowset = (SQCloudResult *)mem_alloc(sizeof(SQCloudResult));
-    if (!rowset) return NULL;
+    if (!rowset) {
+        internal_set_error(connection, 1, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
+        return NULL;
+    }
     
-    rowset->tag = TYPE_ROWSET;
+    rowset->tag = RESULT_ROWSET;
     rowset->buffer = buffer;
+    rowset->rawbuffer = buffer;
     rowset->blen = blen;
     rowset->balloc = blen;
     
@@ -166,6 +224,8 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
     if (!rowset->data) return NULL;
     
     buffer += bstart;
+    
+    // the first column contains names
     for (uint32_t i=0; i<ncols; ++i) {
         uint32_t cstart = 0;
         uint32_t len = internal_parse_number(&buffer[1], blen, &cstart);
@@ -174,11 +234,11 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
     }
     
     for (uint32_t i=0; i<nrows * ncols; ++i) {
-        uint32_t cstart = 0;
-        uint32_t len = internal_parse_number(&buffer[1], blen, &cstart);
-        if (buffer[0] == ':') len = cstart - 2;
-        rowset->data[i] = buffer;
-        buffer += cstart + len + 1;
+        uint32_t len, cellsize;
+        char *value = internal_parse_value(buffer, &len, &cellsize);
+        rowset->data[i] = (value) ? buffer : NULL;
+        buffer += cellsize;
+        //printf("%d) %.*s\n", i, len, value);
     }
     
     return rowset;
@@ -192,10 +252,27 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         return &SQCloudResultOK;
     }
     
+    // if buffer is static (stack based allocation) then it must be duplicated
+    if (buffer[0] != '-' && isstatic) {
+        char *clone = mem_alloc(blen);
+        if (!clone) {
+            internal_set_error(connection, 1, "Unable to allocate memory: %d.", blen);
+            return NULL;
+        }
+        memcpy(clone, buffer, blen);
+        buffer = clone;
+    }
+    
     // parse reply
     switch (buffer[0]) {
-        case '+':
+        case '+': {
             // +LEN string
+            uint32_t cstart = 0;
+            uint32_t len = internal_parse_number(&buffer[1], blen-1, &cstart);
+            
+            len -= cstart;
+            return internal_rowset_string(connection, buffer, len, cstart + 1);
+        }
             break;
             
         case '-': {
@@ -207,7 +284,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             connection->errcode = (int)errcode;
             
             len -= cstart2;
-            memcpy(connection->errmsg, &buffer[cstart + cstart2+1], len);
+            memcpy(connection->errmsg, &buffer[cstart + cstart2 + 1], MIN(len, sizeof(connection->errmsg)));
             connection->errmsg[len] = 0;
             return NULL;
         }
@@ -222,16 +299,8 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             uint32_t ncols = internal_parse_number(&buffer[cstart1 + cstart2 + 1], blen-1, &cstart3);
             
             uint32_t bstart = cstart1 + cstart2 + cstart3 + 1;
-            char *clone = buffer;
-            if (isstatic) {
-                blen -= bstart;
-                clone = mem_alloc(blen);
-                memcpy(clone, &buffer[bstart], blen);
-                bstart = 0;
-            }
-            return internal_parse_rowset(connection, clone, blen, bstart, nrows, ncols);
-            
-            //printf("%s", &buffer[cstart1 + cstart2 + cstart3 + 1]);
+            // printf("%.*s\n\n", blen, buffer);
+            return internal_parse_rowset(connection, buffer, blen, bstart, nrows, ncols);
         }
             break;
     }
@@ -281,8 +350,8 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection) {
                     goto abort_read;
                 }
                 memcpy(clone, original, tread);
-                original = clone;
-                blen += clen + cstart + 1 - blen;
+                buffer = original = clone;
+                blen = (clen + cstart + 1) - tread;
                 buffer += tread;
             }
             
@@ -552,29 +621,32 @@ const char *SQCloudErrorMsg (SQCloudConnection *connection) {
 // MARK: -
 
 SQCloudResType SQCloudResultType (SQCloudResult *result) {
-    return (result) ? result->tag : TYPE_ERROR;
+    return (result) ? result->tag : RESULT_ERROR;
+}
+
+uint32_t SQCloudResultLen (SQCloudResult *result) {
+    return (result) ? result->blen : 0;
+}
+
+char *SQCloudResultBuffer (SQCloudResult *result) {
+    return (result) ? result->buffer : NULL;
 }
 
 void SQCloudResultFree (SQCloudResult *result) {
     if (!result) return;
     if (result == &SQCloudResultOK) return;
+    
+    mem_free(result->rawbuffer);
+    
+    if (result->tag == RESULT_ROWSET) {
+        mem_free(result->name);
+        mem_free(result->data);
+    }
+    
+    mem_free(result);
 }
 
 // MARK: -
-
-char *internal_parse_value (char *buffer, uint32_t *len) {
-    uint32_t cstart = 0;
-    uint32_t blen = internal_parse_number(&buffer[1], 8, &cstart);
-    
-    if (buffer[0] == ':') {
-        *len = cstart - 1;
-        return &buffer[1];
-        
-    }
-    
-    *len = blen;
-    return &buffer[1+cstart];
-}
 
 // https://database.guide/2-sample-databases-sqlite/
 // https://embeddedartistry.com/blog/2017/07/05/printf-a-limited-number-of-characters-from-a-string/
@@ -583,20 +655,92 @@ char *internal_parse_value (char *buffer, uint32_t *len) {
 // SET DATABASE mediastore.sqlite
 // SELECT * FROM Artist LIMIT 10;
 
+static bool SQCloudRowSetSanityCheck (SQCloudResult *result, uint32_t row, uint32_t col) {
+    if (!result || result->tag != RESULT_ROWSET) return false;
+    if ((row >= result->nrows) || (col >= result->ncols)) return false;
+    return true;
+}
+
+SQCloudValueType SQCloudRowSetValueType (SQCloudResult *result, uint32_t row, uint32_t col) {
+    if (!SQCloudRowSetSanityCheck(result, row, col)) return VALUE_NULL;
+    return internal_type(result->data[row*col]);
+}
+
+char *SQCloudRowSetColumnName (SQCloudResult *result, uint32_t col, uint32_t *len) {
+    if (!result || result->tag != RESULT_ROWSET) return NULL;
+    if (col >= result->ncols) return NULL;
+    return internal_parse_value(result->name[col], len, NULL);
+}
+
+uint32_t SQCloudRowSetRows (SQCloudResult *result) {
+    if (!SQCloudRowSetSanityCheck(result, 0, 0)) return 0;
+    return result->nrows;
+}
+
+uint32_t SQCloudRowSetCols (SQCloudResult *result) {
+    if (!SQCloudRowSetSanityCheck(result, 0, 0)) return 0;
+    return result->ncols;
+}
+
+char *SQCloudRowSetValue (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len) {
+    if (!SQCloudRowSetSanityCheck(result, row, col)) return NULL;
+    return internal_parse_value(result->data[row*col], len, NULL);
+}
+
+int32_t SQCloudRowSetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col) {
+    if (!SQCloudRowSetSanityCheck(result, row, col)) return 0;
+    uint32_t len = 0;
+    char *value = internal_parse_value(result->data[row*col], &len, NULL);
+    
+    char buffer[256];
+    snprintf(buffer, sizeof(buffer), "%.*s", len, value);
+    return (int32_t)strtol(buffer, NULL, 0);
+}
+
+int64_t SQCloudRowSetInt64Value (SQCloudResult *result, uint32_t row, uint32_t col) {
+    if (!SQCloudRowSetSanityCheck(result, row, col)) return 0;
+    uint32_t len = 0;
+    char *value = internal_parse_value(result->data[row*col], &len, NULL);
+    
+    char buffer[256];
+    snprintf(buffer, sizeof(buffer), "%.*s", len, value);
+    return (int64_t)strtoll(buffer, NULL, 0);
+}
+
+float SQCloudRowSetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col) {
+    if (!SQCloudRowSetSanityCheck(result, row, col)) return 0.0;
+    uint32_t len = 0;
+    char *value = internal_parse_value(result->data[row*col], &len, NULL);
+    
+    char buffer[256];
+    snprintf(buffer, sizeof(buffer), "%.*s", len, value);
+    return (float)strtof(buffer, NULL);
+}
+
+double SQCloudRowSetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t col) {
+    if (!SQCloudRowSetSanityCheck(result, row, col)) return 0.0;
+    uint32_t len = 0;
+    char *value = internal_parse_value(result->data[row*col], &len, NULL);
+    
+    char buffer[256];
+    snprintf(buffer, sizeof(buffer), "%.*s", len, value);
+    return (double)strtod(buffer, NULL);
+}
+
 void SQCloudRowSetDump (SQCloudResult *result) {
     uint32_t nrows = result->nrows;
     uint32_t ncols = result->ncols;
     
     for (uint32_t i=0; i<ncols; ++i) {
         uint32_t len = 0;
-        char *value = internal_parse_value(result->name[i], &len);
+        char *value = internal_parse_value(result->name[i], &len, NULL);
         printf("%.*s|", len, value);
     }
     printf("\n");
     
     for (uint32_t i=0; i<nrows * ncols; ++i) {
         uint32_t len = 0;
-        char *value = internal_parse_value(result->data[i], &len);
+        char *value = internal_parse_value(result->data[i], &len, NULL);
         printf("%.*s|", len, value);
         if (i % ncols == 1) printf("\n");
     }

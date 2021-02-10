@@ -32,15 +32,19 @@ int main(int argc, const char * argv[]) {
         
         SQCloudResType type = SQCloudResultType(res);
         switch (type) {
-            case TYPE_OK:
+            case RESULT_OK:
                 printf("OK");
                 break;
                 
-            case TYPE_ERROR:
+            case RESULT_ERROR:
                 printf("ERROR: %s (%d)", SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
                 break;
                 
-            case TYPE_ROWSET:
+            case RESULT_STRING:
+                printf("%.*s", SQCloudResultLen(res), SQCloudResultBuffer(res));
+                break;
+                
+            case RESULT_ROWSET:
                 SQCloudRowSetDump(res);
                 break;
         }
