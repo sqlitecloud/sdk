@@ -10,12 +10,15 @@
 #include "sqcloud.h"
 
 int main(int argc, const char * argv[]) {
-    SQCloudConnection *conn = SQCloudConnect("localhost", SQCLOUD_DEFAULT_PORT, NULL);
+    const char *hostname = "localhost";
+    if (argc > 1) hostname = argv[1];
+    
+    SQCloudConnection *conn = SQCloudConnect(hostname, SQCLOUD_DEFAULT_PORT, NULL);
     if (SQCloudIsError(conn)) {
-        printf("ERROR: %s (%d)\n", SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
+        printf("ERROR connecting to %s: %s (%d)\n", hostname, SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
         return -1;
     } else {
-        printf("Connection OK...\n\n");
+        printf("Connection to %s OK...\n\n", hostname);
     }
     
     // REPL

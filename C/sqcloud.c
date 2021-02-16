@@ -167,14 +167,14 @@ static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cs
 
 static char *internal_parse_value (char *buffer, uint32_t *len, uint32_t *cellsize) {
     // handle special NULL value case
-    if (buffer[0] == '_') {
+    if (!buffer || buffer[0] == '_') {
         *len = 0;
         if (cellsize) *cellsize = 2;
         return NULL;
     }
     
     uint32_t cstart = 0;
-    uint32_t blen = internal_parse_number(&buffer[1], 8, &cstart);
+    uint32_t blen = internal_parse_number(&buffer[1], 12, &cstart);
     
     // handle decimal/float cases
     if ((buffer[0] == ':') || (buffer[0] == ',')) {
@@ -195,7 +195,7 @@ static SQCloudResult *internal_rowset_string(SQCloudConnection *connection, char
         return NULL;
     }
     
-    rowset->tag = RESULT_ROWSET;
+    rowset->tag = RESULT_STRING;
     rowset->buffer = &buffer[bstart];
     rowset->rawbuffer = buffer;
     rowset->blen = blen;
@@ -238,7 +238,7 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
         char *value = internal_parse_value(buffer, &len, &cellsize);
         rowset->data[i] = (value) ? buffer : NULL;
         buffer += cellsize;
-        //printf("%d) %.*s\n", i, len, value);
+        // printf("%d) %.*s\n", i, len, value);
     }
     
     return rowset;
@@ -269,9 +269,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             // +LEN string
             uint32_t cstart = 0;
             uint32_t len = internal_parse_number(&buffer[1], blen-1, &cstart);
-            
-            len -= cstart;
-            return internal_rowset_string(connection, buffer, len, cstart + 1);
+            return internal_rowset_string(connection, buffer, len, cstart+1);
         }
             break;
             
@@ -734,15 +732,27 @@ void SQCloudRowSetDump (SQCloudResult *result) {
     for (uint32_t i=0; i<ncols; ++i) {
         uint32_t len = 0;
         char *value = internal_parse_value(result->name[i], &len, NULL);
-        printf("%.*s|", len, value);
+        printf("%-20.*s", len, value);
+        
+        bool newline = ((i % ncols == 1) || (ncols == 1));
+        if (!newline) printf("|");
+    }
+    printf("\n");
+    
+    for (uint32_t i=0; i<ncols; ++i) {
+        printf("--------------------");
+        bool newline = ((i % ncols == 1) || (ncols == 1));
+        if (!newline) printf("|");
     }
     printf("\n");
     
     for (uint32_t i=0; i<nrows * ncols; ++i) {
         uint32_t len = 0;
         char *value = internal_parse_value(result->data[i], &len, NULL);
-        printf("%.*s|", len, value);
-        if (i % ncols == 1) printf("\n");
+        printf("%-20.*s", len, (value) ? value : "NULL");
+        
+        bool newline = ((i % ncols == 1) || (ncols == 1));
+        (newline) ? printf("\n") : printf("|");
     }
     
 }
