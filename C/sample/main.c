@@ -6,8 +6,38 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "sqcloud.h"
+#include "linenoise.h"
+
+#define HISTORY_FILENAME    ".sqlitecloud_history.txt"
+
+void do_command (SQCloudConnection *conn, char *command) {
+    SQCloudResult *res = SQCloudExec(conn, command);
+    
+    SQCloudResType type = SQCloudResultType(res);
+    switch (type) {
+        case RESULT_OK:
+            printf("OK");
+            break;
+            
+        case RESULT_ERROR:
+            printf("ERROR: %s (%d)", SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
+            break;
+            
+        case RESULT_STRING:
+            printf("%.*s", SQCloudResultLen(res), SQCloudResultBuffer(res));
+            break;
+            
+        case RESULT_ROWSET:
+            SQCloudRowSetDump(res);
+            break;
+    }
+    
+    printf("\n\n");
+    SQCloudResultFree(res);
+}
 
 int main(int argc, const char * argv[]) {
     const char *hostname = "localhost";
@@ -21,40 +51,20 @@ int main(int argc, const char * argv[]) {
         printf("Connection to %s OK...\n\n", hostname);
     }
     
+    // load history file
+    linenoiseHistoryLoad(HISTORY_FILENAME);
+    
     // REPL
-    while (1) {
-        printf(">> ");
-        char command[256];
-        fgets(command, sizeof(command), stdin);
-        size_t len = strlen(command);
-        command[len-1] = 0;
-        --len;
-        
-        if (strncmp(command, "QUIT", len) == 0) break;
-        SQCloudResult *res = SQCloudExec(conn, command);
-        
-        SQCloudResType type = SQCloudResultType(res);
-        switch (type) {
-            case RESULT_OK:
-                printf("OK");
-                break;
-                
-            case RESULT_ERROR:
-                printf("ERROR: %s (%d)", SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
-                break;
-                
-            case RESULT_STRING:
-                printf("%.*s", SQCloudResultLen(res), SQCloudResultBuffer(res));
-                break;
-                
-            case RESULT_ROWSET:
-                SQCloudRowSetDump(res);
-                break;
+    char *command = NULL;
+    while((command = linenoise(">> ")) != NULL) {
+        if (command[0] != '\0') {
+            linenoiseHistoryAdd(command);
+            linenoiseHistorySave(HISTORY_FILENAME);
         }
-        
-        printf("\n\n");
-        SQCloudResultFree(res);
+        if (strncmp(command, "QUIT", 4) == 0) break;
+        do_command(conn, command);
     }
+    if (command) free(command);
     
     SQCloudFree(conn);
     return 0;

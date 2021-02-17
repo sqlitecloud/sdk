@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A922688125DCEBB00082A61F /* linenoise.c in Sources */ = {isa = PBXBuildFile; fileRef = A922687F25DCEBB00082A61F /* linenoise.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A95B316025D284E600F9E1F8 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = A95B315F25D284E600F9E1F8 /* main.c */; };
 		A95B316425D284F000F9E1F8 /* sqcloud.c in Sources */ = {isa = PBXBuildFile; fileRef = A95B316325D284F000F9E1F8 /* sqcloud.c */; };
 /* End PBXBuildFile section */
@@ -24,6 +25,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A922687F25DCEBB00082A61F /* linenoise.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = linenoise.c; sourceTree = "<group>"; };
+		A922688025DCEBB00082A61F /* linenoise.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = linenoise.h; sourceTree = "<group>"; };
 		A95B315F25D284E600F9E1F8 /* main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		A95B316225D284F000F9E1F8 /* sqcloud.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqcloud.h; path = ../sqcloud.h; sourceTree = "<group>"; };
 		A95B316325D284F000F9E1F8 /* sqcloud.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqcloud.c; path = ../sqcloud.c; sourceTree = "<group>"; };
@@ -45,6 +48,8 @@
 			isa = PBXGroup;
 			children = (
 				A95B315F25D284E600F9E1F8 /* main.c */,
+				A922687F25DCEBB00082A61F /* linenoise.c */,
+				A922688025DCEBB00082A61F /* linenoise.h */,
 				A95B316325D284F000F9E1F8 /* sqcloud.c */,
 				A95B316225D284F000F9E1F8 /* sqcloud.h */,
 			);
@@ -123,6 +128,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A922688125DCEBB00082A61F /* linenoise.c in Sources */,
 				A95B316025D284E600F9E1F8 /* main.c in Sources */,
 				A95B316425D284F000F9E1F8 /* sqcloud.c in Sources */,
 			);
@@ -245,22 +251,28 @@
 		A972156D25D1322500A207F8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = 3ZH6236ET5;
 				ENABLE_HARDENED_RUNTIME = YES;
+				OTHER_CODE_SIGN_FLAGS = "--timestamp";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.sqlabs.sqlitecloud-cli";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
 			name = Debug;
 		};
 		A972156E25D1322500A207F8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = 3ZH6236ET5;
 				ENABLE_HARDENED_RUNTIME = YES;
+				OTHER_CODE_SIGN_FLAGS = "--timestamp";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.sqlabs.sqlitecloud-cli";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
 			name = Release;
 		};

@@ -732,27 +732,22 @@ void SQCloudRowSetDump (SQCloudResult *result) {
     for (uint32_t i=0; i<ncols; ++i) {
         uint32_t len = 0;
         char *value = internal_parse_value(result->name[i], &len, NULL);
-        printf("%-20.*s", len, value);
-        
-        bool newline = ((i % ncols == 1) || (ncols == 1));
-        if (!newline) printf("|");
+        printf("%-20.*s|", len, value);
     }
     printf("\n");
     
     for (uint32_t i=0; i<ncols; ++i) {
-        printf("--------------------");
-        bool newline = ((i % ncols == 1) || (ncols == 1));
-        if (!newline) printf("|");
+        printf("--------------------|");
     }
     printf("\n");
     
     for (uint32_t i=0; i<nrows * ncols; ++i) {
         uint32_t len = 0;
         char *value = internal_parse_value(result->data[i], &len, NULL);
-        printf("%-20.*s", len, (value) ? value : "NULL");
+        printf("%-20.*s|", len, (value) ? value : "NULL");
         
-        bool newline = ((i % ncols == 1) || (ncols == 1));
-        (newline) ? printf("\n") : printf("|");
+        bool newline = (((i+1) % ncols == 0) || (ncols == 1));
+        if (newline) printf("\n");
     }
     
 }
