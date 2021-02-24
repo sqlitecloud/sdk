@@ -393,40 +393,18 @@ static bool internal_socket_write (SQCloudConnection *connection, const char *bu
 }
 
 static bool internal_connect (SQCloudConnection *connection, const char *hostname, int port, SQCloudConfig *config) {
-    // apparently a listening IPv4 socket can accept incoming connections from only IPv4 clients
-    // so I must explicitly connect using IPv4 if I want to be able to connect with older cubeSQL versions
-    // https://stackoverflow.com/questions/16480729/connecting-ipv4-client-to-ipv6-server-connection-refused
-    
     // ipv4/ipv6 specific variables
-    struct sockaddr_storage serveraddr;
     struct addrinfo hints, *addr_list = NULL, *addr;
     
     // ipv6 code from https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_72/rzab6/xip6client.htm
-    memset(&hints, 0x00, sizeof(hints));
-    hints.ai_flags    = AI_NUMERICSERV;
-    hints.ai_family   = AF_UNSPEC;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
-    
-    // check if we were provided the address of the server using
-    // inet_pton() to convert the text form of the address to binary form.
-    // If it is numeric then we want to prevent getaddrinfo() from doing any name resolution.
-    int rc = inet_pton(AF_INET, hostname, &serveraddr);
-    if (rc == 1) { /* valid IPv4 text address? */
-        hints.ai_family = AF_INET;
-        hints.ai_flags |= AI_NUMERICHOST;
-    }
-    else {
-        rc = inet_pton(AF_INET6, hostname, &serveraddr);
-        if (rc == 1) { /* valid IPv6 text address? */
-            hints.ai_family = AF_INET6;
-            hints.ai_flags |= AI_NUMERICHOST;
-        }
-    }
     
     // get the address information for the server using getaddrinfo()
     char port_string[256];
     snprintf(port_string, sizeof(port_string), "%d", port);
-    rc = getaddrinfo(hostname, port_string, &hints, &addr_list);
+    int rc = getaddrinfo(hostname, port_string, &hints, &addr_list);
     if (rc != 0 || addr_list == NULL) {
         return internal_set_error(connection, 1, "Error while resolving getaddrinfo (host %s not found).", hostname);
     }
@@ -437,6 +415,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     int sock_list[MAX_SOCK_LIST] = {0};
     for (addr = addr_list; addr != NULL; addr = addr->ai_next, ++sock_index) {
         if (sock_index >= MAX_SOCK_LIST) break;
+        if ((addr->ai_family != AF_INET) && (addr->ai_family != AF_INET6)) continue;
         
         sock_current = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
         if (sock_current < 0) continue;
