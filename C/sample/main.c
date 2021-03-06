@@ -26,7 +26,13 @@ void do_command (SQCloudConnection *conn, char *command) {
             printf("ERROR: %s (%d)", SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
             break;
             
+        case RESULT_NULL:
+            printf("NULL");
+            break;
+            
         case RESULT_STRING:
+        case RESULT_INTEGER:
+        case RESULT_FLOAT:
             printf("%.*s", SQCloudResultLen(res), SQCloudResultBuffer(res));
             break;
             
@@ -61,7 +67,7 @@ int main(int argc, const char * argv[]) {
             linenoiseHistoryAdd(command);
             linenoiseHistorySave(HISTORY_FILENAME);
         }
-        if (strncmp(command, "QUIT", 4) == 0) break;
+        if (strncmp(command, "EXIT", 4) == 0) break;
         do_command(conn, command);
     }
     if (command) free(command);

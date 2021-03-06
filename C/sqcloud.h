@@ -4,13 +4,6 @@
 //  Created by Marco Bambini on 08/02/21.
 //
 
-// TODO:
-// lz4 compression: https://lz4.github.io/lz4/
-// multi-part rowset
-// async callbacks
-// pub-sub
-// thread-safe
-
 #ifndef __SQCLOUD_CLI__
 #define __SQCLOUD_CLI__
 
@@ -36,7 +29,10 @@ typedef enum {
     RESULT_OK,
     RESULT_ERROR,
     RESULT_STRING,
+    RESULT_INTEGER,
+    RESULT_FLOAT,
     RESULT_ROWSET,
+    RESULT_NULL
 } SQCloudResType;
 
 typedef enum {

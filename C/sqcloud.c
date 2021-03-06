@@ -82,6 +82,7 @@ struct SQCloudConnection {
 } _SQCloudConnection;
 
 static SQCloudResult SQCloudResultOK = {RESULT_OK, NULL, 0, 0, 0};
+static SQCloudResult SQCloudResultNULL = {RESULT_NULL, NULL, 0, 0, 0};
 
 // MARK: - PRIVATE -
 
@@ -188,14 +189,14 @@ static char *internal_parse_value (char *buffer, uint32_t *len, uint32_t *cellsi
     return &buffer[1+cstart];
 }
 
-static SQCloudResult *internal_rowset_string(SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart) {
+static SQCloudResult *internal_rowset_type(SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart, SQCloudResType type) {
     SQCloudResult *rowset = (SQCloudResult *)mem_alloc(sizeof(SQCloudResult));
     if (!rowset) {
         internal_set_error(connection, 1, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
         return NULL;
     }
     
-    rowset->tag = RESULT_STRING;
+    rowset->tag = type;
     rowset->buffer = &buffer[bstart];
     rowset->rawbuffer = buffer;
     rowset->blen = blen;
@@ -269,7 +270,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             // +LEN string
             uint32_t cstart = 0;
             uint32_t len = internal_parse_number(&buffer[1], blen-1, &cstart);
-            return internal_rowset_string(connection, buffer, len, cstart+1);
+            return internal_rowset_type(connection, buffer, len, cstart+1, RESULT_STRING);
         }
             break;
             
@@ -301,6 +302,16 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             return internal_parse_rowset(connection, buffer, blen, bstart, nrows, ncols);
         }
             break;
+        
+        case '_':
+            return &SQCloudResultNULL;
+            
+        case ':':
+        case ',': {
+            // NUMBER case
+            internal_parse_value(buffer, &blen, NULL);
+            return internal_rowset_type(connection, buffer, blen, 1, (buffer[0] == ':') ? RESULT_INTEGER : RESULT_FLOAT);
+        }
     }
     
     return NULL;
@@ -334,6 +345,9 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection) {
         uint32_t cstart = 0;
         uint32_t clen = internal_parse_number (&original[1], tread-1, &cstart);
         if (clen == 0) continue;
+        
+        // handle special cases
+        if ((original[0] == ':') || (original[0] == ',')) cstart = 0;
         
         // check if read is complete
         // clen is the lenght parsed in the buffer
