@@ -10,6 +10,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define SQCLOUD_SDK_VERSION         "0.1.0"
 #define SQCLOUD_SDK_VERSION_NUM     0x000100
 #define SQCLOUD_DEFAULT_PORT        8860
@@ -66,5 +70,9 @@ int64_t SQCloudRowSetInt64Value (SQCloudResult *result, uint32_t row, uint32_t c
 float SQCloudRowSetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col);
 double SQCloudRowSetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t col);
 void SQCloudRowSetDump (SQCloudResult *result);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

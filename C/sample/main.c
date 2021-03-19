@@ -47,9 +47,15 @@ void do_command (SQCloudConnection *conn, char *command) {
 
 int main(int argc, const char * argv[]) {
     const char *hostname = "localhost";
-    if (argc > 1) hostname = argv[1];
+    int port = SQCLOUD_DEFAULT_PORT;
     
-    SQCloudConnection *conn = SQCloudConnect(hostname, SQCLOUD_DEFAULT_PORT, NULL);
+    // a very simple command line parser (atoi not really recommended)
+    if (argc > 1) hostname = argv[1];
+    if (argc > 2) port = atoi(argv[2]);
+    if (hostname == NULL) hostname = "localhost";
+    if (port <= 0) port = SQCLOUD_DEFAULT_PORT;
+    
+    SQCloudConnection *conn = SQCloudConnect(hostname, port, NULL);
     if (SQCloudIsError(conn)) {
         printf("ERROR connecting to %s: %s (%d)\n", hostname, SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
         return -1;
