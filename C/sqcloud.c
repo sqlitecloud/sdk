@@ -174,8 +174,10 @@ static char *internal_parse_value (char *buffer, uint32_t *len, uint32_t *cellsi
         return NULL;
     }
     
+    // blen originally was hard coded to 24 because the max 64bit value is 20 characters long
     uint32_t cstart = 0;
-    uint32_t blen = internal_parse_number(&buffer[1], 12, &cstart);
+    uint32_t blen = *len;
+    blen = internal_parse_number(&buffer[1], blen, &cstart);
     
     // handle decimal/float cases
     if ((buffer[0] == ':') || (buffer[0] == ',')) {
@@ -232,13 +234,15 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
         uint32_t len = internal_parse_number(&buffer[1], blen, &cstart);
         rowset->name[i] = buffer;
         buffer += cstart + len + 1;
+        blen -= cstart + len + 1;
     }
     
     for (uint32_t i=0; i<nrows * ncols; ++i) {
-        uint32_t len, cellsize;
+        uint32_t len = blen, cellsize;
         char *value = internal_parse_value(buffer, &len, &cellsize);
         rowset->data[i] = (value) ? buffer : NULL;
         buffer += cellsize;
+        blen -= cellsize;
         // printf("%d) %.*s\n", i, len, value);
     }
     
@@ -721,11 +725,13 @@ double SQCloudRowSetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t c
 void SQCloudRowSetDump (SQCloudResult *result) {
     uint32_t nrows = result->nrows;
     uint32_t ncols = result->ncols;
+    uint32_t blen = result->blen;
     
     for (uint32_t i=0; i<ncols; ++i) {
-        uint32_t len = 0;
+        uint32_t len = blen;
         char *value = internal_parse_value(result->name[i], &len, NULL);
         printf("%-20.*s|", len, value);
+        blen -= len;
     }
     printf("\n");
     
@@ -735,12 +741,13 @@ void SQCloudRowSetDump (SQCloudResult *result) {
     printf("\n");
     
     for (uint32_t i=0; i<nrows * ncols; ++i) {
-        uint32_t len = 0;
+        uint32_t len = blen;
         char *value = internal_parse_value(result->data[i], &len, NULL);
         printf("%-20.*s|", len, (value) ? value : "NULL");
         
         bool newline = (((i+1) % ncols == 0) || (ncols == 1));
         if (newline) printf("\n");
+        blen -= len;
     }
     
 }

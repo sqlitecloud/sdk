@@ -11,7 +11,9 @@
 #include "sqcloud.h"
 #include "linenoise.h"
 
-#define HISTORY_FILENAME    ".sqlitecloud_history.txt"
+#define CLI_HISTORY_FILENAME    ".sqlitecloud_history.txt"
+#define CLI_VERSION             "1.0a1"
+#define CLI_BUILD_DATE          __DATE__
 
 void do_command (SQCloudConnection *conn, char *command) {
     SQCloudResult *res = SQCloudExec(conn, command);
@@ -55,6 +57,8 @@ int main(int argc, const char * argv[]) {
     if (hostname == NULL) hostname = "localhost";
     if (port <= 0) port = SQCLOUD_DEFAULT_PORT;
     
+    printf("sqlitecloud-cli version %s (build date %s)\n\n", CLI_VERSION, CLI_BUILD_DATE);
+    
     SQCloudConnection *conn = SQCloudConnect(hostname, port, NULL);
     if (SQCloudIsError(conn)) {
         printf("ERROR connecting to %s: %s (%d)\n", hostname, SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
@@ -64,14 +68,14 @@ int main(int argc, const char * argv[]) {
     }
     
     // load history file
-    linenoiseHistoryLoad(HISTORY_FILENAME);
+    linenoiseHistoryLoad(CLI_HISTORY_FILENAME);
     
     // REPL
     char *command = NULL;
     while((command = linenoise(">> ")) != NULL) {
         if (command[0] != '\0') {
             linenoiseHistoryAdd(command);
-            linenoiseHistorySave(HISTORY_FILENAME);
+            linenoiseHistorySave(CLI_HISTORY_FILENAME);
         }
         if (strncmp(command, "EXIT", 4) == 0) break;
         do_command(conn, command);
