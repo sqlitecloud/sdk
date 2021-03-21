@@ -39,7 +39,7 @@ void do_command (SQCloudConnection *conn, char *command) {
             break;
             
         case RESULT_ROWSET:
-            SQCloudRowSetDump(res);
+            SQCloudRowSetDump(res, 0);
             break;
     }
     
@@ -82,6 +82,6 @@ int main(int argc, const char * argv[]) {
     }
     if (command) free(command);
     
-    SQCloudFree(conn);
+    SQCloudDisconnect(conn);
     return 0;
 }

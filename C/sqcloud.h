@@ -19,9 +19,11 @@ extern "C" {
 #define SQCLOUD_DEFAULT_PORT        8860
 #define SQCLOUD_DEFAULT_TIMEOUT     12
 
+// opaque datatypes
 typedef struct SQCloudConnection    SQCloudConnection;
 typedef struct SQCloudResult        SQCloudResult;
 
+// configuration struct to be passed to the connect function (currently unused)
 typedef struct {
     const char *username;
     const char *password;
@@ -49,7 +51,7 @@ typedef enum {
 
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command);
-void SQCloudFree (SQCloudConnection *connection);
+void SQCloudDisconnect (SQCloudConnection *connection);
 
 bool SQCloudIsError (SQCloudConnection *connection);
 int SQCloudErrorCode (SQCloudConnection *connection);
@@ -69,7 +71,7 @@ int32_t SQCloudRowSetInt32Value (SQCloudResult *result, uint32_t row, uint32_t c
 int64_t SQCloudRowSetInt64Value (SQCloudResult *result, uint32_t row, uint32_t col);
 float SQCloudRowSetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col);
 double SQCloudRowSetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t col);
-void SQCloudRowSetDump (SQCloudResult *result);
+void SQCloudRowSetDump (SQCloudResult *result, uint32_t maxline);
 
 #ifdef __cplusplus
 }

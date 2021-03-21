@@ -69,10 +69,11 @@ struct SQCloudResult {
     uint32_t        blen;                   // buffer real length
     
     // used in TYPE_ROWSET
-    uint32_t        nrows;
-    uint32_t        ncols;
-    char            **data;
-    char            **name;
+    uint32_t        nrows;                  // number of rows
+    uint32_t        ncols;                  // number of columns
+    char            **data;                 // data contained in the rowset
+    char            **name;                 // column names
+    uint32_t        *clen;                  // max len for each column (used to display result)
 } _SQCloudResult;
 
 struct SQCloudConnection {
@@ -83,6 +84,39 @@ struct SQCloudConnection {
 
 static SQCloudResult SQCloudResultOK = {RESULT_OK, NULL, 0, 0, 0};
 static SQCloudResult SQCloudResultNULL = {RESULT_NULL, NULL, 0, 0, 0};
+
+// MARK: - UTILS -
+
+static uint32_t utf8_charbytes (const char *s, uint32_t i) {
+    unsigned char c = (unsigned char)s[i];
+    
+    // determine bytes needed for character, based on RFC 3629
+    if ((c > 0) && (c <= 127)) return 1;
+    if ((c >= 194) && (c <= 223)) return 2;
+    if ((c >= 224) && (c <= 239)) return 3;
+    if ((c >= 240) && (c <= 244)) return 4;
+    
+    // means error
+    return 0;
+}
+
+static uint32_t utf8_len (const char *s, uint32_t nbytes) {
+    uint32_t pos = 0;
+    uint32_t len = 0;
+    
+    if (strncmp(s, "Sandra De", 9) == 0) {
+        ;
+    }
+    
+    while (pos < nbytes) {
+        ++len;
+        uint32_t n = utf8_charbytes(s, pos);
+        if (n == 0) return 0; // means error
+        pos += n;
+    }
+    
+    return len;
+}
 
 // MARK: - PRIVATE -
 
@@ -224,7 +258,8 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
     rowset->ncols = ncols;
     rowset->data = (char **) mem_alloc(nrows * ncols * sizeof(char *));
     rowset->name = (char **) mem_alloc(ncols * sizeof(char *));
-    if (!rowset->data) return NULL;
+    rowset->clen = (uint32_t *) mem_alloc(ncols * sizeof(uint32_t));
+    if (!rowset->data || !rowset->name || !rowset->clen) goto abort_rowset;
     
     buffer += bstart;
     
@@ -235,6 +270,7 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
         rowset->name[i] = buffer;
         buffer += cstart + len + 1;
         blen -= cstart + len + 1;
+        if (rowset->clen[i] < len) rowset->clen[i] = len;
     }
     
     for (uint32_t i=0; i<nrows * ncols; ++i) {
@@ -243,10 +279,19 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
         rowset->data[i] = (value) ? buffer : NULL;
         buffer += cellsize;
         blen -= cellsize;
+        if (rowset->clen[i % ncols] < len) rowset->clen[i % ncols] = len;
         // printf("%d) %.*s\n", i, len, value);
     }
     
     return rowset;
+    
+abort_rowset:
+    if (rowset->data) mem_free(rowset->data);
+    if (rowset->name) mem_free(rowset->name);
+    if (rowset->clen) mem_free(rowset->clen);
+    
+    internal_set_error(connection, 1, "Unable to allocate internal memory for SQCloudResult.");
+    return NULL;
 }
 
 static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t cstart, bool isstatic) {
@@ -589,7 +634,7 @@ SQCloudResult *SQCloudExec(SQCloudConnection *connection, const char *command) {
     return internal_socket_read(connection);
 }
 
-void SQCloudFree (SQCloudConnection *connection) {
+void SQCloudDisconnect (SQCloudConnection *connection) {
     if (!connection) return;
     
     // free SSL
@@ -636,6 +681,7 @@ void SQCloudResultFree (SQCloudResult *result) {
     if (result->tag == RESULT_ROWSET) {
         mem_free(result->name);
         mem_free(result->data);
+        mem_free(result->clen);
     }
     
     mem_free(result);
@@ -722,32 +768,53 @@ double SQCloudRowSetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t c
     return (double)strtod(buffer, NULL);
 }
 
-void SQCloudRowSetDump (SQCloudResult *result) {
+void SQCloudRowSetDump (SQCloudResult *result, uint32_t maxline) {
     uint32_t nrows = result->nrows;
     uint32_t ncols = result->ncols;
     uint32_t blen = result->blen;
     
+    // print separator header
+    for (uint32_t i=0; i<ncols; ++i) {
+        for (uint32_t j=0; j<result->clen[i]+2; ++j) putchar('-');
+        putchar('|');
+    }
+    printf("\n");
+    
+    // print column names
     for (uint32_t i=0; i<ncols; ++i) {
         uint32_t len = blen;
+        uint32_t delta = 0;
         char *value = internal_parse_value(result->name[i], &len, NULL);
-        printf("%-20.*s|", len, value);
+        
+        // UTF-8 strings need special adjustments
+        uint32_t utf8len = utf8_len(value, len);
+        if (utf8len != len) delta = len - utf8len;
+        printf(" %-*.*s |", result->clen[i] + delta, len, value);
         blen -= len;
     }
     printf("\n");
     
+    // print separator header
     for (uint32_t i=0; i<ncols; ++i) {
-        printf("--------------------|");
+        for (uint32_t j=0; j<result->clen[i]+2; ++j) putchar('-');
+        putchar('|');
     }
     printf("\n");
     
+    // print result
     for (uint32_t i=0; i<nrows * ncols; ++i) {
         uint32_t len = blen;
+        uint32_t delta = 0;
         char *value = internal_parse_value(result->data[i], &len, NULL);
-        printf("%-20.*s|", len, (value) ? value : "NULL");
+        if (!value) {value = "NULL"; len = 4;}
+        
+        // UTF-8 strings need special adjustments
+        uint32_t utf8len = utf8_len(value, len);
+        if (utf8len != len) delta = len - utf8len;
+        printf(" %-*.*s |", (result->clen[i % ncols]) + delta, len, value);
         
         bool newline = (((i+1) % ncols == 0) || (ncols == 1));
         if (newline) printf("\n");
         blen -= len;
     }
-    
 }
