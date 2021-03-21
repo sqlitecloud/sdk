@@ -773,6 +773,13 @@ void SQCloudRowSetDump (SQCloudResult *result, uint32_t maxline) {
     uint32_t ncols = result->ncols;
     uint32_t blen = result->blen;
     
+    // if user specify a maxline then do not print more than maxline characters for every column
+    if (maxline > 0) {
+        for (uint32_t i=0; i<ncols; ++i) {
+            if (result->clen[i] > maxline) result->clen[i] = maxline;
+        }
+    }
+    
     // print separator header
     for (uint32_t i=0; i<ncols; ++i) {
         for (uint32_t j=0; j<result->clen[i]+2; ++j) putchar('-');
@@ -789,7 +796,7 @@ void SQCloudRowSetDump (SQCloudResult *result, uint32_t maxline) {
         // UTF-8 strings need special adjustments
         uint32_t utf8len = utf8_len(value, len);
         if (utf8len != len) delta = len - utf8len;
-        printf(" %-*.*s |", result->clen[i] + delta, len, value);
+        printf(" %-*.*s |", result->clen[i] + delta, (maxline && len > maxline) ? maxline : len, value);
         blen -= len;
     }
     printf("\n");
@@ -811,7 +818,7 @@ void SQCloudRowSetDump (SQCloudResult *result, uint32_t maxline) {
         // UTF-8 strings need special adjustments
         uint32_t utf8len = utf8_len(value, len);
         if (utf8len != len) delta = len - utf8len;
-        printf(" %-*.*s |", (result->clen[i % ncols]) + delta, len, value);
+        printf(" %-*.*s |", (result->clen[i % ncols]) + delta, (maxline && len > maxline) ? maxline : len, value);
         
         bool newline = (((i+1) % ncols == 0) || (ncols == 1));
         if (newline) printf("\n");
