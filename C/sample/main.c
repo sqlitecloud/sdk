@@ -12,7 +12,7 @@
 #include "linenoise.h"
 
 #define CLI_HISTORY_FILENAME    ".sqlitecloud_history.txt"
-#define CLI_VERSION             "1.0a1"
+#define CLI_VERSION             "1.0a2"
 #define CLI_BUILD_DATE          __DATE__
 
 void do_command (SQCloudConnection *conn, char *command) {
@@ -57,7 +57,7 @@ int main(int argc, const char * argv[]) {
     if (hostname == NULL) hostname = "localhost";
     if (port <= 0) port = SQCLOUD_DEFAULT_PORT;
     
-    printf("sqlitecloud-cli version %s (build date %s)\n\n", CLI_VERSION, CLI_BUILD_DATE);
+    printf("sqlitecloud-cli version %s (build date %s)\n", CLI_VERSION, CLI_BUILD_DATE);
     
     SQCloudConnection *conn = SQCloudConnect(hostname, port, NULL);
     if (SQCloudIsError(conn)) {

@@ -14,8 +14,8 @@
 extern "C" {
 #endif
 
-#define SQCLOUD_SDK_VERSION         "0.1.0"
-#define SQCLOUD_SDK_VERSION_NUM     0x000100
+#define SQCLOUD_SDK_VERSION         "0.2.0"
+#define SQCLOUD_SDK_VERSION_NUM     0x000200
 #define SQCLOUD_DEFAULT_PORT        8860
 #define SQCLOUD_DEFAULT_TIMEOUT     12
 

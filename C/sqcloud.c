@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <sys/time.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -27,7 +28,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/time.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <sys/ioctl.h>
@@ -58,6 +58,10 @@
 #define REPLY_OK                            "+2 OK"     // default OK reply
 #define REPLY_OK_LEN                        5           // default OK reply string length
 
+// https://levelup.gitconnected.com/8-ways-to-measure-execution-time-in-c-c-48634458d0f9
+#define TIME_GET(_t1)                       struct timeval _t1; gettimeofday(&_t1, NULL)
+#define TIME_VAL(_t1, _t2)                  ((double)(_t2.tv_sec - _t1.tv_sec) + (double)((_t2.tv_usec - _t1.tv_usec)*1e-6))
+
 // MARK: -
 
 struct SQCloudResult {
@@ -67,6 +71,7 @@ struct SQCloudResult {
     char            *rawbuffer;             // ptr to the buffer to be freed
     uint32_t        balloc;                 // buffer allocation size
     uint32_t        blen;                   // buffer real length
+    double          time;                   // full execution time (latency + server side time)
     
     // used in TYPE_ROWSET
     uint32_t        nrows;                  // number of rows
@@ -630,8 +635,12 @@ SQCloudConnection *SQCloudConnect(const char *hostname, int port, SQCloudConfig 
 SQCloudResult *SQCloudExec(SQCloudConnection *connection, const char *command) {
     internal_clear_error(connection);
     
+    TIME_GET(tstart);
     if (!internal_socket_write(connection, command, strlen(command))) return false;
-    return internal_socket_read(connection);
+    SQCloudResult *result = internal_socket_read(connection);
+    TIME_GET(tend);
+    if (result) result->time = TIME_VAL(tstart, tend);
+    return result;
 }
 
 void SQCloudDisconnect (SQCloudConnection *connection) {
@@ -824,4 +833,13 @@ void SQCloudRowSetDump (SQCloudResult *result, uint32_t maxline) {
         if (newline) printf("\n");
         blen -= len;
     }
+    
+    // print footer
+    for (uint32_t i=0; i<ncols; ++i) {
+        for (uint32_t j=0; j<result->clen[i]+2; ++j) putchar('-');
+        putchar('|');
+    }
+    printf("\n");
+    
+    printf("Rows: %d - Cols: %d - Bytes: %d Time: %f secs", result->nrows, result->ncols, result->blen, result->time);
 }
