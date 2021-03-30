@@ -627,6 +627,10 @@ SQCloudResult *sqcloud_parse_buffer (char *buffer, uint32_t blen, uint32_t cstar
     return internal_parse_buffer(&connection, buffer, blen, cstart, false);
 }
 
+uint32_t sqcloud_parse_number (char *buffer, uint32_t blen, uint32_t *cstart) {
+    return internal_parse_number(buffer, blen, cstart);
+}
+
 // MARK: - PUBLIC -
 
 SQCloudConnection *SQCloudConnect(const char *hostname, int port, SQCloudConfig *config) {
