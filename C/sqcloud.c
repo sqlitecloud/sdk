@@ -833,16 +833,16 @@ void SQCloudRowSetDump (SQCloudResult *result, uint32_t maxline) {
         uint32_t len = blen;
         uint32_t delta = 0;
         char *value = internal_parse_value(result->data[i], &len, NULL);
-        if (!value) {value = "NULL"; len = 4;}
+        blen -= len;
         
         // UTF-8 strings need special adjustments
+        if (!value) {value = "NULL"; len = 4;}
         uint32_t utf8len = utf8_len(value, len);
         if (utf8len != len) delta = len - utf8len;
         printf(" %-*.*s |", (result->clen[i % ncols]) + delta, (maxline && len > maxline) ? maxline : len, value);
         
         bool newline = (((i+1) % ncols == 0) || (ncols == 1));
         if (newline) printf("\n");
-        blen -= len;
     }
     
     // print footer
