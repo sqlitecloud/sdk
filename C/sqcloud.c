@@ -620,6 +620,13 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     return true;
 }
 
+// MARK: - NOT EXPOSED -
+
+SQCloudResult *sqcloud_parse_buffer (char *buffer, uint32_t blen, uint32_t cstart) {
+    SQCloudConnection connection = {0};
+    return internal_parse_buffer(&connection, buffer, blen, cstart, false);
+}
+
 // MARK: - PUBLIC -
 
 SQCloudConnection *SQCloudConnect(const char *hostname, int port, SQCloudConfig *config) {
