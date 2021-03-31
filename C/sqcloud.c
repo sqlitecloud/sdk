@@ -80,6 +80,7 @@ struct SQCloudResult {
     char            **data;                 // data contained in the rowset
     char            **name;                 // column names
     uint32_t        *clen;                  // max len for each column (used to display result)
+    uint32_t        maxlen;                 // max len for each row/column
 } _SQCloudResult;
 
 struct SQCloudConnection {
@@ -277,6 +278,7 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
         buffer += cstart + len + 1;
         blen -= cstart + len + 1;
         if (rowset->clen[i] < len) rowset->clen[i] = len;
+        if (rowset->maxlen < len) rowset->maxlen = len;
     }
     
     for (uint32_t i=0; i<nrows * ncols; ++i) {
@@ -286,6 +288,7 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
         buffer += cellsize;
         blen -= cellsize;
         if (rowset->clen[i % ncols] < len) rowset->clen[i % ncols] = len;
+        if (rowset->maxlen < len) rowset->maxlen = len;
         // printf("%d) %.*s\n", i, len, value);
     }
     
@@ -295,6 +298,7 @@ abort_rowset:
     if (rowset->data) mem_free(rowset->data);
     if (rowset->name) mem_free(rowset->name);
     if (rowset->clen) mem_free(rowset->clen);
+    if (rowset) mem_free(rowset);
     
     internal_set_error(connection, 1, "Unable to allocate internal memory for SQCloudResult.");
     return NULL;
@@ -309,8 +313,9 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
     }
     
     // if buffer is static (stack based allocation) then it must be duplicated
+    char *clone = NULL;
     if (buffer[0] != '-' && isstatic) {
-        char *clone = mem_alloc(blen);
+        clone = mem_alloc(blen);
         if (!clone) {
             internal_set_error(connection, 1, "Unable to allocate memory: %d.", blen);
             return NULL;
@@ -338,7 +343,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         
         // try to allocate a buffer big enough to hold uncompressed data + raw header
         long clonelen = ulen + (zdata - hstart) + 1;
-        char *clone = mem_malloc (clonelen);
+        clone = mem_malloc (clonelen);
         if (!clone) {
             internal_set_error(connection, 1, "Unable to allocate memory to uncompress buffer: %d.", clonelen);
             if (!isstatic) mem_free(buffer);
@@ -404,6 +409,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             break;
         
         case '_':
+            if (clone) mem_free(clone);
             return &SQCloudResultNULL;
             
         case ':':
@@ -414,6 +420,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         }
     }
     
+    if (clone) mem_free(clone);
     return NULL;
 }
 
@@ -787,6 +794,11 @@ uint32_t SQCloudRowSetRows (SQCloudResult *result) {
 uint32_t SQCloudRowSetCols (SQCloudResult *result) {
     if (!SQCloudRowSetSanityCheck(result, 0, 0)) return 0;
     return result->ncols;
+}
+
+uint32_t SQCloudRowSetMaxLen (SQCloudResult *result) {
+    if (!SQCloudRowSetSanityCheck(result, 0, 0)) return 0;
+    return result->maxlen;
 }
 
 char *SQCloudRowSetValue (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len) {
