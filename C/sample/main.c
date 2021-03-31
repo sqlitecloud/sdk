@@ -12,7 +12,7 @@
 #include "linenoise.h"
 
 #define CLI_HISTORY_FILENAME    ".sqlitecloud_history.txt"
-#define CLI_VERSION             "1.0a2"
+#define CLI_VERSION             "1.0a3"
 #define CLI_BUILD_DATE          __DATE__
 
 void do_command (SQCloudConnection *conn, char *command) {
@@ -69,6 +69,9 @@ int main(int argc, const char * argv[]) {
     
     // load history file
     linenoiseHistoryLoad(CLI_HISTORY_FILENAME);
+    
+    // test compression
+    // do_command(conn, "SET KEY CLIENT_COMPRESSION TO 1");
     
     // REPL
     char *command = NULL;

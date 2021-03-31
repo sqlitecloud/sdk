@@ -4,6 +4,7 @@
 //  Created by Marco Bambini on 08/02/21.
 //
 
+#include "lz4.h"
 #include "sqcloud.h"
 #include <stdlib.h>
 #include <string.h>
@@ -316,6 +317,51 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         }
         memcpy(clone, buffer, blen);
         buffer = clone;
+    }
+    
+    // check for compressed reply before the parse step
+    char *zdata = NULL;
+    if (buffer[0] == '%') {
+        // %TLEN CLEN ULEN *0 NROWS NCOLS DATA
+        uint32_t cstart1 = 0;
+        uint32_t cstart2 = 0;
+        uint32_t cstart3 = 0;
+        uint32_t tlen = internal_parse_number(&buffer[1], blen-1, &cstart1);
+        uint32_t clen = internal_parse_number(&buffer[cstart1 + 1], blen-1, &cstart2);
+        uint32_t ulen = internal_parse_number(&buffer[cstart1 + cstart2 + 1], blen-1, &cstart3);
+        
+        // start of compressed buffer
+        zdata = &buffer[tlen - clen + cstart1 + 1];
+        
+        // start of raw uncompressed header
+        char *hstart = &buffer[cstart1 + cstart2 + cstart3 + 1];
+        
+        // try to allocate a buffer big enough to hold uncompressed data + raw header
+        long clonelen = ulen + (zdata - hstart) + 1;
+        char *clone = mem_malloc (clonelen);
+        if (!clone) {
+            internal_set_error(connection, 1, "Unable to allocate memory to uncompress buffer: %d.", clonelen);
+            if (!isstatic) mem_free(buffer);
+            return NULL;
+        }
+        
+        // copy raw buffer
+        memcpy(clone, hstart, zdata - hstart);
+        
+        // uncompress buffer and sanity check the result
+        uint32_t rc = LZ4_decompress_safe(zdata, clone + (zdata - hstart), clen, ulen);
+        if (rc <= 0 || rc != ulen) {
+            internal_set_error(connection, 1, "Unable to decompress buffer (err code: %d).", rc);
+            if (!isstatic) mem_free(buffer);
+            return NULL;
+        }
+        
+        // decompression is OK so replace buffer
+        if (!isstatic) mem_free(buffer);
+        
+        isstatic = false;
+        buffer = clone;
+        blen = ulen;
     }
     
     // parse reply

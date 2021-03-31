@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		A922688125DCEBB00082A61F /* linenoise.c in Sources */ = {isa = PBXBuildFile; fileRef = A922687F25DCEBB00082A61F /* linenoise.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		A94F56CD2614633200DB86A3 /* lz4.c in Sources */ = {isa = PBXBuildFile; fileRef = A94F56CB2614633200DB86A3 /* lz4.c */; };
 		A95B316025D284E600F9E1F8 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = A95B315F25D284E600F9E1F8 /* main.c */; };
 		A95B316425D284F000F9E1F8 /* sqcloud.c in Sources */ = {isa = PBXBuildFile; fileRef = A95B316325D284F000F9E1F8 /* sqcloud.c */; };
 /* End PBXBuildFile section */
@@ -27,6 +28,8 @@
 /* Begin PBXFileReference section */
 		A922687F25DCEBB00082A61F /* linenoise.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = linenoise.c; sourceTree = "<group>"; };
 		A922688025DCEBB00082A61F /* linenoise.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = linenoise.h; sourceTree = "<group>"; };
+		A94F56CB2614633200DB86A3 /* lz4.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = lz4.c; path = ../lz4.c; sourceTree = "<group>"; };
+		A94F56CC2614633200DB86A3 /* lz4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lz4.h; path = ../lz4.h; sourceTree = "<group>"; };
 		A95B315F25D284E600F9E1F8 /* main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		A95B316225D284F000F9E1F8 /* sqcloud.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqcloud.h; path = ../sqcloud.h; sourceTree = "<group>"; };
 		A95B316325D284F000F9E1F8 /* sqcloud.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqcloud.c; path = ../sqcloud.c; sourceTree = "<group>"; };
@@ -52,6 +55,8 @@
 				A922688025DCEBB00082A61F /* linenoise.h */,
 				A95B316325D284F000F9E1F8 /* sqcloud.c */,
 				A95B316225D284F000F9E1F8 /* sqcloud.h */,
+				A94F56CB2614633200DB86A3 /* lz4.c */,
+				A94F56CC2614633200DB86A3 /* lz4.h */,
 			);
 			name = Sources;
 			sourceTree = "<group>";
@@ -128,6 +133,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A94F56CD2614633200DB86A3 /* lz4.c in Sources */,
 				A922688125DCEBB00082A61F /* linenoise.c in Sources */,
 				A95B316025D284E600F9E1F8 /* main.c in Sources */,
 				A95B316425D284F000F9E1F8 /* sqcloud.c in Sources */,
