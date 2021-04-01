@@ -227,7 +227,7 @@ static char *internal_parse_value (char *buffer, uint32_t *len, uint32_t *cellsi
         return &buffer[1];
     }
     
-    *len = blen;
+    *len = (buffer[0] == '!') ? blen - 1 : blen;
     if (cellsize) *cellsize = cstart + blen + 1;
     return &buffer[1+cstart];
 }
@@ -371,10 +371,12 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
     
     // parse reply
     switch (buffer[0]) {
+        case '!':
         case '+': {
             // +LEN string
             uint32_t cstart = 0;
             uint32_t len = internal_parse_number(&buffer[1], blen-1, &cstart);
+            if (buffer[0] == '!') --len;
             return internal_rowset_type(connection, buffer, len, cstart+1, RESULT_STRING);
         }
             break;
@@ -454,7 +456,7 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection) {
         if (clen == 0) continue;
         
         // handle special cases
-        if ((original[0] == ':') || (original[0] == ',')) cstart = 0;
+        if ((original[0] == ':') || (original[0] == ',')) clen = 0;
         
         // check if read is complete
         // clen is the lenght parsed in the buffer
@@ -478,7 +480,7 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection) {
         }
         
         // command is complete so parse it
-        return internal_parse_buffer(connection, original, tread, cstart, (original == header));
+        return internal_parse_buffer(connection, original, tread, (clen) ? cstart : 0, (original == header));
     }
     
 abort_read:
@@ -802,6 +804,11 @@ uint32_t SQCloudRowSetMaxLen (SQCloudResult *result) {
 }
 
 char *SQCloudRowSetValue (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len) {
+    if (!SQCloudRowSetSanityCheck(result, row, col)) return NULL;
+    return internal_parse_value(result->data[row*col], len, NULL);
+}
+
+char *SQCloudRowSetCString (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len) {
     if (!SQCloudRowSetSanityCheck(result, row, col)) return NULL;
     return internal_parse_value(result->data[row*col], len, NULL);
 }
