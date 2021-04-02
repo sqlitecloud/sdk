@@ -779,7 +779,7 @@ static bool SQCloudRowSetSanityCheck (SQCloudResult *result, uint32_t row, uint3
 
 SQCloudValueType SQCloudRowSetValueType (SQCloudResult *result, uint32_t row, uint32_t col) {
     if (!SQCloudRowSetSanityCheck(result, row, col)) return VALUE_NULL;
-    return internal_type(result->data[row*col]);
+    return internal_type(result->data[row*result->ncols+col]);
 }
 
 char *SQCloudRowSetColumnName (SQCloudResult *result, uint32_t col, uint32_t *len) {
@@ -805,7 +805,7 @@ uint32_t SQCloudRowSetMaxLen (SQCloudResult *result) {
 
 char *SQCloudRowSetValue (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len) {
     if (!SQCloudRowSetSanityCheck(result, row, col)) return NULL;
-    return internal_parse_value(result->data[row*col], len, NULL);
+    return internal_parse_value(result->data[row*result->ncols+col], len, NULL);
 }
 
 char *SQCloudRowSetCString (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len) {
@@ -816,7 +816,7 @@ char *SQCloudRowSetCString (SQCloudResult *result, uint32_t row, uint32_t col, u
 int32_t SQCloudRowSetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col) {
     if (!SQCloudRowSetSanityCheck(result, row, col)) return 0;
     uint32_t len = 0;
-    char *value = internal_parse_value(result->data[row*col], &len, NULL);
+    char *value = internal_parse_value(result->data[row*result->ncols+col], &len, NULL);
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
@@ -826,7 +826,7 @@ int32_t SQCloudRowSetInt32Value (SQCloudResult *result, uint32_t row, uint32_t c
 int64_t SQCloudRowSetInt64Value (SQCloudResult *result, uint32_t row, uint32_t col) {
     if (!SQCloudRowSetSanityCheck(result, row, col)) return 0;
     uint32_t len = 0;
-    char *value = internal_parse_value(result->data[row*col], &len, NULL);
+    char *value = internal_parse_value(result->data[row*result->ncols+col], &len, NULL);
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
@@ -836,7 +836,7 @@ int64_t SQCloudRowSetInt64Value (SQCloudResult *result, uint32_t row, uint32_t c
 float SQCloudRowSetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col) {
     if (!SQCloudRowSetSanityCheck(result, row, col)) return 0.0;
     uint32_t len = 0;
-    char *value = internal_parse_value(result->data[row*col], &len, NULL);
+    char *value = internal_parse_value(result->data[row*result->ncols+col], &len, NULL);
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
@@ -846,7 +846,7 @@ float SQCloudRowSetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col
 double SQCloudRowSetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t col) {
     if (!SQCloudRowSetSanityCheck(result, row, col)) return 0.0;
     uint32_t len = 0;
-    char *value = internal_parse_value(result->data[row*col], &len, NULL);
+    char *value = internal_parse_value(result->data[row*result->ncols+col], &len, NULL);
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
