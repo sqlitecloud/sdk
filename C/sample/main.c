@@ -8,12 +8,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <stdbool.h>
 #include "sqcloud.h"
 #include "linenoise.h"
 
 #define CLI_HISTORY_FILENAME    ".sqlitecloud_history.txt"
-#define CLI_VERSION             "1.0a3"
+#define CLI_VERSION             "1.0a4"
 #define CLI_BUILD_DATE          __DATE__
+
+static bool skip_ok = false;
 
 void do_command (SQCloudConnection *conn, char *command) {
     SQCloudResult *res = SQCloudExec(conn, command);
@@ -21,6 +25,7 @@ void do_command (SQCloudConnection *conn, char *command) {
     SQCloudResType type = SQCloudResultType(res);
     switch (type) {
         case RESULT_OK:
+            if (skip_ok) return;
             printf("OK");
             break;
             
@@ -47,15 +52,49 @@ void do_command (SQCloudConnection *conn, char *command) {
     SQCloudResultFree(res);
 }
 
-int main(int argc, const char * argv[]) {
-    const char *hostname = "localhost";
-    int port = SQCLOUD_DEFAULT_PORT;
+void do_command_without_ok_reply (SQCloudConnection *conn, char *command) {
+    skip_ok = true;
+    do_command(conn, command);
+    skip_ok = false;
+}
+
+bool do_process_file (SQCloudConnection *conn, const char *filename) {
+    // should continue flag set to false by default
+    bool result = false;
     
-    // a very simple command line parser (atoi not really recommended)
-    if (argc > 1) hostname = argv[1];
-    if (argc > 2) port = atoi(argv[2]);
-    if (hostname == NULL) hostname = "localhost";
-    if (port <= 0) port = SQCLOUD_DEFAULT_PORT;
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        printf("Unable to open file %s.\n", filename);
+        return false;
+    }
+    
+    char line[512];
+    while (fgets(line, sizeof(line), file)) {
+        if (strcasecmp(line, ".PROMPT")) {result = true; break;}
+        do_command_without_ok_reply(conn, line);
+    }
+    
+    fclose(file);
+    return result;
+}
+
+// usage:
+// % sqlitecloud-cli -h HOST -p PORT -f FILE -c
+int main(int argc, char * argv[]) {
+    const char *hostname = "localhost";
+    const char *filename = NULL;
+    int port = SQCLOUD_DEFAULT_PORT;
+    bool compression = false;
+    int c;
+    
+    while ((c = getopt (argc, argv, "h:p:f:c")) != -1) {
+        switch (c) {
+            case 'h': hostname = optarg; break;
+            case 'p': port = atoi(optarg); break;
+            case 'f': filename = optarg; break;
+            case 'c': compression = true; break;
+        }
+    }
     
     printf("sqlitecloud-cli version %s (build date %s)\n", CLI_VERSION, CLI_BUILD_DATE);
     
@@ -70,8 +109,13 @@ int main(int argc, const char * argv[]) {
     // load history file
     linenoiseHistoryLoad(CLI_HISTORY_FILENAME);
     
-    // test compression
-    // do_command(conn, "SET KEY CLIENT_COMPRESSION TO 1");
+    // activate compression
+    if (compression) do_command_without_ok_reply(conn, "SET KEY CLIENT_COMPRESSION TO 1");
+    
+    if (filename) {
+        bool should_continue = do_process_file(conn, filename);
+        if (should_continue == false) return 0;
+    }
     
     // REPL
     char *command = NULL;
