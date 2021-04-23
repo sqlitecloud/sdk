@@ -60,7 +60,7 @@ void do_command_without_ok_reply (SQCloudConnection *conn, char *command) {
 
 bool do_process_file (SQCloudConnection *conn, const char *filename) {
     // should continue flag set to false by default
-    bool result = false;
+    bool should_continue = false;
     
     FILE *file = fopen(filename, "r");
     if (!file) {
@@ -70,12 +70,12 @@ bool do_process_file (SQCloudConnection *conn, const char *filename) {
     
     char line[512];
     while (fgets(line, sizeof(line), file)) {
-        if (strcasecmp(line, ".PROMPT")) {result = true; break;}
+        if (strcasecmp(line, ".PROMPT")) {should_continue = true; break;}
         do_command_without_ok_reply(conn, line);
     }
     
     fclose(file);
-    return result;
+    return should_continue;
 }
 
 // usage:
