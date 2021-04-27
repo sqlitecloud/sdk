@@ -810,7 +810,7 @@ char *SQCloudRowSetValue (SQCloudResult *result, uint32_t row, uint32_t col, uin
 
 char *SQCloudRowSetCString (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len) {
     if (!SQCloudRowSetSanityCheck(result, row, col)) return NULL;
-    return internal_parse_value(result->data[row*col], len, NULL);
+    return internal_parse_value(result->data[row*result->ncols+col], len, NULL);
 }
 
 int32_t SQCloudRowSetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col) {
