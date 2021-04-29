@@ -111,10 +111,6 @@ static uint32_t utf8_len (const char *s, uint32_t nbytes) {
     uint32_t pos = 0;
     uint32_t len = 0;
     
-    if (strncmp(s, "Sandra De", 9) == 0) {
-        ;
-    }
-    
     while (pos < nbytes) {
         ++len;
         uint32_t n = utf8_charbytes(s, pos);
