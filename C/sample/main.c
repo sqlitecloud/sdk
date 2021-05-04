@@ -126,7 +126,7 @@ int main(int argc, char * argv[]) {
             linenoiseHistorySave(CLI_HISTORY_FILENAME);
         }
         if (strncmp(command, "EXIT", 4) == 0) break;
-        do_command(conn, command);
+        if (strlen(command) > 2) do_command(conn, command);
     }
     if (command) free(command);
     
