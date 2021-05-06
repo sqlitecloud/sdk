@@ -14,14 +14,15 @@
 extern "C" {
 #endif
 
-#define SQCLOUD_SDK_VERSION         "0.2.0"
-#define SQCLOUD_SDK_VERSION_NUM     0x000200
+#define SQCLOUD_SDK_VERSION         "0.3.0"
+#define SQCLOUD_SDK_VERSION_NUM     0x000300
 #define SQCLOUD_DEFAULT_PORT        8860
 #define SQCLOUD_DEFAULT_TIMEOUT     12
 
 // opaque datatypes
 typedef struct SQCloudConnection    SQCloudConnection;
 typedef struct SQCloudResult        SQCloudResult;
+typedef void (*SQCloudPubSubCB)    (SQCloudConnection *connection, SQCloudResult *result, void *data);
 
 // configuration struct to be passed to the connect function (currently unused)
 typedef struct {
@@ -38,7 +39,8 @@ typedef enum {
     RESULT_INTEGER,
     RESULT_FLOAT,
     RESULT_ROWSET,
-    RESULT_NULL
+    RESULT_NULL,
+    RESULT_JSON
 } SQCloudResType;
 
 typedef enum {
@@ -52,6 +54,7 @@ typedef enum {
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command);
 void SQCloudDisconnect (SQCloudConnection *connection);
+void SQCloudSetPubSubCallback (SQCloudConnection *connection, SQCloudPubSubCB callback, void *data);
 
 bool SQCloudIsError (SQCloudConnection *connection);
 int SQCloudErrorCode (SQCloudConnection *connection);
@@ -61,6 +64,7 @@ SQCloudResType SQCloudResultType (SQCloudResult *result);
 uint32_t SQCloudResultLen (SQCloudResult *result);
 char *SQCloudResultBuffer (SQCloudResult *result);
 void SQCloudResultFree (SQCloudResult *result);
+bool SQCloudResultIsOK (SQCloudResult *result);
 
 SQCloudValueType SQCloudRowSetValueType (SQCloudResult *result, uint32_t row, uint32_t col);
 char *SQCloudRowSetColumnName (SQCloudResult *result, uint32_t col, uint32_t *len);

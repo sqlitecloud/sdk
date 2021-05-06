@@ -14,14 +14,12 @@
 #include "linenoise.h"
 
 #define CLI_HISTORY_FILENAME    ".sqlitecloud_history.txt"
-#define CLI_VERSION             "1.0a4"
+#define CLI_VERSION             "1.0a5"
 #define CLI_BUILD_DATE          __DATE__
 
 static bool skip_ok = false;
 
-void do_command (SQCloudConnection *conn, char *command) {
-    SQCloudResult *res = SQCloudExec(conn, command);
-    
+void do_print (SQCloudConnection *conn, SQCloudResult *res) {
     SQCloudResType type = SQCloudResultType(res);
     switch (type) {
         case RESULT_OK:
@@ -37,6 +35,7 @@ void do_command (SQCloudConnection *conn, char *command) {
             printf("NULL");
             break;
             
+        case RESULT_JSON:
         case RESULT_STRING:
         case RESULT_INTEGER:
         case RESULT_FLOAT:
@@ -50,6 +49,11 @@ void do_command (SQCloudConnection *conn, char *command) {
     
     printf("\n\n");
     SQCloudResultFree(res);
+}
+
+void do_command (SQCloudConnection *conn, char *command) {
+    SQCloudResult *res = SQCloudExec(conn, command);
+    do_print(conn, res);
 }
 
 void do_command_without_ok_reply (SQCloudConnection *conn, char *command) {
@@ -78,6 +82,15 @@ bool do_process_file (SQCloudConnection *conn, const char *filename) {
     fclose(file);
     return should_continue;
 }
+
+void pubsub_callback (SQCloudConnection *connection, SQCloudResult *result, void *data) {
+    // THIS CALLBACK IS EXECUTED IN ANOTHER THREAD
+    printf("*** begin pubsub_callback:\n");
+    do_print(connection, result);
+    printf("*** end pubsub_callback:\n");
+}
+
+// MARK: -
 
 // usage:
 // % sqlitecloud-cli -h HOST -p PORT -f FILE -c
@@ -117,6 +130,9 @@ int main(int argc, char * argv[]) {
         bool should_continue = do_process_file(conn, filename);
         if (should_continue == false) return 0;
     }
+    
+    // SET Pub/Sub callback
+    SQCloudSetPubSubCallback(conn, pubsub_callback, NULL);
     
     // REPL
     char *command = NULL;

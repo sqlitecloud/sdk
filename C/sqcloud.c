@@ -19,6 +19,7 @@
 #include <Shlwapi.h>
 #include <io.h>
 #include <float.h>
+#include "pthread.h"
 #else
 #include <errno.h>
 #include <netdb.h>
@@ -32,6 +33,7 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <sys/ioctl.h>
+#include <pthread.h>
 #endif
 
 // MARK: MACROS -
@@ -63,6 +65,28 @@
 #define TIME_GET(_t1)                       struct timeval _t1; gettimeofday(&_t1, NULL)
 #define TIME_VAL(_t1, _t2)                  ((double)(_t2.tv_sec - _t1.tv_sec) + (double)((_t2.tv_usec - _t1.tv_usec)*1e-6))
 
+#define CMD_STRING                          '+'
+#define CMD_ZEROSTRING                      '!'
+#define CMD_ERROR                           '-'
+#define CMD_INT                             ':'
+#define CMD_FLOAT                           ','
+#define CMD_ROWSET                          '*'
+#define CMD_JSON                            '#'
+#define CMD_RAWJSON                         '{'
+#define CMD_NULL                            '_'
+#define CMD_BLOB                            '$'
+#define CMD_COMPRESSED                      '%'
+#define CMD_PUBSUB                          '|'
+#define CMD_COMMAND                         '^'
+
+// MARK: -
+
+static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool mainfd);
+static bool internal_socket_write (SQCloudConnection *connection, const char *buffer, size_t len, bool mainfd);
+static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cstart);
+static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t cstart, bool isstatic);
+static bool internal_connect (SQCloudConnection *connection, const char *hostname, int port, SQCloudConfig *config, bool mainfd);
+
 // MARK: -
 
 struct SQCloudResult {
@@ -87,6 +111,15 @@ struct SQCloudConnection {
     int             fd;
     char            errmsg[1024];
     int             errcode;
+    
+    // pub/sub
+    int             pubsubfd;
+    SQCloudPubSubCB callback;
+    void            *data;
+    char            *hostname;
+    int             port;
+    pthread_t       tid;
+    
 } _SQCloudConnection;
 
 static SQCloudResult SQCloudResultOK = {RESULT_OK, NULL, 0, 0, 0};
@@ -132,6 +165,87 @@ static int socket_geterror (int fd) {
     
     return ((err == 0 || err == EINTR || err == EAGAIN || err == EINPROGRESS)) ? 0 : err;
 }
+
+static void *pubsub_thread (void *arg) {
+    SQCloudConnection *connection = (SQCloudConnection *)arg;
+    int fd = connection->pubsubfd;
+    
+    size_t blen = 2048;
+    char *buffer = mem_malloc(blen);
+    char *original = buffer;
+    
+    while (1) {
+        fd_set set;
+        FD_ZERO(&set);
+        FD_SET(fd, &set);
+        
+        // wait for read event
+        int rc = select(fd + 1, &set, NULL, NULL, NULL);
+        if (rc <= 0) continue;
+        
+        //  read payload string
+        uint32_t tread = 0;
+        ssize_t nread = readsocket(fd, buffer, blen);
+        
+        if (nread < 0) {
+            printf("Handle error here %s.", strerror(errno));
+            break;
+            // internal_set_error(connection, 1, "An error occurred while reading data: %s.", strerror(errno));
+            // goto abort_read;
+        }
+        
+        if (nread == 0) {
+            printf("Handle error here %s.", strerror(errno));
+            break;
+            // internal_set_error(connection, 1, "Unexpected EOF found while reading data: %s.", strerror(errno));
+            // goto abort_read;
+        }
+        
+        tread += (uint32_t)nread;
+        blen -= (uint32_t)nread;
+        buffer += nread;
+        
+        uint32_t cstart = 0;
+        uint32_t clen = internal_parse_number (&original[1], tread-1, &cstart);
+        if (clen == 0) continue;
+        
+        // check if read is complete
+        // clen is the lenght parsed in the buffer
+        // cstart is the index of the first space
+        // +1 because we skipped the first character in the internal_parse_number function
+        if (clen + cstart + 1 != tread) {
+            // check buffer allocation and continue reading
+            if (clen + cstart > blen) {
+                char *clone = mem_malloc(clen + cstart + 1);
+                if (!clone) {
+                    printf("Handle memory error here %s.", strerror(errno));
+                    break;
+                    // internal_set_error(connection, 1, "Unable to allocate memory: %d.", clen + cstart + 1);
+                    // goto abort_read;
+                }
+                memcpy(clone, original, tread);
+                buffer = original = clone;
+                blen = (clen + cstart + 1) - tread;
+                buffer += tread;
+            }
+            
+            continue;
+        }
+        
+        SQCloudResult *result = internal_parse_buffer(connection, original, tread, (clen) ? cstart : 0, false);
+        if (result->tag == RESULT_STRING) result->tag = RESULT_JSON;
+        
+        connection->callback(connection, result, connection->data);
+        
+        blen = 2048;
+        buffer = mem_malloc(blen);
+        original = buffer;
+    }
+    
+    return NULL;
+}
+
+// MARK: -
 
 static bool internal_init (void) {
     static bool inited = false;
@@ -205,7 +319,7 @@ static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cs
 
 static char *internal_parse_value (char *buffer, uint32_t *len, uint32_t *cellsize) {
     // handle special NULL value case
-    if (!buffer || buffer[0] == '_') {
+    if (!buffer || buffer[0] == CMD_NULL) {
         *len = 0;
         if (cellsize) *cellsize = 2;
         return NULL;
@@ -217,15 +331,41 @@ static char *internal_parse_value (char *buffer, uint32_t *len, uint32_t *cellsi
     blen = internal_parse_number(&buffer[1], blen, &cstart);
     
     // handle decimal/float cases
-    if ((buffer[0] == ':') || (buffer[0] == ',')) {
+    if ((buffer[0] == CMD_INT) || (buffer[0] == CMD_FLOAT)) {
         *len = cstart - 1;
         if (cellsize) *cellsize = cstart + 1;
         return &buffer[1];
     }
     
-    *len = (buffer[0] == '!') ? blen - 1 : blen;
+    *len = (buffer[0] == CMD_ZEROSTRING) ? blen - 1 : blen;
     if (cellsize) *cellsize = cstart + blen + 1;
     return &buffer[1+cstart];
+}
+
+static SQCloudResult *internal_run_command(SQCloudConnection *connection, const char *buffer, size_t blen, bool mainfd) {
+    internal_clear_error(connection);
+    
+    TIME_GET(tstart);
+    if (!internal_socket_write(connection, buffer, blen, mainfd)) return false;
+    SQCloudResult *result = internal_socket_read(connection, mainfd);
+    TIME_GET(tend);
+    if (result) result->time = TIME_VAL(tstart, tend);
+    return result;
+}
+
+static SQCloudResult *internal_setup_pubsub(SQCloudConnection *connection, const char *buffer, size_t blen) {
+    // check if pubsub was already setup
+    if (connection->pubsubfd != 0) return &SQCloudResultOK;
+    
+    if (internal_connect(connection, connection->hostname, connection->port, NULL, false)) {
+        SQCloudResult *result = internal_run_command(connection, buffer, blen, false);
+        if (!SQCloudResultIsOK(result)) return result;
+        pthread_create(&connection->tid, NULL, pubsub_thread, (void *)connection);
+    } else {
+        return NULL;
+    }
+    
+    return &SQCloudResultOK;
 }
 
 static SQCloudResult *internal_rowset_type(SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart, SQCloudResType type) {
@@ -310,7 +450,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
     
     // if buffer is static (stack based allocation) then it must be duplicated
     char *clone = NULL;
-    if (buffer[0] != '-' && isstatic) {
+    if (buffer[0] != CMD_ERROR && isstatic) {
         clone = mem_alloc(blen);
         if (!clone) {
             internal_set_error(connection, 1, "Unable to allocate memory: %d.", blen);
@@ -322,7 +462,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
     
     // check for compressed reply before the parse step
     char *zdata = NULL;
-    if (buffer[0] == '%') {
+    if (buffer[0] == CMD_COMPRESSED) {
         // %TLEN CLEN ULEN *0 NROWS NCOLS DATA
         uint32_t cstart1 = 0;
         uint32_t cstart2 = 0;
@@ -367,17 +507,23 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
     
     // parse reply
     switch (buffer[0]) {
-        case '!':
-        case '+': {
+        case CMD_ZEROSTRING:
+        case CMD_PUBSUB:
+        case CMD_COMMAND:
+        case CMD_STRING:
+        case CMD_JSON: {
             // +LEN string
             uint32_t cstart = 0;
             uint32_t len = internal_parse_number(&buffer[1], blen-1, &cstart);
-            if (buffer[0] == '!') --len;
-            return internal_rowset_type(connection, buffer, len, cstart+1, RESULT_STRING);
+            SQCloudResType type = (buffer[0] == CMD_JSON) ? RESULT_JSON : RESULT_STRING;
+            if (buffer[0] == CMD_ZEROSTRING) --len;
+            else if (buffer[0] == CMD_COMMAND) return internal_run_command(connection, &buffer[cstart+1], len, true);
+            else if (buffer[0] == CMD_PUBSUB) return internal_setup_pubsub(connection, &buffer[cstart+1], len);
+            return internal_rowset_type(connection, buffer, len, cstart+1, type);
         }
             break;
             
-        case '-': {
+        case CMD_ERROR: {
             // -LEN ERRCODE ERRMSG
             uint32_t cstart = 0, cstart2 = 0;
             uint32_t len = internal_parse_number(&buffer[1], blen-1, &cstart);
@@ -392,7 +538,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         }
             break;
             
-        case '*': {
+        case CMD_ROWSET: {
             // *LEN ROWS COLS DATA
             uint32_t cstart1 = 0, cstart2 = 0, cstart3 = 0;
             internal_parse_number(&buffer[1], blen-1, &cstart1);
@@ -406,15 +552,20 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         }
             break;
         
-        case '_':
+        case CMD_NULL:
             if (clone) mem_free(clone);
             return &SQCloudResultNULL;
             
-        case ':':
-        case ',': {
+        case CMD_INT:
+        case CMD_FLOAT: {
             // NUMBER case
             internal_parse_value(buffer, &blen, NULL);
-            return internal_rowset_type(connection, buffer, blen, 1, (buffer[0] == ':') ? RESULT_INTEGER : RESULT_FLOAT);
+            return internal_rowset_type(connection, buffer, blen, 1, (buffer[0] == CMD_INT) ? RESULT_INTEGER : RESULT_FLOAT);
+        }
+            
+        case CMD_RAWJSON: {
+            // handle JSON here
+            return &SQCloudResultNULL;
         }
     }
     
@@ -422,16 +573,17 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
     return NULL;
 }
 
-static SQCloudResult *internal_socket_read (SQCloudConnection *connection) {
+static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool mainfd) {
     // most of the time one read will be sufficient
     char header[1024];
     char *buffer = (char *)&header;
     uint32_t blen = sizeof(header);
     uint32_t tread = 0;
 
+    int fd = (mainfd) ? connection->fd : connection->pubsubfd;
     char *original = buffer;
     while (1) {
-        ssize_t nread = readsocket(connection->fd, buffer, blen);
+        ssize_t nread = readsocket(fd, buffer, blen);
         
         if (nread < 0) {
             internal_set_error(connection, 1, "An error occurred while reading data: %s.", strerror(errno));
@@ -452,7 +604,7 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection) {
         if (clen == 0) continue;
         
         // handle special cases
-        if ((original[0] == ':') || (original[0] == ',')) clen = 0;
+        if ((original[0] == CMD_INT) || (original[0] == CMD_FLOAT)) clen = 0;
         
         // check if read is complete
         // clen is the lenght parsed in the buffer
@@ -484,18 +636,20 @@ abort_read:
     return NULL;
 }
 
-static bool internal_socket_write (SQCloudConnection *connection, const char *buffer, size_t len) {
+static bool internal_socket_write (SQCloudConnection *connection, const char *buffer, size_t len, bool mainfd) {
     size_t written = 0;
+    
+    int fd = (mainfd) ? connection->fd : connection->pubsubfd;
     
     // write header
     char header[32];
     int hlen = snprintf(header, sizeof(header), "+%zu ", len);
-    writesocket(connection->fd, header, hlen);
+    writesocket(fd, header, hlen);
     
     // write buffer
     while (written < len) {
-        ssize_t nwrote = writesocket(connection->fd, buffer, len);
-        //printf("writesocket connfd:%d nwrote:%d", connection->fd, nwrote);
+        ssize_t nwrote = writesocket(fd, buffer, len);
+        //printf("writesocket connfd:%d nwrote:%d", fd, nwrote);
         
         if (nwrote < 0) {
             return internal_set_error(connection, 1, "An error occurred while writing data: %s.", strerror(errno));
@@ -511,7 +665,7 @@ static bool internal_socket_write (SQCloudConnection *connection, const char *bu
     return true;
 }
 
-static bool internal_connect (SQCloudConnection *connection, const char *hostname, int port, SQCloudConfig *config) {
+static bool internal_connect (SQCloudConnection *connection, const char *hostname, int port, SQCloudConfig *config, bool mainfd) {
     // ipv4/ipv6 specific variables
     struct addrinfo hints, *addr_list = NULL, *addr;
     
@@ -667,7 +821,13 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     if (!internal_auth(connection, config)) return false;
     
     // finalize connection
-    connection->fd = sockfd;
+    if (mainfd) {
+        connection->fd = sockfd;
+        connection->port = port;
+        connection->hostname = strdup(hostname);
+    } else {
+        connection->pubsubfd = sockfd;
+    }
     return true;
 }
 
@@ -690,29 +850,39 @@ SQCloudConnection *SQCloudConnect(const char *hostname, int port, SQCloudConfig 
     SQCloudConnection *connection = mem_alloc(sizeof(SQCloudConnection));
     if (!connection) return NULL;
     
-    internal_connect(connection, hostname, port, config);
+    internal_connect(connection, hostname, port, config, true);
     return connection;
 }
 
 SQCloudResult *SQCloudExec(SQCloudConnection *connection, const char *command) {
-    internal_clear_error(connection);
-    
-    TIME_GET(tstart);
-    if (!internal_socket_write(connection, command, strlen(command))) return false;
-    SQCloudResult *result = internal_socket_read(connection);
-    TIME_GET(tend);
-    if (result) result->time = TIME_VAL(tstart, tend);
-    return result;
+    return internal_run_command(connection, command, strlen(command), true);
 }
 
 void SQCloudDisconnect (SQCloudConnection *connection) {
     if (!connection) return;
     
     // free SSL
-    // try to gracefully close connection
     
-    if (connection->fd) closesocket(connection->fd);
+    // try to gracefully close connections
+    if (connection->fd) {
+        closesocket(connection->fd);
+    }
+    
+    if (connection->pubsubfd) {
+        closesocket(connection->pubsubfd);
+    }
+    
+    // free memory
+    if (connection->hostname) {
+        free(connection->hostname);
+    }
+    
     mem_free(connection);
+}
+
+void SQCloudSetPubSubCallback (SQCloudConnection *connection, SQCloudPubSubCB callback, void *data) {
+    connection->callback = callback;
+    connection->data = data;
 }
 
 // MARK: -
@@ -733,6 +903,10 @@ const char *SQCloudErrorMsg (SQCloudConnection *connection) {
 
 SQCloudResType SQCloudResultType (SQCloudResult *result) {
     return (result) ? result->tag : RESULT_ERROR;
+}
+
+bool SQCloudResultIsOK (SQCloudResult *result) {
+    return (result == &SQCloudResultOK);
 }
 
 uint32_t SQCloudResultLen (SQCloudResult *result) {
