@@ -55,6 +55,7 @@ SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command);
 void SQCloudDisconnect (SQCloudConnection *connection);
 void SQCloudSetPubSubCallback (SQCloudConnection *connection, SQCloudPubSubCB callback, void *data);
+SQCloudResult *SQCloudSetPubSubOnly (SQCloudConnection *connection);
 
 bool SQCloudIsError (SQCloudConnection *connection);
 int SQCloudErrorCode (SQCloudConnection *connection);

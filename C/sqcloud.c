@@ -885,6 +885,16 @@ void SQCloudSetPubSubCallback (SQCloudConnection *connection, SQCloudPubSubCB ca
     connection->data = data;
 }
 
+SQCloudResult *SQCloudSetPubSubOnly (SQCloudConnection *connection) {
+    if (!connection->callback) {
+        internal_set_error(connection, 1, "A PubSub callback must be set before executing a PUBSUB ONLY command.");
+        return NULL;
+    }
+    
+    const char *command = "PUBSUB ONLY";
+    return internal_run_command(connection, command, strlen(command), true);
+}
+
 // MARK: -
 
 bool SQCloudIsError (SQCloudConnection *connection) {
