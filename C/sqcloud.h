@@ -30,6 +30,7 @@ typedef struct {
     const char *password;
     const char *database;
     int timeout;
+    int family;     // can be: AF_INET, AF_INET6 or AF_UNSPEC
 } SQCloudConfig;
 
 typedef enum {

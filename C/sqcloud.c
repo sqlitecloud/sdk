@@ -671,7 +671,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     
     // ipv6 code from https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_72/rzab6/xip6client.htm
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
+    hints.ai_family = (config) ? config->family : AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     
     // get the address information for the server using getaddrinfo()
