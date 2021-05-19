@@ -573,6 +573,58 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
     return NULL;
 }
 
+static bool internal_socker_forward_read (SQCloudConnection *connection, bool (*forward_cb) (char *buffer, size_t blen, void *xdata), void *xdata) {
+    char sbuffer[8129];
+    uint32_t blen = sizeof(sbuffer);
+    uint32_t cstart = 0;
+    uint32_t tread = 0;
+    uint32_t clen = 0;
+    
+    char *buffer = sbuffer;
+    char *original = buffer;
+    int fd = connection->fd;
+    
+    while (1) {
+        // perform read operation
+        ssize_t nread = readsocket(fd, buffer, blen);
+        
+        // sanity check read
+        if (nread < 0) {
+            internal_set_error(connection, 1, "An error occurred while reading data: %s.", strerror(errno));
+            goto abort_read;
+        }
+        
+        if (nread == 0) {
+            internal_set_error(connection, 1, "Unexpected EOF found while reading data: %s.", strerror(errno));
+            goto abort_read;
+        }
+        
+        // forward read to callback
+        bool result = forward_cb(buffer, nread, xdata);
+        if (!result) goto abort_read;
+        
+        // update internal counter
+        tread += (uint32_t)nread;
+        
+        // determine command length
+        if (clen == 0) {
+            clen = internal_parse_number (&original[1], tread-1, &cstart);
+            if (clen == 0) continue;
+            
+            // handle special cases
+            if ((original[0] == CMD_INT) || (original[0] == CMD_FLOAT)) clen = 0;
+        }
+        
+        // check if read is complete
+        if (clen + cstart + 1 != tread) continue;
+    }
+    
+    return true;
+    
+abort_read:
+    return false;
+}
+
 static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool mainfd) {
     // most of the time one read will be sufficient
     char header[1024];
@@ -840,6 +892,15 @@ SQCloudResult *sqcloud_parse_buffer (char *buffer, uint32_t blen, uint32_t cstar
 
 uint32_t sqcloud_parse_number (char *buffer, uint32_t blen, uint32_t *cstart) {
     return internal_parse_number(buffer, blen, cstart);
+}
+
+// MARK: - RESERVED -
+
+bool SQCloudForwardExec(SQCloudConnection *connection, const char *command, bool (*forward_cb) (char *buffer, size_t blen, void *xdata), void *xdata) {
+    if (!forward_cb) return false;
+    if (!internal_socket_write(connection, command, strlen(command), true)) return false;
+    if (!internal_socker_forward_read(connection, forward_cb, xdata)) return false;
+    return true;
 }
 
 // MARK: - PUBLIC -
