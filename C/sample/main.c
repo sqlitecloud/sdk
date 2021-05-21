@@ -14,8 +14,10 @@
 #include "linenoise.h"
 
 #define CLI_HISTORY_FILENAME    ".sqlitecloud_history.txt"
-#define CLI_VERSION             "1.0a5"
+#define CLI_VERSION             "1.0b1"
 #define CLI_BUILD_DATE          __DATE__
+
+// MARK: -
 
 static bool skip_ok = false;
 
@@ -82,6 +84,8 @@ bool do_process_file (SQCloudConnection *conn, const char *filename) {
     fclose(file);
     return should_continue;
 }
+
+// MARK: -
 
 void pubsub_callback (SQCloudConnection *connection, SQCloudResult *result, void *data) {
     // THIS CALLBACK IS EXECUTED IN ANOTHER THREAD

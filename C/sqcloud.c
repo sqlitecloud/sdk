@@ -49,8 +49,8 @@
 #endif
 
 #define mem_realloc                         realloc
-#define mem_alloc(_s)                       calloc(1,_s)
-#define mem_malloc(_s)                      malloc(_s)
+#define mem_zeroalloc(_s)                   calloc(1,_s)
+#define mem_alloc(_s)                       malloc(_s)
 #define mem_free(_s)                        free(_s)
 #define MIN(a,b)                            (((a)<(b))?(a):(b))
 
@@ -113,6 +113,7 @@ struct SQCloudConnection {
     int             errcode;
     
     // pub/sub
+    char            *uuid;
     int             pubsubfd;
     SQCloudPubSubCB callback;
     void            *data;
@@ -171,7 +172,7 @@ static void *pubsub_thread (void *arg) {
     int fd = connection->pubsubfd;
     
     size_t blen = 2048;
-    char *buffer = mem_malloc(blen);
+    char *buffer = mem_alloc(blen);
     char *original = buffer;
     
     while (1) {
@@ -216,7 +217,7 @@ static void *pubsub_thread (void *arg) {
         if (clen + cstart + 1 != tread) {
             // check buffer allocation and continue reading
             if (clen + cstart > blen) {
-                char *clone = mem_malloc(clen + cstart + 1);
+                char *clone = mem_alloc(clen + cstart + 1);
                 if (!clone) {
                     printf("Handle memory error here %s.", strerror(errno));
                     break;
@@ -238,7 +239,7 @@ static void *pubsub_thread (void *arg) {
         connection->callback(connection, result, connection->data);
         
         blen = 2048;
-        buffer = mem_malloc(blen);
+        buffer = mem_alloc(blen);
         original = buffer;
     }
     
@@ -277,6 +278,27 @@ static bool internal_set_error (SQCloudConnection *connection, int errcode, cons
     va_end (arg);
     
     return false;
+}
+
+static void internal_parse_uuid (SQCloudConnection *connection, const char *buffer, size_t blen) {
+    // sanity check
+    if (!buffer || blen == 0) return;
+    
+    // expected buffer is PAUTH uuid secret
+    // PUATH -> 5
+    // uuid -> 36
+    // secret -> 36
+    // spaces -> 2
+    if (blen != (5 + 36 + 36 + 2)) return;
+    
+    if (strncmp(buffer, "PAUTH ", 6) != 0) return;
+    
+    // allocate 36 (UUID) + 1 (null-terminated) zero-bytes
+    char *uuid = mem_zeroalloc(37);
+    if (!uuid) return;
+    
+    memcpy(uuid, &buffer[6], 36);
+    connection->uuid = uuid;
 }
 
 static void internal_clear_error (SQCloudConnection *connection) {
@@ -360,6 +382,7 @@ static SQCloudResult *internal_setup_pubsub(SQCloudConnection *connection, const
     if (internal_connect(connection, connection->hostname, connection->port, NULL, false)) {
         SQCloudResult *result = internal_run_command(connection, buffer, blen, false);
         if (!SQCloudResultIsOK(result)) return result;
+        internal_parse_uuid(connection, buffer, blen);
         pthread_create(&connection->tid, NULL, pubsub_thread, (void *)connection);
     } else {
         return NULL;
@@ -369,7 +392,7 @@ static SQCloudResult *internal_setup_pubsub(SQCloudConnection *connection, const
 }
 
 static SQCloudResult *internal_rowset_type(SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart, SQCloudResType type) {
-    SQCloudResult *rowset = (SQCloudResult *)mem_alloc(sizeof(SQCloudResult));
+    SQCloudResult *rowset = (SQCloudResult *)mem_zeroalloc(sizeof(SQCloudResult));
     if (!rowset) {
         internal_set_error(connection, 1, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
         return NULL;
@@ -385,7 +408,7 @@ static SQCloudResult *internal_rowset_type(SQCloudConnection *connection, char *
 }
 
 static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart, uint32_t nrows, uint32_t ncols) {
-    SQCloudResult *rowset = (SQCloudResult *)mem_alloc(sizeof(SQCloudResult));
+    SQCloudResult *rowset = (SQCloudResult *)mem_zeroalloc(sizeof(SQCloudResult));
     if (!rowset) {
         internal_set_error(connection, 1, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
         return NULL;
@@ -479,7 +502,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         
         // try to allocate a buffer big enough to hold uncompressed data + raw header
         long clonelen = ulen + (zdata - hstart) + 1;
-        clone = mem_malloc (clonelen);
+        clone = mem_alloc (clonelen);
         if (!clone) {
             internal_set_error(connection, 1, "Unable to allocate memory to uncompress buffer: %d.", clonelen);
             if (!isstatic) mem_free(buffer);
@@ -665,7 +688,7 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool 
         if (clen + cstart + 1 != tread) {
             // check buffer allocation and continue reading
             if (clen + cstart > blen) {
-                char *clone = mem_malloc(clen + cstart + 1);
+                char *clone = mem_alloc(clen + cstart + 1);
                 if (!clone) {
                     internal_set_error(connection, 1, "Unable to allocate memory: %d.", clen + cstart + 1);
                     goto abort_read;
@@ -908,7 +931,7 @@ bool SQCloudForwardExec(SQCloudConnection *connection, const char *command, bool
 SQCloudConnection *SQCloudConnect(const char *hostname, int port, SQCloudConfig *config) {
     internal_init();
     
-    SQCloudConnection *connection = mem_alloc(sizeof(SQCloudConnection));
+    SQCloudConnection *connection = mem_zeroalloc(sizeof(SQCloudConnection));
     if (!connection) return NULL;
     
     internal_connect(connection, hostname, port, config, true);
@@ -935,7 +958,11 @@ void SQCloudDisconnect (SQCloudConnection *connection) {
     
     // free memory
     if (connection->hostname) {
-        free(connection->hostname);
+        mem_free(connection->hostname);
+    }
+    
+    if (connection->uuid) {
+        mem_free(connection->uuid);
     }
     
     mem_free(connection);
@@ -954,6 +981,10 @@ SQCloudResult *SQCloudSetPubSubOnly (SQCloudConnection *connection) {
     
     const char *command = "PUBSUB ONLY";
     return internal_run_command(connection, command, strlen(command), true);
+}
+
+char *SQCloudUUID (SQCloudConnection *connection) {
+    return connection->uuid;
 }
 
 // MARK: -

@@ -14,8 +14,8 @@
 extern "C" {
 #endif
 
-#define SQCLOUD_SDK_VERSION         "0.3.5"
-#define SQCLOUD_SDK_VERSION_NUM     0x000305
+#define SQCLOUD_SDK_VERSION         "0.3.9"
+#define SQCLOUD_SDK_VERSION_NUM     0x000309
 #define SQCLOUD_DEFAULT_PORT        8860
 #define SQCLOUD_DEFAULT_TIMEOUT     12
 
@@ -54,6 +54,7 @@ typedef enum {
 
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command);
+char *SQCloudUUID (SQCloudConnection *connection);
 void SQCloudDisconnect (SQCloudConnection *connection);
 void SQCloudSetPubSubCallback (SQCloudConnection *connection, SQCloudPubSubCB callback, void *data);
 SQCloudResult *SQCloudSetPubSubOnly (SQCloudConnection *connection);
