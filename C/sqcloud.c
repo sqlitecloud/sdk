@@ -424,7 +424,7 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
     rowset->ncols = ncols;
     rowset->data = (char **) mem_alloc(nrows * ncols * sizeof(char *));
     rowset->name = (char **) mem_alloc(ncols * sizeof(char *));
-    rowset->clen = (uint32_t *) mem_alloc(ncols * sizeof(uint32_t));
+    rowset->clen = (uint32_t *) mem_zeroalloc(ncols * sizeof(uint32_t));
     if (!rowset->data || !rowset->name || !rowset->clen) goto abort_rowset;
     
     buffer += bstart;
