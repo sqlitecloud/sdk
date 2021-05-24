@@ -639,7 +639,7 @@ static bool internal_socker_forward_read (SQCloudConnection *connection, bool (*
         }
         
         // check if read is complete
-        if (clen + cstart + 1 != tread) continue;
+        if (clen + cstart + 1 == tread) break;
     }
     
     return true;
