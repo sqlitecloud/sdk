@@ -173,6 +173,8 @@ static void *pubsub_thread (void *arg) {
     
     size_t blen = 2048;
     char *buffer = mem_alloc(blen);
+    if (buffer == NULL) return NULL;
+    
     char *original = buffer;
     
     while (1) {
@@ -240,6 +242,8 @@ static void *pubsub_thread (void *arg) {
         
         blen = 2048;
         buffer = mem_alloc(blen);
+        if (!buffer) break;
+        
         original = buffer;
     }
     
