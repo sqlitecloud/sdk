@@ -176,7 +176,8 @@ static void *pubsub_thread (void *arg) {
     if (buffer == NULL) return NULL;
     
     char *original = buffer;
-    
+    uint32_t tread = 0;
+
     while (1) {
         fd_set set;
         FD_ZERO(&set);
@@ -187,7 +188,6 @@ static void *pubsub_thread (void *arg) {
         if (rc <= 0) continue;
         
         //  read payload string
-        uint32_t tread = 0;
         ssize_t nread = readsocket(fd, buffer, blen);
         
         if (nread < 0) {
@@ -245,6 +245,7 @@ static void *pubsub_thread (void *arg) {
         if (!buffer) break;
         
         original = buffer;
+        tread = 0;
     }
     
     return NULL;
