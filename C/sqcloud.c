@@ -636,10 +636,10 @@ static bool internal_socker_forward_read (SQCloudConnection *connection, bool (*
         // determine command length
         if (clen == 0) {
             clen = internal_parse_number (&original[1], tread-1, &cstart);
-            if (clen == 0) continue;
             
             // handle special cases
-            if ((original[0] == CMD_INT) || (original[0] == CMD_FLOAT)) clen = 0;
+            if ((original[0] == CMD_INT) || (original[0] == CMD_FLOAT) || (original[0] == CMD_NULL)) clen = 0;
+            else if (clen == 0) continue;
         }
         
         // check if read is complete
@@ -683,7 +683,7 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool 
         uint32_t clen = internal_parse_number (&original[1], tread-1, &cstart);
         
         // handle special cases
-        if ((original[0] == CMD_INT) || (original[0] == CMD_FLOAT)) clen = 0;
+        if ((original[0] == CMD_INT) || (original[0] == CMD_FLOAT) || (original[0] == CMD_NULL)) clen = 0;
         else if (clen == 0) continue;
         
         // check if read is complete
