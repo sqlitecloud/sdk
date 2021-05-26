@@ -78,7 +78,8 @@ bool do_process_file (SQCloudConnection *conn, const char *filename) {
     while (fgets(line, sizeof(line), file)) {
         line[strcspn(line, "\n")] = 0;
         if (strcasecmp(line, ".PROMPT")==0) {should_continue = true; break;}
-        do_command_without_ok_reply(conn, line);
+        printf(">> %s\n", line);
+        do_command(conn, line);
     }
     
     fclose(file);
