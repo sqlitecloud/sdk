@@ -678,12 +678,13 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool 
         blen -= (uint32_t)nread;
         buffer += nread;
         
+        // parse buffer looking for command length
         uint32_t cstart = 0;
         uint32_t clen = internal_parse_number (&original[1], tread-1, &cstart);
-        if (clen == 0) continue;
         
         // handle special cases
         if ((original[0] == CMD_INT) || (original[0] == CMD_FLOAT)) clen = 0;
+        else if (clen == 0) continue;
         
         // check if read is complete
         // clen is the lenght parsed in the buffer
