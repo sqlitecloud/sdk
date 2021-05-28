@@ -932,6 +932,12 @@ bool SQCloudForwardExec(SQCloudConnection *connection, const char *command, bool
     return true;
 }
 
+SQCloudResult *SQCloudSetUUID (SQCloudConnection *connection, const char *UUID) {
+    char command[512];
+    snprintf(command, sizeof(command), "SET CLIENT UUID TO %s", UUID);
+    return internal_run_command(connection, command, strlen(command), true);
+}
+
 // MARK: - PUBLIC -
 
 SQCloudConnection *SQCloudConnect(const char *hostname, int port, SQCloudConfig *config) {

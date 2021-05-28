@@ -82,9 +82,6 @@ float SQCloudRowSetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col
 double SQCloudRowSetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t col);
 void SQCloudRowSetDump (SQCloudResult *result, uint32_t maxline);
 
-// reserved
-bool SQCloudForwardExec(SQCloudConnection *connection, const char *command, bool (*forward_cb) (char *buffer, size_t blen, void *xdata), void *xdata);
-
 #ifdef __cplusplus
 }
 #endif
