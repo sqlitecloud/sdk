@@ -98,6 +98,9 @@ struct SQCloudResult {
     uint32_t        blen;                   // buffer real length
     double          time;                   // full execution time (latency + server side time)
     
+    bool            unmanagedbuffer;        // true if the buffer is managed by the caller code
+                                            // false if the buffer can be freed by the SQCloudResultFree func
+    
     // used in TYPE_ROWSET
     uint32_t        nrows;                  // number of rows
     uint32_t        ncols;                  // number of columns
@@ -916,7 +919,9 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
 
 SQCloudResult *sqcloud_parse_buffer (char *buffer, uint32_t blen, uint32_t cstart) {
     SQCloudConnection connection = {0};
-    return internal_parse_buffer(&connection, buffer, blen, cstart, false);
+    SQCloudResult *res = internal_parse_buffer(&connection, buffer, blen, cstart, false);
+    res->unmanagedbuffer = true;
+    return res;
 }
 
 uint32_t sqcloud_parse_number (char *buffer, uint32_t blen, uint32_t *cstart) {
@@ -1035,7 +1040,7 @@ void SQCloudResultFree (SQCloudResult *result) {
     if (!result) return;
     if (result == &SQCloudResultOK) return;
     
-    mem_free(result->rawbuffer);
+    if (!result->unmanagedbuffer) mem_free(result->rawbuffer);
     
     if (result->tag == RESULT_ROWSET) {
         mem_free(result->name);
