@@ -749,6 +749,20 @@ static bool internal_socket_write (SQCloudConnection *connection, const char *bu
     return true;
 }
 
+static void internal_socket_set_timeout (int sockfd, int timeout_secs) {
+    #ifdef _WIN32
+    DWORD timeout = timeout_secs * 1000;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof timeout);
+    setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof timeout);
+    #else
+    struct timeval tv;
+    tv.tv_sec = timeout_secs;
+    tv.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+    setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof tv);
+    #endif
+}
+
 static bool internal_connect (SQCloudConnection *connection, const char *hostname, int port, SQCloudConfig *config, bool mainfd) {
     // ipv4/ipv6 specific variables
     struct addrinfo hints, *addr_list = NULL, *addr;
@@ -909,6 +923,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
         connection->fd = sockfd;
         connection->port = port;
         connection->hostname = strdup(hostname);
+        if (config && config->timeout) internal_socket_set_timeout(connection->fd, config->timeout);
     } else {
         connection->pubsubfd = sockfd;
     }
