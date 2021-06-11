@@ -22,6 +22,8 @@
 static bool skip_ok = false;
 
 void do_print (SQCloudConnection *conn, SQCloudResult *res) {
+    if (!res) return;
+    
     SQCloudResType type = SQCloudResultType(res);
     switch (type) {
         case RESULT_OK:
@@ -147,7 +149,7 @@ int main(int argc, char * argv[]) {
             linenoiseHistorySave(CLI_HISTORY_FILENAME);
         }
         if (strncmp(command, "EXIT", 4) == 0) break;
-        if (strlen(command) > 2) do_command(conn, command);
+        do_command(conn, command);
     }
     if (command) free(command);
     

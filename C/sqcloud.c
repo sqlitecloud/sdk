@@ -79,6 +79,8 @@
 #define CMD_PUBSUB                          '|'
 #define CMD_COMMAND                         '^'
 
+#define CMD_MINLEN                          2
+
 // MARK: -
 
 static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool mainfd);
@@ -374,6 +376,8 @@ static char *internal_parse_value (char *buffer, uint32_t *len, uint32_t *cellsi
 
 static SQCloudResult *internal_run_command(SQCloudConnection *connection, const char *buffer, size_t blen, bool mainfd) {
     internal_clear_error(connection);
+    
+    if (!buffer || blen < CMD_MINLEN) return NULL;
     
     TIME_GET(tstart);
     if (!internal_socket_write(connection, buffer, blen, mainfd)) return false;
