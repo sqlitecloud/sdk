@@ -47,7 +47,7 @@ void do_print (SQCloudConnection *conn, SQCloudResult *res) {
             break;
             
         case RESULT_ROWSET:
-            SQCloudRowSetDump(res, 0);
+            SQCloudRowsetDump(res, 0);
             break;
     }
     

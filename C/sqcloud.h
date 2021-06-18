@@ -69,18 +69,18 @@ char *SQCloudResultBuffer (SQCloudResult *result);
 void SQCloudResultFree (SQCloudResult *result);
 bool SQCloudResultIsOK (SQCloudResult *result);
 
-SQCloudValueType SQCloudRowSetValueType (SQCloudResult *result, uint32_t row, uint32_t col);
-char *SQCloudRowSetColumnName (SQCloudResult *result, uint32_t col, uint32_t *len);
-uint32_t SQCloudRowSetRows (SQCloudResult *result);
-uint32_t SQCloudRowSetCols (SQCloudResult *result);
-uint32_t SQCloudRowSetMaxLen (SQCloudResult *result);
-char *SQCloudRowSetCString (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len);
-char *SQCloudRowSetValue (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len);
-int32_t SQCloudRowSetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col);
-int64_t SQCloudRowSetInt64Value (SQCloudResult *result, uint32_t row, uint32_t col);
-float SQCloudRowSetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col);
-double SQCloudRowSetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t col);
-void SQCloudRowSetDump (SQCloudResult *result, uint32_t maxline);
+SQCloudValueType SQCloudRowsetValueType (SQCloudResult *result, uint32_t row, uint32_t col);
+char *SQCloudRowsetColumnName (SQCloudResult *result, uint32_t col, uint32_t *len);
+uint32_t SQCloudRowsetRows (SQCloudResult *result);
+uint32_t SQCloudRowsetCols (SQCloudResult *result);
+uint32_t SQCloudRowsetMaxLen (SQCloudResult *result);
+char *SQCloudRowsetCString (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len);
+char *SQCloudRowsetValue (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len);
+int32_t SQCloudRowsetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col);
+int64_t SQCloudRowsetInt64Value (SQCloudResult *result, uint32_t row, uint32_t col);
+float SQCloudRowsetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col);
+double SQCloudRowsetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t col);
+void SQCloudRowsetDump (SQCloudResult *result, uint32_t maxline);
 
 #ifdef __cplusplus
 }

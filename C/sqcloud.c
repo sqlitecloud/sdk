@@ -1079,50 +1079,57 @@ void SQCloudResultFree (SQCloudResult *result) {
 // SET DATABASE mediastore.sqlite
 // SELECT * FROM Artist LIMIT 10;
 
-static bool SQCloudRowSetSanityCheck (SQCloudResult *result, uint32_t row, uint32_t col) {
+static bool SQCloudRowsetSanityCheck (SQCloudResult *result, uint32_t row, uint32_t col) {
     if (!result || result->tag != RESULT_ROWSET) return false;
     if ((row >= result->nrows) || (col >= result->ncols)) return false;
     return true;
 }
 
-SQCloudValueType SQCloudRowSetValueType (SQCloudResult *result, uint32_t row, uint32_t col) {
-    if (!SQCloudRowSetSanityCheck(result, row, col)) return VALUE_NULL;
+SQCloudValueType SQCloudRowsetValueType (SQCloudResult *result, uint32_t row, uint32_t col) {
+    if (!SQCloudRowsetSanityCheck(result, row, col)) return VALUE_NULL;
     return internal_type(result->data[row*result->ncols+col]);
 }
 
-char *SQCloudRowSetColumnName (SQCloudResult *result, uint32_t col, uint32_t *len) {
+char *SQCloudRowsetColumnName (SQCloudResult *result, uint32_t col, uint32_t *len) {
     if (!result || result->tag != RESULT_ROWSET) return NULL;
     if (col >= result->ncols) return NULL;
+    *len = result->blen - (uint32_t)(result->name[col] - result->rawbuffer);
     return internal_parse_value(result->name[col], len, NULL);
 }
 
-uint32_t SQCloudRowSetRows (SQCloudResult *result) {
-    if (!SQCloudRowSetSanityCheck(result, 0, 0)) return 0;
+uint32_t SQCloudRowsetRows (SQCloudResult *result) {
+    if (!SQCloudRowsetSanityCheck(result, 0, 0)) return 0;
     return result->nrows;
 }
 
-uint32_t SQCloudRowSetCols (SQCloudResult *result) {
-    if (!SQCloudRowSetSanityCheck(result, 0, 0)) return 0;
+uint32_t SQCloudRowsetCols (SQCloudResult *result) {
+    if (!SQCloudRowsetSanityCheck(result, 0, 0)) return 0;
     return result->ncols;
 }
 
-uint32_t SQCloudRowSetMaxLen (SQCloudResult *result) {
-    if (!SQCloudRowSetSanityCheck(result, 0, 0)) return 0;
+uint32_t SQCloudRowsetMaxLen (SQCloudResult *result) {
+    if (!SQCloudRowsetSanityCheck(result, 0, 0)) return 0;
     return result->maxlen;
 }
 
-char *SQCloudRowSetValue (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len) {
-    if (!SQCloudRowSetSanityCheck(result, row, col)) return NULL;
+char *SQCloudRowsetValue (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len) {
+    if (!SQCloudRowsetSanityCheck(result, row, col)) return NULL;
+    
+    // The *len var must contain the remaining length of the buffer pointed by
+    // result->data[row*result->ncols+col]. The caller should not be aware of the
+    // internal implementation of this buffer, so it must be set here.
+    *len = result->blen - (uint32_t)(result->data[row*result->ncols+col] - result->rawbuffer);
     return internal_parse_value(result->data[row*result->ncols+col], len, NULL);
 }
 
-char *SQCloudRowSetCString (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len) {
-    if (!SQCloudRowSetSanityCheck(result, row, col)) return NULL;
+char *SQCloudRowsetCString (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len) {
+    if (!SQCloudRowsetSanityCheck(result, row, col)) return NULL;
+    *len = result->blen - (uint32_t)(result->data[row*result->ncols+col] - result->rawbuffer);
     return internal_parse_value(result->data[row*result->ncols+col], len, NULL);
 }
 
-int32_t SQCloudRowSetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col) {
-    if (!SQCloudRowSetSanityCheck(result, row, col)) return 0;
+int32_t SQCloudRowsetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col) {
+    if (!SQCloudRowsetSanityCheck(result, row, col)) return 0;
     uint32_t len = 0;
     char *value = internal_parse_value(result->data[row*result->ncols+col], &len, NULL);
     
@@ -1131,8 +1138,8 @@ int32_t SQCloudRowSetInt32Value (SQCloudResult *result, uint32_t row, uint32_t c
     return (int32_t)strtol(buffer, NULL, 0);
 }
 
-int64_t SQCloudRowSetInt64Value (SQCloudResult *result, uint32_t row, uint32_t col) {
-    if (!SQCloudRowSetSanityCheck(result, row, col)) return 0;
+int64_t SQCloudRowsetInt64Value (SQCloudResult *result, uint32_t row, uint32_t col) {
+    if (!SQCloudRowsetSanityCheck(result, row, col)) return 0;
     uint32_t len = 0;
     char *value = internal_parse_value(result->data[row*result->ncols+col], &len, NULL);
     
@@ -1141,8 +1148,8 @@ int64_t SQCloudRowSetInt64Value (SQCloudResult *result, uint32_t row, uint32_t c
     return (int64_t)strtoll(buffer, NULL, 0);
 }
 
-float SQCloudRowSetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col) {
-    if (!SQCloudRowSetSanityCheck(result, row, col)) return 0.0;
+float SQCloudRowsetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col) {
+    if (!SQCloudRowsetSanityCheck(result, row, col)) return 0.0;
     uint32_t len = 0;
     char *value = internal_parse_value(result->data[row*result->ncols+col], &len, NULL);
     
@@ -1151,8 +1158,8 @@ float SQCloudRowSetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col
     return (float)strtof(buffer, NULL);
 }
 
-double SQCloudRowSetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t col) {
-    if (!SQCloudRowSetSanityCheck(result, row, col)) return 0.0;
+double SQCloudRowsetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t col) {
+    if (!SQCloudRowsetSanityCheck(result, row, col)) return 0.0;
     uint32_t len = 0;
     char *value = internal_parse_value(result->data[row*result->ncols+col], &len, NULL);
     
@@ -1161,7 +1168,7 @@ double SQCloudRowSetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t c
     return (double)strtod(buffer, NULL);
 }
 
-void SQCloudRowSetDump (SQCloudResult *result, uint32_t maxline) {
+void SQCloudRowsetDump (SQCloudResult *result, uint32_t maxline) {
     uint32_t nrows = result->nrows;
     uint32_t ncols = result->ncols;
     uint32_t blen = result->blen;
