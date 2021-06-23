@@ -22,9 +22,9 @@
 static bool skip_ok = false;
 
 void do_print (SQCloudConnection *conn, SQCloudResult *res) {
-    if (!res) return;
-    
+    // res NULL means to read error message and error code from conn
     SQCloudResType type = SQCloudResultType(res);
+    
     switch (type) {
         case RESULT_OK:
             if (skip_ok) return;
@@ -150,6 +150,7 @@ int main(int argc, char * argv[]) {
         }
         if (strncmp(command, "EXIT", 4) == 0) break;
         do_command(conn, command);
+        if (strncmp(command, "QUIT", 4) == 0) break;
     }
     if (command) free(command);
     
