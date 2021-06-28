@@ -1122,12 +1122,6 @@ char *SQCloudRowsetValue (SQCloudResult *result, uint32_t row, uint32_t col, uin
     return internal_parse_value(result->data[row*result->ncols+col], len, NULL);
 }
 
-char *SQCloudRowsetCString (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len) {
-    if (!SQCloudRowsetSanityCheck(result, row, col)) return NULL;
-    *len = result->blen - (uint32_t)(result->data[row*result->ncols+col] - result->rawbuffer);
-    return internal_parse_value(result->data[row*result->ncols+col], len, NULL);
-}
-
 int32_t SQCloudRowsetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col) {
     if (!SQCloudRowsetSanityCheck(result, row, col)) return 0;
     uint32_t len = 0;

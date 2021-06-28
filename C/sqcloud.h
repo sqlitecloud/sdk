@@ -74,7 +74,6 @@ char *SQCloudRowsetColumnName (SQCloudResult *result, uint32_t col, uint32_t *le
 uint32_t SQCloudRowsetRows (SQCloudResult *result);
 uint32_t SQCloudRowsetCols (SQCloudResult *result);
 uint32_t SQCloudRowsetMaxLen (SQCloudResult *result);
-char *SQCloudRowsetCString (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len);
 char *SQCloudRowsetValue (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len);
 int32_t SQCloudRowsetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col);
 int64_t SQCloudRowsetInt64Value (SQCloudResult *result, uint32_t row, uint32_t col);
