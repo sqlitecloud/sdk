@@ -1057,7 +1057,7 @@ char *SQCloudResultBuffer (SQCloudResult *result) {
 
 void SQCloudResultFree (SQCloudResult *result) {
     if (!result) return;
-    if (result == &SQCloudResultOK) return;
+    if (result == &SQCloudResultOK || result == &SQCloudResultNULL) return;
     
     if (!result->unmanagedbuffer) mem_free(result->rawbuffer);
     
