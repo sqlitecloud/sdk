@@ -35,7 +35,7 @@ In SCSP, the type of data depends on the first byte:
 * For **PSUB** the first byte is `|`
 * For **Command** the first byte is `^`
 
-If the encoding does not include an explicit LEN value then the whole encoded value is terminated by a `  ` space character.
+If the encoding does not include an explicit LEN value then the whole encoded value is terminated by a ` ` space character.
 
 ### SCSP Strings
 The format is `+LEN STRING `. The whole command is built by four parts:
