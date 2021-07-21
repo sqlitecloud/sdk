@@ -47,7 +47,6 @@ The format is `+LEN STRING `. The whole command is built by four parts:
 For example to send the string "Hello World!" the command would be: `+12 Hello World!`
 
 ### SCSP Zero-Terminated Strings
-
 The format is `!LEN STRING0 `. See **SCSP Strings** for details, the only difference is that `STRING` is sent with a 0 at the end (for better performance in C-like environment that requires Zero-Terminated strings). The LEN field includes the 0 at the end.
 
 For example to send the string "Hello World!" the command would be: `!13 Hello World!0`
@@ -76,7 +75,6 @@ The format is `*LEN NROWS NCOLS DATA`. The whole command is built by eight parts
    2. The next NROWS * NCOLS fields are SCSP encoded values
 
 ### SCSP **Rowset** Chunk
-
 A Rowset can be sent as a series of multiple chunks (based on user-specific settings) when its size exceeds a pre-defined value. This can be useful to reduce the memory usage (especially on the server-side) with the disadvantage of increasing the time required to process the whole Rowset on the client-side (due to the increased network latency).
 
 The format is `/LEN NROWS NCOLS DATA`. The command is equal to the SCSP Rowset specification, except for the following differences:
@@ -89,7 +87,7 @@ The format is `/LEN NROWS NCOLS DATA`. The command is equal to the SCSP Rowset s
 ### SCSP JSON
 When the first character is `{` that means that the whole packet is guarantee to be a valid JSON value that can be parsed with a JSON parser.
 
-## SCSP NULL
+### SCSP NULL
 The null type is encoded just as `_ `, which is just the underscore character followed by the ` ` space character.
 
 ### SCSP Compression
@@ -101,3 +99,5 @@ Any value can be compressed and the format is `%LEN COMPRESSED UNCOMPRESSED BUFF
 5. UNCOMPRESSED is a string representation of the uncompressed BUFFER size
 6. BUFFER can be a **SCSP Rowset** or a **SCSP Rowset chunk**.
 
+---
+```Last revision: July 21th, 2021```
