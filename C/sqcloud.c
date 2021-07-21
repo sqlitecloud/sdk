@@ -86,7 +86,7 @@
 static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool mainfd);
 static bool internal_socket_write (SQCloudConnection *connection, const char *buffer, size_t len, bool mainfd);
 static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cstart);
-static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t cstart, bool isstatic);
+static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t cstart, bool isstatic, bool externalbuffer);
 static bool internal_connect (SQCloudConnection *connection, const char *hostname, int port, SQCloudConfig *config, bool mainfd);
 
 // MARK: -
@@ -100,7 +100,7 @@ struct SQCloudResult {
     uint32_t        blen;                   // buffer real length
     double          time;                   // full execution time (latency + server side time)
     
-    bool            unmanagedbuffer;        // true if the buffer is managed by the caller code
+    bool            externalbuffer;         // true if the buffer is managed by the caller code
                                             // false if the buffer can be freed by the SQCloudResultFree func
     
     // used in TYPE_ROWSET
@@ -240,7 +240,7 @@ static void *pubsub_thread (void *arg) {
             continue;
         }
         
-        SQCloudResult *result = internal_parse_buffer(connection, original, tread, (clen) ? cstart : 0, false);
+        SQCloudResult *result = internal_parse_buffer(connection, original, tread, (clen) ? cstart : 0, false, false);
         if (result->tag == RESULT_STRING) result->tag = RESULT_JSON;
         
         connection->callback(connection, result, connection->data);
@@ -475,7 +475,7 @@ abort_rowset:
     return NULL;
 }
 
-static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t cstart, bool isstatic) {
+static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t cstart, bool isstatic, bool externalbuffer) {
     if (blen <= 1) return false;
     
     // try to check if it is a OK reply: +2 OK
@@ -517,7 +517,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         clone = mem_alloc (clonelen);
         if (!clone) {
             internal_set_error(connection, 1, "Unable to allocate memory to uncompress buffer: %d.", clonelen);
-            if (!isstatic) mem_free(buffer);
+            if (!isstatic && !externalbuffer) mem_free(buffer);
             return NULL;
         }
         
@@ -528,16 +528,21 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         uint32_t rc = LZ4_decompress_safe(zdata, clone + (zdata - hstart), clen, ulen);
         if (rc <= 0 || rc != ulen) {
             internal_set_error(connection, 1, "Unable to decompress buffer (err code: %d).", rc);
-            if (!isstatic) mem_free(buffer);
+            if (!isstatic && !externalbuffer) mem_free(buffer);
             return NULL;
         }
         
         // decompression is OK so replace buffer
-        if (!isstatic) mem_free(buffer);
+        if (!isstatic && !externalbuffer) mem_free(buffer);
         
         isstatic = false;
         buffer = clone;
         blen = ulen;
+        
+        // at this point the buffer used in the SQCloudResult is a new one
+        // (clone) allocated few rows above to hold uncompressed data + raw
+        // header, so it externalbuffer is false in this case
+        externalbuffer = false;
     }
     
     // parse reply
@@ -554,7 +559,9 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             if (buffer[0] == CMD_ZEROSTRING) --len;
             else if (buffer[0] == CMD_COMMAND) return internal_run_command(connection, &buffer[cstart+1], len, true);
             else if (buffer[0] == CMD_PUBSUB) return internal_setup_pubsub(connection, &buffer[cstart+1], len);
-            return internal_rowset_type(connection, buffer, len, cstart+1, type);
+            SQCloudResult *res = internal_rowset_type(connection, buffer, len, cstart+1, type);
+            res->externalbuffer = externalbuffer;
+            return res;
         }
             break;
             
@@ -583,7 +590,9 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             
             uint32_t bstart = cstart1 + cstart2 + cstart3 + 1;
             // printf("%.*s\n\n", blen, buffer);
-            return internal_parse_rowset(connection, buffer, blen, bstart, nrows, ncols);
+            SQCloudResult *res = internal_parse_rowset(connection, buffer, blen, bstart, nrows, ncols);
+            res->externalbuffer = externalbuffer;
+            return res;
         }
             break;
         
@@ -595,7 +604,9 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         case CMD_FLOAT: {
             // NUMBER case
             internal_parse_value(buffer, &blen, NULL);
-            return internal_rowset_type(connection, buffer, blen, 1, (buffer[0] == CMD_INT) ? RESULT_INTEGER : RESULT_FLOAT);
+            SQCloudResult *res = internal_rowset_type(connection, buffer, blen, 1, (buffer[0] == CMD_INT) ? RESULT_INTEGER : RESULT_FLOAT);
+            res->externalbuffer = externalbuffer;
+            return res;
         }
             
         case CMD_RAWJSON: {
@@ -716,7 +727,7 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool 
         }
         
         // command is complete so parse it
-        return internal_parse_buffer(connection, original, tread, (clen) ? cstart : 0, (original == header));
+        return internal_parse_buffer(connection, original, tread, (clen) ? cstart : 0, (original == header), false);
     }
     
 abort_read:
@@ -938,8 +949,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
 
 SQCloudResult *sqcloud_parse_buffer (char *buffer, uint32_t blen, uint32_t cstart) {
     SQCloudConnection connection = {0};
-    SQCloudResult *res = internal_parse_buffer(&connection, buffer, blen, cstart, false);
-    res->unmanagedbuffer = true;
+    SQCloudResult *res = internal_parse_buffer(&connection, buffer, blen, cstart, false, true);
     return res;
 }
 
@@ -1059,7 +1069,7 @@ void SQCloudResultFree (SQCloudResult *result) {
     if (!result) return;
     if (result == &SQCloudResultOK || result == &SQCloudResultNULL) return;
     
-    if (!result->unmanagedbuffer) mem_free(result->rawbuffer);
+    if (!result->externalbuffer) mem_free(result->rawbuffer);
     
     if (result->tag == RESULT_ROWSET) {
         mem_free(result->name);
