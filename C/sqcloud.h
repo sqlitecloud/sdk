@@ -25,7 +25,7 @@ typedef struct SQCloudResult        SQCloudResult;
 typedef void (*SQCloudPubSubCB)    (SQCloudConnection *connection, SQCloudResult *result, void *data);
 
 // configuration struct to be passed to the connect function (currently unused)
-typedef struct {
+typedef struct SQCloudConfigStruct {
     const char *username;
     const char *password;
     const char *database;
