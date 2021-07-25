@@ -743,7 +743,8 @@ static bool internal_socket_write (SQCloudConnection *connection, const char *bu
     // write header
     char header[32];
     int hlen = snprintf(header, sizeof(header), "+%zu ", len);
-    writesocket(fd, header, hlen);
+    ssize_t n = writesocket(fd, header, hlen);
+    if (n != hlen) return internal_set_error(connection, 1, "An error occurred while writing header data: %s.", strerror(errno));
     
     // write buffer
     while (written < len) {
