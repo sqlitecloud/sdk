@@ -6,6 +6,7 @@
 
 #include "lz4.h"
 #include "sqcloud.h"
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
@@ -80,6 +81,10 @@
 #define CMD_COMMAND                         '^'
 
 #define CMD_MINLEN                          2
+
+#define CONNSTRING_KEYVALUE_SEPARATOR       '='
+#define CONNSTRING_TOKEN_SEPARATOR          ';'
+
 
 // MARK: -
 
@@ -158,6 +163,43 @@ static uint32_t utf8_len (const char *s, uint32_t nbytes) {
     }
     
     return len;
+}
+
+static char *extract_connection_token (const char *s, char *key, char buffer[256]) {
+    char *target = strstr(s, key);
+    if (!target) return NULL;
+    
+    // find out = separator
+    char *p = target;
+    while (p[0]) {
+        if (p[0] == CONNSTRING_KEYVALUE_SEPARATOR) break;
+        ++p;
+    }
+    
+    // skip =
+    ++p;
+    
+    // skip spaces (if any)
+    while (p[0]) {
+        if (!isspace(p[0])) break;
+        ++p;
+    }
+    
+    // copy value to buffer
+    int len = 0;
+    while (p[0] && len < 255) {
+        if (isspace(p[0])) break;
+        if (p[0] == CONNSTRING_TOKEN_SEPARATOR) break;
+        buffer[len] = p[0];
+        ++len;
+        ++p;
+    }
+    
+    // null-terminate returning value
+    buffer[len] = 0;
+    p = &buffer[0];
+    
+    return p;
 }
 
 // MARK: - PRIVATE -
@@ -983,6 +1025,48 @@ SQCloudConnection *SQCloudConnect(const char *hostname, int port, SQCloudConfig 
     
     internal_connect(connection, hostname, port, config, true);
     return connection;
+}
+
+SQCloudConnection *SQCloudConnectWithString (const char *s) {
+    // format is a comma separated list of (case sensitive)key=value
+    // host=HOSTNAME; port=PORT; username=USERNAME; password=PASSWORD; timeout=TIMEOUT
+    
+    // find host
+    char buffer1[256];
+    char *hostname = extract_connection_token(s, "host", buffer1);
+    if (!hostname) {
+        // if (errmsg) *errmsg = "Missing required host field.";
+        return NULL;
+    }
+    
+    // lookup port (optional)
+    char buffer2[256];
+    char *port_s = extract_connection_token(s, "port", buffer2);
+    int port = (port_s) ? (int)strtol(port_s, NULL, 0) : 6640;
+    
+    // lookup username
+    char buffer3[256];
+    char *username = extract_connection_token(s, "username", buffer3);
+    
+    // lookup password
+    char buffer4[256];
+    char *password = extract_connection_token(s, "password", buffer4);
+    
+    // lookup timeout
+    char buffer5[256];
+    char *timeout_s = extract_connection_token(s, "timeout", buffer5);
+    int timeout = (timeout_s) ? (int)strtol(timeout_s, NULL, 0) : 0;
+    
+    SQCloudConfig *config = NULL;
+    SQCloudConfig sconfig;
+    if (username || password || timeout) {
+        sconfig.username = (username) ? username : NULL;
+        sconfig.password = (password) ? password : NULL;
+        sconfig.timeout = (timeout) ? timeout : 0;
+        config = &sconfig;
+    }
+    
+    return SQCloudConnect(hostname, port, config);
 }
 
 SQCloudResult *SQCloudExec(SQCloudConnection *connection, const char *command) {
