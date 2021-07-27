@@ -53,6 +53,7 @@ typedef enum {
 } SQCloudValueType;
 
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
+SQCloudConnection *SQCloudConnectWithString (const char *s);
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command);
 char *SQCloudUUID (SQCloudConnection *connection);
 void SQCloudDisconnect (SQCloudConnection *connection);
