@@ -4,27 +4,10 @@ import "fmt"
 import "os"
 import "bufio"
 import "strings"
-// import "errors"
+//import "time"
+import "errors"
 
-func (this *SQCloud) Use( Database string ) error {
-	_, err := this.Execute( fmt.Sprintf( "USE DATABASE %s", Database ) )
-	return err
-}
-
-func (this *SQCloudResult ) Dump( MaxLine uint ) {
-	this.bridge_Dump( MaxLine )
-}
-
-
-
-func (this *SQCloud) Compress( Enabled bool ) error {
-	enabled := 0
-	if Enabled {
-		enabled = 1
-	}
-	_, err := this.Execute( fmt.Sprintf( "SET KEY CLIENT_COMPRESSION TO %d", enabled ) )
-	return err
-}
+///// Convenience API's
 
 func (this *SQCloud) ExecuteFiles( FilePathes []string ) error {
 	for _, file := range FilePathes {
@@ -55,10 +38,102 @@ func (this *SQCloud) ExecuteFile( FilePath string ) error {
 	return err
 }
 
+func (this *SQCloud) BeginTransaction() {
 
-// func (this *SQCloud ) GetError() ( int, error ) {
-// 	if this.bridge_IsError() {
-// 		return this.bridge_GetErrorCode(), errors.New( this.bridge_GetErrorMessage() )
-// 	}	
-// 	return 0, nil
-// }
+}
+func (this *SQCloud) EndTransaction() {
+	
+}
+func (this *SQCloud) RollBackTransaction() {
+	
+}
+
+func (this *SQCloud) AutoCommit( Enabled bool ) {
+	
+}
+
+func (this *SQCloud) Compress( Enabled bool ) error {
+	switch Enabled {
+	  case false: return this.Execute( "SET KEY CLIENT_COMPRESSION TO 0" )
+	  default: 		return this.Execute( "SET KEY CLIENT_COMPRESSION TO 1" )
+	}
+}
+
+
+
+
+func (this *SQCloud) SelectSingleString( SQL string ) ( string, error ) {
+	result, err := this.SelectStringList( SQL )
+	if err != nil {
+		switch len( result ) {
+			case 0:  return ""         , errors.New( "ERROR: Query returned no value (-1)" )
+			case 1:  return result[ 1 ], nil
+			default: return ""         , errors.New( "ERROR: Query returned too many values (-1)" ) 
+		}
+	}
+	return "", err
+}
+func (this *SQCloud) SelectSingleInt64( SQL string ) ( int64, error ) {
+	result, err := this.Select( SQL )
+	if err == nil {
+		if result != nil {
+			if result.GetNumberOfColumns() == 1 {
+				if result.GetNumberOfRows() == 1 {
+					val := result.CGetInt64Value( 0, 0 )
+					result.Free()
+					return val, nil
+				}
+			}
+			result.Free()
+			return 0, errors.New( "ERROR: Query returned not exactly one value (-1)" )
+		}
+		return 0, errors.New( "ERROR: Query returned no result (-1)" )
+	}
+	return 0, err
+}
+
+func (this *SQCloud) SelectStringList( SQL string ) ( []string, error ) {
+	stringList := []string{}
+	result, err := this.Select( SQL )
+	//result.Dump( 150 )
+	//println( result.GetNumberOfColumns() )
+	//println( result.GetNumberOfRows() )
+	if err == nil {
+		if result != nil {
+			if result.GetNumberOfColumns() == 1 {
+				rows :=result.GetNumberOfRows()
+				for row := uint( 0 ); row < rows; row++ {
+					// println( result.CGetStringValue( row, 0 ) )
+					stringList = append( stringList, result.CGetStringValue( row, 0 ) )
+				}
+				result.Free()
+				return stringList, nil
+			}
+			result.Free()
+			return []string{}, errors.New( "ERROR: Query returned not 1 Column (-1)" )
+		}
+		return []string{}, errors.New( "ERROR: Query returned no result (-1)" )
+	}
+	return []string{}, err	
+}
+
+func (this *SQCloud) SelectKeyValues( SQL string ) ( []SQCloudKeyValues, error ) {
+	keyValueList := []SQCloudKeyValues{}
+	result, err := this.Select( SQL )
+	if err == nil {
+		if result != nil {
+			if result.GetNumberOfColumns() == 2 {
+				rows :=result.GetNumberOfRows()
+				for row := uint( 0 ); row < rows; row++ {
+					keyValueList = append( keyValueList, SQCloudKeyValues{ Key: result.CGetStringValue( row, 0 ), Value: result.CGetStringValue( row, 1 ) } )
+				}
+				result.Free()
+				return keyValueList, nil
+			}
+			result.Free()
+			return []SQCloudKeyValues{}, errors.New( "ERROR: Query returned not 2 Columns (-1)" )
+		}
+		return []SQCloudKeyValues{}, errors.New( "ERROR: Query returned no result (-1)" )
+	}
+	return []SQCloudKeyValues{}, err
+}
