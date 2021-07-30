@@ -10,34 +10,6 @@ import "unsafe"
 // import "fmt"
 // import "reflect"
 
-type SQCloud struct {
-  connection 		*C.struct_SQCloudConnection
-
-	Host      		string
-	Port		  		int
-	Username			string
-	Password			string
-	Database  		string
-  Timeout   		int
-	Family    		int
-
-	UUID          string
-
-	ErrorCode   	int
-	ErrorMessage 	string
-}
-
-type SQCloudResult struct {
-	result *C.struct_SQCloudResult
-
-	row uint
-	Rows uint
-
-	Type 	int
-	ErrorCode int
-	ErrorMessage string
-}
-
 // SQCloudResType
 const RESULT_OK 			= C.RESULT_OK
 const RESULT_ERROR 		= C.RESULT_ERROR
@@ -138,8 +110,8 @@ func (this *SQCloud ) CSetPubSubOnly() *SQCloudResult {
 	return &result
 }
 // SQCloudResType SQCloudResultType (SQCloudResult *result);
-func (this *SQCloudResult ) CGetResultType() int {
-	return int( C.SQCloudResultType( this.result ) )
+func (this *SQCloudResult ) CGetResultType() uint {
+	return uint( C.SQCloudResultType( this.result ) )
 }
 // uint32_t SQCloudResultLen (SQCloudResult *result);
 func (this *SQCloudResult ) CGetResultLen() uint {
@@ -161,8 +133,12 @@ func (this *SQCloudResult ) CIsOK() bool {
 func (this *SQCloudResult ) CGetValueType( Row uint, Column uint ) int {
 	return int( C.SQCloudRowsetValueType( this.result, C.uint( Row ), C.uint( Column ) ) )
 }
+// uint32_t SQCloudResultMaxColumnLenght (SQCloudResult *result, uint32_t col) ;
+func (this *SQCloudResult ) CGetMaxColumnLenght( Column uint ) uint {
+	return uint( C.SQCloudResultMaxColumnLenght( this.result, C.uint( Column ) ) )
+}
 // char *SQCloudRowsetColumnName (SQCloudResult *result, uint32_t col, uint32_t *len);
-func (this *SQCloudResult ) CGetColumnName( Row uint, Column uint ) string {
+func (this *SQCloudResult ) CGetColumnName( Column uint ) string {
 	var len C.uint32_t = 0
 	return C.GoStringN( C.SQCloudRowsetColumnName( this.result, C.uint( Column ), &len ), C.int( len ) )
 }
