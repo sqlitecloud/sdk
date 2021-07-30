@@ -4,3 +4,6 @@ License: MIT
 go get https://github.com/deadsy/go-cli
 go get github.com/docopt/docopt-go
 go get github.com/xo/dburl
+
+License: BSD3
+go get github.com/pierrec/lz4
