@@ -1,18 +1,34 @@
 package sqlitecloud
 
+// #include <stdlib.h>
+// #include "sqcloud.h"
+import "C"
+
 import "fmt"
 //import "os"
 //import "bufio"
 import "strings"
 import "errors"
-import "time"
+//mport "time"
 //import "strconv"
 
 import "github.com/xo/dburl"
 
-type SQCloudKeyValues struct {
-	Key 				string
-	Value 			string
+type SQCloud struct {
+  connection 		*C.struct_SQCloudConnection
+
+	Host      		string
+	Port		  		int
+	Username			string
+	Password			string
+	Database  		string
+  Timeout   		int
+	Family    		int
+
+	UUID          string
+
+	ErrorCode   	int
+	ErrorMessage 	string
 }
 
 func init() {
@@ -28,15 +44,27 @@ func init() {
 
 // Creation
 
+func (this *SQCloud) reset() {
+	this.Close()
+	this.resetError()
+	this.Host       = ""
+	this.Port     	= -1
+	this.Username 	= ""
+	this.Password 	= ""
+	this.Database 	= ""
+  this.Timeout  	= -1
+	this.Family   	= -1
+	this.UUID       = ""
+}
+
 func New() *SQCloud {
 	connection := SQCloud{ connection: nil }
 	connection.reset()
 	return &connection
 }
 
-// sqlitecloud://user:pass@host.com:port/dbname?timeout=10&uuid=12342&compress=disabled&sslmode=disabled&family=1
 func Connect( ConnectionString string ) (*SQCloud, error) {
-	u, err := dburl.Parse( ConnectionString ) // "postgresql://user:pass@localhost/mydatabase/?sslmode=disable")
+	u, err := dburl.Parse( ConnectionString ) // sqlitecloud://user:pass@host.com:port/dbname?timeout=10&uuid=12342&compress=disabled&sslmode=disabled&family=1
 	if err == nil {
 
 		host, _	  := parseString( u.Hostname(), "localhost" )
@@ -97,23 +125,6 @@ func Connect( ConnectionString string ) (*SQCloud, error) {
 }
 
 // Connection Functions
-
-func (this *SQCloud) reset() {
-	this.Close()
-	this.resetError()
-	this.Host       = ""
-	this.Port     	= -1
-	this.Username 	= ""
-	this.Password 	= ""
-	this.Database 	= ""
-  this.Timeout  	= -1
-	this.Family   	= -1
-	this.UUID       = ""
-}
-func (this *SQCloud) resetError() {
-	this.ErrorCode    = 0
-	this.ErrorMessage = ""
-}
 
 func (this *SQCloud) Connect( Host string, Port int, Username string, Password string, Database string, Timeout int, Family int ) error {
 	this.reset()
@@ -201,8 +212,22 @@ func (this *SQCloud) IsConnected() bool {
 	return true
 }
 
+// Connection Info Methods
+
+func (this *SQCloud ) GetUUID() string {
+	return this.UUID // this.CGetCloudUUID()
+}
+func (this *SQCloud) SetUUID( UUID string ) error {
+	this.UUID = UUID
+	return this.Execute( fmt.Sprintf( "SET CLIENT UUID TO %s", SQCloudEnquoteString( UUID ) ) )
+}
+
 // Error Methods
 
+func (this *SQCloud) resetError() {
+	this.ErrorCode    = 0
+	this.ErrorMessage = ""
+}
 func (this *SQCloud) IsError() bool {
 	return this.ErrorCode != 0
 }
@@ -219,75 +244,6 @@ func (this *SQCloud ) GetError() ( int, error ) {
 	return this.GetErrorCode(), this.GetErrorMessage()
 }
 
-// Connection Info Methods
-
-func (this *SQCloud ) GetUUID() string {
-	return this.UUID // this.CGetCloudUUID()
-}
-func (this *SQCloud) SetUUID( UUID string ) error {
-	this.UUID = UUID
-	return this.Execute( fmt.Sprintf( "SET CLIENT UUID TO %s", SQCloudEnquoteString( UUID ) ) )
-}
-
-
-
-// ResultSet Methods
-
-func (this *SQCloudResult ) GetType() int {
-	return this.CGetResultType()
-}
-func (this *SQCloudResult ) GetBuffer() string {
-	return this.CGetResultBuffer()
-}
-func (this *SQCloudResult ) GetLength() uint {
-	return this.CGetResultLen()
-}
-func (this *SQCloudResult ) GetMaxLength() uint32 {
-	return this.CGetMaxLen()
-}
-func (this *SQCloudResult ) Free() {
-	this.CFree()
-}
-func (this *SQCloudResult ) IsOK() bool {
-	return this.Type == RESULT_OK
-}
-func (this *SQCloudResult ) GetNumberOfRows() uint {
-	return this.CGetRows()
-}
-func (this *SQCloudResult ) GetNumberOfColumns() uint {
-	return this.CGetColumns()
-}
-func (this *SQCloudResult ) GetValueType( Row uint, Column uint ) int {
-	return this.CGetValueType( Row, Column )
-}
-func (this *SQCloudResult ) GetColumnName( Row uint, Column uint ) string {
-	return this.CGetColumnName( Row, Column )
-}
-func (this *SQCloudResult ) GetStringValue( Row uint, Column uint ) string {
-	return this.CGetStringValue( Row, Column )
-} 
-func (this *SQCloudResult ) GetInt32Value( Row uint, Column uint ) int32 {
-	return this.CGetInt32Value( Row, Column )
-} 
-func (this *SQCloudResult ) GetInt64Value( Row uint, Column uint ) int64 {
-	return this.CGetInt64Value( Row, Column )
-} 
-func (this *SQCloudResult ) GetFloat32Value( Row uint, Column uint ) float32 {
-	return this.CGetFloat32Value( Row, Column )
-} 
-func (this *SQCloudResult ) GetFloat64Value( Row uint, Column uint ) float64 {
-	return this.CGetFloat64Value( Row, Column )
-}
-func (this *SQCloudResult ) Dump( MaxLine uint ) {
-	this.CDump( MaxLine )
-}
-
-// Additional ResultSet Methods
-
-func (this *SQCloudResult ) GetSQLDateTime( Row uint, Column uint ) time.Time {
-	datetime, _ := time.Parse( "2006-01-02 15:04:05", this.CGetStringValue( Row, Column ) )
-	return datetime
-} 
 
 // Data Access Functions
 
@@ -299,11 +255,26 @@ func (this *SQCloud) Select( SQL string ) (*SQCloudResult, error) {
 	this.ErrorMessage = this.CGetErrorMessage()
 
 	if result != nil {
-		result.Rewind()
-		result.Type 				= result.GetType()
-		result.ErrorCode 		= this.ErrorCode
-		result.ErrorMessage = this.ErrorMessage
-		result.Rows         = result.GetNumberOfRows()
+		result.Rows         	= result.CGetRows()
+		result.Columns      	= result.CGetColumns()
+		result.ColumnWidth  	= make( []uint, result.Columns )
+		result.HeaderWidth  	= make( []uint, result.Columns )
+		result.MaxHeaderWidth = 0  
+
+		result.Type 					= result.CGetResultType()
+		result.ErrorCode 			= this.ErrorCode
+		result.ErrorMessage 	= this.ErrorMessage
+		
+		for c := uint( 0 ); c < result.Columns ; c++ {
+			result.HeaderWidth[ c ] = uint( len( result.GetColumnName( c ) ) )
+			result.ColumnWidth[ c ] = result.CGetMaxColumnLenght( c )
+			if result.ColumnWidth[ c ] < result.HeaderWidth[ c ] {
+				result.ColumnWidth[ c ] = result.HeaderWidth[ c ]
+			}
+			if result.MaxHeaderWidth < result.HeaderWidth[ c ] {
+				result.MaxHeaderWidth = result.HeaderWidth[ c ]
+			}
+		}
 	} else {
 		return nil, errors.New( "ERROR: Could not execute SQL command (-1)" )
 	}
@@ -313,47 +284,6 @@ func (this *SQCloud) Select( SQL string ) (*SQCloudResult, error) {
 		return nil, errors.New( fmt.Sprintf( "ERROR: %s (%d)", this.CGetErrorMessage(), this.CGetErrorCode() ) )
 	}
 	return result, nil // nil, nil or *result, nil
-}
-
-// Additional Data Access Functions
-
-func (this *SQCloudResult ) IsError() bool {
-	return this.Type == RESULT_ERROR
-}
-func (this *SQCloudResult ) IsNull() bool {
-	return this.Type == RESULT_NULL
-}
-func (this *SQCloudResult ) IsJson() bool {
-	return this.Type == RESULT_JSON
-}
-func (this *SQCloudResult ) IsString() bool {
-	return this.Type == RESULT_STRING
-}
-func (this *SQCloudResult ) IsInteger() bool {
-	return this.Type == RESULT_INTEGER
-}
-func (this *SQCloudResult ) IsFloat() bool {
-	return this.Type == RESULT_FLOAT
-}
-func (this *SQCloudResult ) IsRowSet() bool {
-	return this.Type == RESULT_ROWSET
-}
-func (this *SQCloudResult ) IsTextual() bool {
-	return this.IsJson() || this.IsString() || this.IsInteger() || this.IsFloat()
-}
-
-func (this *SQCloudResult ) Rewind() {
-	this.row = 0
-}
-func (this *SQCloudResult ) GetNextRow() bool {
-	if !this.IsEOF() {
-		this.row++
-		return true
-	}
-	return false
-}
-func (this *SQCloudResult ) IsEOF() bool {
-	return this.row >= this.Rows
 }
 
 func (this *SQCloud) Execute( SQL string ) error {
@@ -368,30 +298,4 @@ func (this *SQCloud) Execute( SQL string ) error {
 		}
 	}
 	return err
-}
-
-
-
-
-
-// Pub/Sub
-
-func (this *SQCloud ) SetPubSubOnly() *SQCloudResult {
-	return this.CSetPubSubOnly()
-}
-// void SQCloudSetPubSubCallback (SQCloudConnection *connection, SQCloudPubSubCB callback, void *data);
-
-
-
-
-
-
-// Helper functions
-
-func SQCloudEnquoteString( Token string ) string {
-	Token = strings.Replace( Token, "\"", "\"\"", -1 )
-	if strings.Contains( Token, " " ) {
-		return fmt.Sprintf( "\"%s\"", Token )
-	}
-	return Token
 }

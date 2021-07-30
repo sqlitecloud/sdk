@@ -6,6 +6,12 @@ import "bufio"
 import "strings"
 //import "time"
 import "errors"
+//import "io"
+
+type SQCloudKeyValues struct {
+	Key 				string
+	Value 			string
+}
 
 ///// Convenience API's
 
@@ -58,6 +64,13 @@ func (this *SQCloud) Compress( Enabled bool ) error {
 	  default: 		return this.Execute( "SET KEY CLIENT_COMPRESSION TO 1" )
 	}
 }
+
+
+
+
+
+
+
 
 
 
