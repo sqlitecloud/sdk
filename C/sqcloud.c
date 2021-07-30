@@ -1142,7 +1142,7 @@ bool SQCloudResultIsOK (SQCloudResult *result) {
     return (result == &SQCloudResultOK);
 }
 
-uint32_t SQCloudResultLen (SQCloudResult *result) {
+uint32_t SQCloudResultLen (SQCloudResult *result ) {
     return (result) ? result->blen : 0;
 }
 
@@ -1183,6 +1183,10 @@ static bool SQCloudRowsetSanityCheck (SQCloudResult *result, uint32_t row, uint3
 SQCloudValueType SQCloudRowsetValueType (SQCloudResult *result, uint32_t row, uint32_t col) {
     if (!SQCloudRowsetSanityCheck(result, row, col)) return VALUE_NULL;
     return internal_type(result->data[row*result->ncols+col]);
+}
+
+uint32_t SQCloudResultMaxColumnLenght (SQCloudResult *result, uint32_t col) {
+    return (result) ? result->clen[ col ] : 0;
 }
 
 char *SQCloudRowsetColumnName (SQCloudResult *result, uint32_t col, uint32_t *len) {
