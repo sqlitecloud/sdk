@@ -1142,7 +1142,7 @@ bool SQCloudResultIsOK (SQCloudResult *result) {
     return (result == &SQCloudResultOK);
 }
 
-uint32_t SQCloudResultLen (SQCloudResult *result ) {
+uint32_t SQCloudResultLen (SQCloudResult *result) {
     return (result) ? result->blen : 0;
 }
 
@@ -1185,7 +1185,7 @@ SQCloudValueType SQCloudRowsetValueType (SQCloudResult *result, uint32_t row, ui
     return internal_type(result->data[row*result->ncols+col]);
 }
 
-uint32_t SQCloudResultMaxColumnLenght (SQCloudResult *result, uint32_t col) {
+uint32_t SQCloudRowsetRowsMaxColumnLength (SQCloudResult *result, uint32_t col) {
     return (result) ? result->clen[ col ] : 0;
 }
 
