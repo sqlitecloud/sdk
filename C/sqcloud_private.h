@@ -11,6 +11,11 @@
 
 #include "sqcloud.h"
 
+#define SQCloudForwardExec      _reserved1
+#define SQCloudSetUUID          _reserved2
+#define sqcloud_parse_buffer    _reserved3
+#define sqcloud_parse_number    _reserved4
+
 bool SQCloudForwardExec(SQCloudConnection *connection, const char *command, bool (*forward_cb) (char *buffer, size_t blen, void *xdata), void *xdata);
 SQCloudResult *SQCloudSetUUID (SQCloudConnection *connection, const char *UUID);
 
