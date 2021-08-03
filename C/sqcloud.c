@@ -53,6 +53,7 @@
 #define mem_zeroalloc(_s)                   calloc(1,_s)
 #define mem_alloc(_s)                       malloc(_s)
 #define mem_free(_s)                        free(_s)
+#define string_dup(_s)                      strdup(_s)
 #define MIN(a,b)                            (((a)<(b))?(a):(b))
 
 #define MAX_SOCK_LIST                       6           // maximum number of socket descriptor to try to connect to
@@ -1147,6 +1148,125 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     return true;
 }
 
+// MARK: - CONNECTION URL -
+
+static int url_extract_username_password (const char *s, char b1[512], char b2[512]) {
+    // user:pass@host.com:port/dbname?timeout=10&key2=value2&key3=value3
+    
+    // lookup username (if any)
+    char *username = strchr(s, ':');
+    if (!username) return 0;
+    size_t len = username - s;
+    if (len > 511) return -1;
+    memcpy(b1, s, len);
+    b1[len] = 0;
+    
+    // lookup username (if any)
+    char *password = strchr(s, '@');
+    if (!password) return 0;
+    len = password - username - 1;
+    if (len > 511) return -1;
+    memcpy(b2, username+1, len);
+    b2[len] = 0;
+    
+    return (int)(password - s) + 1;
+}
+
+static int url_extract_hostname_port (const char *s, char b1[512], char b2[512]) {
+    // host.com:port/dbname?timeout=10&key2=value2&key3=value3
+    
+    // lookup hostname (if any)
+    char *hostname = strchr(s, ':');
+    if (!hostname) hostname = strchr(s, '/');
+    if (!hostname) hostname = strchr(s, '?');
+    if (!hostname) hostname = strchr(s, 0);
+    if (!hostname) return -1;
+    size_t len = hostname - s;
+    if (len > 511) return -1;
+    memcpy(b1, s, len);
+    b1[len] = 0;
+    
+    // lookup port (if any)
+    char *port = strchr(s, ':');
+    if (port) {
+        char *p = port + 1;
+        ++len;
+        
+        int i = 0;
+        while (p[0]) {
+            if ((p[0] == '/') || (p[0] == '?') || (p[0] == 0)) break;
+            if (i+1 > 511) return -1;
+            b2[i++] = p[0];
+            ++len;
+            ++p;
+        }
+        b2[len] = 0;
+    }
+    
+    // adjust returned len
+    if (s[len] != 0) ++len;
+    
+    return (int)len;
+}
+
+static int url_extract_database (const char *s, char b1[512]) {
+    // dbname?timeout=10&key2=value2&key3=value3
+    
+    // lookup database (if any)
+    char *database = strchr(s, '?');
+    if (database) {
+        size_t len = database - s;
+        if (len > 511) return -1;
+        memcpy(b1, s, len);
+        b1[len] = 0;
+        return (int)(len + 1);
+    }
+    
+    // there is no ? separator character
+    // that means that there should be
+    // no key/value
+    char *guard = strchr(s, '=');
+    if (guard) return 0;
+    
+    // database name is the s string
+    size_t len = strlen(s);
+    if (len > 511) return -1;
+    memcpy(b1, s, len);
+    b1[len] = 0;
+    
+    return (int)len;
+}
+
+static int url_extract_keyvalue (const char *s, char b1[512], char b2[512]) {
+    // timeout=10&key2=value2&key3=value3
+    
+    // lookup key (if any)
+    char *key = strchr(s, '=');
+    if (!key) return 0;
+    size_t len = key - s;
+    if (len > 511) return -1;
+    memcpy(b1, s, len);
+    b1[len] = 0;
+    
+    // lookup username (if any)
+    char *value = strchr(s, '&');
+    if (!value) value = strchr(s, 0);
+    if (!value) return 0;
+    len = value - key - 1;
+    if (len > 511) return -1;
+    memcpy(b2, key+1, len);
+    b2[len] = 0;
+    
+    return (int)(value - s) + 1;
+}
+
+static bool url_sanityze (const char *s) {
+    // sanity check
+    const char domain[] = "sqlitecloud://";
+    int n = sizeof(domain) - 1;
+    return (strncmp(s, domain, n) == 0);
+}
+
 // MARK: - RESERVED -
 
 bool _reserved1 (SQCloudConnection *connection, const char *command, bool (*forward_cb) (char *buffer, size_t blen, void *xdata), void *xdata) {
@@ -1188,45 +1308,59 @@ SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig
 }
 
 SQCloudConnection *SQCloudConnectWithString (const char *s) {
-    // format is a comma separated list of (case sensitive)key=value
-    // host=HOSTNAME; port=PORT; username=USERNAME; password=PASSWORD; timeout=TIMEOUT
-    
-    // TO UPDATE TO THE NEW URL FORMAT
+    // URL STRING FORMAT
     // sqlitecloud://user:pass@host.com:port/dbname?timeout=10&key2=value2&key3=value3
     
-    // find host
-    char buffer1[256];
-    char *hostname = extract_connection_token(s, "host", buffer1);
-    if (!hostname) {
-        // if (errmsg) *errmsg = "Missing required host field.";
-        return NULL;
-    }
+    // sanity check
+    const char domain[] = "sqlitecloud://";
+    int n = sizeof(domain) - 1;
+    if (strncmp(s, domain, n) != 0) return NULL;
     
-    // lookup port (optional)
-    char buffer2[256];
-    char *port_s = extract_connection_token(s, "port", buffer2);
-    int port = (port_s) ? (int)strtol(port_s, NULL, 0) : 6640;
-    
-    // lookup username
-    char buffer3[256];
-    char *username = extract_connection_token(s, "username", buffer3);
-    
-    // lookup password
-    char buffer4[256];
-    char *password = extract_connection_token(s, "password", buffer4);
-    
-    // lookup timeout
-    char buffer5[256];
-    char *timeout_s = extract_connection_token(s, "timeout", buffer5);
-    int timeout = (timeout_s) ? (int)strtol(timeout_s, NULL, 0) : 0;
-    
+    // config struct
     SQCloudConfig *config = NULL;
     SQCloudConfig sconfig;
-    if (username || password || timeout) {
-        sconfig.username = (username) ? username : NULL;
-        sconfig.password = (password) ? password : NULL;
-        sconfig.timeout = (timeout) ? timeout : 0;
+    
+    // lookup for optional username/password
+    char username[512];
+    char password[512];
+    int rc = url_extract_username_password(&s[n], username, password);
+    if (rc == -1) return NULL;
+    if (rc) {
+        sconfig.username = string_dup(username);
+        sconfig.password = string_dup(password);
         config = &sconfig;
+    }
+    
+    // lookup for mandatory hostname
+    n += rc;
+    char hostname[512];
+    char port_s[512];
+    rc = url_extract_hostname_port(&s[n], hostname, port_s);
+    if (rc <= 0) return NULL;
+    int port = (int)strtol(port_s, NULL, 0);
+    if (port == 0) port = SQCLOUD_DEFAULT_PORT;
+    
+    // lookup for optional database
+    n += rc;
+    char database[512];
+    rc = url_extract_database(&s[n], database);
+    if (rc == -1) return NULL;
+    if (rc > 0) {
+        sconfig.database = string_dup(database);
+        config = &sconfig;
+    }
+    
+    // lookup for optional key(s)/value(s)
+    n += rc;
+    char key[512];
+    char value[512];
+    while ((rc = url_extract_keyvalue(&s[n], key, value)) > 0) {
+        if (strcasecmp(key, "timeout")) {
+            int timeout = (int)strtol(value, NULL, 0);
+            sconfig.timeout = (timeout) ? timeout : 0;
+            config = &sconfig;
+        }
+        n += rc;
     }
     
     return SQCloudConnect(hostname, port, config);
