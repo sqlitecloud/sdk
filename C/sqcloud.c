@@ -184,6 +184,7 @@ static uint32_t utf8_len (const char *s, uint32_t nbytes) {
     return len;
 }
 
+#if 0
 static char *extract_connection_token (const char *s, char *key, char buffer[256]) {
     char *target = strstr(s, key);
     if (!target) return NULL;
@@ -220,6 +221,7 @@ static char *extract_connection_token (const char *s, char *key, char buffer[256
     
     return p;
 }
+#endif
 
 // MARK: - PRIVATE -
 
@@ -595,7 +597,7 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
     // check end-chunk condition
     if (nrows == 0 && ncols == 0) {
         connection->_chunk = NULL;
-        mem_free(buffer);
+        if (!rowset->externalbuffer) mem_free(buffer);
         return rowset;
     }
     
@@ -637,9 +639,13 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
         if (rowset->maxlen < len) rowset->maxlen = len;
     }
     
+    // this check if for internal usage only
+    if (connection->fd == 0) return rowset;
+    
+    // normal usage
     // send ACK
     if (!internal_socket_write(connection, "OK", 2, true)) goto abort_rowset;
-    
+        
     // read next chunk
     return internal_socket_read (connection, true);
     
@@ -1260,13 +1266,6 @@ static int url_extract_keyvalue (const char *s, char b1[512], char b2[512]) {
     return (int)(value - s) + 1;
 }
 
-static bool url_sanityze (const char *s) {
-    // sanity check
-    const char domain[] = "sqlitecloud://";
-    int n = sizeof(domain) - 1;
-    return (strncmp(s, domain, n) == 0);
-}
-
 // MARK: - RESERVED -
 
 bool _reserved1 (SQCloudConnection *connection, const char *command, bool (*forward_cb) (char *buffer, size_t blen, void *xdata), void *xdata) {
@@ -1282,8 +1281,9 @@ SQCloudResult *_reserved2 (SQCloudConnection *connection, const char *UUID) {
     return internal_run_command(connection, command, strlen(command), true);
 }
 
-SQCloudResult *_reserved3 (char *buffer, uint32_t blen, uint32_t cstart) {
+SQCloudResult *_reserved3 (char *buffer, uint32_t blen, uint32_t cstart, SQCloudResult *chunk) {
     SQCloudConnection connection = {0};
+    connection._chunk = chunk;
     SQCloudResult *res = internal_parse_buffer(&connection, buffer, blen, cstart, false, true);
     return res;
 }
@@ -1459,7 +1459,7 @@ void SQCloudResultFree (SQCloudResult *result) {
         mem_free(result->data);
         mem_free(result->clen);
         
-        if (result->ischunk) {
+        if (result->ischunk && !result->externalbuffer) {
             for (uint32_t i = 0; i<result->bcount; ++i) {
                 if (result->buffers[i]) mem_free(result->buffers[i]);
             }
