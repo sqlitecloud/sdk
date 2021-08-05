@@ -608,7 +608,7 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
     rowset->blen += blen;
     
     // check end-chunk condition
-    if (nrows == 0 && ncols == 0) {
+    if (idx == 0 && nrows == 0 && ncols == 0) {
         connection->_chunk = NULL;
         if (!rowset->externalbuffer) mem_free(buffer);
         return rowset;
