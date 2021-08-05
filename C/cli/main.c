@@ -14,7 +14,7 @@
 #include "linenoise.h"
 
 #define CLI_HISTORY_FILENAME    ".sqlitecloud_history.txt"
-#define CLI_VERSION             "1.0b1"
+#define CLI_VERSION             "1.0b2"
 #define CLI_BUILD_DATE          __DATE__
 
 // MARK: -
@@ -92,9 +92,7 @@ bool do_process_file (SQCloudConnection *conn, const char *filename) {
 
 void pubsub_callback (SQCloudConnection *connection, SQCloudResult *result, void *data) {
     // THIS CALLBACK IS EXECUTED IN ANOTHER THREAD
-    printf("*** begin pubsub_callback:\n");
     do_print(connection, result);
-    printf("*** end pubsub_callback:\n");
 }
 
 // MARK: -
