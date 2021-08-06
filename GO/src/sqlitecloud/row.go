@@ -15,24 +15,35 @@ type SQCloudResultRow struct {
   rows    uint
   columns uint
 }
+
+// ToJSON returns a JSON representation of this query result row.
+// BUG(andreas): The SQCloudResultRow.ToJSON method is not implemented yet.
 func (this *SQCloudResultRow ) ToJSON() string {
   return "todo" // Use Writer into Buffer
 }
 
-
+// IsFirst returns true if this query result row is the first in the result set, false otherwise.
 func (this *SQCloudResultRow ) IsFirst() bool {
   return this.row == 0
 }
+
+// IsLast returns true if this query result row is the last in the result set, false otherwise.
 func (this *SQCloudResultRow ) IsLast() bool {
   return this.row == this.rows - 1
 }
+
+// IsEOF returns false if this query result row is in the result set, true otherwise.
 func (this *SQCloudResultRow ) IsEOF() bool {
   return this.row >= this.rows
 }
+
+// Rewind resets the iterator and returns the first row in this query result. 
 func (this *SQCloudResultRow ) Rewind() *SQCloudResultRow {
   this.row = 0
   return this
 }
+
+// Next fetches the next row in this query result and returns it, otherwise if there is no next row, nil is returned.
 func (this *SQCloudResultRow ) Next() *SQCloudResultRow {
   if this.row < this.rows - 1 {
     this.row++
@@ -41,74 +52,108 @@ func (this *SQCloudResultRow ) Next() *SQCloudResultRow {
   return nil
 }
 
-
+// GetType returns the type of the value in column Column of this query result row.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
+// Possible return types are: VALUE_INTEGER, VALUE_FLOAT, VALUE_TEXT, VALUE_BLOB, VALUE_NULL
 func (this *SQCloudResultRow ) GetType( Column uint ) int {
   return this.result.GetValueType( this.row, Column )
-} 
+}
 
-func (this *SQCloudResultRow ) IsError( Column uint ) bool {
-  return this.GetType( Column ) == RESULT_ERROR
-}
-func (this *SQCloudResultRow ) IsNull( Column uint ) bool {
-  return this.GetType( Column ) == RESULT_NULL
-}
-func (this *SQCloudResultRow ) IsJson( Column uint ) bool {
-  return this.GetType( Column ) == RESULT_JSON
-}
-func (this *SQCloudResultRow ) IsString( Column uint ) bool {
-  return this.GetType( Column ) == RESULT_STRING
-}
+// IsInteger returns true if this query result row column Column is of type "VALUE_INTEGER", false otherwise.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
 func (this *SQCloudResultRow ) IsInteger( Column uint ) bool {
   return this.GetType( Column ) == RESULT_INTEGER
 }
+
+// IsFloat returns true if this query result row column Column is of type "VALUE_FLOAT", false otherwise.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
 func (this *SQCloudResultRow ) IsFloat( Column uint ) bool {
-  return this.GetType( Column ) == RESULT_FLOAT
+  return this.GetType( Column ) == VALUE_FLOAT
 }
-func (this *SQCloudResultRow ) IsRowSet( Column uint ) bool {
-  return this.GetType( Column ) == RESULT_ROWSET
+
+// IsText returns true if this query result row column Column is of type "VALUE_TEXT", false otherwise.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
+func (this *SQCloudResultRow ) IsText( Column uint ) bool {
+  return this.GetType( Column ) == VALUE_TEXT
 }
+
+// IsBlob returns true if this query result row column Column is of type "VALUE_BLOB", false otherwise.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
+func (this *SQCloudResultRow ) IsBlob( Column uint ) bool {
+  return this.GetType( Column ) == VALUE_BLOB
+}
+
+// IsNull returns true if this query result row column Column is of type "VALUE_NULL", false otherwise.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
+func (this *SQCloudResultRow ) IsNull( Column uint ) bool {
+  return this.GetType( Column ) == RESULT_NULL
+}
+
+// IsTextual returns true if this query result row column Column is of type "VALUE_NULL" or "VALUE_BLOB", false otherwise.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
 func (this *SQCloudResultRow ) IsTextual( Column uint ) bool {
-  return this.IsJson( Column ) || this.IsString( Column ) || this.IsInteger( Column ) || this.IsFloat( Column )
+  return this.IsText( Column ) || this.IsBlob( Column )
 }
 
-
-
-
-func (this *SQCloudResultRow ) GetNameWidth( Column uint ) uint {
-  return this.result.GetNameWidth( Column )
-}
-func (this *SQCloudResultRow ) GetName( Column uint ) string {
-  return this.result.GetColumnName( Column )
-}
+// GetMaxNameWidth returns the number of runes of the longest column name.
 func (this *SQCloudResultRow ) GetMaxNameWidth() uint {
   return this.result.GetMaxNameWidth()
 }
 
+// GetNameWidth returns the number of runes of the column name in the specified column.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
+func (this *SQCloudResultRow ) GetNameWidth( Column uint ) uint {
+  return this.result.GetNameWidth( Column )
+}
 
+// GetName returns the column name in column Column of this query result.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
+func (this *SQCloudResultRow ) GetName( Column uint ) string {
+  return this.result.GetColumnName( Column )
+}
 
+// GetWidth returns the number of runes of the value in the specified column with the maximum length in this query result.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
+// BUG(andreas): Rename GetWidth->GetmaxWidth
 func (this *SQCloudResultRow ) GetWidth( Column uint ) uint {
   return this.result.GetMaxColumnLength( Column )
 }
+
+// GetStringValue returns the contents in column Column of this query result row as string.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
 func (this *SQCloudResultRow ) GetStringValue( Column uint ) string {
   return this.result.GetStringValue( this.row, Column )
-} 
+}
+
+// GetInt32Value returns the contents in column Column of this query result row as int32.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
 func (this *SQCloudResultRow ) GetInt32Value( Column uint ) int32 {
   return this.result.GetInt32Value( this.row, Column )
-} 
+}
+
+// GetInt64Value returns the contents in column Column of this query result row as int64.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
 func (this *SQCloudResultRow ) GetInt64Value( Column uint ) int64 {
   return this.result.GetInt64Value( this.row, Column )
-} 
+}
+
+// GetFloat32Value returns the contents in column Column of this query result row as float32.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
 func (this *SQCloudResultRow ) GetFloat32Value( Column uint ) float32 {
   return this.result.GetFloat32Value( this.row, Column )
-} 
+}
+
+// GetFloat64Value returns the contents in column Column of this query result row as float64.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
 func (this *SQCloudResultRow ) GetFloat64Value( Column uint ) float64 {
   return this.result.GetFloat64Value( this.row, Column )
 }
+
+// GetSQLDateTime parses this query result value in column Column as an SQL-DateTime and returns its value.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
 func (this *SQCloudResultRow ) GetSQLDateTime( Column uint ) time.Time {
   return this.result.GetSQLDateTime( this.row, Column )
 } 
-
-
 
 
 func (this *SQCloudResultRow) renderLine( Format int, Seperator string, MaxLineLength uint ) string {
@@ -125,6 +170,10 @@ func (this *SQCloudResultRow) renderLine( Format int, Seperator string, MaxLineL
   return trimStringToMaxLength( strings.TrimRight( buffer, Seperator ), MaxLineLength )
 }
 
+// DumpToWriter renders this query result row into the buffer of an io.Writer.
+// The output Format can be specified and must be one of the following values: OUTFORMAT_LIST, OUTFORMAT_CSV, OUTFORMAT_QUOTE, OUTFORMAT_TABS, OUTFORMAT_LINE, OUTFORMAT_JSON, OUTFORMAT_HTML, OUTFORMAT_MARKDOWN, OUTFORMAT_TABLE, OUTFORMAT_BOX
+// The Separator argument specifies the column separating string (default: '|'). 
+// All lines are truncated at MaxLineLeength. A MaxLineLangth of '0' means no truncation. 
 func (this *SQCloudResultRow) DumpToWriter( Out io.Writer, Format int, Seperator string, MaxLineLength uint ) ( int, error ) {
   buffer := ""
   
