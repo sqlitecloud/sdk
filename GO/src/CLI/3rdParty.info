@@ -1,5 +1,7 @@
 The following 3rd Party packages where used:
 
+go get -u golang.org/x/tools/cmd/godoc
+
 License: MIT
 go get https://github.com/deadsy/go-cli
 go get github.com/docopt/docopt-go
