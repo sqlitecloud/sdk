@@ -1,14 +1,3 @@
-package sqlitecloud
-
-// #cgo CFLAGS: -Wno-multichar -I../../../C
-// #cgo LDFLAGS: -L. -lsqcloud -ldl
-// #include <stdlib.h>
-// #include "sqcloud.h"
-import "C"
-import "unsafe"
-//import "errors"
-// import "fmt"
-// import "reflect"
 
 // SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
 func CConnect( Host string, Port int, Username string, Password string, Database string, Timeout int, Family int ) *C.struct_SQCloudConnection {
