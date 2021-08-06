@@ -10,10 +10,18 @@ package sqlitecloud
 
 // Pub/Sub
 
-func (this *SQCloud ) SetPubSubOnly() *SQCloudResult {
-	return this.CSetPubSubOnly()
+// Connection Info Methods
+
+// GetUUID returns the UUID as string
+func (this *SQCloud ) GetUUID() string {
+  return this.UUID // this.CGetCloudUUID()
 }
+
+// SetPubSubOnly
+// BUG(andreas): TODO, postponed by Marco
+func (this *SQCloud ) SetPubSubOnly() *SQCloudResult {
+  return this.CSetPubSubOnly()
+}
+
+
 // void SQCloudSetPubSubCallback (SQCloudConnection *connection, SQCloudPubSubCB callback, void *data);
-
-
-
