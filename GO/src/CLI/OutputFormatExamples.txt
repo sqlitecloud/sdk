@@ -95,7 +95,6 @@ sqlite> SELECT * FROM Dummy;
 | Andreas | Langholzstraße   | 91099 |
 | Werner  | Raiffeisenstr. 4 | 96145 |
 +---------+------------------+-------+
-sqlite> 
 
 #
 
@@ -104,16 +103,17 @@ SQLite version 3.35.4 2021-04-02 15:20:15
 Enter ".help" for usage hints.
 sqlite> SELECT * FROM Dummy;
 ┌─────────┬──────────────────┬───────┐
-OutputExamples  Names  │     Address      │  ZIP  │
+│  Names  │     Address      │  ZIP  │
 ├─────────┼──────────────────┼───────┤
 │ Andreas │ Langholzstraße   │ 91099 │
 │ Werner  │ Raiffeisenstr. 4 │ 96145 │
 └─────────┴──────────────────┴───────┘
  
-    sqlite3 -column test.db
+#
+
+sqlite3 -column test.db
 SQLite version 3.35.4 2021-04-02 15:20:15
 Enter ".help" for usage hints.
 sqlite> SELECT * FROM Dummy;
 Andreas  Langholzstraße    91099
 Werner   Raiffeisenstr. 4  96145
-sqlite> 
