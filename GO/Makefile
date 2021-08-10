@@ -4,41 +4,41 @@ install-prerequirements:	patch docopt-go dburl lz4 godoc
 # Linenoise
 go-cli:
 ifeq ($(wildcard src/github.com/deadsy),)
-	go get github.com/deadsy/go-cli
+	-go get -v github.com/deadsy/go-cli
 endif
 
 # Command line arguments
 docopt-go:
 ifeq ($(wildcard src/github.com/docopt),)
-	go get github.com/docopt/docopt-go
+	go get -v github.com/docopt/docopt-go
 endif
 
 # Connection strings
 dburl:
 ifeq ($(wildcard src/github.com/xo),)
-	go get github.com/xo/dburl
+	go get -v github.com/xo/dburl
 endif
 
 # LZ4 compression
 lz4:
 ifeq ($(wildcard src/github.com/pierrec),)
-	go get github.com/pierrec/lz4
+	go get -v github.com/pierrec/lz4
 endif
 
 # Godoc
 godoc:
 ifeq ($(wildcard bin/godoc),)
-	go get -u golang.org/x/tools/cmd/godoc
+	go get -v -u golang.org/x/tools/cmd/godoc
 endif
 
 # Linenoise patching for OSX
 src/github.com/deadsy/go-cli/line.go:	go-cli src/deadsy_line.patch
 	cp src/deadsy_line.patch src/github.com/deadsy/go-cli/line.go
 	
-patch: src/github.com/deadsy/go-cli/line.go
+patch: go-cli src/github.com/deadsy/go-cli/line.go
 
 # Test Programs
-src/Test/test1:	csdk src/Test/test1.go
+src/Test/test1:	src/Test/test1.go
 	go build -o src/Test/test1 src/Test/test1.go
 
 test:	sdk src/Test/test1
@@ -96,6 +96,7 @@ src/sqlitecloud/synthesized-c-proxy.go: ../C/lz4.h ../C/sqcloud_private.h ../C/s
 proxy: src/sqlitecloud/synthesized-c-proxy.go
 	
 clean:
+	rm -rf rm -rf src/github.com src/golang.org/
 	rm -rf src/Test/test1  src/sqlitecloud/libsqcloud.a
 	# rm src/SQLiteCloud/c.go
 

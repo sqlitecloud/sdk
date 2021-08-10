@@ -44,7 +44,7 @@ func main() {
 		res, err := db.Select( "SELECT * FROM Dummy" )
 		if( err == nil ) {
 			fmt.Printf( "Num Rows = %d\r\n", res.GetNumberOfRows() )
-			res.Dump( 80 )
+			res.Dump()
 			res.Free()
 			os.Stderr.WriteString("\r\n")
 			return
