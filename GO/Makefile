@@ -1,5 +1,5 @@
 # Pre-requirements
-install-prerequirements:	patch docopt-go dburl lz4 godoc
+install-prerequirements:	patch docopt-go dburl lz4 godoc gosec
 
 # Linenoise
 go-cli:
@@ -29,6 +29,12 @@ endif
 godoc:
 ifeq ($(wildcard bin/godoc),)
 	go get -u golang.org/x/tools/cmd/godoc
+endif
+
+# gosec
+gosec:
+ifeq ($(wildcard bin/gosec),)
+	curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh
 endif
 
 # Linenoise patching for OSX
@@ -66,6 +72,10 @@ github:
 	
 diff:
 	git difftool
+	
+checksec:	gosec
+	./bin/gosec ./src/sqlitecloud/
+	# ./bin/gosec ./src/CLI/
 
 # Documentation
 doc:	godoc
