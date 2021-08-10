@@ -1,4 +1,4 @@
-# Prerequirements
+# Pre-requirements
 install-prerequirements:	patch docopt-go dburl lz4 godoc
 
 # Linenoise
@@ -31,13 +31,13 @@ ifeq ($(wildcard bin/godoc),)
 	go get -u golang.org/x/tools/cmd/godoc
 endif
 
-# Linenoise pathcing for OSX
-src/github.com/deadsy/go-cli/line.go:	src/deadsy_line.patch
+# Linenoise patching for OSX
+src/github.com/deadsy/go-cli/line.go:	go-cli src/deadsy_line.patch
 	cp src/deadsy_line.patch src/github.com/deadsy/go-cli/line.go
 	
-patch: src/github.com/deadsy/go-cli/line.go go-cli
+patch: src/github.com/deadsy/go-cli/line.go
 
-# Test Programms
+# Test Programs
 src/Test/test1:	csdk src/Test/test1.go
 	go build -o src/Test/test1 src/Test/test1.go
 
@@ -61,12 +61,17 @@ bin/sqlc:	sdk src/CLI/sqlc.go
 	
 cli: bin/sqlc
 
+github:
+	open https://github.com/sqlitecloud/sdk 
+	
+diff:
+	git difftool
 
 # Documentation
 doc:	godoc
 	@echo "Hit CRTL-C to stop the documentation server..."
-	@( sleep 1 && open http:#localhost:6060/pkg/sqlitecloud/ ) &
-	@./bin/godoc -http=:6060 -index -play -goroot /Users/pfeil/GitHub/SqliteCloud/sdk/GO/src/sqlitecloud
+	@( sleep 1 && open http://localhost:6060/pkg/sqlitecloud/ ) &
+	@./bin/godoc -http=:6060 -index -play -goroot ./src/sqlitecloud
 
 src/sqlitecloud/synthesized-c-proxy.go: ../C/lz4.h ../C/sqcloud_private.h ../C/sqcloud.h ../C/lz4.c ../C/sqcloud.c
 	echo "package sqlitecloud" > src/sqlitecloud/synthesized-c-proxy.go
