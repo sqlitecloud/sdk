@@ -28,7 +28,7 @@ endif
 # Godoc
 godoc:
 ifeq ($(wildcard bin/godoc),)
-	go get -v -u golang.org/x/tools/cmd/godoc
+	go get -u golang.org/x/tools/cmd/godoc
 endif
 
 # Linenoise patching for OSX
@@ -38,7 +38,7 @@ src/github.com/deadsy/go-cli/line.go:	go-cli src/deadsy_line.patch
 patch: go-cli src/github.com/deadsy/go-cli/line.go
 
 # Test Programs
-src/Test/test1:	src/Test/test1.go
+src/Test/test1:	sdk src/Test/test1.go
 	go build -o src/Test/test1 src/Test/test1.go
 
 test:	sdk src/Test/test1
@@ -52,7 +52,7 @@ csdk:	src/sqlitecloud/libsqcloud.a
 
 
 # GO SDK
-sdk:	proxy src/sqlitecloud/*.go
+sdk:	install-prerequirements proxy src/sqlitecloud/*.go
 
 
 # CLI App
