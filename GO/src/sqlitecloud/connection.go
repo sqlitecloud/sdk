@@ -2,7 +2,7 @@
 package sqlitecloud
 
 // #include <stdlib.h>
-// #include "sqcloud.h"
+// #include "../../../C/sqcloud.h"
 import "C"
 
 import "fmt"
