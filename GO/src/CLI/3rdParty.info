@@ -9,3 +9,17 @@ go get github.com/xo/dburl
 
 License: BSD3
 go get github.com/pierrec/lz4
+
+
+License: Apache 2.0
+
+https://github.com/securego/gosec
+curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh
+
+./bin/gosec ./src/sqlitecloud/
+Summary:
+  Gosec  : 2.8.1
+  Files  : 5
+  Lines  : 876
+  Nosec  : 0
+  Issues : 0
