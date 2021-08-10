@@ -67,8 +67,8 @@ func (this *SQCloud) ListNodes() ( []string, error ) {
 // Connection Functions
 
 // CloseConnection - INTERNAL SERVER COMMAND: Closes the specified connection.
-func (this *SQCloud) CloseConnection( Connection string ) error {
-  return this.Execute( fmt.Sprintf( "CLOSE CONNECTION %s", SQCloudEnquoteString( Connection ) ) )
+func (this *SQCloud) CloseConnection( ConnectionID string ) error {
+  return this.Execute( fmt.Sprintf( "CLOSE CONNECTION %s", SQCloudEnquoteString( ConnectionID ) ) )
 }
 
 // ListConnections - INTERNAL SERVER COMMAND: Lists all connections of this SQLite Cloud Database Cluster.
@@ -129,10 +129,10 @@ func (this *SQCloud) ListDatabaseConnections( Database string ) ( []SQCloudConne
   return []SQCloudConnection{}, err
 }
 
-// ListDatabaseConnectionIds - INTERNAL SERVER COMMAND: Lists all connections with the specified Id on this SQLite Cloud Database Cluster.
-func (this *SQCloud) ListDatabaseConnectionIds( Id uint ) ( []SQCloudConnection, error ) {
+// ListDatabaseClientConnectionIds - INTERNAL SERVER COMMAND: Lists all connections with the specified DatabaseId on this SQLite Cloud Database Cluster.
+func (this *SQCloud) ListDatabaseClientConnectionIds( DatabaseID uint ) ( []SQCloudConnection, error ) {
   connectionList := []SQCloudConnection{}
-  result, err := this.Select( fmt.Sprintf( "LIST DATABASE CONNECTIONS ID %d", Id ) )
+  result, err := this.Select( fmt.Sprintf( "LIST DATABASE CONNECTIONS ID %d", DatabaseID ) )
   if err == nil {
     if result != nil {
       if result.GetNumberOfColumns() == 2 {
@@ -183,11 +183,12 @@ func (this *SQCloud) CreateDatabase( Database string, Key string, Encoding strin
     sql += fmt.Sprintf( " KEY", SQCloudEnquoteString( Key ) )
   }
   if strings.TrimSpace( Encoding ) != "" {
-    sql += fmt.Sprintf( " ENCODING", SQCloudEnquoteString( Encoding ) )
+    sql += fmt.Sprintf( " ENCODING %s", SQCloudEnquoteString( Encoding ) )
   }
   if NoError {
     sql += " IF NOT EXISTS"
   }
+	// println( sql )
   return this.Execute( sql )
 }
 
@@ -253,22 +254,23 @@ func (this *SQCloud) ListPlugins() ( []SQCloudPlugin, error ) {
   result, err := this.Select( "LIST PLUGINS" )
   if err == nil {
     if result != nil {
-      if result.GetNumberOfColumns() == 6 {
-        rows :=result.GetNumberOfRows()
-        for row := uint( 1 ); row < rows; row++ {
-          pluginList = append( pluginList, SQCloudPlugin{ 
-            Name:        result.CGetStringValue( row, 1 ), 
-            Type:        result.CGetStringValue( row, 2 ),
-            Version:     result.CGetStringValue( row, 3 ),
-            Copyright:   result.CGetStringValue( row, 4 ),
-            Description: result.CGetStringValue( row, 5 ),
+			rows :=result.GetNumberOfRows()
+			for row := uint( 1 ); row < rows; row++ {
+				if result.GetNumberOfColumns() == 5 {
+					pluginList = append( pluginList, SQCloudPlugin{ 
+            Name:        result.CGetStringValue( row, 0 ), 
+            Type:        result.CGetStringValue( row, 1 ),
+            Version:     result.CGetStringValue( row, 2 ),
+            Copyright:   result.CGetStringValue( row, 3 ),
+            Description: result.CGetStringValue( row, 4 ),
           } )
-        }
-        result.Free()
-        return pluginList, nil
-      }
+				} else {
+					result.Free()
+      		return []SQCloudPlugin{}, errors.New( "ERROR: Query returned not 5 Columns (-1)" )
+				}
+			}
       result.Free()
-      return []SQCloudPlugin{}, errors.New( "ERROR: Query returned not 6 Columns (-1)" )
+      return pluginList, nil
     }
     return []SQCloudPlugin{}, nil
   }
@@ -357,13 +359,13 @@ func (this *SQCloud) Ping() error {
   return err
 }
 
-// ListCommands lists all available server commands and retuns them in an array of strings.
+// ListCommands lists all available server commands and returns them in an array of strings.
 func (this *SQCloud) ListCommands() ( []string, error ) {
   return this.SelectStringList( "LIST COMMANDS" )
 }
 
-// ListInfo fetches all SQLite Cloud Database server specific runtime informations and retuns a SQCloudInfo structure.
-func (this *SQCloud) ListInfo() ( SQCloudInfo, error ) {
+// GetInfo fetches all SQLite Cloud Database server specific runtime informations and returns a SQCloudInfo structure.
+func (this *SQCloud) GetInfo() ( SQCloudInfo, error ) {
   info := SQCloudInfo{
     SQLiteVersion:      "0.0.0",
     SQCloudVersion:     "0.0.0",
@@ -402,7 +404,7 @@ func (this *SQCloud) ListInfo() ( SQCloudInfo, error ) {
   return info, err
 }
 
-// ListTables lists all tables in the selected database and retuns them in an array of strings.
+// ListTables lists all tables in the selected database and returns them in an array of strings.
 // If no database was selected with SQCloud.UseDatabase(), an error is returned. 
 func (this *SQCloud) ListTables() ( []string, error ) {
   return this.SelectStringList( "LIST TABLES" )

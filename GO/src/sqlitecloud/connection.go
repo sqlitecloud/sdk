@@ -212,21 +212,18 @@ func (this *SQCloud) reconnect() error {
   if this.connection != nil {
     this.ErrorCode    = this.CGetErrorCode()
     this.ErrorMessage = this.CGetErrorMessage()
- 
     if !this.IsError() {
       if strings.TrimSpace( this.Database ) != "" {
         this.UseDatabase( this.Database )
       }
     }
-
   } else {
-
     this.ErrorCode    = 666
     this.ErrorMessage = "Not enoght memory to allocate a SQCloudConnection."
   }
 
   if this.IsError() {
-    err := errors.New( fmt.Sprintf( "ERROR CONNECTION TO %s: %s (%d)", this.Host, this.ErrorMessage, this.ErrorCode ) )
+    err := errors.New( fmt.Sprintf( "Connecting to database server '%s', %s (%d)", this.Host, this.ErrorMessage, this.ErrorCode ) )
     this.Close()
     return err
   }

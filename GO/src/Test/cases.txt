@@ -1,0 +1,32 @@
+--------------------------------------------------------|
+ command                                                |
+--------------------------------------------------------|
+* ADD [LEARNER] NODE % ADDRESS % CLUSTER % SNAPSHOT %    |
+$ AUTH [USER %] [PASS %]                                 |
+* CLOSE CONNECTION %                                     |
+$ CREATE DATABASE % [KEY %] [ENCODING %] [IF NOT EXISTS] |
+* DISABLE PLUGIN %                                       |
+$ DROP DATABASE % [IF EXISTS]                            |
+$ DROP KEY %                                             |
+* ENABLE PLUGIN %                                        |
+$ GET DATABASE [ID]                                      |
+$ GET KEY %                                              |
+$ LIST COMMANDS                                          |
+$ LIST CONNECTIONS                                       |
+$ LIST DATABASE CONNECTIONS [ID] %                       |
+* LIST DATABASES                                         |
+$ LIST INFO                                              |
+$ LIST NODES                                             |
+$ LIST PLUGINS                                           |
+$ LIST TABLES                                            |  
+$ LIST [%] KEYS                                          |
+$$ LIST [CLIENT|DATABASE] KEYS                           |
+~ LISTEN %                                               |
+! NOTIFY % [%]                                           |
+$ PING                                                   |
+* REMOVE NODE %                                          |
+$ SET KEY % TO %                                         |
+~ UNLISTEN %                                             |
+$ UNUSE DATABASE                                         |
+$ USE DATABASE %                                         |
+--------------------------------------------------------|             

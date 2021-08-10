@@ -13,7 +13,7 @@ Password: <access-token or password>
 
 ```
 
-### Seting up the development environment
+### Setting up the development environment
 ```console
 go env -w GO111MODULE=off
 cd sdk/GO
@@ -22,11 +22,11 @@ echo $GOPATH
 
 ```
 
-### Install and precompile the pre-requirements
-First, you will have to install all the pre-requirements on you machine: `make install-prerequirements`. This will also patch the source code of the linenoise package...
+### Install and compile the pre-requirements
+First, you will have to install all the pre-requirements on your machine: `make install-prerequirements`. This will also patch the source code of the linenoise package...
 
 ### Synthesizing the C Proxy
-The new GO lines are generated out of the C SDK. Every time you change something in the C SDK, you have to go to the SqliteCloud/sdk/GO directory and there you must enter: `make proxy`. This will generate a fresh GO source file out of the C files. Everything gets embedded and when you then compile a GO program, there will be no external dependencies
+The new GO lines are generated out of the C SDK. Every time you change something in the C SDK, you have to go to the SqliteCloud/sdk/GO (`cd $GOPATH`) directory and there you must enter: `make proxy`. This will generate a fresh GO source file out of the C files. Everything gets embedded and then, when you compile a GO program, there will be no external dependencies
 
 ### Precompile the static csdk library
 If you like the pre-compiled C SDK more than the embedded C SDK, you can enter `make csdk`
