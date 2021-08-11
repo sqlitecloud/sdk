@@ -12,7 +12,7 @@ func main() {
 
 	db := sqlitecloud.New()
 
-	err := db.Connect( "***REMOVED***", 8860, "", "", "X", 10, "NO", 0 ) // Host, Port, Username, Password, Database, Timeout, Compression, Family
+	err := db.Connect( "***REMOVED***", 8860, "none empty user", "none empty password", "X", 10, "NO", 0 ) // Host, Port, Username, Password, Database, Timeout, Compression, Family
 	if err == nil {
 		defer db.Close()
 
@@ -54,11 +54,21 @@ func main() {
 		}
 		fmt.Printf( "ok.\r\n" )
 		
+
+
 		fmt.Printf( "Checking USE DATABASE..." )
+		db.CreateDatabase( "X", "", "", true )
 		if err := db.UseDatabase( "X" ); err != nil { // Database
 			fail( err.Error() )
 		}
 		fmt.Printf( "ok.\r\n" )
+
+		// fmt.Printf( "Checking GET DATABASE ID..." )
+		// id, err := db.GetDatabaseID()
+		// if err != nil {
+		// 	fail( err.Error() )
+		// }
+		// fmt.Printf( "ok.\r\n" )
 
 
 		fmt.Printf( "Checking SET KEY..." )
@@ -82,7 +92,7 @@ func main() {
 			fail( err.Error() )
 		} else {
 			if val != "1405" {
-				fail( "Invalid value." )
+				fail( fmt.Sprintf( "Invalid value (%s).", val ) )
 			}
 		}
 		fmt.Printf( "ok.\r\n" )
@@ -136,8 +146,11 @@ func main() {
 		}
 		fmt.Printf( "ok.\r\n" )
 
-		fmt.Printf( "Checking LIST DATABASE CONNECTIONS ID(3)..." )
-		if connections, err := db.ListDatabaseClientConnectionIds( 3 ); err != nil {
+
+	
+
+		fmt.Printf( "Checking LIST DATABASE CONNECTIONS ID %d...", 1 )
+		if connections, err := db.ListDatabaseClientConnectionIds( 1 ); err != nil {
 			fail( err.Error() )
 		} else {
 			if len( connections ) == 0 {
@@ -178,15 +191,15 @@ func main() {
 
 
 
-		fmt.Printf( "Checking LIST NODES..." )
-		if nodes, err := db.ListNodes(); err != nil {
-			fail( err.Error() )
-		} else {
-			if len( nodes ) == 0 {
-				fail( "Ivalid result." )
-			}
-		}
-		fmt.Printf( "ok.\r\n" )
+		// fmt.Printf( "Checking LIST NODES..." )
+		// if nodes, err := db.ListNodes(); err != nil {
+		// 	fail( err.Error() )
+		// } else {
+		// 	if len( nodes ) == 0 {
+		// 		fail( "Ivalid result." )
+		// 	}
+		// }
+		// fmt.Printf( "ok.\r\n" )
 
 		fmt.Printf( "Checking LIST DATABASE KEYS..." )
 		if _, err := db.ListDatabaseKeys(); err != nil {
@@ -203,11 +216,11 @@ func main() {
 		}
 		fmt.Printf( "ok.\r\n" )
 
-		fmt.Printf( "Checking CLOSE CONNECTION..." )
-		if err := db.CloseConnection( "14" ); err != nil { // ConnectionID
-			fail( err.Error() )
-		}
-		fmt.Printf( "ok.\r\n" )
+		// fmt.Printf( "Checking CLOSE CONNECTION..." )
+		// if err := db.CloseConnection( "14" ); err != nil { // ConnectionID
+		// 	fail( err.Error() )
+		// }
+		// fmt.Printf( "ok.\r\n" )
 		
 
 		fmt.Printf( "Success.\r\n" )

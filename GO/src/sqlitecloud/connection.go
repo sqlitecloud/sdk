@@ -307,7 +307,12 @@ func (this *SQCloud ) GetError() ( int, error ) {
 func (this *SQCloud) Select( SQL string ) (*SQCloudResult, error) {
   this.resetError()
 
+	//fmt.Printf( "Executing: <%s>\r\n", SQL )
+
   result           := this.CExec( SQL )
+
+	// fmt.Printf( "Result Type: %d\r\n", result.CGetResultType() )
+
   this.ErrorCode    = this.CGetErrorCode()
   this.ErrorMessage = this.CGetErrorMessage()
 
@@ -346,15 +351,13 @@ func (this *SQCloud) Select( SQL string ) (*SQCloudResult, error) {
 // Execute executes the given query.
 // If the execution was not successful, an error describing the reason of the failure is returned.
 func (this *SQCloud) Execute( SQL string ) error {
-  result, err := this.Select( SQL )
-  if result != nil {
-    
-
-    isOK := result.IsOK()
-    result.Free()
-    if !isOK {
+  if result, err := this.Select( SQL ); result != nil {
+    defer result.Free()
+    if !result.IsOK() {
       return errors.New( "ERROR: Unexpected Result Set (-1)")
     }
-  }
-  return err
+		return err
+  } else {
+		return err
+	}
 }

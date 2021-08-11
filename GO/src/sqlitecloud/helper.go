@@ -18,6 +18,9 @@ func SQCloudEnquoteString( Token string ) string {
   if strings.Contains( Token, " " ) {
     return fmt.Sprintf( "\"%s\"", Token )
   }
+	if Token == "" {
+		return "\"\""
+	}
   return Token
 }
 

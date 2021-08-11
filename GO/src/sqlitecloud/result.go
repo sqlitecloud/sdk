@@ -11,7 +11,8 @@ import "strings"
 import "errors"
 import "time"
 import "io"
-//import "strconv"
+import "strconv"
+import "encoding/json"
 
 // SQCloudResType
 const RESULT_OK           = C.RESULT_OK
@@ -164,6 +165,49 @@ func (this *SQCloudResult ) GetSQLDateTime( Row uint, Column uint ) time.Time {
 // GetBuffer returns the buffer of this query result as string.
 func (this *SQCloudResult ) GetBuffer() string {
   return this.CGetResultBuffer()
+}
+
+func (this *SQCloudResult ) GetBufferAsString() ( string, error ) {
+	if this.IsString() {
+		return this.GetBuffer(), nil
+	}
+	return "", errors.New( "Result is not a string" )
+}
+
+func (this *SQCloudResult ) GetBufferAsJSON() ( object interface{}, err error ) {
+	if this.IsJson() {
+		err = json.Unmarshal( []byte( this.GetBuffer() ), object)
+		return
+	}
+	return "", errors.New( "Result is not a JSON object" )
+}
+
+func (this *SQCloudResult ) GetBufferAsInt32() ( int32, error ) {
+	if this.IsInteger() {
+		value64, err := strconv.ParseInt( this.GetBuffer(), 0, 32 )
+		return int32( value64 ), err
+	}
+	return 0, errors.New( "Result is not an integer number" )
+}
+func (this *SQCloudResult ) GetBufferAsInt64() ( int64, error ) {
+	if this.IsInteger() {
+		return strconv.ParseInt( this.GetBuffer(), 0, 64 )
+	}
+	return 0, errors.New( "Result is not an integer number" )
+}
+
+func (this *SQCloudResult ) GetBufferAsFloat32() ( float32, error ) {
+	if this.IsFloat() {
+		value64, err := strconv.ParseFloat( this.GetBuffer(), 32 )
+		return float32( value64 ), err
+	}
+	return 0, errors.New( "Result is not a float number" )
+}
+func (this *SQCloudResult ) GetBufferAsFloat64() ( float64, error ) {
+	if this.IsFloat() {
+		return strconv.ParseFloat( this.GetBuffer(), 64 )
+	}
+	return 0, errors.New( "Result is not a float number" )
 }
 
 // GetLength returns the length of the buffer of this query result.

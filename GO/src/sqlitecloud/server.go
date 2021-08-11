@@ -130,7 +130,7 @@ func (this *SQCloud) ListDatabaseConnections( Database string ) ( []SQCloudConne
 }
 
 // ListDatabaseClientConnectionIds - INTERNAL SERVER COMMAND: Lists all connections with the specified DatabaseId on this SQLite Cloud Database Cluster.
-func (this *SQCloud) ListDatabaseClientConnectionIds( DatabaseID uint ) ( []SQCloudConnection, error ) {
+func (this *SQCloud) ListDatabaseClientConnectionIds( DatabaseID uint64 ) ( []SQCloudConnection, error ) {
   connectionList := []SQCloudConnection{}
   result, err := this.Select( fmt.Sprintf( "LIST DATABASE CONNECTIONS ID %d", DatabaseID ) )
   if err == nil {
@@ -215,10 +215,23 @@ func (this *SQCloud) GetDatabase() ( string, error ) {
   return this.SelectSingleString( "GET DATABASE " )
 }
 
-// GetDatabaseID - INTERNAL SERVER COMMAND: Gets the ID of the previously selected Database as int64. (see: *SQCloud.UseDatabase())
+// GetDatabaseID - INTERNAL SERVER COMMAND: Gets the ID of the previously selected Database as uint64. (see: *SQCloud.UseDatabase())
 // If no database was selected, an error describing the problem is returned.
-func (this *SQCloud) GetDatabaseID() ( int64, error ) {
-  return this.SelectSingleInt64( "GET DATABASE ID" )
+func (this *SQCloud) GetDatabaseID() ( uint64, error ) {
+	result, err := this.Select( "GET DATABASE ID" )
+	if result != nil {
+		defer result.Free()
+
+		if err != nil {
+			return 0, err
+		}
+
+		// fmt.Printf( "XXX: %d", result.GetType() )
+
+		val, err := result.GetBufferAsInt64()
+		return uint64( val ), err
+	}
+	return 0, err
 }
 
 // UseDatabase - INTERNAL SERVER COMMAND: Selects the specified Database for usage.
@@ -288,7 +301,15 @@ func (this *SQCloud) SetKey( Key string, Value string ) error {
 // If the Key was not found an error is returned.
 // BUG(andreas): If key is not set, DB returns NULL -> does not work with current implementation
 func (this *SQCloud) GetKey( Key string ) ( string, error ) {
-  return this.SelectSingleString( fmt.Sprintf( "GET KEY %s", Key ) )
+	result, err := this.Select( fmt.Sprintf( "GET KEY %s", Key ) )
+	if result != nil {
+		defer result.Free()
+		if err != nil {
+			return "", err
+		}
+		return result.GetBuffer(), nil
+	}
+	return "", err
 }
 
 // DropKey deletes the key value pair referenced with Key.
@@ -309,7 +330,7 @@ func (this *SQCloud) ListClientKeys() ( []SQCloudKeyValues, error ) {
 // ListDatabaseKeys lists all server specific keys and values and returns an array of type SQCloudKeyValues.
 // BUG(marco): ToDo - Not implemented yet.
 func (this *SQCloud) ListDatabaseKeys() ( []SQCloudKeyValues, error ) {
-  return []SQCloudKeyValues{}, errors.New( "not implemented yet (-1)." )
+  //return []SQCloudKeyValues{}, errors.New( "not implemented yet (-1)." )
   return this.SelectKeyValues( "LIST DATABASE KEYS" )
 }
 
@@ -344,19 +365,23 @@ func (this *SQCloud) Unlisten( Channel string ) error {
 // Ping sends the PING command to the SQLite Cloud Database Server and returns nil if it got a PONG answer.
 // If no PONG was received or a timeout occurred, an error describing the problem is retuned.
 func (this *SQCloud) Ping() error {
-  result, err := this.Select( "PING" )
-  if err == nil {
-    if result != nil {
-      defer result.Free()
-      if result.GetType() == RESULT_STRING {
-        if result.CGetResultBuffer() == "PONG" {
-          return nil
-        }
-      }
-    }
-    return errors.New( "ERROR: Unexpected result (-1)" )
-  }
-  return err
+	if result, err := this.Select( "PING" ); result != nil {
+		defer result.Free()
+
+		if err == nil {
+			if retval, err := result.GetBufferAsString(); retval == "PONG" {
+				return err // should be nil on success...
+			} else {
+				return errors.New( "ERROR: Unexpected result (-1)" )
+			}	
+		}
+		return err
+	} else {
+		if err != nil {
+			return err
+		}
+		return errors.New( "Got no result on Ping" )
+	}
 }
 
 // ListCommands lists all available server commands and returns them in an array of strings.
