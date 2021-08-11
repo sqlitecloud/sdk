@@ -908,27 +908,26 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool 
         if (internal_has_commandlen(original[0])) {
             clen = internal_parse_number (&original[1], tread-1, &cstart);
             if (clen == 0) continue;
-        }
-        
-        // check if read is complete
-        // clen is the lenght parsed in the buffer
-        // cstart is the index of the first space
-        // +1 because we skipped the first character in the internal_parse_number function
-        if (clen + cstart + 1 != tread) {
-            // check buffer allocation and continue reading
-            if (clen + cstart > blen) {
-                char *clone = mem_alloc(clen + cstart + 1);
-                if (!clone) {
-                    internal_set_error(connection, 1, "Unable to allocate memory: %d.", clen + cstart + 1);
-                    goto abort_read;
-                }
-                memcpy(clone, original, tread);
-                buffer = original = clone;
-                blen = (clen + cstart + 1) - tread;
-                buffer += tread;
-            }
             
-            continue;
+            // check if read is complete
+            // clen is the lenght parsed in the buffer
+            // cstart is the index of the first space
+            // +1 because we skipped the first character in the internal_parse_number function
+            if (clen + cstart + 1 != tread) {
+                // check buffer allocation and continue reading
+                if (clen + cstart > blen) {
+                    char *clone = mem_alloc(clen + cstart + 1);
+                    if (!clone) {
+                        internal_set_error(connection, 1, "Unable to allocate memory: %d.", clen + cstart + 1);
+                        goto abort_read;
+                    }
+                    memcpy(clone, original, tread);
+                    buffer = original = clone;
+                    blen = (clen + cstart + 1) - tread;
+                    buffer += tread;
+                }
+                continue;
+            }
         }
         
         // command is complete so parse it
