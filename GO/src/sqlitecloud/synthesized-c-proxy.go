@@ -5014,15 +5014,15 @@ import "unsafe"
 // SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
 func CConnect( Host string, Port int, Username string, Password string, Database string, Timeout int, Family int ) *C.struct_SQCloudConnection {
   conf := C.struct_SQCloudConfigStruct{}
-  conf.username = C.CString( Username )
-  conf.password = C.CString( Password )
-  conf.database = C.CString( Database )
+  conf.username = C.CString( SQCloudEnquoteString( Username ) )
+  conf.password = C.CString( SQCloudEnquoteString( Password ) )
+  conf.database = C.CString( SQCloudEnquoteString( Database ) )
   conf.timeout  = C.int( Timeout )
   conf.family   = C.int( Family )
 
   cHost := C.CString( Host )
 
-  cConnection := C.SQCloudConnect( cHost, C.int( Port ), &conf )
+  cConnection := C.SQCloudConnect( cHost, C.int( Port ), &conf ) // nil, &conf
   
   C.free( unsafe.Pointer( cHost ) )
   C.free( unsafe.Pointer( conf.database ) )
@@ -5075,9 +5075,10 @@ func (this *SQCloud ) CExec( Command string ) *SQCloudResult {
   cCommand := C.CString( Command )
   defer C.free( unsafe.Pointer( cCommand ) )
 
-  // println( "exec ("+Command+").." )
+   //println( "exec ("+Command+").." )
 
   result := SQCloudResult{ result: C.SQCloudExec( this.connection, cCommand ) }
+  // println( "done.") 
   if result.result == nil {
     return nil
   }
@@ -5103,7 +5104,8 @@ func (this *SQCloudResult ) CGetResultLen() uint {
 }
 // char *SQCloudResultBuffer (SQCloudResult *result);
 func (this *SQCloudResult ) CGetResultBuffer() string {
-  return C.GoString( C.SQCloudResultBuffer( this.result ) )
+  return C.GoStringN( C.SQCloudResultBuffer( this.result ), C.int( this.CGetResultLen() ) )
+  //return C.GoString( C.SQCloudResultBuffer( this.result ) )
 }
 // void SQCloudResultFree (SQCloudResult *result);
 func (this *SQCloudResult ) CFree() {
