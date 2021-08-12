@@ -1,54 +1,26 @@
 package main
 
-import "os"
-import "fmt"
-//import "strings"
 import "sqlitecloud"
-import "encoding/json"
-
 
 func main() {
-	fmt.Printf( "Simple API test...\r\n")
-
 	db, err := sqlitecloud.Connect( "sqlitecloud://dev1.sqlitecloud.io/X" )
-
-	//db := sqlitecloud.New()
-	//err := db.Connect( "dev1.sqlitecloud.io", 8860, "", "", "X", 10, 0 )
-
-
 	if err == nil {
 		defer db.Close()
 
+		db.CreateDatabase( "X", "", "UTF-8", true )
+		db.Execute( `CREATE TABLE IF NOT EXISTS "Dummy" (ID INTEGER PRIMARY KEY AUTOINCREMENT, FirstName TEXT(20), LastName TEXT(20), ZIP INTEGER, City TEXT, Address TEXT)` )
+		db.Execute( `DELETE FROM Dummy` )
+		db.Execute( `INSERT INTO Dummy ( FirstName, LastName, ZIP, City, Address ) VALUES( 'Some', 'One', 96450, 'Coburg', "Mohrenstrasse 1" )` )
+		db.Execute( `INSERT INTO Dummy ( FirstName, LastName, ZIP, City, Address ) VALUES( 'Someone', 'Else', 96145, 'Sesslach', 'Raiffeisenstrasse 6' )` )
+		db.Execute( `INSERT INTO Dummy ( FirstName, LastName, ZIP, City, Address ) VALUES( 'One', 'More', 91099, 'Poxdorf', "Langholzstr. 4" )` )
 
-		if db.Ping() == nil {
-			fmt.Println( "PONG." )
-		}
+		if res, err := db.Select( "SELECT * FROM Dummy" ); res != nil {
+			defer res.Free()
 
-		db.UseDatabase( "X" )
+			if err == nil {
+				res.Dump()
+				return
 
-		commands, _ := db.ListCommands()
-		jCommands, _ := json.Marshal( commands )
-		fmt.Printf( "LIST COMMANDS:\r\n%v\r\n", string( jCommands ) )
-	
-		info, _ := db.ListInfo()
-		jInfo, _ := json.Marshal( info )
-		fmt.Printf( "LIST INFO:\r\n%v\r\n", string( jInfo ) )
-
-		tables, _ := db.ListTables()
-		jTables, _ := json.Marshal( tables )
-		fmt.Printf( "LIST TABLES:\r\n%v\r\n", string( jTables ) )
-
-		fmt.Printf( "UUID = '%s'\r\n", db.GetUUID() )
-
-		
-		res, err := db.Select( "SELECT * FROM Dummy" )
-		if( err == nil ) {
-			fmt.Printf( "Num Rows = %d\r\n", res.GetNumberOfRows() )
-			res.Dump()
-			res.Free()
-			os.Stderr.WriteString("\r\n")
-			return
-		}
-		panic( err )
-	}
+	} } }
+	panic( err )
 }

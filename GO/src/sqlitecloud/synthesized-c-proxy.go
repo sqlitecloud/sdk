@@ -4269,27 +4269,26 @@ package sqlitecloud
 //         if (internal_has_commandlen(original[0])) {
 //             clen = internal_parse_number (&original[1], tread-1, &cstart);
 //             if (clen == 0) continue;
-//         }
-//         
-//         // check if read is complete
-//         // clen is the lenght parsed in the buffer
-//         // cstart is the index of the first space
-//         // +1 because we skipped the first character in the internal_parse_number function
-//         if (clen + cstart + 1 != tread) {
-//             // check buffer allocation and continue reading
-//             if (clen + cstart > blen) {
-//                 char *clone = mem_alloc(clen + cstart + 1);
-//                 if (!clone) {
-//                     internal_set_error(connection, 1, "Unable to allocate memory: %d.", clen + cstart + 1);
-//                     goto abort_read;
-//                 }
-//                 memcpy(clone, original, tread);
-//                 buffer = original = clone;
-//                 blen = (clen + cstart + 1) - tread;
-//                 buffer += tread;
-//             }
 //             
-//             continue;
+//             // check if read is complete
+//             // clen is the lenght parsed in the buffer
+//             // cstart is the index of the first space
+//             // +1 because we skipped the first character in the internal_parse_number function
+//             if (clen + cstart + 1 != tread) {
+//                 // check buffer allocation and continue reading
+//                 if (clen + cstart > blen) {
+//                     char *clone = mem_alloc(clen + cstart + 1);
+//                     if (!clone) {
+//                         internal_set_error(connection, 1, "Unable to allocate memory: %d.", clen + cstart + 1);
+//                         goto abort_read;
+//                     }
+//                     memcpy(clone, original, tread);
+//                     buffer = original = clone;
+//                     blen = (clen + cstart + 1) - tread;
+//                     buffer += tread;
+//                 }
+//                 continue;
+//             }
 //         }
 //         
 //         // command is complete so parse it
@@ -4350,14 +4349,14 @@ package sqlitecloud
 //         internal_socket_set_timeout(connection->fd, config->timeout);
 //     }
 //     
-//     if (config->username && config->password) {
+//     if (config->username && config->password && strlen(config->username) && strlen(config->password)) {
 //         char buffer[1024];
 //         snprintf(buffer, sizeof(buffer), "AUTH USER %s PASS %s", config->username, config->password);
 //         SQCloudResult *res = internal_run_command(connection, buffer, strlen(buffer), true);
 //         if (res != &SQCloudResultOK) return false;
 //     }
 //     
-//     if (config->database) {
+//     if (config->database && strlen(config->database)) {
 //         char buffer[1024];
 //         snprintf(buffer, sizeof(buffer), "USE DATABASE %s", config->database);
 //         SQCloudResult *res = internal_run_command(connection, buffer, strlen(buffer), true);
@@ -5007,6 +5006,7 @@ package sqlitecloud
 //     printf("\n");
 //     
 //     printf("Rows: %d - Cols: %d - Bytes: %d Time: %f secs", result->nrows, result->ncols, result->blen, result->time);
+//     fflush( stdout );
 // }
 import "C"
 import "unsafe"

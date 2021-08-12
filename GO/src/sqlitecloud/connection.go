@@ -37,7 +37,7 @@ type SQCloud struct {
 func init() {
   dburl.Register( dburl.Scheme {
     Driver: "sc", // sqlitecloud
-    Generator: dburl.GenFromURL("sqlitecloud://user:pass@host.com:8860/dbname?timeout=10&compress=disabled&sslmode=disabled"),
+    Generator: dburl.GenFromURL("sqlitecloud://user:pass@host.com:8860/dbname?timeout=10&compress=NO"),
     Transport: dburl.TransportTCP,
     Opaque: false,
     Aliases: []string{ "sqlitecloud" },
@@ -62,16 +62,19 @@ func ParseConnectionString( ConnectionString string ) ( Host string, Port int, U
     timeout   := 0
     compress  := "NO"
     port      := 0
-    if port, err = strconv.Atoi( u.Port() ); err != nil {
-      port = -1
-    }
+		sPort     := strings.TrimSpace( u.Port() )
+		if len( sPort ) > 0 {
+			if port, err = strconv.Atoi( sPort ); err != nil {
+				return "", -1, "", "", "", -1, "", err
+			}
+		}
 
     for key, values := range u.Query() {
-      lastValue := values[ len( values ) - 1 ]
+      lastValue := strings.TrimSpace( values[ len( values ) - 1 ] )
       switch strings.ToLower( strings.TrimSpace( key ) ) {
       case "timeout":
         if timeout, err = strconv.Atoi( lastValue ); err != nil {
-          timeout = -1
+          return "", -1, "", "", "", -1, "", err
         } 
 
       case "compress":
@@ -158,6 +161,10 @@ func Connect( ConnectionString string ) (*SQCloud, error) {
   if err != nil {
     return nil, err
   }
+
+	if Port == 0 {
+		Port = 8860
+	}
 
   connection := New()
   err = connection.Connect( Host, Port, Username, Password, Database, Timeout, Compress, 0 )
