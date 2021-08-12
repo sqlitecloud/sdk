@@ -1645,4 +1645,5 @@ void SQCloudRowsetDump (SQCloudResult *result, uint32_t maxline) {
     printf("\n");
     
     printf("Rows: %d - Cols: %d - Bytes: %d Time: %f secs", result->nrows, result->ncols, result->blen, result->time);
+    fflush( stdout );
 }
