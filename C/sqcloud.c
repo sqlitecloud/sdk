@@ -988,14 +988,14 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
         internal_socket_set_timeout(connection->fd, config->timeout);
     }
     
-    if (config->username && config->password) {
+    if (config->username && config->password && strlen(config->username) && strlen(config->password)) {
         char buffer[1024];
         snprintf(buffer, sizeof(buffer), "AUTH USER %s PASS %s", config->username, config->password);
         SQCloudResult *res = internal_run_command(connection, buffer, strlen(buffer), true);
         if (res != &SQCloudResultOK) return false;
     }
     
-    if (config->database) {
+    if (config->database && strlen(config->database)) {
         char buffer[1024];
         snprintf(buffer, sizeof(buffer), "USE DATABASE %s", config->database);
         SQCloudResult *res = internal_run_command(connection, buffer, strlen(buffer), true);
