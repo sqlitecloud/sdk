@@ -2,9 +2,9 @@
 // SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
 func CConnect( Host string, Port int, Username string, Password string, Database string, Timeout int, Family int ) *C.struct_SQCloudConnection {
   conf := C.struct_SQCloudConfigStruct{}
-  conf.username = C.CString( SQCloudEnquoteString( Username ) )
-  conf.password = C.CString( SQCloudEnquoteString( Password ) )
-  conf.database = C.CString( SQCloudEnquoteString( Database ) )
+  conf.username = C.CString( Username )
+  conf.password = C.CString( Password )
+  conf.database = C.CString( Database )
   conf.timeout  = C.int( Timeout )
   conf.family   = C.int( Family )
 
@@ -93,7 +93,6 @@ func (this *SQCloudResult ) CGetResultLen() uint {
 // char *SQCloudResultBuffer (SQCloudResult *result);
 func (this *SQCloudResult ) CGetResultBuffer() string {
   return C.GoStringN( C.SQCloudResultBuffer( this.result ), C.int( this.CGetResultLen() ) )
-  //return C.GoString( C.SQCloudResultBuffer( this.result ) )
 }
 // void SQCloudResultFree (SQCloudResult *result);
 func (this *SQCloudResult ) CFree() {

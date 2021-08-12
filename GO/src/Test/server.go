@@ -63,12 +63,12 @@ func main() {
 		}
 		fmt.Printf( "ok.\r\n" )
 
-		// fmt.Printf( "Checking GET DATABASE ID..." )
-		// id, err := db.GetDatabaseID()
-		// if err != nil {
-		// 	fail( err.Error() )
-		// }
-		// fmt.Printf( "ok.\r\n" )
+		fmt.Printf( "Checking GET DATABASE ID..." )
+		id, err := db.GetDatabaseID()
+		if err != nil {
+			fail( err.Error() )
+		}
+		fmt.Printf( "ok.\r\n" )
 
 
 		fmt.Printf( "Checking SET KEY..." )
@@ -149,8 +149,8 @@ func main() {
 
 	
 
-		fmt.Printf( "Checking LIST DATABASE CONNECTIONS ID %d...", 1 )
-		if connections, err := db.ListDatabaseClientConnectionIds( 1 ); err != nil {
+		fmt.Printf( "Checking LIST DATABASE CONNECTIONS ID %d...", id )
+		if connections, err := db.ListDatabaseClientConnectionIds( id ); err != nil {
 			fail( err.Error() )
 		} else {
 			if len( connections ) == 0 {
@@ -169,7 +169,7 @@ func main() {
 		if tables, err := db.ListTables(); err != nil {
 			fail( err.Error() )
 		} else {
-			if len( tables ) != 1 {
+			if len( tables ) < 1 {
 				fail( "Ivalid result." )
 			}
 		}

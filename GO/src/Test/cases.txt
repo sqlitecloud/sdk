@@ -9,11 +9,11 @@
 ✅ DROP DATABASE % [IF EXISTS]                            |
 ✅ DROP KEY %                                             |
 💤 ENABLE PLUGIN %                                        |
-💣 GET DATABASE [ID]                                      |
+✅ GET DATABASE [ID]                                      |
 ✅ GET KEY %                                              |
 ✅ LIST COMMANDS                                          |
 ✅ LIST CONNECTIONS                                       |
-💣 LIST DATABASE CONNECTIONS [ID] %                       |
+✅ LIST DATABASE CONNECTIONS [ID] %                       |
 ✅ LIST DATABASES                                         |
 ✅ LIST INFO                                              |
 💤 LIST NODES                                             |

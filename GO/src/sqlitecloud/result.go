@@ -288,6 +288,7 @@ func (this *SQCloudResult ) GetFloat64Value( Row uint, Column uint ) float64 {
 // The output is truncated at a maximum line width of MaxLineLength runes (compare: SQCloudResult.Dump())
 func (this *SQCloudResult ) DumpToScreen( MaxLineLength uint ) {
   this.CDump( MaxLineLength )
+	println()
 }
 
 ////// Row Methods (100% GO)
