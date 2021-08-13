@@ -117,3 +117,14 @@ Enter ".help" for usage hints.
 sqlite> SELECT * FROM Dummy;
 Andreas  Langholzstraße    91099
 Werner   Raiffeisenstr. 4  96145
+
+
+mysql --xml
+<?xml version="1.0"?>
+<resultset statement="SELECT * FROM orders" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <row>
+    <field name="emp_id">129</field>
+    <field name="cust_id">107</field>
+    <field name="region">Eastern</field>
+  </row>
+</resultset>

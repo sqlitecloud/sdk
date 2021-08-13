@@ -1,3 +1,20 @@
+//
+//                    ////              SQLite Cloud
+//        ////////////  ///             
+//      ///             ///  ///        Product     : SQLite Cloud GO SDK
+//     ///             ///  ///         Version     : 0.0.1
+//     //             ///   ///  ///    Date        : 2021/08/13
+//    ///             ///   ///  ///    Author      : Andreas Pfeil
+//   ///             ///   ///  ///     
+//   ///     //////////   ///  ///      Description : GO methods related to the
+//   ////                ///  ///                     SQCloudResultRow class.
+//     ////     //////////   ///        
+//        ////            ////          
+//          ////     /////              
+//             ///                      Copyright   : 2021 by SQLite Cloud Inc.
+//
+// -----------------------------------------------------------------------TAB=2
+
 package sqlitecloud
 
 import "fmt"
@@ -8,11 +25,12 @@ import "strings"
 //import "errors"
 import "time"
 //import "strconv"
+import "html"
 
 type SQCloudResultRow struct {
   result  *SQCloudResult
-  row     uint
-  rows    uint
+  row     uint // 0, 1, ... rows-1
+  rows    uint 
   columns uint
 }
 
@@ -161,10 +179,11 @@ func (this *SQCloudResultRow) renderLine( Format int, Seperator string, MaxLineL
   for forThisColumn := uint( 0 ); forThisColumn < this.columns; forThisColumn++ {
     switch Format {
     case OUTFORMAT_LIST, OUTFORMAT_TABS:                      buffer += fmt.Sprintf( "%s%s", this.GetStringValue( forThisColumn ), Seperator )
-    case OUTFORMAT_MARKDOWN, OUTFORMAT_TABLE, OUTFORMAT_BOX:  buffer += fmt.Sprintf( fmt.Sprintf( "%%%ds|", this.GetWidth( forThisColumn ) ), this.GetStringValue( forThisColumn ) ) 
+    case OUTFORMAT_MARKDOWN, OUTFORMAT_TABLE, OUTFORMAT_BOX:  buffer += fmt.Sprintf( fmt.Sprintf( " %%-%ds %s", this.GetWidth( forThisColumn ), Seperator ), this.GetStringValue( forThisColumn ) ) 
     case OUTFORMAT_CSV:                                       buffer += fmt.Sprintf( "%s,", SQCloudEnquoteString( this.GetStringValue( forThisColumn ) ) )
-    case OUTFORMAT_LINE:                                      buffer += fmt.Sprintf( fmt.Sprintf( "%%%ds = %s\r\n", this.result.MaxHeaderWidth ), this.GetName( forThisColumn ), this.GetStringValue( forThisColumn ) )
-    case OUTFORMAT_HTML:                                      buffer += fmt.Sprintf( "  <TD>%s</TD>\r\n", this.GetStringValue( forThisColumn ) )
+    case OUTFORMAT_LINE:                                      buffer += fmt.Sprintf( fmt.Sprintf( "%%%ds = %%s\r\n", this.result.MaxHeaderWidth ), this.GetName( forThisColumn ), this.GetStringValue( forThisColumn ) )
+    case OUTFORMAT_HTML:                                      buffer += fmt.Sprintf( "  <TD>%s</TD>\r\n", html.EscapeString( this.GetStringValue( forThisColumn ) ) )
+    case OUTFORMAT_XML:                                       buffer += fmt.Sprintf( "    <field name=\"%s\">%s</field>\r\n", this.GetName( forThisColumn ), html.EscapeString( this.GetStringValue( forThisColumn ) ) )
     }
   }
   return trimStringToMaxLength( strings.TrimRight( buffer, Seperator ), MaxLineLength )
@@ -179,10 +198,10 @@ func (this *SQCloudResultRow) DumpToWriter( Out io.Writer, Format int, Seperator
   
   switch( Format ) {
   case OUTFORMAT_LIST:
-    buffer = this.renderLine( Format, Seperator, MaxLineLength )
+    buffer = this.renderLine( Format, Seperator, MaxLineLength ) + "\r\n"
 
   case OUTFORMAT_CSV:
-    buffer = this.renderLine( Format, ",", MaxLineLength )
+    buffer = this.renderLine( Format, ",", MaxLineLength ) + "\r\n"
 
   case OUTFORMAT_QUOTE: 
     for forThisColumn := uint( 0 ); forThisColumn < this.columns; forThisColumn++ {
@@ -191,13 +210,13 @@ func (this *SQCloudResultRow) DumpToWriter( Out io.Writer, Format int, Seperator
       default:                      buffer += fmt.Sprintf( "%s,", this.GetStringValue( forThisColumn ))
       }
     }
-    buffer = trimStringToMaxLength( strings.TrimRight( buffer, "," ), MaxLineLength )
+    buffer = trimStringToMaxLength( strings.TrimRight( buffer, "," ), MaxLineLength ) + "\r\n"
 
   case OUTFORMAT_TABS:
-    buffer = this.renderLine( Format, "\t", MaxLineLength )
+    buffer = this.renderLine( Format, "\t", MaxLineLength ) + "\r\n"
   
   case OUTFORMAT_LINE:
-    buffer = this.renderLine( Format, "", MaxLineLength )
+    buffer = this.renderLine( Format, "", MaxLineLength ) + "\r\n"
   
   case OUTFORMAT_JSON:
     for forThisColumn := uint( 0 ); forThisColumn < this.columns; forThisColumn++ {
@@ -206,19 +225,21 @@ func (this *SQCloudResultRow) DumpToWriter( Out io.Writer, Format int, Seperator
       default:                      buffer += fmt.Sprintf( "\"%s\":\"%s\",", strings.Replace( this.GetName( forThisColumn ), "\"", "\"\"", -1 ), this.GetStringValue( forThisColumn ) )
       }
     }
-    buffer = fmt.Sprintf( "{%s},", strings.TrimRight( buffer, "," ) )
+    buffer = fmt.Sprintf( "  {%s},\r\n", strings.TrimRight( buffer, "," ) )
 
   case OUTFORMAT_HTML:
-    buffer = fmt.Sprintf( "<TR>\r\n%s</TR>", this.renderLine( Format, "", MaxLineLength ) )
+    buffer = fmt.Sprintf( "<TR>\r\n%s</TR>\r\n", this.renderLine( Format, "", MaxLineLength ) )
   
+  case OUTFORMAT_XML:
+    buffer = fmt.Sprintf( "  <row>\r\n%s  </row>\r\n", this.renderLine( Format, "", MaxLineLength ) )
+
   case OUTFORMAT_MARKDOWN, OUTFORMAT_TABLE:
-    buffer = "|" + this.renderLine( Format, "|", MaxLineLength ) + "|"
+    buffer = "|" + this.renderLine( Format, "|", MaxLineLength ) + "|\r\n"
   
   case OUTFORMAT_BOX:
-    buffer = "│" + this.renderLine( Format, "│", MaxLineLength ) + "│"
+    buffer = "│" + this.renderLine( Format, "│", MaxLineLength ) + "│\r\n"
 
   }
   
-  buffer = fmt.Sprintf( "%s\r\n", buffer )
   return io.WriteString( Out, buffer )
 }
