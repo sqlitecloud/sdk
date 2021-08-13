@@ -18,7 +18,7 @@
 ✅ LIST INFO                                              |
 💤 LIST NODES                                             |
 ✅ LIST PLUGINS                                           |
-✅ LIST TABLES                                            |  
+✅ LIST TABLES                                            |
 ✅ LIST [%] KEYS                                          |
 ✅ LIST CLIENT KEYS                                       |
 ✅ LIST DATABASE KEYS                                     |
@@ -30,7 +30,7 @@
 💤 UNLISTEN %                                             |
 ✅ UNUSE DATABASE                                         |
 ✅ USE DATABASE %                                         |
-----------------------------------------------------------|             
+----------------------------------------------------------|
 
 ✅ = Implemented, working.
 💣 = Implemented, not working, bug.
