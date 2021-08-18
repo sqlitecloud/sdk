@@ -2,7 +2,7 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///             
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 0.0.1
+//     ///             ///  ///         Version     : 1.0.0
 //     //             ///   ///  ///    Date        : 2021/08/13
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///     
@@ -18,13 +18,8 @@
 package main
 
 import "os"
-//import "io"
-//import "fmt"
-//import "strings"
 import "sqlitecloud"
-//import "encoding/json"
 import "bufio"
-
 
 func main() {
   out := bufio.NewWriter( os.Stdout )
@@ -36,9 +31,10 @@ func main() {
     db.CreateDatabase( "X", "", "UTF-8", true )
     db.Execute( `CREATE TABLE IF NOT EXISTS "Dummy" (ID INTEGER PRIMARY KEY AUTOINCREMENT, FirstName TEXT(20), LastName TEXT(20), ZIP INTEGER, City TEXT, Address TEXT)` )
     db.Execute( `DELETE FROM Dummy` )
-    db.Execute( `INSERT INTO Dummy ( FirstName, LastName, ZIP, City, Address ) VALUES( 'Some', 'One', 96450, 'Coburg', "Mohrenstrasse 1" )` )
-    db.Execute( `INSERT INTO Dummy ( FirstName, LastName, ZIP, City, Address ) VALUES( 'Someone', 'Else', 96145, 'Sesslach', 'Raiffeisenstrasse 6' )` )
+    db.Execute( `INSERT INTO Dummy ( FirstName, LastName, ZIP, City, Address ) VALUES( 'Some', 'One', 96450, 'Coburg', "Mohrenstraße 1" )` )
+    db.Execute( `INSERT INTO Dummy ( FirstName, LastName, ZIP, City, Address ) VALUES( 'Someone', 'Else', 96145, 'Sesslach', 'Raiffeisenstraße 6' )` )
     db.Execute( `INSERT INTO Dummy ( FirstName, LastName, ZIP, City, Address ) VALUES( 'One', 'More', 91099, 'Poxdorf', "Langholzstr. 4" )` )
+		db.Execute( `INSERT INTO Dummy ( FirstName, LastName, ZIP, City, Address ) VALUES( 'Quotation', 'Test', 12345, '&"<>', "'Straße 0'" )` )
 
     sql := "SELECT * FROM Dummy"
     if res, err := db.Select( sql ); res != nil {
@@ -46,20 +42,18 @@ func main() {
 
       if err == nil {
         res.DumpToWriter( out, sqlitecloud.OUTFORMAT_LIST, "|", 0, false )
-        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_CSV, "|", 0, false )
-        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_QUOTE, "|", 0, false )
-        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_TABS, "|", 0, false )
-        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_LINE, "|", 0, false )
-        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_JSON, "|", 0, false )
-        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_HTML, "|", 0, false )
+        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_CSV, ",", 0, false )
+        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_QUOTE, ",", 0, false )
+        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_TABS, "\t", 0, false )
+        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_LINE, "", 0, false )
+        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_JSON, ",", 0, false )
+        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_HTML, "", 0, false )
         res.DumpToWriter( out, sqlitecloud.OUTFORMAT_MARKDOWN, "|", 0, false )
         res.DumpToWriter( out, sqlitecloud.OUTFORMAT_TABLE, "|", 0, false )
-        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_BOX, "|", 0, false )
+        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_BOX, "│", 0, false )
         res.DumpToWriter( out, sqlitecloud.OUTFORMAT_XML, sql, 0, false )
-        
-        // out.Flush()
-        return
 
+        return
   } } }
   panic( err )
 }
