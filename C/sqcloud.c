@@ -1306,6 +1306,10 @@ uint32_t _reserved4 (char *buffer, uint32_t blen, uint32_t *cstart) {
     return internal_parse_number(buffer, blen, cstart);
 }
 
+bool _reserved5 (SQCloudResult *res) {
+    return res->ischunk;
+}
+
 // MARK: - PUBLIC -
 
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config) {
@@ -1626,7 +1630,7 @@ void SQCloudRowsetDump (SQCloudResult *result, uint32_t maxline) {
         uint32_t delta = 0;
         char *value = internal_parse_value(result->data[i], &len, NULL);
         blen -= len;
-        
+
         // UTF-8 strings need special adjustments
         if (!value) {value = "NULL"; len = 4;}
         uint32_t utf8len = utf8_len(value, len);

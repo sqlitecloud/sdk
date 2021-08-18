@@ -15,11 +15,13 @@
 #define SQCloudSetUUID          _reserved2
 #define sqcloud_parse_buffer    _reserved3
 #define sqcloud_parse_number    _reserved4
+#define sqcloud_result_is_chunk _reserved5
 
 bool SQCloudForwardExec(SQCloudConnection *connection, const char *command, bool (*forward_cb) (char *buffer, size_t blen, void *xdata), void *xdata);
 SQCloudResult *SQCloudSetUUID (SQCloudConnection *connection, const char *UUID);
 
 SQCloudResult *sqcloud_parse_buffer (char *buffer, uint32_t blen, uint32_t cstart, SQCloudResult *chunk);
 uint32_t sqcloud_parse_number (char *buffer, uint32_t blen, uint32_t *cstart);
+bool sqcloud_result_is_chunk (SQCloudResult *res);
 
 #endif
