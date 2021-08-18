@@ -384,6 +384,8 @@ static bool internal_setup_ssl (SQCloudConnection *connection, SQCloudConfig *co
 }
 
 static SQCloudValueType internal_type (char *buffer) {
+    if (!buffer) return VALUE_NULL;
+    
     switch (buffer[0]) {
         case '+': return VALUE_TEXT;
         case ':': return VALUE_INTEGER;
