@@ -1,3 +1,21 @@
+//
+//                    ////              SQLite Cloud
+//        ////////////  ///             
+//      ///             ///  ///        Product     : SQLite Cloud GO SDK
+//     ///             ///  ///         Version     : 0.0.1
+//     //             ///   ///  ///    Date        : 2021/08/13
+//    ///             ///   ///  ///    Author      : Andreas Pfeil
+//   ///             ///   ///  ///     
+//   ///     //////////   ///  ///      Description : Go Methods related to the
+//   ////                ///  ///                     SQCloud class for managing 
+//     ////     //////////   ///                      the connection and executing
+//        ////            ////                        queries.
+//          ////     /////              
+//             ///                      Copyright   : 2021 by SQLite Cloud Inc.
+//
+// -----------------------------------------------------------------------TAB=2
+
+
 // Package sqlitecloud provides an easy to use GO driver for connecting to and using the SQLite Cloud Database server.
 package sqlitecloud
 
@@ -62,12 +80,12 @@ func ParseConnectionString( ConnectionString string ) ( Host string, Port int, U
     timeout   := 0
     compress  := "NO"
     port      := 0
-		sPort     := strings.TrimSpace( u.Port() )
-		if len( sPort ) > 0 {
-			if port, err = strconv.Atoi( sPort ); err != nil {
-				return "", -1, "", "", "", -1, "", err
-			}
-		}
+    sPort     := strings.TrimSpace( u.Port() )
+    if len( sPort ) > 0 {
+      if port, err = strconv.Atoi( sPort ); err != nil {
+        return "", -1, "", "", "", -1, "", err
+      }
+    }
 
     for key, values := range u.Query() {
       lastValue := strings.TrimSpace( values[ len( values ) - 1 ] )
@@ -84,7 +102,7 @@ func ParseConnectionString( ConnectionString string ) ( Host string, Port int, U
       }
     }
 
-    fmt.Printf( "NO ERROR: Host=%s, Port=%d, User=%s, Password=%s, Database=%s, Timeout=%d, Compress=%s\r\n", host, port, user, pass, database, timeout, compress )
+    // fmt.Printf( "NO ERROR: Host=%s, Port=%d, User=%s, Password=%s, Database=%s, Timeout=%d, Compress=%s\r\n", host, port, user, pass, database, timeout, compress )
     return host, port, user, pass, database, timeout, compress, nil
   }
   return "", -1, "", "", "", -1, "", err
@@ -100,28 +118,28 @@ func ParseConnectionString( ConnectionString string ) ( Host string, Port int, U
 func (this *SQCloud) CheckConnectionParameter( Host string, Port int, Username string, Password string, Database string, Timeout int, Compress string ) error {
   
   if strings.TrimSpace( Host ) == ""  {
-    return errors.New( "Invalid Hostname" )
+    return errors.New( fmt.Sprintf( "Invalid hostname (%s)", Host ) )
   }
 
   ip := net.ParseIP( Host )
   if ip == nil {
     if _, err := net.LookupHost( Host ); err != nil {
-      return errors.New( "Can't resolve Hostname" )
+      return errors.New( fmt.Sprintf( "Can't resolve hostname (%s)", Host ) )
     }
   }
 
   if Port < 1 || Port >= 0xFFFF {
-    return errors.New( "Invalid Port" )
+    return errors.New( fmt.Sprintf( "Invalid Port (%d)", Port ) )
   }
 
   if Timeout < 0 {
-    return errors.New( "Invalid Timeout" )
+    return errors.New( fmt.Sprintf( "Invalid Timeout (%d)", Timeout ) )
   }
 
-  switch Compress {
+  switch strings.ToUpper( Compress ) {
   case "NO", "LZ4":
   default:
-    return errors.New( "Invalid Compression Method" )
+    return errors.New( fmt.Sprintf( "Invalid compression method (%s)", Compress ) )
   }
 
   return nil
@@ -162,9 +180,9 @@ func Connect( ConnectionString string ) (*SQCloud, error) {
     return nil, err
   }
 
-	if Port == 0 {
-		Port = 8860
-	}
+  if Port == 0 {
+    Port = 8860
+  }
 
   connection := New()
   err = connection.Connect( Host, Port, Username, Password, Database, Timeout, Compress, 0 )
@@ -173,11 +191,8 @@ func Connect( ConnectionString string ) (*SQCloud, error) {
     return nil, err
   }
 
-  switch( Compress ) {
-  case "LZ4": connection.Compress( true )
-  default:    connection.Compress( false )
-  }
-  
+  connection.Compress( Compress )
+    
   return connection, nil
 }
 
@@ -241,33 +256,27 @@ func (this *SQCloud) reconnect() error {
 // Close closes the connection to the SQLite Cloud Database server.
 // The connection can later be reopened (see: reconnect)
 func (this *SQCloud) Close() {
-  if this.IsConnected() {
-    this.CDisconnect()
-  }
+  if this.connection != nil { this.CDisconnect() }
   this.connection = nil
   this.resetError()
 }
 
 // Compress enabled or disables data compression for this connection.
 // If enabled, the data is compressed with the LZ4 compression algorithm, otherwise no compression is applied the data.
-func (this *SQCloud) Compress( Enabled bool ) error {
-  switch Enabled {
-    case false: return this.Execute( "SET KEY CLIENT_COMPRESSION TO 0" )
-    default:    return this.Execute( "SET KEY CLIENT_COMPRESSION TO 1" )
+func (this *SQCloud) Compress( CompressMode string ) error {
+  switch strings.ToUpper( CompressMode ) {
+  case "NO":  return this.Execute( "SET KEY CLIENT_COMPRESSION TO 0" )
+  case "LZ4": return this.Execute( "SET KEY CLIENT_COMPRESSION TO 1" )
+  default:    return errors.New( fmt.Sprintf( "Invalid compression method (%s)", CompressMode ) )
   }
 }
-
 
 // IsConnected checks the connection to the SQLite Cloud database server by sending a PING command.
 // true is returned, if the connection is established and actually working, false otherwise.
 func (this *SQCloud) IsConnected() bool {
-  if( this.connection == nil ) {
-    return false
-  }
-  if( this.Ping() != nil ) {
-    return false
-  }
-  return true
+  if this.connection == nil { return false }
+  if this.Ping() != nil     { return false }
+                              return true
 }
 
 // Error Methods
@@ -314,44 +323,38 @@ func (this *SQCloud ) GetError() ( int, error ) {
 func (this *SQCloud) Select( SQL string ) (*SQCloudResult, error) {
   this.resetError()
 
-	//fmt.Printf( "Executing: <%s>\r\n", SQL )
-
   result           := this.CExec( SQL )
-
-	// fmt.Printf( "Result Type: %d\r\n", result.CGetResultType() )
-
   this.ErrorCode    = this.CGetErrorCode()
   this.ErrorMessage = this.CGetErrorMessage()
 
-  if result != nil {
-    result.Rows           = result.CGetRows()
-    result.Columns        = result.CGetColumns()
-    result.ColumnWidth    = make( []uint, result.Columns )
-    result.HeaderWidth    = make( []uint, result.Columns )
-    result.MaxHeaderWidth = 0  
-
-    result.Type           = result.CGetResultType()
-    result.ErrorCode      = this.ErrorCode
-    result.ErrorMessage   = this.ErrorMessage
-    
-    for c := uint( 0 ); c < result.Columns ; c++ {
-      result.HeaderWidth[ c ] = uint( len( result.GetColumnName( c ) ) )
-      result.ColumnWidth[ c ] = result.CGetMaxColumnLenght( c )
-      if result.ColumnWidth[ c ] < result.HeaderWidth[ c ] {
-        result.ColumnWidth[ c ] = result.HeaderWidth[ c ]
-      }
-      if result.MaxHeaderWidth < result.HeaderWidth[ c ] {
-        result.MaxHeaderWidth = result.HeaderWidth[ c ]
-      }
-    }
-  } else {
-    return nil, errors.New( "ERROR: Could not execute SQL command (-1)" )
+  if result == nil {
+    return nil, errors.New( fmt.Sprintf( "ERROR: %s (%d)", this.ErrorMessage, this.ErrorCode ) )
   }
 
   if this.IsError() {
     result.Free()
-    return nil, errors.New( fmt.Sprintf( "ERROR: %s (%d)", this.CGetErrorMessage(), this.CGetErrorCode() ) )
+    return nil, errors.New( fmt.Sprintf( "ERROR: %s (%d)", this.ErrorMessage, this.ErrorCode ) )
   }
+
+  result.Rows           = result.CGetRows()
+  result.Columns        = result.CGetColumns()
+  result.ColumnWidth    = make( []uint, result.Columns )
+  result.HeaderWidth    = make( []uint, result.Columns )
+  result.MaxHeaderWidth = 0  
+  result.Type           = result.CGetResultType()
+  result.ErrorCode      = this.ErrorCode
+  result.ErrorMessage   = this.ErrorMessage
+  for c := uint( 0 ); c < result.Columns ; c++ {
+    result.HeaderWidth[ c ] = uint( len( result.GetColumnName( c ) ) )
+    result.ColumnWidth[ c ] = result.CGetMaxColumnLenght( c )
+    if result.ColumnWidth[ c ] < result.HeaderWidth[ c ] {
+      result.ColumnWidth[ c ] = result.HeaderWidth[ c ]
+    }
+    if result.MaxHeaderWidth < result.HeaderWidth[ c ] {
+      result.MaxHeaderWidth = result.HeaderWidth[ c ]
+    }
+  }
+
   return result, nil // nil, nil or *result, nil
 }
 
@@ -363,8 +366,8 @@ func (this *SQCloud) Execute( SQL string ) error {
     if !result.IsOK() {
       return errors.New( "ERROR: Unexpected Result Set (-1)")
     }
-		return err
+    return err
   } else {
-		return err
-	}
+    return err
+  }
 }

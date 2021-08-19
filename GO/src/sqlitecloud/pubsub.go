@@ -1,3 +1,20 @@
+//
+//                    ////              SQLite Cloud
+//        ////////////  ///             
+//      ///             ///  ///        Product     : SQLite Cloud GO SDK
+//     ///             ///  ///         Version     : 0.0.1
+//     //             ///   ///  ///    Date        : 2021/08/13
+//    ///             ///   ///  ///    Author      : Andreas Pfeil
+//   ///             ///   ///  ///     
+//   ///     //////////   ///  ///      Description : GO Methods related to the
+//   ////                ///  ///                     SQCloud class for handling
+//     ////     //////////   ///                      asynchronous communication.
+//        ////            ////          
+//          ////     /////              
+//             ///                      Copyright   : 2021 by SQLite Cloud Inc.
+//
+// -----------------------------------------------------------------------TAB=2
+
 package sqlitecloud
 
 //import "fmt"

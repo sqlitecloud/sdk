@@ -1,6 +1,23 @@
+//
+//                    ////              SQLite Cloud
+//        ////////////  ///             
+//      ///             ///  ///        Product     : SQLite Cloud GO SDK
+//     ///             ///  ///         Version     : 0.0.1
+//     //             ///   ///  ///    Date        : 2021/08/13
+//    ///             ///   ///  ///    Author      : Andreas Pfeil
+//   ///             ///   ///  ///     
+//   ///     //////////   ///  ///      Description : Auxiliary GO methods
+//   ////                ///  ///                     related to the SQCloud
+//     ////     //////////   ///                      class.
+//        ////            ////          
+//          ////     /////              
+//             ///                      Copyright   : 2021 by SQLite Cloud Inc.
+//
+// -----------------------------------------------------------------------TAB=2
+
 package sqlitecloud
 
-//import "fmt"
+import "fmt"
 //import "os"
 //import "bufio"
 //import "strings"
@@ -41,25 +58,52 @@ func (this *SQCloud) AutoCommit( Enabled bool ) {
   
 }
 
+func (this *SQCloud) GetAutocompleteTokens() ( tokens []string ) {
+  if tables, err := this.ListTables(); err == nil {
+    for _, table := range tables {
+      tokens = append( tokens, table )
+      for _, column := range this.ListColumns( table ) {
+        tokens = append( tokens, fmt.Sprintf( "%s", column ) )
+        tokens = append( tokens, fmt.Sprintf( "%s.%s", table, column ) )
+      }
+    }
+  }
+  return
+}
+
+func (this *SQCloud) ListColumns( TableName string ) ( columns []string ) {
+  res, err := this.Select( fmt.Sprintf( "pragma table_info( %s )", SQCloudEnquoteString( TableName ) ) ) 
+  if res != nil {
+    defer res.Free()
+
+    if err ==nil {
+      for row := res.GetFirstRow(); row != nil; row = row.Next() {
+        columns = append( columns, row.GetStringValue( 1 ) )
+      }
+    }
+  }
+  return
+}
+
 
 // SelectSingleString executes the query in SQL and returns the result as string.
 // The given query must return one single value. If no value or more than one values are selected by the query, nil is 
 // returned and error describes the problem that occurred.
 // See: SQCloud.SelectSingleInt64(), SQCloud.SelectStringList(), SQCloud.SelectKeyValues()
 func (this *SQCloud) SelectSingleString( SQL string ) ( string, error ) {
-	result, err := this.Select( SQL )
-	if result != nil {
-		defer result.Free()
+  result, err := this.Select( SQL )
+  if result != nil {
+    defer result.Free()
 
-		if err == nil {
-			if result.GetNumberOfColumns() == 1 && result.GetNumberOfRows() == 1 {
-				return result.CGetStringValue( 0, 0 ), nil
-			}
-			return "", errors.New( "ERROR: Query returned not exactly one value (-1)" )
-		} 
-		return "", err
-	}
-	return "", errors.New( "ERROR: Query returned no result (-1)" )
+    if err == nil {
+      if result.GetNumberOfColumns() == 1 && result.GetNumberOfRows() == 1 {
+        return result.CGetStringValue( 0, 0 ), nil
+      }
+      return "", errors.New( "ERROR: Query returned not exactly one value (-1)" )
+    } 
+    return "", err
+  }
+  return "", errors.New( "ERROR: Query returned no result (-1)" )
 }
 
 // SelectSingleInt64 executes the query in SQL and returns the result as int64.
@@ -68,18 +112,18 @@ func (this *SQCloud) SelectSingleString( SQL string ) ( string, error ) {
 // See: SQCloud.SelectSingleString(), SQCloud.SelectStringList(), SQCloud.SelectKeyValues()
 func (this *SQCloud) SelectSingleInt64( SQL string ) ( int64, error ) {
   result, err := this.Select( SQL )
-	if result != nil {
-		defer result.Free()
+  if result != nil {
+    defer result.Free()
 
-		if err == nil {
-			if result.GetNumberOfColumns() == 1 && result.GetNumberOfRows() == 1 {
-				return result.CGetInt64Value( 0, 0 ), nil
-			}
-			return 0, errors.New( "ERROR: Query returned not exactly one value (-1)" )
-		} 
-		return 0, err
-	}
-	return 0, errors.New( "ERROR: Query returned no result (-1)" )
+    if err == nil {
+      if result.GetNumberOfColumns() == 1 && result.GetNumberOfRows() == 1 {
+        return result.CGetInt64Value( 0, 0 ), nil
+      }
+      return 0, errors.New( "ERROR: Query returned not exactly one value (-1)" )
+    } 
+    return 0, err
+  }
+  return 0, errors.New( "ERROR: Query returned no result (-1)" )
 }
 
 // SelectStringList executes the query in SQL and returns the result as an array of strings.
@@ -91,23 +135,23 @@ func (this *SQCloud) SelectSingleInt64( SQL string ) ( int64, error ) {
 func (this *SQCloud) SelectStringList( SQL string ) ( []string, error ) {
   result, err := this.Select( SQL )
 
-	if result != nil {
-		defer result.Free()
-		
-		if err == nil {
-			stringList := []string{}
+  if result != nil {
+    defer result.Free()
+    
+    if err == nil {
+      stringList := []string{}
       for row := uint( 0 ); row < result.Rows; row++ {
-				if result.Columns == 1 {
+        if result.Columns == 1 {
           stringList = append( stringList, result.CGetStringValue( row, 0 ) )
         } else {
-					return []string{}, errors.New( "ERROR: Query returned not 1 Column (-1)" )
-				}
-			}
-			return stringList, nil
-		}
-		return []string{}, err  
-	}
-	return []string{}, nil
+          return []string{}, errors.New( "ERROR: Query returned not 1 Column (-1)" )
+        }
+      }
+      return stringList, nil
+    }
+    return []string{}, err  
+  }
+  return []string{}, nil
 }
 
 // SelectKeyValues executes the query in SQL and returns the result as an array of SQCloudKeyValues.
@@ -120,21 +164,21 @@ func (this *SQCloud) SelectStringList( SQL string ) ( []string, error ) {
 func (this *SQCloud) SelectKeyValues( SQL string ) ( []SQCloudKeyValues, error ) {
   result, err := this.Select( SQL )
 
-	if result != nil {
-		defer result.Free()
+  if result != nil {
+    defer result.Free()
 
-		if err == nil {
-			keyValueList := []SQCloudKeyValues{}
-			for row := uint( 0 ); row < result.Rows; row++ {
-				if result.Columns == 2 {
-					keyValueList = append( keyValueList, SQCloudKeyValues{ Key: result.CGetStringValue( row, 0 ), Value: result.CGetStringValue( row, 1 ) } )
+    if err == nil {
+      keyValueList := []SQCloudKeyValues{}
+      for row := uint( 0 ); row < result.Rows; row++ {
+        if result.Columns == 2 {
+          keyValueList = append( keyValueList, SQCloudKeyValues{ Key: result.CGetStringValue( row, 0 ), Value: result.CGetStringValue( row, 1 ) } )
         } else {
-					return []SQCloudKeyValues{}, errors.New( "ERROR: Query returned not exactly 2 Columns (-1)" )
-				}
-			}
-			return keyValueList, nil
-		}
-		return []SQCloudKeyValues{}, err
-	}
-	return []SQCloudKeyValues{}, nil
+          return []SQCloudKeyValues{}, errors.New( "ERROR: Query returned not exactly 2 Columns (-1)" )
+        }
+      }
+      return keyValueList, nil
+    }
+    return []SQCloudKeyValues{}, err
+  }
+  return []SQCloudKeyValues{}, nil
 }

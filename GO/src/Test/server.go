@@ -7,8 +7,8 @@
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///     
 //   ///     //////////   ///  ///      Description : Test program for the 
-//   ////                ///  ///                     SQLite Cloud server 
-//     ////     //////////   ///                      commands.
+//   ////                ///  ///                     SQLite Cloud internal 
+//     ////     //////////   ///                      server commands.
 //        ////            ////          
 //          ////     /////              
 //             ///                      Copyright   : 2021 by SQLite Cloud Inc.
@@ -19,17 +19,14 @@ package main
 
 import "os"
 import "fmt"
-//import "strings"
 import "sqlitecloud"
-//import "encoding/json"
-
 
 func main() {
   fmt.Printf( "Server API test...\r\n")
 
   db := sqlitecloud.New()
 
-  err := db.Connect( "dev1.sqlitecloud.io", 8860, "none empty user", "none empty password", "X", 10, "NO", 0 ) // Host, Port, Username, Password, Database, Timeout, Compression, Family
+  err := db.Connect( "dev1.sqlitecloud.io", 8860, "user", "password", "X", 10, "NO", 0 ) // Host, Port, Username, Password, Database, Timeout, Compression, Family
   if err == nil {
     defer db.Close()
 
