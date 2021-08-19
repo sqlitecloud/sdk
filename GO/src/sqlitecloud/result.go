@@ -2,11 +2,11 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///             
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 0.0.1
-//     //             ///   ///  ///    Date        : 2021/08/13
+//     ///             ///  ///         Version     : 0.0.2
+//     //             ///   ///  ///    Date        : 2021/08/18
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///     
-//   ///     //////////   ///  ///      Description : GO methods related to the 
+//   ///     //////////   ///  ///      Description : GO Methods related to the 
 //   ////                ///  ///                     SQCloudResult class.
 //     ////     //////////   ///        
 //        ////            ////          
@@ -22,7 +22,7 @@ package sqlitecloud
 import "C"
 
 import "fmt"
-//import "os"
+import "os"
 
 import "bufio"
 import "strings"
@@ -31,6 +31,7 @@ import "time"
 import "io"
 import "strconv"
 import "encoding/json"
+import "golang.org/x/term"
 
 // SQCloudResType
 const RESULT_OK           = C.RESULT_OK
@@ -101,7 +102,9 @@ func (this *SQCloudResult ) GetNumberOfColumns() uint {
 // Dump outputs this query result to the screen.
 // Warning: No line truncation is used. If you want to truncation the output to a certain width, use: SQCloudResult.DumpToScreen( width )
 func (this *SQCloudResult ) Dump() {
-  this.DumpToScreen( 0 )
+  w := 0
+  if width, _, err := term.GetSize( 0 ); err == nil { w = width }
+  this.DumpToScreen( uint( w ) )
 }
 
 // ToJSON returns a JSON representation of this query result.
@@ -306,8 +309,7 @@ func (this *SQCloudResult ) GetFloat64Value( Row uint, Column uint ) float64 {
 // DumpToScreen outputs this query result to the screen.
 // The output is truncated at a maximum line width of MaxLineLength runes (compare: SQCloudResult.Dump())
 func (this *SQCloudResult ) DumpToScreen( MaxLineLength uint ) {
-  this.CDump( MaxLineLength )
-  println()
+  this.DumpToWriter( bufio.NewWriter( os.Stdout ), OUTFORMAT_BOX, false, "│", "NULL", "\r\n", MaxLineLength, false )
 }
 
 ////// Row Methods (100% GO)
@@ -346,78 +348,63 @@ func (this *SQCloudResult ) GetLastRow() *SQCloudResultRow {
 /// Dump Method (100% GO)
 
 func trimStringToMaxLength( Buffer string, MaxLineLength uint ) string {
-  switch MaxLineLength {
-  case 0: return Buffer
-  default:
-    len := uint( len( Buffer ) )
-    if len > MaxLineLength {
-      return fmt.Sprintf( fmt.Sprintf( "%%%ds…", MaxLineLength - 1 ), Buffer )
-    }
-    return Buffer
+  switch {
+  case MaxLineLength == 0:                            return Buffer
+  case MaxLineLength >= uint( len([]rune(Buffer) ) ): return Buffer
+  default:                                            return fmt.Sprintf( fmt.Sprintf( "%%.%ds…", MaxLineLength - 1 ), Buffer )
   }
 }
-
 func renderCenteredString( Buffer string, Width int ) string {
   return fmt.Sprintf( "%[1]*s", -Width, fmt.Sprintf( "%[1]*s", ( Width + len( Buffer ) ) / 2, Buffer ) )
 }
 
-func (this *SQCloudResult) renderHorizontalTableLine( Left string, Fill string, Seperator string, Right string, MaxLineLength uint ) string {
+func (this *SQCloudResult) renderHorizontalTableLine( Left string, Fill string, Separator string, Right string ) string {
   outBuffer := ""
   for _, columnWidth := range this.ColumnWidth {
-    outBuffer = fmt.Sprintf( "%s%s%s", outBuffer, strings.Repeat( Fill, int( columnWidth + 2 ) ), Seperator )
+    outBuffer = fmt.Sprintf( "%s%s%s", outBuffer, strings.Repeat( Fill, int( columnWidth + 2 ) ), Separator )
   }
-  outBuffer = fmt.Sprintf( "%s%s%s", Left, strings.TrimRight( outBuffer, Seperator ), Right )
-  return trimStringToMaxLength( outBuffer, MaxLineLength )
+  return fmt.Sprintf( "%s%s%s", Left, strings.TrimRight( outBuffer, Separator ), Right )
 }
-func (this *SQCloudResult) renderTableColumnNames( Left string, Seperator string, Right string, MaxLineLength uint ) string {
+func (this *SQCloudResult) renderTableColumnNames( Left string, Separator string, Right string ) string {
   outBuffer := ""
   for forThisColumn, columnWidth := range this.ColumnWidth {
-    outBuffer = fmt.Sprintf( "%s%s%s", outBuffer, renderCenteredString( this.GetColumnName( uint( forThisColumn ) ), int( columnWidth + 2 ) ), Seperator )
+    outBuffer = fmt.Sprintf( "%s%s%s", outBuffer, renderCenteredString( this.GetColumnName( uint( forThisColumn ) ), int( columnWidth + 2 ) ), Separator )
   }
-  outBuffer = fmt.Sprintf( "%s%s%s", Left, strings.TrimRight( outBuffer, Seperator ), Right )
-  return trimStringToMaxLength( outBuffer, MaxLineLength )
+  return fmt.Sprintf( "%s%s%s", Left, strings.TrimRight( outBuffer, Separator ), Right )
 }
-func (this *SQCloudResult) renderTableHeader( Format int, Seperator string, MaxLineLength uint ) string {
+func (this *SQCloudResult) renderTableHeader( Format int, Separator string, NewLine string, MaxLineLength uint ) string {
   switch( Format ) {
-    case OUTFORMAT_JSON: return "[\r\n"
+    case OUTFORMAT_JSON: return fmt.Sprintf( "[%s", NewLine )
 
     case OUTFORMAT_MARKDOWN:
-      return this.renderTableColumnNames( "|", "|", "|", MaxLineLength )          + "\r\n" +
-             this.renderHorizontalTableLine( "|", "-", "|", "|", MaxLineLength )  + "\r\n"
+      return trimStringToMaxLength( this.renderTableColumnNames( Separator, Separator, Separator ), MaxLineLength )         + NewLine +
+             trimStringToMaxLength( this.renderHorizontalTableLine( Separator, "-", Separator, Separator ), MaxLineLength ) + NewLine
 
     case OUTFORMAT_TABLE:
-      tableLine := this.renderHorizontalTableLine( "+", "-", "+", "+", MaxLineLength )
-      return  tableLine                                                           + "\r\n" +
-              this.renderTableColumnNames( "|", "|", "|", MaxLineLength )         + "\r\n" +
-              tableLine                                                           + "\r\n"
+      tableLine := trimStringToMaxLength( this.renderHorizontalTableLine( "+", "-", "+", "+" ), MaxLineLength )             + NewLine
+      return  tableLine                                                                                                     +
+              trimStringToMaxLength( this.renderTableColumnNames( Separator, Separator, Separator ), MaxLineLength )        + NewLine +
+              tableLine
 
     case OUTFORMAT_BOX:
-      return this.renderHorizontalTableLine( "┌", "─", "┬", "┐", MaxLineLength )  + "\r\n" +
-             this.renderTableColumnNames( "│", "│", "│", MaxLineLength )          + "\r\n" +
-             this.renderHorizontalTableLine( "├", "─", "┼", "┤", MaxLineLength )  + "\r\n"
+      return trimStringToMaxLength( this.renderHorizontalTableLine( "┌", "─", "┬", "┐" ), MaxLineLength )                   + NewLine +
+             trimStringToMaxLength( this.renderTableColumnNames( Separator, Separator, Separator ), MaxLineLength )         + NewLine +
+             trimStringToMaxLength( this.renderHorizontalTableLine( "├", "─", "┼", "┤" ), MaxLineLength )                   + NewLine
     case OUTFORMAT_XML:
-      return fmt.Sprintf( "<?xml version=\"1.0\"?>\r\n<resultset statement=\"%s\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\r\n", Seperator )
+      return trimStringToMaxLength( "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>", MaxLineLength )         + NewLine +
+             trimStringToMaxLength( fmt.Sprintf( "<resultset statement=\"%s\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">", Separator ), MaxLineLength ) + NewLine
 
     default:
       return "" // No header
   }
-  return ""
 }
-func (this *SQCloudResult) renderTableFooter( Format int, MaxLineLength uint ) string {
+func (this *SQCloudResult) renderTableFooter( Format int, NewLine string, MaxLineLength uint ) string {
   switch( Format ) {
-    case OUTFORMAT_JSON: return "]\r\n"
-
-    case OUTFORMAT_TABLE:
-      return this.renderHorizontalTableLine( "+", "-", "+", "+", MaxLineLength ) + "\r\n"
-
-    case OUTFORMAT_BOX:
-      return this.renderHorizontalTableLine( "└", "─", "┴", "┘", MaxLineLength ) + "\r\n"
-
-    case OUTFORMAT_XML:
-      return "</resultset>\r\n"
-
-    default:
-      return "" // No footer
+    case OUTFORMAT_JSON:  return trimStringToMaxLength( "]", MaxLineLength )                                                  + NewLine
+    case OUTFORMAT_TABLE: return trimStringToMaxLength( this.renderHorizontalTableLine( "+", "-", "+", "+" ), MaxLineLength ) + NewLine
+    case OUTFORMAT_BOX:   return trimStringToMaxLength( this.renderHorizontalTableLine( "└", "─", "┴", "┘" ), MaxLineLength ) + NewLine
+    case OUTFORMAT_XML:   return trimStringToMaxLength( "</resultset>", MaxLineLength )                                       + NewLine
+    default:              return "" // No footer
   }
 }
 
@@ -426,61 +413,97 @@ func (this *SQCloudResult) renderTableFooter( Format int, MaxLineLength uint ) s
 // The Separator argument specifies the column separating string (default: '|'). 
 // All lines are truncated at MaxLineLeength. A MaxLineLangth of '0' means no truncation. 
 // If this query result is of type RESULT_OK and SuppressOK is set to false, an "OK" string is written to the buffer, otherwise nothing is written to the buffer.
-func (this *SQCloudResult) DumpToWriter( Out *bufio.Writer, Format int, Seperator string, MaxLineLength uint, SuppressOK bool ) ( int, error ) {
+func (this *SQCloudResult) DumpToWriter( Out *bufio.Writer, Format int, NoHeader bool, Separator string, NullValue string, NewLine string, MaxLineLength uint, SuppressOK bool ) ( int, error ) {
+  if sep, err := GetDefaultSeparatorForOutputFormat( Format ); err != nil {
+    return 0, err
+  } else if strings.ToUpper( strings.TrimSpace( Separator ) ) == "<AUTO>" {
+    Separator = sep
+  }
+
+  if strings.TrimSpace( NullValue ) == "" { NullValue = "NULL" }
+
+  // fmt.Printf( "Type = %d\r\n", this.Type )
+
+
   switch this.Type {
   case RESULT_OK:
     if SuppressOK {
       return 0, nil
     } else {
-      return io.WriteString( Out, "OK\r\n" )
+      return io.WriteString( Out, fmt.Sprintf( "OK%s", NewLine ) )
     }
     
   case RESULT_NULL:
-    return io.WriteString( Out, "NULL\r\n" )
+    return io.WriteString( Out, fmt.Sprintf( "%s%s", NullValue, NewLine ) )
 
   case RESULT_ERROR:
-    return io.WriteString( Out, fmt.Sprintf( "ERROR: %s (%d)\r\n", this.ErrorMessage, this.ErrorCode ) )
+    return io.WriteString( Out, fmt.Sprintf( "ERROR: %s (%d)%s", this.ErrorMessage, this.ErrorCode, NewLine ) )
 
   case RESULT_STRING, RESULT_INTEGER, RESULT_FLOAT, RESULT_JSON:
-    return io.WriteString( Out, this.CGetResultBuffer() + "\r\n")
+    return io.WriteString( Out, this.CGetResultBuffer() + NewLine )
 
   case RESULT_ROWSET: 
     var totalOutputLength int = 0
 
-    // Render Table Header incl. new line
-    if len, err := io.WriteString( Out, this.renderTableHeader( Format, Seperator, MaxLineLength ) ); err == nil {
-       totalOutputLength += len
-    } else {
-      return len + totalOutputLength, err
-    }
-
-    // Render Table Body incl. new line
-    for row := this.GetFirstRow(); row != nil; row = row.Next() {
-      if len, err := row.DumpToWriter( Out, Format, Seperator, MaxLineLength ); err == nil {
+    if !NoHeader { // Render Table Header incl. new line
+      if len, err := io.WriteString( Out, this.renderTableHeader( Format, Separator, NewLine, MaxLineLength ) ); err == nil {
         totalOutputLength += len
       } else {
         return len + totalOutputLength, err
       }
     }
 
-    // Render Table Footer
-    if len, err := io.WriteString( Out, this.renderTableFooter( Format, MaxLineLength ) ); err == nil {
-      totalOutputLength += len
-    } else {
-      return len + totalOutputLength, err
+    // Render Table Body incl. new line
+    for row := this.GetFirstRow(); row != nil; row = row.Next() {
+      if len, err := row.DumpToWriter( Out, Format, Separator, NullValue, NewLine, MaxLineLength ); err == nil {
+        totalOutputLength += len
+      } else {
+        return len + totalOutputLength, err
+      }
     }
 
-    //// Output newline
-    //if len, err := io.WriteString( Out, "\r\n" ); err == nil {
-    //  totalOutputLength += len
-    //} else {
-    //  return len + totalOutputLength, err
-    //}
-
+    if !NoHeader { // Render Table Footer
+      if len, err := io.WriteString( Out, this.renderTableFooter( Format, NewLine, MaxLineLength ) ); err == nil {
+        totalOutputLength += len
+      } else {
+        return len + totalOutputLength, err
+      }
+    }
+  
     Out.Flush()
     return totalOutputLength, nil
 
   default:
     return 0, errors.New( "Unknown Output Format" )
+  }
+}
+
+func GetOutputFormatFromString( Format string ) ( int, error ) {
+  switch strings.ToUpper( strings.TrimSpace( Format ) ) {
+  case "LIST":      return OUTFORMAT_LIST,      nil
+  case "CSV":       return OUTFORMAT_CSV,       nil
+  case "QUOTE":     return OUTFORMAT_QUOTE,     nil
+  case "TABS":      return OUTFORMAT_TABS,      nil
+  case "LINE":      return OUTFORMAT_LINE,      nil
+  case "JSON":      return OUTFORMAT_JSON,      nil
+  case "HTML":      return OUTFORMAT_HTML,      nil
+  case "MARKDOWN":  return OUTFORMAT_MARKDOWN,  nil
+  case "TABLE":     return OUTFORMAT_TABLE,     nil
+  case "BOX":       return OUTFORMAT_BOX,       nil
+  case "XML":       return OUTFORMAT_XML,       nil
+  case "":          return -1,                  errors.New( "Missing output format" )
+  default:          return -1,                  errors.New( "Unknown output format" )
+  }
+}
+
+func GetDefaultSeparatorForOutputFormat( Format int ) ( string, error ) {
+  switch Format {
+  case OUTFORMAT_LIST, OUTFORMAT_MARKDOWN, OUTFORMAT_TABLE: return "|",   nil
+  case OUTFORMAT_CSV, OUTFORMAT_QUOTE, OUTFORMAT_JSON:      return ",",   nil
+  case OUTFORMAT_TABS:                                      return "\t",  nil
+  case OUTFORMAT_LINE:                                      return "=",   nil
+  case OUTFORMAT_HTML, OUTFORMAT_XML:                       return "",    nil
+  case OUTFORMAT_BOX:                                       return "│",   nil
+  default:                                                  return "",    errors.New( "Unknown output format" )
   }
 }

@@ -8,6 +8,8 @@ C/cli/sqlitecloud-cli.xcodeproj/project.xcworkspace/xcuserdata/marco.xcuserdatad
 C/cli/sqlitecloud-cli.xcodeproj/project.xcworkspace/xcuserdata/marco.xcuserdatad/UserInterfaceState.xcuserstate
 
 
+bin
+*.db
 .DS_Store
 .gitignore
 .sqlitecloud_history.txt

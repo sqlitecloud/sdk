@@ -6,7 +6,7 @@
 //     //             ///   ///  ///    Date        : 2021/08/13
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///     
-//   ///     //////////   ///  ///      Description : GO methods related to the
+//   ///     //////////   ///  ///      Description : GO Methods related to the
 //   ////                ///  ///                     SQCloudResultRow class.
 //     ////     //////////   ///        
 //        ////            ////          
@@ -80,7 +80,7 @@ func (this *SQCloudResultRow ) GetType( Column uint ) int {
 // IsInteger returns true if this query result row column Column is of type "VALUE_INTEGER", false otherwise.
 // The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
 func (this *SQCloudResultRow ) IsInteger( Column uint ) bool {
-  return this.GetType( Column ) == RESULT_INTEGER
+  return this.GetType( Column ) == VALUE_INTEGER
 }
 
 // IsFloat returns true if this query result row column Column is of type "VALUE_FLOAT", false otherwise.
@@ -104,7 +104,7 @@ func (this *SQCloudResultRow ) IsBlob( Column uint ) bool {
 // IsNull returns true if this query result row column Column is of type "VALUE_NULL", false otherwise.
 // The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
 func (this *SQCloudResultRow ) IsNull( Column uint ) bool {
-  return this.GetType( Column ) == RESULT_NULL
+  return this.GetType( Column ) == VALUE_NULL
 }
 
 // IsTextual returns true if this query result row column Column is of type "VALUE_NULL" or "VALUE_BLOB", false otherwise.
@@ -174,71 +174,75 @@ func (this *SQCloudResultRow ) GetSQLDateTime( Column uint ) time.Time {
 } 
 
 
-func (this *SQCloudResultRow) renderLine( Format int, Seperator string, MaxLineLength uint ) string {
+func (this *SQCloudResultRow) renderValue( Column uint, Quotation string, NullValue string ) string {
+  //fmt.Printf( "renderValue, col = %d\r\n", Column )
+  switch this.GetType( Column ) {
+  case VALUE_INTEGER, VALUE_FLOAT:  return this.GetStringValue( Column )
+  case VALUE_NULL:                  return NullValue  
+  case VALUE_TEXT, VALUE_BLOB:      fallthrough
+  default:                          return fmt.Sprintf( "%s%s%s", Quotation, this.GetStringValue( Column ), Quotation )
+  }
+}
+
+func (this *SQCloudResultRow) renderLine( Format int, Separator string, NullValue string, NewLine string, MaxLineLength uint ) string {
   buffer := ""
   for forThisColumn := uint( 0 ); forThisColumn < this.columns; forThisColumn++ {
     switch Format {
-    case OUTFORMAT_LIST, OUTFORMAT_TABS:                      buffer += fmt.Sprintf( "%s%s", this.GetStringValue( forThisColumn ), Seperator )
-    case OUTFORMAT_MARKDOWN, OUTFORMAT_TABLE, OUTFORMAT_BOX:  buffer += fmt.Sprintf( fmt.Sprintf( " %%-%ds %s", this.GetWidth( forThisColumn ), Seperator ), this.GetStringValue( forThisColumn ) ) 
-    case OUTFORMAT_CSV:                                       buffer += fmt.Sprintf( "%s,", SQCloudEnquoteString( this.GetStringValue( forThisColumn ) ) )
-    case OUTFORMAT_LINE:                                      buffer += fmt.Sprintf( fmt.Sprintf( "%%%ds = %%s\r\n", this.result.MaxHeaderWidth ), this.GetName( forThisColumn ), this.GetStringValue( forThisColumn ) )
-    case OUTFORMAT_HTML:                                      buffer += fmt.Sprintf( "  <TD>%s</TD>\r\n", html.EscapeString( this.GetStringValue( forThisColumn ) ) )
-    case OUTFORMAT_XML:                                       buffer += fmt.Sprintf( "    <field name=\"%s\">%s</field>\r\n", this.GetName( forThisColumn ), html.EscapeString( this.GetStringValue( forThisColumn ) ) )
+    case OUTFORMAT_LIST, OUTFORMAT_TABS:                      buffer += fmt.Sprintf( "%s%s", this.renderValue( forThisColumn, "", NullValue ), Separator )
+    case OUTFORMAT_MARKDOWN, OUTFORMAT_TABLE, OUTFORMAT_BOX:  buffer += fmt.Sprintf( fmt.Sprintf( " %%-%ds %s", this.GetWidth( forThisColumn ), Separator ), this.renderValue( forThisColumn, "", NullValue ) ) 
+    case OUTFORMAT_CSV:                                       buffer += fmt.Sprintf( "%s,", SQCloudEnquoteString( this.renderValue( forThisColumn, "", NullValue ) ) )
+    case OUTFORMAT_LINE:                                      buffer += trimStringToMaxLength( fmt.Sprintf( fmt.Sprintf( "%%%ds = %%s", this.result.MaxHeaderWidth ), this.GetName( forThisColumn ), this.renderValue( forThisColumn, "", NullValue ) ), MaxLineLength ) + NewLine
+    case OUTFORMAT_HTML:                                      buffer += trimStringToMaxLength( fmt.Sprintf( "  <TD>%s</TD>", html.EscapeString( this.renderValue( forThisColumn, "", NullValue ) ) ), MaxLineLength ) + NewLine
+    case OUTFORMAT_XML:                                       buffer += trimStringToMaxLength( fmt.Sprintf( "    <field name=\"%s\">%s</field>", this.GetName( forThisColumn ), html.EscapeString( this.renderValue( forThisColumn, "", NullValue ) ) ), MaxLineLength ) + NewLine
     }
   }
-  return trimStringToMaxLength( strings.TrimRight( buffer, Seperator ), MaxLineLength )
+  switch Format {
+  case OUTFORMAT_LINE, OUTFORMAT_HTML, OUTFORMAT_XML: return buffer // Multiline output was truncated already
+  default:                                            return trimStringToMaxLength( strings.TrimRight( buffer, Separator ), MaxLineLength )
+  }
 }
 
 // DumpToWriter renders this query result row into the buffer of an io.Writer.
 // The output Format can be specified and must be one of the following values: OUTFORMAT_LIST, OUTFORMAT_CSV, OUTFORMAT_QUOTE, OUTFORMAT_TABS, OUTFORMAT_LINE, OUTFORMAT_JSON, OUTFORMAT_HTML, OUTFORMAT_MARKDOWN, OUTFORMAT_TABLE, OUTFORMAT_BOX
 // The Separator argument specifies the column separating string (default: '|'). 
 // All lines are truncated at MaxLineLeength. A MaxLineLangth of '0' means no truncation. 
-func (this *SQCloudResultRow) DumpToWriter( Out io.Writer, Format int, Seperator string, MaxLineLength uint ) ( int, error ) {
+func (this *SQCloudResultRow) DumpToWriter( Out io.Writer, Format int, Separator string, NullValue string, NewLine string, MaxLineLength uint ) ( int, error ) {
   buffer := ""
   
   switch( Format ) {
-  case OUTFORMAT_LIST:
-    buffer = this.renderLine( Format, Seperator, MaxLineLength ) + "\r\n"
-
-  case OUTFORMAT_CSV:
-    buffer = this.renderLine( Format, ",", MaxLineLength ) + "\r\n"
+  case OUTFORMAT_LIST, OUTFORMAT_CSV, OUTFORMAT_TABS, OUTFORMAT_LINE:
+    buffer = this.renderLine( Format, Separator, NullValue, NewLine, MaxLineLength ) + NewLine
 
   case OUTFORMAT_QUOTE: 
     for forThisColumn := uint( 0 ); forThisColumn < this.columns; forThisColumn++ {
       switch this.GetType( forThisColumn ) {
-      case VALUE_TEXT, VALUE_BLOB:  buffer += fmt.Sprintf( "'%s',", strings.Replace( this.GetStringValue( forThisColumn ), "'", "\\'", -1 ) )
-      default:                      buffer += fmt.Sprintf( "%s,", this.GetStringValue( forThisColumn ))
+      case VALUE_TEXT, VALUE_BLOB:  buffer += fmt.Sprintf( "'%s'%s", strings.Replace( this.GetStringValue( forThisColumn ), "'", "\\'", -1 ), Separator )
+      default:                      buffer += fmt.Sprintf( "%s%s", this.GetStringValue( forThisColumn ), Separator)
       }
     }
-    buffer = trimStringToMaxLength( strings.TrimRight( buffer, "," ), MaxLineLength ) + "\r\n"
-
-  case OUTFORMAT_TABS:
-    buffer = this.renderLine( Format, "\t", MaxLineLength ) + "\r\n"
-  
-  case OUTFORMAT_LINE:
-    buffer = this.renderLine( Format, "", MaxLineLength ) + "\r\n"
+    buffer = trimStringToMaxLength( strings.TrimRight( buffer, Separator ), MaxLineLength ) + NewLine
   
   case OUTFORMAT_JSON:
     for forThisColumn := uint( 0 ); forThisColumn < this.columns; forThisColumn++ {
       switch this.GetType( forThisColumn ) {
-      case VALUE_TEXT, VALUE_BLOB:  buffer += fmt.Sprintf( "\"%s\":\"%s\",", strings.Replace( this.GetName( forThisColumn ), "\"", "\"\"", -1 ), strings.Replace( this.GetStringValue( forThisColumn ), "\"", "\"\"", -1 ) )
-      default:                      buffer += fmt.Sprintf( "\"%s\":\"%s\",", strings.Replace( this.GetName( forThisColumn ), "\"", "\"\"", -1 ), this.GetStringValue( forThisColumn ) )
+      case VALUE_TEXT, VALUE_BLOB:  buffer += fmt.Sprintf( "\"%s\":\"%s\"%s", strings.Replace( this.GetName( forThisColumn ), "\"", "\\\"", -1 ), strings.Replace( this.renderValue( forThisColumn, "", NullValue ), "\"", "\\\"", -1 ), Separator )
+      default:                      buffer += fmt.Sprintf( "\"%s\":%s%s", strings.Replace( this.GetName( forThisColumn ), "\"", "\\\"", -1 ), this.renderValue( forThisColumn, "", NullValue ), Separator )
       }
     }
-    buffer = fmt.Sprintf( "  {%s},\r\n", strings.TrimRight( buffer, "," ) )
+    buffer = trimStringToMaxLength( fmt.Sprintf( "  {%s}%s", buffer, Separator ), MaxLineLength ) + NewLine
 
   case OUTFORMAT_HTML:
-    buffer = fmt.Sprintf( "<TR>\r\n%s</TR>\r\n", this.renderLine( Format, "", MaxLineLength ) )
+    buffer = trimStringToMaxLength( "<TR>", MaxLineLength )               + NewLine +
+             this.renderLine( Format, Separator, NullValue, NewLine, MaxLineLength )  +
+             trimStringToMaxLength( "</TR>", MaxLineLength )              + NewLine
   
   case OUTFORMAT_XML:
-    buffer = fmt.Sprintf( "  <row>\r\n%s  </row>\r\n", this.renderLine( Format, "", MaxLineLength ) )
+    buffer = trimStringToMaxLength( "  <row>", MaxLineLength )            + NewLine +
+             this.renderLine( Format, Separator, NullValue, NewLine, MaxLineLength )  +
+             trimStringToMaxLength( "  </row>", MaxLineLength )           + NewLine
 
-  case OUTFORMAT_MARKDOWN, OUTFORMAT_TABLE:
-    buffer = "|" + this.renderLine( Format, "|", MaxLineLength ) + "|\r\n"
-  
-  case OUTFORMAT_BOX:
-    buffer = "│" + this.renderLine( Format, "│", MaxLineLength ) + "│\r\n"
-
+  case OUTFORMAT_MARKDOWN, OUTFORMAT_TABLE, OUTFORMAT_BOX:
+    buffer = trimStringToMaxLength( fmt.Sprintf( "%s%s%s", Separator, this.renderLine( Format, Separator, NullValue, NewLine, MaxLineLength ), Separator ), MaxLineLength ) + NewLine
   }
   
   return io.WriteString( Out, buffer )

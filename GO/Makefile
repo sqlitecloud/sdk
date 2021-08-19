@@ -1,10 +1,10 @@
 # Pre-requirements
-install-prerequirements:	patch docopt-go dburl lz4 godoc gosec
+install-prerequirements:	liner docopt-go dburl lz4 godoc gosec
 
-# Linenoise
-go-cli:
-ifeq ($(wildcard src/github.com/deadsy),)
-	-go get -v github.com/deadsy/go-cli
+# liner
+liner:
+ifeq ($(wildcard src/github.com/peterh),)
+	-go get -v github.com/peterh/liner
 endif
 
 # Command line arguments
@@ -37,17 +37,23 @@ ifeq ($(wildcard bin/gosec),)
 	curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh
 endif
 
-# Linenoise patching for OSX
-src/github.com/deadsy/go-cli/line.go:	go-cli src/deadsy_line.patch
-	cp src/deadsy_line.patch src/github.com/deadsy/go-cli/line.go
-	
-patch: go-cli src/github.com/deadsy/go-cli/line.go
-
 # Test Programs
 src/Test/test1:	sdk src/Test/test1.go
 	go build -o src/Test/test1 src/Test/test1.go
 
-test:	sdk src/Test/test1
+src/Test/server:	sdk src/Test/server.go
+	go build -o src/Test/server src/Test/server.go
+	
+src/Test/dump1:	sdk src/Test/dump1.go
+	go build -o src/Test/dump1 src/Test/dump1.go
+	
+src/Test/dump2:	sdk src/Test/dump2.go
+	go build -o src/Test/dump2 src/Test/dump2.go
+	
+src/Test/dump3:	sdk src/Test/dump3.go
+	go build -o src/Test/dump3 src/Test/dump3.go
+
+test:	sdk src/Test/test1 src/Test/server src/Test/dump1 src/Test/dump2 src/Test/dump3
 
 # CSDK
 src/sqlitecloud/libsqcloud.a:	
