@@ -384,6 +384,8 @@ static bool internal_setup_ssl (SQCloudConnection *connection, SQCloudConfig *co
 }
 
 static SQCloudValueType internal_type (char *buffer) {
+    // for VALUE_NULL values we don't return _ but the NULL value itself
+    // so check for this special case
     if (!buffer) return VALUE_NULL;
     
     switch (buffer[0]) {
@@ -1625,6 +1627,19 @@ void SQCloudRowsetDump (SQCloudResult *result, uint32_t maxline) {
         putchar('|');
     }
     printf("\n");
+    
+    #if 0
+    // print types (just for debugging)
+    printf("\n");
+    for (uint32_t i=0; i<nrows; ++i) {
+        for (uint32_t j=0; j<ncols; ++j) {
+            SQCloudValueType type = SQCloudRowsetValueType(result, i, j);
+            printf("%d ", type);
+        }
+        printf("\n");
+    }
+    printf("\n");
+    #endif
     
     // print result
     for (uint32_t i=0; i<nrows * ncols; ++i) {
