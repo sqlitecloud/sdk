@@ -384,8 +384,11 @@ static bool internal_setup_ssl (SQCloudConnection *connection, SQCloudConfig *co
 }
 
 static SQCloudValueType internal_type (char *buffer) {
-    // for VALUE_NULL values we don't return _ but the NULL value itself
-    // so check for this special case
+    // for VALUE_NULL values we don't return _ but the NULL value itself, so check for this special case
+    // internal_parse_value is used both internally to set the value inside a Rowset (1)
+    // and also from the public API SQCloudRowsetValue (2)
+    // to fix this misbehaviour, (1) should return _ while (2) should return NULL
+    // this is really just a convention so it is much more easier to just return NULL everytime
     if (!buffer) return VALUE_NULL;
     
     switch (buffer[0]) {
