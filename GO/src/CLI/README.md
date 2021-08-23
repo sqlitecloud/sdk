@@ -14,17 +14,16 @@
 
 ## Compatibility with other database command line clients
 
-```console
+<PRE>
 ✅ = Implemented, directly or indrectly available
 🤔 = Not Implemented / Maybe later?
 👎 = Decided agains implementation, not usefull
 ❌ = Does not apply / will never be implemented
-
-```
+</PRE>
 
 ### Command line compatibility with sqlite3
 
-```console
+<PRE>
 🤔   -A ARGS...             run ".archive ARGS" and exit
 ❌   -append                append the database to the end of the file
 👎   -ascii                 set output mode to 'ascii'
@@ -62,12 +61,11 @@
 ✅   -version               show SQLite version
 ❌   -vfs NAME              use NAME as the default VFS
 ❌   -zip                   open the file as a ZIP Archive
-
-```
+</PRE>
 
 ### Internal command compatibility with sqlite3
 
-```console
+<PRE>
 🤔 .archive ...             Manage SQL archives
 🤔 .auth ON|OFF             Show authorizer callbacks
 🤔 .backup ?DB? FILE        Backup DB (default "main") to FILE
@@ -132,8 +130,7 @@
 ❌ .vfslist                 List all available VFSes
 ❌ .vfsname ?AUX?           Print the name of the VFS stack
 🤔 .width NUM1 NUM2 ...     Set minimum column widths for columnar output
-
-```
+</PRE>
 
 ## Getting started
 
@@ -143,7 +140,7 @@ go env -w GO111MODULE=off
 cd sdk/GO
 export GOPATH=`pwd`
 echo $GOPATH
-male cli
+make cli
 
 ```
 
@@ -301,7 +298,7 @@ Rows: 3 - Cols: 6: 229 Bytes Time: 82.762014ms
 
 ```
 ### Changing the outformat back
-One can enter `.format` without any argument to switch the output format back to its default format or one could enter an explicit format lik `.format box`.
+One can enter `.format` without any argument to switch the output format back to its default format or one could enter an explicit format like `.format box`.
 
 ### Line Truncation explained:
 Lets assume, that you have a narrow terminal window. If you have entered the following commmands, the output would look something like this:
@@ -340,7 +337,7 @@ Rows: 3 - Cols: 6: 229 Bytes Time: 87.014696ms
 ***REMOVED***:X > 
 
 ```
-You can see a nasty line break in the middle of the result line that can easily ruin the screen reading experience. To avoid this annoyance , sqlc build in line trucation mechanism trims its output line in a terminal session by default. The result looks like this:
+You can see a nasty line break in the middle of the result line that can easily ruin the screen reading experience. To avoid this annoyance, sqlc build in line trucation mechanism trims its output line in a terminal session by default. The result looks like this:
 ```console
 ***REMOVED***:X > .format table
 ***REMOVED***:X > SELECT * FROM Dummy;
@@ -368,7 +365,7 @@ Rows: 3 - Cols: 6: 229 Bytes Time: 88.874433ms
 If an output line was trimed to a certain width, the truncation can easily be spoted by the `…` character at the very end of a line. In batch mode, all output is sent to an output file, no line truncation will occure. You can switch off this autotrunction behaviour with a `.width 0` command. To switch back to auto truncation, use `.width -1`. Truncation to any other width is also possible with, for exampel a `.width 35` command. 
 
 ### Using Autocomplete
-To use the build in autocomplete feature, use the [TAB] key. The [TAB] key will try to guess what SQL command you was trying to use and autocomplete this SQL command for you. If autocomplete has guessed the fron command, keep pressing [TAB] until the right commands shows up. The Autocomplete knows all available SQLite Cloud server and SQLite Cloud SQL commands and functions. If you have selected a database (`USE DATABASE ...`), autocomplete will also help you with the Table and Colum names. "UPDATING'ing some data" shows is a simple example session:
+To use the build in autocomplete feature, use the [TAB] key. The [TAB] key will try to guess what SQL command you was trying to use and autocomplete this SQL command for you. If autocomplete has guessed the wrong command, keep pressing [TAB] until the right command shows up. The Autocomplete knows all available SQLite Cloud server and SQLite Cloud SQL commands and functions. If you have selected a database (`USE DATABASE ...`), autocomplete will also help you with the Table and Colum names. "UPDATING'ing some data" shows a simple example session:
 
 ### UPDATING'ing some data
 ```console
@@ -437,3 +434,14 @@ echo "LIST DATABASES" > script.sql; ./bin/sqlc sqlitecloud://***REMOVED***/X --f
 ./bin/sqlc sqlitecloud://***REMOVED***/X --list -o outputfile --quiet --format=xml
 
 ```
+
+## ToDos
+- [ ] --promt
+- [ ] --reconnect
+- [ ] When started without a host, localhost is assumed. If no database server is running on the localhost, a 10 second timeout will occure.
+- [ ] Make internal .dot commands available in batch files
+- [ ] Test for "empty commands"
+- [ ] Add --log feature
+- [ ] Drop the table "sqlite_sequence" from dynamic autocomplete scanning
+- [ ] Implement the Auth command to use the Password feature
+- [ ] Add more Test example commands
