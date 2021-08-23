@@ -26,7 +26,11 @@ func main() {
 
   db := sqlitecloud.New()
 
-  err := db.Connect( "***REMOVED***", 8860, "user", "password", "X", 10, "NO", 0 ) // Host, Port, Username, Password, Database, Timeout, Compression, Family
+	// This one works
+	// err := db.Connect( "***REMOVED***", 8860, "user", "password", "X", 10, "NO", 0 ) // Host, Port, Username, Password, Database, Timeout, Compression, Family
+  
+	// This one does NOT work
+	err := db.Connect( "***REMOVED***", 8860, "user with space", "password with space", "X", 10, "NO", 0 ) // Host, Port, Username, Password, Database, Timeout, Compression, Family
   if err == nil {
     defer db.Close()
 
@@ -36,8 +40,14 @@ func main() {
     }
     fmt.Printf( "ok.\r\n" )
 
-    fmt.Printf( "Checking AUTH..." )
+    fmt.Printf( "Checking AUTH (without space)..." )
     if err := db.Auth( "pfeil", "secret"); err != nil { //  Username, Password
+      fail( err.Error() )
+    }
+    fmt.Printf( "ok.\r\n" )
+
+		fmt.Printf( "Checking AUTH (with space)..." )
+    if err := db.Auth( "user with space", "password with space"); err != nil { //  Username, Password
       fail( err.Error() )
     }
     fmt.Printf( "ok.\r\n" )
