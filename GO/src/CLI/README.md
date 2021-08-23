@@ -14,13 +14,17 @@
 
 ## Compatibility with other database command line clients
 
+```console
 ✅ = Implemented, directly or indrectly available
 🤔 = Not Implemented / Maybe later?
 👎 = Decided agains implementation, not usefull
 ❌ = Does not apply / will never be implemented
 
+```
+
 ### Command line compatibility with sqlite3
 
+```console
 🤔   -A ARGS...             run ".archive ARGS" and exit
 ❌   -append                append the database to the end of the file
 👎   -ascii                 set output mode to 'ascii'
@@ -59,8 +63,11 @@
 ❌   -vfs NAME              use NAME as the default VFS
 ❌   -zip                   open the file as a ZIP Archive
 
+```
+
 ### Internal command compatibility with sqlite3
 
+```console
 🤔 .archive ...             Manage SQL archives
 🤔 .auth ON|OFF             Show authorizer callbacks
 🤔 .backup ?DB? FILE        Backup DB (default "main") to FILE
@@ -126,6 +133,8 @@
 ❌ .vfsname ?AUX?           Print the name of the VFS stack
 🤔 .width NUM1 NUM2 ...     Set minimum column widths for columnar output
 
+```
+
 ## Getting started
 
 ### Compile
@@ -190,14 +199,7 @@ Connection Options:
 
 ### Internal Commands
 ```console
-./bin/sqlc --host=***REMOVED*** --dbname=X
-   _____     
-  /    /     SQLite Cloud Command Line Application, version 1.0.1
- / ___/ /    (c) 2021 by SQLite Cloud Inc.
- \  ___/ /   
-  \_ ___/    Enter ".help" for usage hints.
-
-***REMOVED***:X > .help
+ ***REMOVED***:X > .help
 
 .help                Show this message
 .bail [on|off]       Stop after hitting an error [default: off]
@@ -222,8 +224,192 @@ Boolean settings are toggled if no parameter is specified.
 
 ```
 
-### Using the CLI
+## Using the CLI
 
+### Starting a new session
+```console
+./bin/sqlc --host=***REMOVED*** --dbname=X
+   _____     
+  /    /     SQLite Cloud Command Line Application, version 1.0.1
+ / ___/ /    (c) 2021 by SQLite Cloud Inc.
+ \  ___/ /   
+  \_ ___/    Enter ".help" for usage hints.
+
+***REMOVED***:X >
+
+```
+
+### SELECT'ing some data
+```console
+***REMOVED***:X > SELECT * FROM Dummy;
+┌─────┬───────────┬──────────┬───────┬──────────┬─────────────────────┐
+│ ID  │ FirstName │ LastName │  ZIP  │   City   │       Address       │
+├─────┼───────────┼──────────┼───────┼──────────┼─────────────────────┤
+│ 369 │ Some      │ One      │ 96450 │ Coburg   │ Mohrenstraße 1      │
+│ 370 │ Someone   │ Else     │ 96145 │ Sesslach │ Raiffeisenstraße 6  │
+│ 371 │ One       │ More     │ 91099 │ Poxdorf  │ Langholzstr. 4      │
+│ 372 │ Quotation │ Test     │ 12345 │ &"<>     │ 'Straße 0'          │
+└─────┴───────────┴──────────┴───────┴──────────┴─────────────────────┘
+Rows: 4 - Cols: 6: 282 Bytes Time: 86.43071ms
+
+***REMOVED***:X > 
+
+```
+### DELETE'ing a row
+```console
+***REMOVED***:X > DELETE FROM Dummy WHERE ID = 372;
+OK
+
+***REMOVED***:X > 
+
+```
+
+### Changing the outformat
+```console
+***REMOVED***:X > .format xml
+***REMOVED***:X > SELECT * FROM Dummy;
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<resultset statement="SELECT * FROM Dummy;" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <row>
+    <field name="ID">369</field>
+    <field name="FirstName">Some</field>
+    <field name="LastName">One</field>
+    <field name="ZIP">96450</field>
+    <field name="City">Coburg</field>
+    <field name="Address">Mohrenstraße 1</field>
+  </row>
+  <row>
+    <field name="ID">370</field>
+    <field name="FirstName">Someone</field>
+    <field name="LastName">Else</field>
+    <field name="ZIP">96145</field>
+    <field name="City">Sesslach</field>
+    <field name="Address">Raiffeisenstraße 6</field>
+  </row>
+  <row>
+    <field name="ID">371</field>
+    <field name="FirstName">One</field>
+    <field name="LastName">More</field>
+    <field name="ZIP">91099</field>
+    <field name="City">Poxdorf</field>
+    <field name="Address">Langholzstr. 4</field>
+  </row>
+</resultset>
+Rows: 3 - Cols: 6: 229 Bytes Time: 82.762014ms
+
+***REMOVED***:X > 
+
+```
+### Changing the outformat back
+One can enter `.format` without any argument to switch the output format back to its default format or one could enter an explicit format lik `.format box`.
+
+### Line Truncation explained:
+Lets assume, that you have a narrow terminal window. If you have entered the following commmands, the output would look something like this:
+```console
+***REMOVED***:X > .format table
+ ***REMOVED***:X > SELECT * FROM Dummy;
++-----+-----------+----------+-------+----------+---------------
+------+
+| ID  | FirstName | LastName |  ZIP  |   City   |       Address 
+      |
++-----+-----------+----------+-------+----------+---------------
+------+
+| 369 | Some      | One      | 96450 | Coburg   | Mohrenstraße 1
+      |
+| 370 | Someone   | Else     | 96145 | Sesslach | Raiffeisenstra
+ße 6  |
+| 371 | One       | More     | 91099 | Poxdorf  | Langholzstr. 4
+      |
++-----+-----------+----------+-------+----------+---------------
+------+
+Rows: 3 - Cols: 6: 229 Bytes Time: 81.418646ms
+
+***REMOVED***:X > .format json
+***REMOVED***:X > SELECT * FROM Dummy;
+
+[
+  {"ID":369,"FirstName":"Some","LastName":"One","ZIP":96450,"Cit
+y":"Coburg","Address":"Mohrenstraße 1",},
+  {"ID":370,"FirstName":"Someone","LastName":"Else","ZIP":96145,
+"City":"Sesslach","Address":"Raiffeisenstraße 6",},
+  {"ID":371,"FirstName":"One","LastName":"More","ZIP":91099,"Cit
+y":"Poxdorf","Address":"Langholzstr. 4",},
+]
+Rows: 3 - Cols: 6: 229 Bytes Time: 87.014696ms
+
+***REMOVED***:X > 
+
+```
+You can see a nasty line break in the middle of the result line that can easily ruin the screen reading experience. To avoid this annoyance , sqlc build in line trucation mechanism trims its output line in a terminal session by default. The result looks like this:
+```console
+***REMOVED***:X > .format table
+***REMOVED***:X > SELECT * FROM Dummy;
++-----+-----------+----------+-------+----------+--------------…
+| ID  | FirstName | LastName |  ZIP  |   City   |       Address…
++-----+-----------+----------+-------+----------+--------------…
+| 369 | Some      | One      | 96450 | Coburg   | Mohrenstraße …
+| 370 | Someone   | Else     | 96145 | Sesslach | Raiffeisenstr…
+| 371 | One       | More     | 91099 | Poxdorf  | Langholzstr. …
++-----+-----------+----------+-------+----------+--------------…
+Rows: 3 - Cols: 6: 229 Bytes Time: 84.409225ms
+
+***REMOVED***:X > .format json
+***REMOVED***:X > SELECT * FROM Dummy;
+[
+  {"ID":369,"FirstName":"Some","LastName":"One","ZIP":96450,"Ci…
+  {"ID":370,"FirstName":"Someone","LastName":"Else","ZIP":96145…
+  {"ID":371,"FirstName":"One","LastName":"More","ZIP":91099,"Ci…
+]
+Rows: 3 - Cols: 6: 229 Bytes Time: 88.874433ms
+
+***REMOVED***:X > 
+```
+
+If an output line was trimed to a certain width, the truncation can easily be spoted by the `…` character at the very end of a line. In batch mode, all output is sent to an output file, no line truncation will occure. You can switch off this autotrunction behaviour with a `.width 0` command. To switch back to auto truncation, use `.width -1`. Truncation to any other width is also possible with, for exampel a `.width 35` command. 
+
+### Using Autocomplete
+To use the build in autocomplete feature, use the [TAB] key. The [TAB] key will try to guess what SQL command you was trying to use and autocomplete this SQL command for you. If autocomplete has guessed the fron command, keep pressing [TAB] until the right commands shows up. The Autocomplete knows all available SQLite Cloud server and SQLite Cloud SQL commands and functions. If you have selected a database (`USE DATABASE ...`), autocomplete will also help you with the Table and Colum names. "UPDATING'ing some data" shows is a simple example session:
+
+### UPDATING'ing some data
+```console
+***REMOVED***:X > sel[TAB]
+***REMOVED***:X > SELECT 
+***REMOVED***:X > SELECT Fi[TAB]
+***REMOVED***:X > SELECT FirstName
+***REMOVED***:X > SELECT FirstName, Dum[TAB][TAB][TAB][TAB]
+***REMOVED***:X > SELECT FirstName, Dummy.LastName
+***REMOVED***:X > SELECT FirstName, Dummy.LastName Fr[TAB]
+***REMOVED***:X > SELECT FirstName, Dummy.LastName FROM D[TAB]
+***REMOVED***:X > SELECT FirstName, Dummy.LastName FROM Dummy[RETURN]
+┌───────────┬──────────┐
+│ FirstName │ LastName │
+├───────────┼──────────┤
+│ Some      │ One      │
+│ Someone   │ Else     │
+│ One       │ More     │
+└───────────┴──────────┘
+Rows: 3 - Cols: 2: 74 Bytes Time: 81.865386ms
+
+***REMOVED***:X > up[TAB]
+***REMOVED***:X > UPDATE D[TAB]
+***REMOVED***:X > UPDATE Dummy SET La[TAB]
+***REMOVED***:X > UPDATE Dummy SET LastName 
+***REMOVED***:X > UPDATE Dummy SET LastName = "ONE" WH[TAB]
+***REMOVED***:X > UPDATE Dummy SET LastName = "ONE" WHERE id=369[RETURN]
+OK
+
+***REMOVED***:X > SELECT * FROM Dummy;
+┌─────┬───────────┬──────────┬───────┬──────────┬─────────────────────┐
+│ ID  │ FirstName │ LastName │  ZIP  │   City   │       Address       │
+├─────┼───────────┼──────────┼───────┼──────────┼─────────────────────┤
+│ 369 │ Some      │ ONE      │ 96450 │ Coburg   │ Mohrenstraße 1      │
+│ 370 │ Someone   │ Else     │ 96145 │ Sesslach │ Raiffeisenstraße 6  │
+│ 371 │ One       │ More     │ 91099 │ Poxdorf  │ Langholzstr. 4      │
+└─────┴───────────┴──────────┴───────┴──────────┴─────────────────────┘
+Rows: 3 - Cols: 6: 229 Bytes Time: 82.797135ms
+
+***REMOVED***:X > 
+```
 
 ### Exiting the app
 ```console
@@ -231,8 +417,7 @@ Boolean settings are toggled if no parameter is specified.
 
 ```
 
-
-### Testing
+## Testing
 ```console
 ./bin/sqlc -?
 ./bin/sqlc --help
