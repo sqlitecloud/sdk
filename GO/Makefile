@@ -1,10 +1,16 @@
 # Pre-requirements
-install-prerequirements:	liner docopt-go dburl lz4 godoc gosec
+install-prerequirements:	liner term docopt-go dburl lz4 godoc gosec
 
 # liner
 liner:
 ifeq ($(wildcard src/github.com/peterh),)
 	-go get -v github.com/peterh/liner
+endif
+
+# term
+term:
+ifeq ($(wildcard src/golang.org/x/term),)
+	-go get -v golang.org/x/term
 endif
 
 # Command line arguments
@@ -38,22 +44,22 @@ ifeq ($(wildcard bin/gosec),)
 endif
 
 # Test Programs
-src/Test/test1:	sdk src/Test/test1.go
-	go build -o src/Test/test1 src/Test/test1.go
+bin/test1:	sdk src/Test/test1.go
+	go build -o bin/test1 src/Test/test1.go
 
-src/Test/server:	sdk src/Test/server.go
-	go build -o src/Test/server src/Test/server.go
+bin/server:	sdk src/Test/server.go
+	go build -o bin/server src/Test/server.go
 	
-src/Test/dump1:	sdk src/Test/dump1.go
-	go build -o src/Test/dump1 src/Test/dump1.go
+bin/dump1:	sdk src/Test/dump1.go
+	go build -o bin/dump1 src/Test/dump1.go
 	
-src/Test/dump2:	sdk src/Test/dump2.go
-	go build -o src/Test/dump2 src/Test/dump2.go
+bin/dump2:	sdk src/Test/dump2.go
+	go build -o bin/dump2 src/Test/dump2.go
 	
-src/Test/dump3:	sdk src/Test/dump3.go
-	go build -o src/Test/dump3 src/Test/dump3.go
+bin/dump3:	sdk src/Test/dump3.go
+	go build -o bin/dump3 src/Test/dump3.go
 
-test:	sdk src/Test/test1 src/Test/server src/Test/dump1 src/Test/dump2 src/Test/dump3
+test:	sdk bin/test1 bin/server bin/dump1 bin/dump2 bin/dump3
 
 # CSDK
 src/sqlitecloud/libsqcloud.a:	
