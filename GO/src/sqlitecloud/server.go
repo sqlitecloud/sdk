@@ -96,7 +96,7 @@ func (this *SQCloud) ListConnections() ( []SQCloudConnection, error ) {
     if result != nil {
       if result.GetNumberOfColumns() == 6 {
         rows :=result.GetNumberOfRows()
-        for row := uint( 1 ); row < rows; row++ {
+        for row := uint( 0 ); row < rows; row++ {
           connectionList = append( connectionList, SQCloudConnection{ 
             ClientID: result.GetInt64Value( row, 1 ), 
             Address:  result.CGetStringValue( row, 2 ),
@@ -125,7 +125,7 @@ func (this *SQCloud) ListDatabaseConnections( Database string ) ( []SQCloudConne
     if result != nil {
       if result.GetNumberOfColumns() == 2 {
         rows :=result.GetNumberOfRows()
-        for row := uint( 1 ); row < rows; row++ {
+        for row := uint( 0 ); row < rows; row++ {
           connectionList = append( connectionList, SQCloudConnection{ 
             ClientID: result.GetInt64Value( row, 1 ), 
             Address:  "",
