@@ -92,7 +92,7 @@ When the first character is `{` that means that the whole packet is guarantee to
 The null type is encoded just as `_ `, which is just the underscore character followed by the ` ` space character.
 
 ### SCSP Compression
-Any value can be compressed and the format is `%LEN COMPRESSED UNCOMPRESSED BUFFER` (even if the current implementation supports RowSet compression only). Compression is used ONLY if client notify the server that it supports compression with a dedicated command. Compression is performed using the high performance LZ4 algorithm (https://github.com/lz4/lz4). The whole command is built by six parts:
+Only Rowset can be compressed and the format is `%LEN COMPRESSED UNCOMPRESSED BUFFER`. Compression is used ONLY if client notify the server that it supports compression with a dedicated command. Compression is performed using the high performance LZ4 algorithm (https://github.com/lz4/lz4). The whole command is built by six parts:
 1. The single `%` character
 2. LEN is a string representation of total command length
 3. A single space is used to separate LEN from EXPANDED
