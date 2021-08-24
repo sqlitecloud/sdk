@@ -8,9 +8,9 @@
 - Many result output formats
 - Many internal commands (.dot commands) for good feature compatibility with other mayor database systems
 - Automatic line trunctions for nice terminal rendering
-- Automatic rednering of numbers and size/time units
+- Automatic rendering of numbers and size/time units
 - Command history
-- Static and dynamic query qutocomplete
+- Static and dynamic SQL qutocomplete
 
 ## Compatibility with other database command line clients
 
