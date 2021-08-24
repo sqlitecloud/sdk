@@ -54,7 +54,7 @@ The format is `!LEN STRING0`. See **SCSP Strings** for details, the only differe
 For example to send the string "Hello World!" the command would be: `!13 Hello World!0`
 
 ### SCSP Errors
-The format is `-LEN ERR STRING`. Error replies are only sent by the server when something wrong happens. The first word in the error is in upper case and describes the error code. The remaining string is the error message itself. The ERR error code is the generic one. The error code is useful for clients to distinguish among different error conditions without having to do pattern matching in the error message, that may change. LEN does not include the length of the first `-LEN ` part.
+The format is `-LEN ERRCODE STRING`. Error replies are only sent by the server when something wrong happens. The first ERRCODE field in the error represents a numeric error code. The remaining string is the error message itself. The error code is useful for clients to distinguish among different error conditions without having to do pattern matching in the error message, that may change. LEN does not include the length of the first `-LEN ` part.
 
 ### SCSP Integer
 The format is `:VALUE `. Where `VALUE` is a string representation of the integer value. `VALUE` can be negative and in C it can be parsed using the `strtol/strtoll` API. `VALUE` is guarantee to be an Integer 64 bit number.
