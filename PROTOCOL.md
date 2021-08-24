@@ -29,16 +29,18 @@ In SCSP, the type of data depends on the first byte:
 * For **Blob** the first byte is `$`
 * For **Rowset** the first byte is `*`
 * For **Rowset chunk** the first byte is `/`
-* For **JSON** the first byte is `{`
+* For **Raw JSON** the first byte is `{` (NOT IMPLEMENTED)
+* For **JSON** the first byte is `#`
 * For **NULL** the first byte is `_`
 * For **Compressed** rowset the first byte is `%`
 * For **PSUB** the first byte is `|`
 * For **Command** the first byte is `^`
+* For **Reconnect** the first byte is `@`
 
 If the encoding does not include an explicit LEN value then the whole encoded value is terminated by a ` ` space character.
 
 ### SCSP Strings
-The format is `+LEN STRING `. The whole command is built by four parts:
+The format is `+LEN STRING`. The whole command is built by four parts:
 1. The single `+` character
 2. LEN is a string representation of STRING length (theoretically the maximum supported value is UINT64_MAX but it is usually much lower. This value can be customized in SQLite Cloud but it can never exceed that maximum value). LEN does not include the length of the first `+LEN ` part.
 3. A single space is used to separate LEN from STRING
@@ -47,12 +49,12 @@ The format is `+LEN STRING `. The whole command is built by four parts:
 For example to send the string "Hello World!" the command would be: `+12 Hello World!`
 
 ### SCSP Zero-Terminated Strings
-The format is `!LEN STRING0 `. See **SCSP Strings** for details, the only difference is that `STRING` is sent with a 0 at the end (for better performance in C-like environment that requires Zero-Terminated strings). The LEN field includes the 0 at the end.
+The format is `!LEN STRING0`. See **SCSP Strings** for details, the only difference is that `STRING` is sent with a 0 at the end (for better performance in C-like environment that requires Zero-Terminated strings). The LEN field includes the 0 at the end.
 
 For example to send the string "Hello World!" the command would be: `!13 Hello World!0`
 
 ### SCSP Errors
-The format is `-LEN ERR STRING`. Error replies are only sent by the server when something wrong happens. The first word in the error is in upper case and describes the error code. The remaining string is the error message itself. The ERR error code is the generic one. The error code is useful for clients to distinguish among different error conditions without having to do pattern matching in the error message, that may change. LEN does not include the length of the first `-LEN ` part.
+The format is `-LEN ERRCODE STRING`. Error replies are only sent by the server when something wrong happens. The first ERRCODE field in the error represents a numeric error code. The remaining string is the error message itself. The error code is useful for clients to distinguish among different error conditions without having to do pattern matching in the error message, that may change. LEN does not include the length of the first `-LEN ` part.
 
 ### SCSP Integer
 The format is `:VALUE `. Where `VALUE` is a string representation of the integer value. `VALUE` can be negative and in C it can be parsed using the `strtol/strtoll` API. `VALUE` is guarantee to be an Integer 64 bit number.
@@ -85,20 +87,43 @@ The format is `/LEN IDX NROWS NCOLS DATA`. The command is equal to the SCSP Rows
 4. NCOLS will be the same for all chunks, which means that it does not need to be computed (as a sum) in the final Rowset, and it means that a logical line is never break
 5. To mark the end of the Rowset, the special string `/LEN 0 0 0` is sent (LEN is always 5 in this case)
 
-### SCSP JSON
+### SCSP RAW JSON
 When the first character is `{` that means that the whole packet is guarantee to be a valid JSON value that can be parsed with a JSON parser.
+**This reply is not used in the current implementation.**
+
+### SCSP JSON
+The format is `#LEN JSON`. The whole command is built by four parts:
+1. The single `#` character
+2. LEN is a string representation of JSON length (theoretically the maximum supported value is UINT64_MAX but it is usually much lower. This value can be customized in SQLite Cloud but it can never exceed that maximum value). LEN does not include the length of the first `+LEN ` part.
+3. A single space is used to separate LEN from JSON
+4. JSON is the string payload
 
 ### SCSP NULL
 The null type is encoded just as `_ `, which is just the underscore character followed by the ` ` space character.
 
 ### SCSP Compression
-Any value can be compressed and the format is `%LEN COMPRESSED UNCOMPRESSED BUFFER` (even if the current implementation supports RowSet compression only). Compression is used ONLY if client notify the server that it supports compression with a dedicated command. Compression is performed using the high performance LZ4 algorithm (https://github.com/lz4/lz4). The whole command is built by six parts:
+Any value can be compressed and the format is `%LEN COMPRESSED UNCOMPRESSED BUFFER`. Compression is used ONLY if client notify the server that it supports compression with a dedicated command. Compression is performed using the high performance LZ4 algorithm (https://github.com/lz4/lz4). The whole command is built by six parts:
 1. The single `%` character
 2. LEN is a string representation of total command length
-3. A single space is used to separate LEN from EXPANDED
+3. A single space is used to separate LEN from COMPRESSED
 4. COMPRESSED is a string representation of the compressed BUFFER size
 5. UNCOMPRESSED is a string representation of the uncompressed BUFFER size
-6. BUFFER can be a **SCSP Rowset** or a **SCSP Rowset chunk**.
+6. BUFFER can be any SCSP value
+
+### SCSP Command
+The format is `^LEN COMMAND`. The whole command is built by four parts:
+1. The single `^` character
+2. LEN is a string representation of COMMAND length (theoretically the maximum supported value is UINT64_MAX but it is usually much lower. This value can be customized in SQLite Cloud but it can never exceed that maximum value). LEN does not include the length of the first `+LEN ` part.
+3. A single space is used to separate LEN from COMMAND
+4. COMMAND is the raw string to be executed as is on client side
+
+### SCSP Reconnect
+The format is `@LEN COMMAND`. The whole command is built by four parts:
+1. The single `^` character
+2. LEN is a string representation of COMMAND length (theoretically the maximum supported value is UINT64_MAX but it is usually much lower. This value can be customized in SQLite Cloud but it can never exceed that maximum value). LEN does not include the length of the first `+LEN ` part.
+3. A single space is used to separate LEN from COMMAND
+4. COMMAND is the raw string to be parsed and to be used to close current connection and reconnect to a new host.
+**This reply is not used in the current implementation.**
 
 ---
-```Last revision: July 21th, 2021```
+```Last revision: August 24th, 2021```
