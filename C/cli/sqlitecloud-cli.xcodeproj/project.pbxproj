@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A909A83726D547D4009DCDA3 /* libtls.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A909A83626D547D4009DCDA3 /* libtls.a */; };
 		A922688125DCEBB00082A61F /* linenoise.c in Sources */ = {isa = PBXBuildFile; fileRef = A922687F25DCEBB00082A61F /* linenoise.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		A94F56CD2614633200DB86A3 /* lz4.c in Sources */ = {isa = PBXBuildFile; fileRef = A94F56CB2614633200DB86A3 /* lz4.c */; };
 		A95B316025D284E600F9E1F8 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = A95B315F25D284E600F9E1F8 /* main.c */; };
@@ -26,6 +27,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A909A83626D547D4009DCDA3 /* libtls.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtls.a; path = ../SSL/macos_fat/libtls.a; sourceTree = "<group>"; };
 		A922687F25DCEBB00082A61F /* linenoise.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = linenoise.c; sourceTree = "<group>"; };
 		A922688025DCEBB00082A61F /* linenoise.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = linenoise.h; sourceTree = "<group>"; };
 		A94F56CB2614633200DB86A3 /* lz4.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = lz4.c; path = ../lz4.c; sourceTree = "<group>"; };
@@ -41,6 +43,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A909A83726D547D4009DCDA3 /* libtls.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -57,6 +60,7 @@
 				A95B316225D284F000F9E1F8 /* sqcloud.h */,
 				A94F56CB2614633200DB86A3 /* lz4.c */,
 				A94F56CC2614633200DB86A3 /* lz4.h */,
+				A909A83626D547D4009DCDA3 /* libtls.a */,
 			);
 			name = Sources;
 			sourceTree = "<group>";
@@ -261,6 +265,8 @@
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = 3ZH6236ET5;
 				ENABLE_HARDENED_RUNTIME = YES;
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../SSL/include\"";
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../SSL/macos_fat\"";
 				OTHER_CODE_SIGN_FLAGS = "--timestamp";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.sqlabs.sqlitecloud-cli";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -275,6 +281,8 @@
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = 3ZH6236ET5;
 				ENABLE_HARDENED_RUNTIME = YES;
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../SSL/include\"";
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../SSL/macos_fat\"";
 				OTHER_CODE_SIGN_FLAGS = "--timestamp";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.sqlabs.sqlitecloud-cli";
 				PRODUCT_NAME = "$(TARGET_NAME)";

@@ -37,6 +37,10 @@
 #include <pthread.h>
 #endif
 
+#ifndef SQLITECLOUD_DISABLE_TSL
+#include "tls.h"
+#endif
+
 // MARK: MACROS -
 #ifdef _WIN32
 #pragma warning (disable: 4005)
@@ -98,6 +102,7 @@ static bool internal_socket_write (SQCloudConnection *connection, const char *bu
 static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cstart);
 static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t cstart, bool isstatic, bool externalbuffer);
 static bool internal_connect (SQCloudConnection *connection, const char *hostname, int port, SQCloudConfig *config, bool mainfd);
+static bool internal_set_error (SQCloudConnection *connection, int errcode, const char *format, ...);
 
 // MARK: -
 
@@ -149,7 +154,10 @@ struct SQCloudConnection {
     char            *hostname;
     int             port;
     pthread_t       tid;
-    
+    #ifndef SQLITECLOUD_DISABLE_TSL
+    struct tls      *tls_context;
+    struct tls      *tls_pubsub_context;
+    #endif
 } _SQCloudConnection;
 
 static SQCloudResult SQCloudResultOK = {RESULT_OK, NULL, 0, 0, 0};
@@ -237,7 +245,11 @@ static int socket_geterror (int fd) {
 
 static void *pubsub_thread (void *arg) {
     SQCloudConnection *connection = (SQCloudConnection *)arg;
+    
     int fd = connection->pubsubfd;
+    #ifndef SQLITECLOUD_DISABLE_TSL
+    struct tls *tls = connection->tls_pubsub_context;
+    #endif
     
     size_t blen = 2048;
     char *buffer = mem_alloc(blen);
@@ -256,20 +268,33 @@ static void *pubsub_thread (void *arg) {
         if (rc <= 0) continue;
         
         //  read payload string
+        #ifndef SQLITECLOUD_DISABLE_TSL
+        ssize_t nread = (tls) ? tls_read(tls, buffer, blen) : readsocket(fd, buffer, blen);
+        if ((tls) && (nread == TLS_WANT_POLLIN || nread == TLS_WANT_POLLOUT)) continue;
+        #else
         ssize_t nread = readsocket(fd, buffer, blen);
+        #endif
         
         if (nread < 0) {
-            printf("Handle error here %s.", strerror(errno));
+            const char *msg = "";
+            #ifndef SQLITECLOUD_DISABLE_TSL
+            if (tls) msg = tls_error(tls);
+            #endif
+            
+            internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while reading data: %s (%s).", strerror(errno), msg);
+            connection->callback(connection, NULL, connection->data);
             break;
-            // internal_set_error(connection, 1, "An error occurred while reading data: %s.", strerror(errno));
-            // goto abort_read;
         }
         
         if (nread == 0) {
-            printf("Handle error here %s.", strerror(errno));
+            const char *msg = "";
+            #ifndef SQLITECLOUD_DISABLE_TSL
+            if (tls) msg = tls_error(tls);
+            #endif
+            
+            internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while reading data: %s (%s).", strerror(errno), msg);
+            connection->callback(connection, NULL, connection->data);
             break;
-            // internal_set_error(connection, 1, "Unexpected EOF found while reading data: %s.", strerror(errno));
-            // goto abort_read;
         }
         
         tread += (uint32_t)nread;
@@ -289,10 +314,9 @@ static void *pubsub_thread (void *arg) {
             if (clen + cstart > blen) {
                 char *clone = mem_alloc(clen + cstart + 1);
                 if (!clone) {
-                    printf("Handle memory error here %s.", strerror(errno));
+                    internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory: %d.", clen + cstart + 1);
+                    connection->callback(connection, NULL, connection->data);
                     break;
-                    // internal_set_error(connection, 1, "Unable to allocate memory: %d.", clen + cstart + 1);
-                    // goto abort_read;
                 }
                 memcpy(clone, original, tread);
                 buffer = original = clone;
@@ -379,7 +403,52 @@ static void internal_clear_error (SQCloudConnection *connection) {
     connection->errmsg[0] = 0;
 }
 
-static bool internal_setup_ssl (SQCloudConnection *connection, SQCloudConfig *config) {
+static bool internal_setup_tls (SQCloudConnection *connection, SQCloudConfig *config) {
+    #ifndef SQLITECLOUD_DISABLE_TSL
+    if (config && config->insecure) return true;
+    
+    int rc = 0;
+    
+    if (tls_init() < 0) {
+        return internal_set_error(connection, INTERNAL_ERRCODE_TLS, "Error while initializing TLS library.");
+    }
+    
+    struct tls_config *tls_conf = tls_config_new();
+    if (!tls_conf) {
+        return internal_set_error(connection, INTERNAL_ERRCODE_TLS, "Error while initializing a new TLS configuration.");
+    }
+    
+    // loads a file containing the root certificates
+    if (config && config->tls_root_certificate) {
+        rc = tls_config_set_ca_file(tls_conf, config->tls_root_certificate);
+        if (rc < 0) {internal_set_error(connection, INTERNAL_ERRCODE_TLS, "Error in tls_config_set_ca_file: %s.", tls_config_error(tls_conf));}
+    }
+    
+    // loads a file containing the server certificate
+    if (config && config->tls_certificate) {
+        rc = tls_config_set_cert_file(tls_conf, config->tls_certificate);
+        if (rc < 0) {internal_set_error(connection, INTERNAL_ERRCODE_TLS, "Error in tls_config_set_cert_file: %s.", tls_config_error(tls_conf));}
+    }
+    
+    // loads a file containing the private key
+    if (config && config->tls_certificate_key) {
+        rc = tls_config_set_key_file(tls_conf, config->tls_certificate_key);
+        if (rc < 0) {internal_set_error(connection, INTERNAL_ERRCODE_TLS, "Error in tls_config_set_key_file: %s.", tls_config_error(tls_conf));}
+    }
+    
+    struct tls *tls_context = tls_client();
+    if (!tls_context) {
+        return internal_set_error(connection, INTERNAL_ERRCODE_TLS, "Error while initializing a new TLS client.");
+    }
+    
+    // apply configuration to context
+    rc = tls_configure(tls_context, tls_conf);
+    if (rc < 0) {
+        return internal_set_error(connection, INTERNAL_ERRCODE_TLS, "Error in tls_configure: %s.", tls_error(tls_context));
+    }
+    
+    connection->tls_context = tls_context;
+    #endif
     return true;
 }
 
@@ -481,7 +550,7 @@ static SQCloudResult *internal_reconnect (SQCloudConnection *connection, const c
 static SQCloudResult *internal_rowset_type (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart, SQCloudResType type) {
     SQCloudResult *rowset = (SQCloudResult *)mem_zeroalloc(sizeof(SQCloudResult));
     if (!rowset) {
-        internal_set_error(connection, 1, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
+        internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
         return NULL;
     }
     
@@ -497,7 +566,7 @@ static SQCloudResult *internal_rowset_type (SQCloudConnection *connection, char 
 static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart, uint32_t nrows, uint32_t ncols) {    
     SQCloudResult *rowset = (SQCloudResult *)mem_zeroalloc(sizeof(SQCloudResult));
     if (!rowset) {
-        internal_set_error(connection, 1, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
+        internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
         return NULL;
     }
     
@@ -547,7 +616,7 @@ abort_rowset:
     if (rowset->clen) mem_free(rowset->clen);
     if (rowset) mem_free(rowset);
     
-    internal_set_error(connection, 1, "Unable to allocate internal memory for SQCloudResult.");
+    internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate internal memory for SQCloudResult.");
     return NULL;
 }
 
@@ -571,7 +640,7 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
         // allocate a new rowset
         rowset = (SQCloudResult *)mem_zeroalloc(sizeof(SQCloudResult));
         if (!rowset) {
-            internal_set_error(connection, 1, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
+            internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
             return NULL;
         }
         first_chunk = true;
@@ -688,7 +757,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
     if (buffer[0] != CMD_ERROR && isstatic) {
         char *clone = mem_alloc(blen);
         if (!clone) {
-            internal_set_error(connection, 1, "Unable to allocate memory: %d.", blen);
+            internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory: %d.", blen);
             return NULL;
         }
         memcpy(clone, buffer, blen);
@@ -717,7 +786,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         long clonelen = ulen + (zdata - hstart) + 1;
         char *clone = mem_alloc (clonelen);
         if (!clone) {
-            internal_set_error(connection, 1, "Unable to allocate memory to uncompress buffer: %d.", clonelen);
+            internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory to uncompress buffer: %d.", clonelen);
             if (!isstatic && !externalbuffer) mem_free(buffer);
             return NULL;
         }
@@ -728,7 +797,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         // uncompress buffer and sanity check the result
         uint32_t rc = LZ4_decompress_safe(zdata, clone + (zdata - hstart), clen, ulen);
         if (rc <= 0 || rc != ulen) {
-            internal_set_error(connection, 1, "Unable to decompress buffer (err code: %d).", rc);
+            internal_set_error(connection, INTERNAL_ERRCODE_GENERIC, "Unable to decompress buffer (err code: %d).", rc);
             if (!isstatic && !externalbuffer) mem_free(buffer);
             return NULL;
         }
@@ -840,19 +909,37 @@ static bool internal_socker_forward_read (SQCloudConnection *connection, bool (*
     char *buffer = sbuffer;
     char *original = buffer;
     int fd = connection->fd;
+    #ifndef SQLITECLOUD_DISABLE_TSL
+    struct tls *tls = connection->tls_context;
+    #endif
     
     while (1) {
         // perform read operation
+        #ifndef SQLITECLOUD_DISABLE_TSL
+        ssize_t nread = (tls) ? tls_read(tls, buffer, blen) : readsocket(fd, buffer, blen);
+        if ((tls) && (nread == TLS_WANT_POLLIN || nread == TLS_WANT_POLLOUT)) continue;
+        #else
         ssize_t nread = readsocket(fd, buffer, blen);
+        #endif
         
         // sanity check read
         if (nread < 0) {
-            internal_set_error(connection, 1, "An error occurred while reading data: %s.", strerror(errno));
+            const char *msg = "";
+            #ifndef SQLITECLOUD_DISABLE_TSL
+            if (tls) msg = tls_error(tls);
+            #endif
+            
+            internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while reading data: %s (%s).", strerror(errno), msg);
             goto abort_read;
         }
         
         if (nread == 0) {
-            internal_set_error(connection, 1, "Unexpected EOF found while reading data: %s.", strerror(errno));
+            const char *msg = "";
+            #ifndef SQLITECLOUD_DISABLE_TSL
+            if (tls) msg = tls_error(tls);
+            #endif
+            
+            internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "Unexpected EOF found while reading data: %s (%s).", strerror(errno), msg);
             goto abort_read;
         }
         
@@ -890,17 +977,36 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool 
     uint32_t tread = 0;
 
     int fd = (mainfd) ? connection->fd : connection->pubsubfd;
+    #ifndef SQLITECLOUD_DISABLE_TSL
+    struct tls *tls = (mainfd) ? connection->tls_context : connection->tls_pubsub_context;
+    #endif
+    
     char *original = buffer;
     while (1) {
+        #ifndef SQLITECLOUD_DISABLE_TSL
+        ssize_t nread = (tls) ? tls_read(tls, buffer, blen) : readsocket(fd, buffer, blen);
+        if ((tls) && (nread == TLS_WANT_POLLIN || nread == TLS_WANT_POLLOUT)) continue;
+        #else
         ssize_t nread = readsocket(fd, buffer, blen);
+        #endif
         
         if (nread < 0) {
-            internal_set_error(connection, 1, "An error occurred while reading data: %s.", strerror(errno));
+            const char *msg = "";
+            #ifndef SQLITECLOUD_DISABLE_TSL
+            if (tls) msg = tls_error(tls);
+            #endif
+            
+            internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while reading data: %s (%s).", strerror(errno), msg);
             goto abort_read;
         }
         
         if (nread == 0) {
-            internal_set_error(connection, 1, "Unexpected EOF found while reading data: %s.", strerror(errno));
+            const char *msg = "";
+            #ifndef SQLITECLOUD_DISABLE_TSL
+            if (tls) msg = tls_error(tls);
+            #endif
+            
+            internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "Unexpected EOF found while reading data: %s (%s).", strerror(errno), msg);
             goto abort_read;
         }
         
@@ -925,7 +1031,7 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool 
                 if (clen + cstart > blen) {
                     char *clone = mem_alloc(clen + cstart + 1);
                     if (!clone) {
-                        internal_set_error(connection, 1, "Unable to allocate memory: %d.", clen + cstart + 1);
+                        internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory: %d.", clen + cstart + 1);
                         goto abort_read;
                     }
                     memcpy(clone, original, tread);
@@ -947,23 +1053,45 @@ abort_read:
 }
 
 static bool internal_socket_write (SQCloudConnection *connection, const char *buffer, size_t len, bool mainfd) {
-    size_t written = 0;
-    
     int fd = (mainfd) ? connection->fd : connection->pubsubfd;
+    #ifndef SQLITECLOUD_DISABLE_TSL
+    struct tls *tls = (mainfd) ? connection->tls_context : connection->tls_pubsub_context;
+    #endif
     
     // write header
     char header[32];
     int hlen = snprintf(header, sizeof(header), "+%zu ", len);
+    
+    #ifndef SQLITECLOUD_DISABLE_TSL
+    ssize_t n = (tls) ? tls_write(tls, header, hlen) : writesocket(fd, header, hlen);
+    // if ((tls) && (n == TLS_WANT_POLLIN || n == TLS_WANT_POLLOUT)) continue; // FIXME
+    #else
     ssize_t n = writesocket(fd, header, hlen);
-    if (n != hlen) return internal_set_error(connection, 1, "An error occurred while writing header data: %s.", strerror(errno));
+    #endif
+    if (n != hlen) {
+        const char *msg = "";
+        #ifndef SQLITECLOUD_DISABLE_TSL
+        if (tls) msg = tls_error(tls);
+        #endif
+        return internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while writing header data: %s (%s).", strerror(errno), msg);
+    }
     
     // write buffer
+    size_t written = 0;
     while (len > 0) {
+        #ifndef SQLITECLOUD_DISABLE_TSL
+        ssize_t nwrote = (tls) ? tls_write(tls, buffer, len) : writesocket(fd, buffer, len);
+        if ((tls) && (nwrote == TLS_WANT_POLLIN || nwrote == TLS_WANT_POLLOUT)) continue;
+        #else
         ssize_t nwrote = writesocket(fd, buffer, len);
-        //printf("writesocket connfd:%d nwrote:%d", fd, nwrote);
+        #endif
         
         if (nwrote < 0) {
-            return internal_set_error(connection, 1, "An error occurred while writing data: %s.", strerror(errno));
+            const char *msg = "";
+            #ifndef SQLITECLOUD_DISABLE_TSL
+            if (tls) msg = tls_error(tls);
+            #endif
+            return internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while writing data: %s (%s).", strerror(errno), msg);
         } else if (nwrote == 0) {
             return true;
         } else {
@@ -1018,7 +1146,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     
     // ipv6 code from https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_72/rzab6/xip6client.htm
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = (config) ? config->family : AF_UNSPEC;
+    hints.ai_family = (config) ? config->family : AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     
     // get the address information for the server using getaddrinfo()
@@ -1026,7 +1154,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     snprintf(port_string, sizeof(port_string), "%d", port);
     int rc = getaddrinfo(hostname, port_string, &hints, &addr_list);
     if (rc != 0 || addr_list == NULL) {
-        return internal_set_error(connection, 1, "Error while resolving getaddrinfo (host %s not found).", hostname);
+        return internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "Error while resolving getaddrinfo (host %s not found).", hostname);
     }
     
     // begin non-blocking connection loop
@@ -1149,28 +1277,37 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     
     // bail if there was an error
     if (rc < 0) {
-        return internal_set_error(connection, 1, "An error occurred while trying to connect: %s.", strerror(errno));
+        return internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while trying to connect: %s.", strerror(errno));
     }
     
     // bail if there was a timeout
     if ((time(NULL) - start) >= connect_timeout) {
-        return internal_set_error(connection, 1, "Connection timeout while trying to connect (%d).", connect_timeout);
+        return internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "Connection timeout while trying to connect (%d).", connect_timeout);
     }
     
     // turn off non-blocking
     int ioctl_blocking = 0;    /* ~0; //TRUE; */
     ioctl(sockfd, FIONBIO, &ioctl_blocking);
     
-    // SSL on sockfd
-    if (!internal_setup_ssl(connection, config)) return false;
-    
     // finalize connection
     if (mainfd) {
         connection->fd = sockfd;
         connection->port = port;
         connection->hostname = strdup(hostname);
+        #ifndef SQLITECLOUD_DISABLE_TSL
+        if (config && !config->insecure) {
+            int rc = tls_connect_socket(connection->tls_context, sockfd, hostname);
+            if (rc < 0) printf("Error on tls_connect_socket: %s\n", tls_error(connection->tls_context));
+        }
+        #endif
     } else {
         connection->pubsubfd = sockfd;
+        #ifndef SQLITECLOUD_DISABLE_TSL
+        if (config && !config->insecure) {
+            int rc = tls_connect_socket(connection->tls_pubsub_context, sockfd, hostname);
+            if (rc < 0) printf("Error on tls_connect_socket\n");
+        }
+        #endif
     }
     return true;
 }
@@ -1275,7 +1412,7 @@ static int url_extract_keyvalue (const char *s, char b1[512], char b2[512]) {
     memcpy(b1, s, len);
     b1[len] = 0;
     
-    // lookup username (if any)
+    // lookup value (if any)
     char *value = strchr(s, '&');
     if (!value) value = strchr(s, 0);
     if (!value) return 0;
@@ -1325,6 +1462,10 @@ SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig
     SQCloudConnection *connection = mem_zeroalloc(sizeof(SQCloudConnection));
     if (!connection) return NULL;
     
+    #ifndef SQLITECLOUD_DISABLE_TSL
+    if (!internal_setup_tls(connection, config)) return connection;
+    #endif
+    
     if (internal_connect(connection, hostname, port, config, true)) {
         if (config) internal_connect_apply_config(connection, config);
     }
@@ -1363,7 +1504,7 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     rc = url_extract_hostname_port(&s[n], hostname, port_s);
     if (rc <= 0) return NULL;
     int port = (int)strtol(port_s, NULL, 0);
-    if (port == 0) port = SQCLOUD_DEFAULT_PORT;
+    if (port <= 0) port = SQCLOUD_DEFAULT_PORT;
     
     // lookup for optional database
     n += rc;
@@ -1382,9 +1523,33 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     while ((rc = url_extract_keyvalue(&s[n], key, value)) > 0) {
         if (strcasecmp(key, "timeout")) {
             int timeout = (int)strtol(value, NULL, 0);
-            sconfig.timeout = (timeout) ? timeout : 0;
+            sconfig.timeout = (timeout > 0) ? timeout : 0;
             config = &sconfig;
         }
+        else if (strcasecmp(key, "compression")) {
+            int compression = (int)strtol(value, NULL, 0);
+            sconfig.timeout = (compression > 0) ? compression : 0;
+            config = &sconfig;
+        }
+        #ifndef SQLITECLOUD_DISABLE_TSL
+        else if (strcasecmp(key, "insecure")) {
+            int insecure = (int)strtol(value, NULL, 0);
+            sconfig.insecure = (insecure > 0) ? insecure : 0;
+            config = &sconfig;
+        }
+        else if (strcasecmp(key, "root_certificate")) {
+            sconfig.tls_root_certificate = strdup(value);
+            config = &sconfig;
+        }
+        else if (strcasecmp(key, "client_certificate")) {
+            sconfig.tls_certificate = strdup(value);
+            config = &sconfig;
+        }
+        else if (strcasecmp(key, "client_certificate_key")) {
+            sconfig.tls_certificate_key = strdup(value);
+            config = &sconfig;
+        }
+        #endif
         n += rc;
     }
     
@@ -1398,7 +1563,18 @@ SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command) 
 void SQCloudDisconnect (SQCloudConnection *connection) {
     if (!connection) return;
     
-    // free SSL
+    // free TSL
+    #ifndef SQLITECLOUD_DISABLE_TSL
+    if (connection->tls_context) {
+        tls_close(connection->tls_context);
+        tls_free(connection->tls_context);
+    }
+    
+    if (connection->tls_pubsub_context) {
+        tls_close(connection->tls_pubsub_context);
+        tls_free(connection->tls_pubsub_context);
+    }
+    #endif
     
     // try to gracefully close connections
     if (connection->fd) {
@@ -1428,7 +1604,7 @@ void SQCloudSetPubSubCallback (SQCloudConnection *connection, SQCloudPubSubCB ca
 
 SQCloudResult *SQCloudSetPubSubOnly (SQCloudConnection *connection) {
     if (!connection->callback) {
-        internal_set_error(connection, 1, "A PubSub callback must be set before executing a PUBSUB ONLY command.");
+        internal_set_error(connection, INTERNAL_ERRCODE_PUBSUB, "A PubSub callback must be set before executing a PUBSUB ONLY command.");
         return NULL;
     }
     
@@ -1447,7 +1623,7 @@ bool SQCloudIsError (SQCloudConnection *connection) {
 }
 
 int SQCloudErrorCode (SQCloudConnection *connection) {
-    return (connection) ? connection->errcode : 666;
+    return (connection) ? connection->errcode : INTERNAL_ERRCODE_GENERIC;
 }
 
 const char *SQCloudErrorMsg (SQCloudConnection *connection) {

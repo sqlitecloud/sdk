@@ -14,10 +14,14 @@
 extern "C" {
 #endif
 
-#define SQCLOUD_SDK_VERSION         "0.4.1"
-#define SQCLOUD_SDK_VERSION_NUM     0x000401
+#define SQCLOUD_SDK_VERSION         "0.5.0"
+#define SQCLOUD_SDK_VERSION_NUM     0x000500
 #define SQCLOUD_DEFAULT_PORT        8860
 #define SQCLOUD_DEFAULT_TIMEOUT     12
+
+#define SQCLOUD_IPany               0
+#define SQCLOUD_IPv4                2
+#define SQCLOUD_IPv6                30
 
 // opaque datatypes
 typedef struct SQCloudConnection    SQCloudConnection;
@@ -26,11 +30,17 @@ typedef void (*SQCloudPubSubCB)    (SQCloudConnection *connection, SQCloudResult
 
 // configuration struct to be passed to the connect function (currently unused)
 typedef struct SQCloudConfigStruct {
-    const char *username;
-    const char *password;
-    const char *database;
-    int timeout;
-    int family;                 // can be: AF_INET, AF_INET6 or AF_UNSPEC
+    const char  *username;
+    const char  *password;
+    const char  *database;
+    int         timeout;
+    int         family;             // can be: AF_INET, AF_INET6 or AF_UNSPEC
+    #ifndef SQLITECLOUD_DISABLE_TSL
+    const char  *tls_root_certificate;
+    const char  *tls_certificate;
+    const char  *tls_certificate_key;
+    bool        insecure;           // flag to disable TLS
+    #endif
 } SQCloudConfig;
 
 typedef enum {
@@ -51,6 +61,26 @@ typedef enum {
     VALUE_BLOB = 4,
     VALUE_NULL = 5
 } SQCloudValueType;
+
+typedef enum {
+    INTERNAL_ERRCODE_GENERIC = 100000,
+    INTERNAL_ERRCODE_PUBSUB = 100001,
+    INTERNAL_ERRCODE_TLS = 100002,
+    INTERNAL_ERRCODE_URL = 100003,
+    INTERNAL_ERRCODE_MEMORY = 100004,
+    INTERNAL_ERRCODE_NETWORK = 100005
+} INTERNAL_ERRCODE;
+
+// from SQLiteCloud
+typedef enum {
+    CLOUD_ERRCODE_MEM = 10000,
+    CLOUD_ERRCODE_NOTFOUND = 10001,
+    CLOUD_ERRCODE_COMMAND = 10002,
+    CLOUD_ERRCODE_INTERNAL = 10003,
+    CLOUD_ERRCODE_AUTH = 10004,
+    CLOUD_ERRCODE_GENERIC = 10005,
+    CLOUD_ERRCODE_RAFT = 10006
+} CLOUD_ERRCODE;
 
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
 SQCloudConnection *SQCloudConnectWithString (const char *s);
