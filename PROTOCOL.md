@@ -56,6 +56,10 @@ For example to send the string "Hello World!" the command would be: `!13 Hello W
 ### SCSP Errors
 The format is `-LEN ERRCODE STRING`. Error replies are only sent by the server when something wrong happens. The first ERRCODE field in the error represents a numeric error code. The remaining string is the error message itself. The error code is useful for clients to distinguish among different error conditions without having to do pattern matching in the error message, that may change. LEN does not include the length of the first `-LEN ` part.
 
+- ERROCODE < 10,000 are SQLite error codes as reported by https://www.sqlite.org/rescode.html
+- ERRCODE >= 10,000 and <100,000 are SQLite Cloud error codes
+- ERROCODE >= 100,000 are generated internally by the SDK
+
 ### SCSP Integer
 The format is `:VALUE `. Where `VALUE` is a string representation of the integer value. `VALUE` can be negative and in C it can be parsed using the `strtol/strtoll` API. `VALUE` is guarantee to be an Integer 64 bit number.
 
@@ -126,4 +130,4 @@ The format is `@LEN COMMAND`. The whole command is built by four parts:
 **This reply is not used in the current implementation.**
 
 ---
-```Last revision: August 24th, 2021```
+```Last revision: August 26th, 2021```
