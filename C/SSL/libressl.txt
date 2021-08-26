@@ -1,0 +1,52 @@
+Download LibreSSL from https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/
+https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-3.3.3.tar.gz
+
+# cd libressl-3.3.3 
+
+=================
+LINUX COMPILATION
+=================
+# ./configure --enable-libtls-only
+# make
+# mv tls/.libs/libtls.a to appropriate directory 
+
+
+=================
+MACOS COMPILATION
+=================
+In macOS we need to build a fat library that contains both the arm64 code and the x86_64 code.
+Partial instructions from:
+https://www.f-ax.de/dev/2021/01/15/build-fat-macos-library.html
+and from the libressl.sh script
+
+
+MACOS ARM
+# ./configure --build=aarch64-apple-darwin --host=aarch64-apple-darwin22 --enable-libtls-only CFLAGS="-arch arm64"
+# make
+# mv tls/.libs/libtls.a libtls_arm64.a
+# make clean
+
+MACOS x86_64
+# ./configure --enable-libtls-only
+# make
+# mv tls/.libs/libtls.a libtls_x86_64.a
+
+MAC FAT
+# lipo -create libtls_x86_64.a libtls_arm64.a -output libtls.a 
+
+MAC CHECK
+# lipo -info libtls.a
+
+
+===================
+WINDOWS COMPILATION
+===================
+To do
+
+
+=================
+API DOCUMENTATION
+=================
+https://github.com/bob-beck/libtls/blob/master/TUTORIAL.md
+https://gist.github.com/kinichiro/9ac1f6768d490bb3d9828e9ffac7d098
+https://github.com/daniloegea/libressl-tls-api-examples

@@ -14,7 +14,7 @@
 #include "linenoise.h"
 
 #define CLI_HISTORY_FILENAME    ".sqlitecloud_history.txt"
-#define CLI_VERSION             "1.0b2"
+#define CLI_VERSION             "1.0"
 #define CLI_BUILD_DATE          __DATE__
 
 // MARK: -
@@ -98,26 +98,46 @@ void pubsub_callback (SQCloudConnection *connection, SQCloudResult *result, void
 // MARK: -
 
 // usage:
-// % sqlitecloud-cli -h HOST -p PORT -f FILE -c
+// % sqlitecloud-cli -h HOST -p PORT -f FILE -c -i -r root_certificate -s client_certificate -t client_certificate_key
 int main(int argc, char * argv[]) {
     const char *hostname = "localhost";
     const char *filename = NULL;
+    const char *root_certificate_path = NULL;
+    const char *client_certificate_path = NULL;
+    const char *client_certificate_key_path = NULL;
+    
     int port = SQCLOUD_DEFAULT_PORT;
     bool compression = false;
-    int c;
+    bool insecure = false;
     
-    while ((c = getopt (argc, argv, "h:p:f:c")) != -1) {
+    int c;
+    SQCloudConfig config = {0};
+    
+    while ((c = getopt (argc, argv, "h:p:f:cir:s:t:")) != -1) {
         switch (c) {
             case 'h': hostname = optarg; break;
             case 'p': port = atoi(optarg); break;
             case 'f': filename = optarg; break;
             case 'c': compression = true; break;
+            case 'i': insecure = true; break;
+            case 'r': root_certificate_path = optarg; break;
+            case 's': client_certificate_path = optarg; break;
+            case 't': client_certificate_key_path = optarg; break;
         }
     }
     
     printf("sqlitecloud-cli version %s (build date %s)\n", CLI_VERSION, CLI_BUILD_DATE);
     
-    SQCloudConnection *conn = SQCloudConnect(hostname, port, NULL);
+    // setup TLS config parameter
+    #ifndef SQLITECLOUD_DISABLE_TSL
+    if (insecure) config.insecure = true;
+    if (root_certificate_path) config.tls_root_certificate = root_certificate_path;
+    if (client_certificate_path) config.tls_certificate = client_certificate_path;
+    if (client_certificate_key_path) config.tls_certificate_key = client_certificate_key_path;
+    #endif
+    
+    // try to connect to hostname:port
+    SQCloudConnection *conn = SQCloudConnect(hostname, port, &config);
     if (SQCloudIsError(conn)) {
         printf("ERROR connecting to %s: %s (%d)\n", hostname, SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
         return -1;
@@ -129,7 +149,9 @@ int main(int argc, char * argv[]) {
     linenoiseHistoryLoad(CLI_HISTORY_FILENAME);
     
     // activate compression
-    if (compression) do_command_without_ok_reply(conn, "SET KEY CLIENT_COMPRESSION TO 1");
+    if (compression) {
+        do_command_without_ok_reply(conn, "SET KEY CLIENT_COMPRESSION TO 1");
+    }
     
     if (filename) {
         bool should_continue = do_process_file(conn, filename);
