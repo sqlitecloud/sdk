@@ -36,7 +36,7 @@ libsqcloud.dylib: lz4.o sqcloud.o
 all:	lz4.o
 
 cli:	libsqcloud.a cli/linenoise.c cli/linenoise.h cli/main.c
-	$(CC) $(OPTIONS) $(INCLUDES) ${LIBFLAGS} ${LDFLAGS} cli/*.c libsqcloud.a -o sqlitecloud-cli
+	$(CC) $(OPTIONS) $(INCLUDES) cli/*.c libsqcloud.a -o sqlitecloud-cli ${LIBFLAGS} ${LDFLAGS}
 
 clean:
 	rm -rf *.o *.a *.so *.dylib
