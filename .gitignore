@@ -16,7 +16,6 @@ bin
 sqlitecloud-cli
 SQLiteCloud.sdk.tmproj
 example-session.txt
-*.a
 *.o
 Arbeitszeiten.txt
 test1
