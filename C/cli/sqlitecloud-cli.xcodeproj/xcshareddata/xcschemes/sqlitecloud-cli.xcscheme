@@ -52,7 +52,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-h dev1.sqlitecloud.io"
+            argument = "-h dev1.sqlitecloud.io -i"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -60,7 +60,15 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "-h dev1.sqlitecloud.io -p 9860 -r /Users/marco/SQLiteCloud/sdk/SSL/ca.pem"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "-i"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-r /Users/marco/SQLiteCloud/sdk/SSL/ca.pem"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
