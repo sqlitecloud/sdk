@@ -114,6 +114,7 @@ int main(int argc, char * argv[]) {
 
     int c;
     SQCloudConfig config = {0};
+    config.family = SQCLOUD_IPv4;
     
     while ((c = getopt (argc, argv, "h:p:f:ciqr:s:t:")) != -1) {
         switch (c) {
