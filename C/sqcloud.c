@@ -1041,6 +1041,10 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool 
                 }
                 continue;
             }
+        } else {
+            // it is a command with no explicit len
+            // so make sure that the final character is a space
+            if (original[tread-1] != ' ') continue;
         }
         
         // command is complete so parse it
@@ -1058,26 +1062,36 @@ static bool internal_socket_write (SQCloudConnection *connection, const char *bu
     struct tls *tls = (mainfd) ? connection->tls_context : connection->tls_pubsub_context;
     #endif
     
+    size_t written = 0;
+    
     // write header
     char header[32];
+    char *p = header;
     int hlen = snprintf(header, sizeof(header), "+%zu ", len);
-    
-    #ifndef SQLITECLOUD_DISABLE_TSL
-    ssize_t n = (tls) ? tls_write(tls, header, hlen) : writesocket(fd, header, hlen);
-    // if ((tls) && (n == TLS_WANT_POLLIN || n == TLS_WANT_POLLOUT)) continue; // FIXME
-    #else
-    ssize_t n = writesocket(fd, header, hlen);
-    #endif
-    if (n != hlen) {
-        const char *msg = "";
+    int len1 = hlen;
+    while (len1) {
         #ifndef SQLITECLOUD_DISABLE_TSL
-        if (tls) msg = tls_error(tls);
+        ssize_t nwrote = (tls) ? tls_write(tls, p, len1) : writesocket(fd, p, len1);
+        if ((tls) && (nwrote == TLS_WANT_POLLIN || nwrote == TLS_WANT_POLLOUT)) continue;
+        #else
+        ssize_t nwrote = writesocket(fd, p, len1);
         #endif
-        return internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while writing header data: %s (%s).", strerror(errno), msg);
+        
+        if ((nwrote < 0) || (nwrote == 0 && written != hlen)) {
+            const char *msg = "";
+            #ifndef SQLITECLOUD_DISABLE_TSL
+            if (tls) msg = tls_error(tls);
+            #endif
+            return internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while writing header data: %s (%s).", strerror(errno), msg);
+        } else {
+            written += nwrote;
+            p += nwrote;
+            len1 -= nwrote;
+        }
     }
     
     // write buffer
-    size_t written = 0;
+    written = 0;
     while (len > 0) {
         #ifndef SQLITECLOUD_DISABLE_TSL
         ssize_t nwrote = (tls) ? tls_write(tls, buffer, len) : writesocket(fd, buffer, len);
@@ -1396,6 +1410,36 @@ void internal_rowset_dump (SQCloudResult *result, uint32_t maxline, bool quiet) 
 
 // MARK: - URL -
 
+static int char2hex (int c) {
+    if (isnumber(c)) return (c - '0');
+    c = toupper(c);
+    if (c >='A' && c <='F') return (c - 'A' + 0x0A);
+    return -1;
+}
+
+static int url_decode (char s[512]) {
+    int i = 0;
+    int j = 0;
+    int len = (int)strlen(s);
+    
+    while (i < len) {
+        int c = s[i];
+        if (c == '%') {
+            if (i + 2 >= len) return 0;
+            c = (char2hex(s[i+1]) * 0x10) + char2hex(s[i+2]);
+            if (c < 0) return 0;
+            s[j] = c;
+            i += 2;
+        } else {
+            s[j] = c;
+        }
+        ++i;
+        ++j;
+    }
+    s[j] = 0;
+    return j;
+}
+
 static int url_extract_username_password (const char *s, char b1[512], char b2[512]) {
     // user:pass@host.com:port/dbname?timeout=10&key2=value2&key3=value3
     
@@ -1406,6 +1450,7 @@ static int url_extract_username_password (const char *s, char b1[512], char b2[5
     if (len > 511) return -1;
     memcpy(b1, s, len);
     b1[len] = 0;
+    if (url_decode(b1) <= 0) return 0;
     
     // lookup username (if any)
     char *password = strchr(s, '@');
@@ -1414,6 +1459,7 @@ static int url_extract_username_password (const char *s, char b1[512], char b2[5
     if (len > 511) return -1;
     memcpy(b2, username+1, len);
     b2[len] = 0;
+    if (url_decode(b2) <= 0) return 0;
     
     return (int)(password - s) + 1;
 }
@@ -1431,6 +1477,7 @@ static int url_extract_hostname_port (const char *s, char b1[512], char b2[512])
     if (len > 511) return -1;
     memcpy(b1, s, len);
     b1[len] = 0;
+    if (url_decode(b1) <= 0) return 0;
     
     // lookup port (if any)
     char *port = strchr(s, ':');
@@ -1447,6 +1494,7 @@ static int url_extract_hostname_port (const char *s, char b1[512], char b2[512])
             ++p;
         }
         b2[len] = 0;
+        if (url_decode(b2) <= 0) return 0;
     }
     
     // adjust returned len
@@ -1465,6 +1513,8 @@ static int url_extract_database (const char *s, char b1[512]) {
         if (len > 511) return -1;
         memcpy(b1, s, len);
         b1[len] = 0;
+        if (url_decode(b1) <= 0) return 0;
+        
         return (int)(len + 1);
     }
     
@@ -1479,6 +1529,7 @@ static int url_extract_database (const char *s, char b1[512]) {
     if (len > 511) return -1;
     memcpy(b1, s, len);
     b1[len] = 0;
+    if (url_decode(b1) <= 0) return 0;
     
     return (int)len;
 }
@@ -1493,6 +1544,7 @@ static int url_extract_keyvalue (const char *s, char b1[512], char b2[512]) {
     if (len > 511) return -1;
     memcpy(b1, s, len);
     b1[len] = 0;
+    if (url_decode(b1) <= 0) return 0;
     
     // lookup value (if any)
     char *value = strchr(s, '&');
@@ -1502,6 +1554,7 @@ static int url_extract_keyvalue (const char *s, char b1[512], char b2[512]) {
     if (len > 511) return -1;
     memcpy(b2, key+1, len);
     b2[len] = 0;
+    if (url_decode(b2) <= 0) return 0;
     
     return (int)(value - s) + 1;
 }
