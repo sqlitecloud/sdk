@@ -145,6 +145,7 @@ struct SQCloudConnection {
     char            errmsg[1024];
     int             errcode;
     SQCloudResult   *_chunk;
+    SQCloudConfig   *_config;
     
     // pub/sub
     char            *uuid;
@@ -154,6 +155,7 @@ struct SQCloudConnection {
     char            *hostname;
     int             port;
     pthread_t       tid;
+    
     #ifndef SQLITECLOUD_DISABLE_TSL
     struct tls      *tls_context;
     struct tls      *tls_pubsub_context;
@@ -403,7 +405,7 @@ static void internal_clear_error (SQCloudConnection *connection) {
     connection->errmsg[0] = 0;
 }
 
-static bool internal_setup_tls (SQCloudConnection *connection, SQCloudConfig *config) {
+static bool internal_setup_tls (SQCloudConnection *connection, SQCloudConfig *config, bool mainfd) {
     #ifndef SQLITECLOUD_DISABLE_TSL
     if (config && config->insecure) return true;
     
@@ -447,7 +449,10 @@ static bool internal_setup_tls (SQCloudConnection *connection, SQCloudConfig *co
         return internal_set_error(connection, INTERNAL_ERRCODE_TLS, "Error in tls_configure: %s.", tls_error(tls_context));
     }
     
-    connection->tls_context = tls_context;
+    // save context
+    if (mainfd) connection->tls_context = tls_context;
+    else connection->tls_pubsub_context = tls_context;
+    
     #endif
     return true;
 }
@@ -530,7 +535,11 @@ static SQCloudResult *internal_setup_pubsub (SQCloudConnection *connection, cons
     // check if pubsub was already setup
     if (connection->pubsubfd != 0) return &SQCloudResultOK;
     
-    if (internal_connect(connection, connection->hostname, connection->port, NULL, false)) {
+    #ifndef SQLITECLOUD_DISABLE_TSL
+    if (!internal_setup_tls(connection, connection->_config, false)) return NULL;
+    #endif
+    
+    if (internal_connect(connection, connection->hostname, connection->port, connection->_config, false)) {
         SQCloudResult *result = internal_run_command(connection, buffer, blen, false);
         if (!SQCloudResultIsOK(result)) return result;
         internal_parse_uuid(connection, buffer, blen);
@@ -1598,11 +1607,12 @@ SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig
     if (!connection) return NULL;
     
     #ifndef SQLITECLOUD_DISABLE_TSL
-    if (!internal_setup_tls(connection, config)) return connection;
+    if (!internal_setup_tls(connection, config, true)) return connection;
     #endif
     
     if (internal_connect(connection, hostname, port, config, true)) {
         if (config) internal_connect_apply_config(connection, config);
+        connection->_config = config;
     }
     
     return connection;
