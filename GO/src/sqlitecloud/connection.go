@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///             
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 0.0.1
-//     //             ///   ///  ///    Date        : 2021/08/13
+//     ///             ///  ///         Version     : 1.0.0
+//     //             ///   ///  ///    Date        : 2021/08/26
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///     
 //   ///     //////////   ///  ///      Description : Go Methods related to the
@@ -19,33 +19,30 @@
 // Package sqlitecloud provides an easy to use GO driver for connecting to and using the SQLite Cloud Database server.
 package sqlitecloud
 
-// #include <stdlib.h>
-// #include "../../../C/sqcloud.h"
-import "C"
-
 import "fmt"
-//import "os"
-//import "bufio"
 import "strings"
 import "errors"
-//mport "time"
 import "strconv"
 import "net"
-
+import "crypto/tls"
+import "time"
 import "github.com/xo/dburl"
 
 type SQCloud struct {
-  connection    *C.struct_SQCloudConnection
+  sock          *net.Conn
+  psub_sock     *net.Conn
 
   Host          string
   Port          int
   Username      string
   Password      string
   Database      string
-  Timeout       int
+  SSL           bool
+  Timeout       time.Duration
   Family        int
 
-  UUID          string
+  uuid          string // 36 runes
+  secret        string // 36 runes
 
   ErrorCode     int
   ErrorMessage  string
@@ -88,15 +85,15 @@ func ParseConnectionString( ConnectionString string ) ( Host string, Port int, U
     }
 
     for key, values := range u.Query() {
-      lastValue := strings.TrimSpace( values[ len( values ) - 1 ] )
+      lastLiteral := strings.TrimSpace( values[ len( values ) - 1 ] )
       switch strings.ToLower( strings.TrimSpace( key ) ) {
       case "timeout":
-        if timeout, err = strconv.Atoi( lastValue ); err != nil {
+        if timeout, err = strconv.Atoi( lastLiteral ); err != nil {
           return "", -1, "", "", "", -1, "", err
         } 
 
       case "compress":
-        compress = strings.ToUpper( lastValue )
+        compress = strings.ToUpper( lastLiteral )
       
       default: // Ignore
       }
@@ -138,8 +135,7 @@ func (this *SQCloud) CheckConnectionParameter( Host string, Port int, Username s
 
   switch strings.ToUpper( Compress ) {
   case "NO", "LZ4":
-  default:
-    return errors.New( fmt.Sprintf( "Invalid compression method (%s)", Compress ) )
+  default: return errors.New( fmt.Sprintf( "Invalid compression method (%s)", Compress ) )
   }
 
   return nil
@@ -150,22 +146,35 @@ func (this *SQCloud) CheckConnectionParameter( Host string, Port int, Username s
 // reset resets all Connection attributes.
 func (this *SQCloud) reset() {
   this.Close()
-  this.resetError()
   this.Host       = ""
   this.Port       = -1
   this.Username   = ""
   this.Password   = ""
   this.Database   = ""
-  this.Timeout    = -1
   this.Family     = -1
-  this.UUID       = ""
+  this.uuid       = ""
+  this.secret     = ""
+  this.resetError()
 }
 
 // New creates an empty connection and resets it.
 // A pointer to the newly created connection is returned (see: Connect).
-func New() *SQCloud {
-  connection := SQCloud{ connection: nil }
-  connection.reset()
+func New( UseSSL bool, TimeOut uint ) *SQCloud {
+  connection := SQCloud{  sock        : nil,
+                          psub_sock   : nil,
+                          Host        : "", 
+                          Port        : -1, 
+                          Username    : "", 
+                          Password    : "", 
+                          Database    : "", 
+                          SSL         : UseSSL, 
+                          Timeout     : time.Duration( TimeOut ) * time.Second, 
+                          Family      : 1, 
+                          uuid        : "", 
+                          secret      : "",
+                          ErrorCode   : 0, 
+                          ErrorMessage: "", 
+                        }
   return &connection
 }
 
@@ -173,26 +182,22 @@ func New() *SQCloud {
 // The given connection string is parsed and checked for correct parameters.
 // Nil and an error is returned if the connection string had invalid values or a connection to the server could not be established,
 // otherwise, a pointer to the newly established connection is returned.
-func Connect( ConnectionString string ) (*SQCloud, error) {
+func Connect( ConnectionString string ) ( *SQCloud, error ) {
   Host, Port, Username, Password, Database, Timeout, Compress, err := ParseConnectionString( ConnectionString )
 
-  if err != nil {
-    return nil, err
-  }
+  if err != nil   { return nil, err }
+  if Port == 0    { Port    = 8860  }
+  if Timeout == 0 { Timeout = 10    }
 
-  if Port == 0 {
-    Port = 8860
-  }
+  connection := New( false, uint( Timeout ) ) // allways works
 
-  connection := New()
-  err = connection.Connect( Host, Port, Username, Password, Database, Timeout, Compress, 0 )
-  if err != nil {
+  if err = connection.Connect( Host, Port, Username, Password, Database, uint( Timeout ), Compress, 0 ); err != nil {
     connection.Close()
     return nil, err
+  } else {
+    connection.Compress( Compress )
   }
 
-  connection.Compress( Compress )
-    
   return connection, nil
 }
 
@@ -202,52 +207,58 @@ func Connect( ConnectionString string ) (*SQCloud, error) {
 // If Connect is called on an already established connection, the old connection is closed first.
 // All arguments are checked for valid values (see: CheckConnectionParameter). An error is returned if the protocol Family was not '0', 
 // invalid argument values where given or the connection could not be established. 
-func (this *SQCloud) Connect( Host string, Port int, Username string, Password string, Database string, Timeout int, Compression string, Family int ) error {
-  this.reset()
+func (this *SQCloud) Connect( Host string, Port int, Username string, Password string, Database string, Timeout uint, Compression string, Family int ) error {
+  this.reset() // also closes an open connection
 
-  if Family != 0 {
-    return errors.New( "Invalid Protocol Family" )
+  switch err := this.CheckConnectionParameter( Host, Port, Username, Password, Database, int( Timeout ), Compression );  {
+  case Family != 0: return errors.New( "Invalid Protocol Family" )
+  case err != nil:  return err
+  default:
+    this.Host     = Host
+    this.Port     = Port
+    this.Username = Username
+    this.Password = Password
+    this.Database = Database
+    this.Timeout  = time.Duration( Timeout ) * time.Second
+    this.Family   = Family
+  
+    return this.reconnect()
   }
-
-  if err := this.CheckConnectionParameter( Host, Port, Username, Password, Database, Timeout, Compression ); err != nil {
-    return err
-  }
-
-  this.Host     = Host
-  this.Port     = Port
-  this.Username = Username
-  this.Password = Password
-  this.Database = Database
-  this.Timeout  = Timeout
-  this.Family   = Family
-
-  return this.reconnect()
 }
 
 // reconnect closes and then reopens a connection to the SQLite Cloud database server.
 func (this *SQCloud) reconnect() error {
-  this.Close()
+  if this.sock != nil { return nil }
+
   this.resetError()
 
-  this.connection = CConnect( this.Host, this.Port, this.Username, this.Password, this.Database, this.Timeout, this.Family )
+  var dialer       = net.Dialer{}
+  dialer.Timeout   = this.Timeout
+  dialer.DualStack = true
 
-  if this.connection != nil {
-    this.ErrorCode    = this.CGetErrorCode()
-    this.ErrorMessage = this.CGetErrorMessage()
-    if !this.IsError() {
-      if strings.TrimSpace( this.Database ) != "" {
-        this.UseDatabase( this.Database )
-      }
+  switch this.SSL {
+  case true:
+    if tls_c, err := tls.DialWithDialer( &dialer, "tcp", fmt.Sprintf( "%s:%d", this.Host, this.Port ), nil ); err != nil {
+      this.ErrorCode    = -1
+      this.ErrorMessage = err.Error()
+      return err
+    } else {
+      c := net.Conn( tls_c )
+      this.sock = &c
     }
-  } else {
-    this.ErrorCode    = 666
-    this.ErrorMessage = "Not enoght memory to allocate a SQCloudConnection."
+  default:
+    // todo: use the dialer...
+    if c, err := net.DialTimeout( "tcp", fmt.Sprintf( "%s:%d", this.Host, this.Port ), this.Timeout ); err != nil {
+      this.ErrorCode    = -1
+      this.ErrorMessage = err.Error()
+      return err
+    } else {
+      this.sock = &c
+    }
   }
 
-  if this.IsError() {
-    err := errors.New( fmt.Sprintf( "Connecting to database server '%s', %s (%d)", this.Host, this.ErrorMessage, this.ErrorCode ) )
-    this.Close()
-    return err
+  if strings.TrimSpace( this.Database ) != "" {
+    this.UseDatabase( this.Database )
   }
 
   return nil
@@ -255,28 +266,50 @@ func (this *SQCloud) reconnect() error {
 
 // Close closes the connection to the SQLite Cloud Database server.
 // The connection can later be reopened (see: reconnect)
-func (this *SQCloud) Close() {
-  if this.connection != nil { this.CDisconnect() }
-  this.connection = nil
+func (this *SQCloud) Close() error {
+  var err_sock, err_psub_sock error
+
+  if this.sock != nil       { err_sock      = ( *this.sock ).Close()      } 
+  if this.psub_sock != nil  { err_psub_sock = ( *this.psub_sock ).Close() } 
+
+  this.sock       = nil
+  this.psub_sock  = nil
+
   this.resetError()
+
+  if err_sock != nil {
+    this.ErrorCode = -1
+    this.ErrorMessage = err_sock.Error()
+    return err_sock
+  }
+
+  if err_psub_sock != nil {
+    this.ErrorCode = -1
+    this.ErrorMessage = err_psub_sock.Error()
+    return err_psub_sock
+  }
+  return nil
 }
 
 // Compress enabled or disables data compression for this connection.
 // If enabled, the data is compressed with the LZ4 compression algorithm, otherwise no compression is applied the data.
 func (this *SQCloud) Compress( CompressMode string ) error {
-  switch strings.ToUpper( CompressMode ) {
-  case "NO":  return this.Execute( "SET KEY CLIENT_COMPRESSION TO 0" )
-  case "LZ4": return this.Execute( "SET KEY CLIENT_COMPRESSION TO 1" )
-  default:    return errors.New( fmt.Sprintf( "Invalid compression method (%s)", CompressMode ) )
+  switch compression := strings.ToUpper( CompressMode ); {
+  case this.sock == nil:     return errors.New( "Not connected" )
+  case compression == "NO":  return this.Execute( "SET KEY CLIENT_COMPRESSION TO 0" )
+  case compression == "LZ4": return this.Execute( "SET KEY CLIENT_COMPRESSION TO 1" )
+  default:                   return errors.New( fmt.Sprintf( "Invalid method (%s)", CompressMode ) )
   }
 }
 
 // IsConnected checks the connection to the SQLite Cloud database server by sending a PING command.
 // true is returned, if the connection is established and actually working, false otherwise.
 func (this *SQCloud) IsConnected() bool {
-  if this.connection == nil { return false }
-  if this.Ping() != nil     { return false }
-                              return true
+  switch {
+  case this.sock == nil:    return false 
+  case this.Ping() != nil:  return false
+  default:                  return true
+  }
 }
 
 // Error Methods
@@ -287,32 +320,26 @@ func (this *SQCloud) resetError() {
   this.ErrorMessage = ""
 }
 
-// IsError checks the successful execution of the last method call / command.
-// true is returned if the last command resulted in an error, false otherwise.
-func (this *SQCloud) IsError() bool {
-  return this.ErrorCode != 0
-}
-
 // GetErrorCode returns the error code of the last unsuccessful command as an int value.
 // 0 is returned if the last command run successful.
-func (this *SQCloud ) GetErrorCode() int {
-  return this.ErrorCode
-}
+func (this *SQCloud ) GetErrorCode() int { return this.ErrorCode }
+
+// IsError checks the successful execution of the last method call / command.
+// true is returned if the last command resulted in an error, false otherwise.
+func (this *SQCloud) IsError() bool { return this.GetErrorCode() != 0 }
 
 // GetErrorMessage returns the error message of the last unsuccuessful command as an error.
 // nil is returned if the last command run successful.
 func (this *SQCloud ) GetErrorMessage() error {
-  if this.IsError() {
-    return errors.New( this.ErrorMessage )
+  switch this.IsError() {
+  case true: return errors.New( this.ErrorMessage )
+  default:   return nil
   }
-  return nil
 }
 
 // GetError returned the error code and message of the last unsuccessful command.
 // 0 and nil is returned if the last command run successful.
-func (this *SQCloud ) GetError() ( int, error ) {
-  return this.GetErrorCode(), this.GetErrorMessage()
-}
+func (this *SQCloud ) GetError() ( int, error ) { return this.GetErrorCode(), this.GetErrorMessage() }
 
 
 // Data Access Functions
@@ -320,42 +347,26 @@ func (this *SQCloud ) GetError() ( int, error ) {
 // Select executes a query on an open SQLite Cloud database connection.
 // If an error occurs during the execution of the query, nil and an error describing the problem is returned.
 // On successful execution, a pointer to the result is returned. 
-func (this *SQCloud) Select( SQL string ) (*SQCloudResult, error) {
+func ( this *SQCloud ) Select( SQL string ) ( *Result, error ) {
   this.resetError()
 
-  result           := this.CExec( SQL )
-  this.ErrorCode    = this.CGetErrorCode()
-  this.ErrorMessage = this.CGetErrorMessage()
+  this.sendString( SQL )
 
-  if result == nil {
-    return nil, errors.New( fmt.Sprintf( "ERROR: %s (%d)", this.ErrorMessage, this.ErrorCode ) )
-  }
+  switch result, err := this.readResult(); {
+  case result == nil: return nil, errors.New( "nil" )
 
-  if this.IsError() {
+  case result.IsError():
+    this.ErrorCode, this.ErrorMessage, _ = result.GetError()
     result.Free()
-    return nil, errors.New( fmt.Sprintf( "ERROR: %s (%d)", this.ErrorMessage, this.ErrorCode ) )
-  }
+    return nil, errors.New( this.ErrorMessage )
 
-  result.Rows           = result.CGetRows()
-  result.Columns        = result.CGetColumns()
-  result.ColumnWidth    = make( []uint, result.Columns )
-  result.HeaderWidth    = make( []uint, result.Columns )
-  result.MaxHeaderWidth = 0  
-  result.Type           = result.CGetResultType()
-  result.ErrorCode      = this.ErrorCode
-  result.ErrorMessage   = this.ErrorMessage
-  for c := uint( 0 ); c < result.Columns ; c++ {
-    result.HeaderWidth[ c ] = uint( len( result.GetColumnName( c ) ) )
-    result.ColumnWidth[ c ] = result.CGetMaxColumnLenght( c )
-    if result.ColumnWidth[ c ] < result.HeaderWidth[ c ] {
-      result.ColumnWidth[ c ] = result.HeaderWidth[ c ]
-    }
-    if result.MaxHeaderWidth < result.HeaderWidth[ c ] {
-      result.MaxHeaderWidth = result.HeaderWidth[ c ]
-    }
-  }
+  case err != nil:
+    this.ErrorCode, this.ErrorMessage = 100000, err.Error()
+    result.Free()
+    return nil, err
 
-  return result, nil // nil, nil or *result, nil
+  default:            return result, nil
+  }
 }
 
 // Execute executes the given query.

@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///             
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 0.0.1
-//     //             ///   ///  ///    Date        : 2021/08/13
+//     ///             ///  ///         Version     : 1.0.0
+//     //             ///   ///  ///    Date        : 2021/08/31
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///     
 //   ///     //////////   ///  ///      Description : Go Methods related to the
@@ -18,8 +18,6 @@
 package sqlitecloud
 
 import "fmt"
-//import "os"
-//import "bufio"
 import "strings"
 import "time"
 import "errors"
@@ -95,16 +93,15 @@ func (this *SQCloud) ListConnections() ( []SQCloudConnection, error ) {
   if err == nil {
     if result != nil {
       if result.GetNumberOfColumns() == 6 {
-        rows :=result.GetNumberOfRows()
-        for row := uint( 0 ); row < rows; row++ {
-          connectionList = append( connectionList, SQCloudConnection{ 
-            ClientID: result.GetInt64Value( row, 1 ), 
-            Address:  result.CGetStringValue( row, 2 ),
-            Username: result.CGetStringValue( row, 3 ),
-            Database: result.CGetStringValue( row, 4 ),
-            ConnectionDate: result.GetSQLDateTime( row, 5 ),
-            LastActivity: result.GetSQLDateTime( row, 6 ),
-          } )
+        for row, rows := uint64( 0 ), result.GetNumberOfRows(); row <  rows; row++ {
+          connection := SQCloudConnection{}
+          connection.ClientID,        _ = result.GetInt64Value( row, 1 )
+          connection.Address,         _ = result.GetStringValue( row, 2 )
+          connection.Username,        _ = result.GetStringValue( row, 3 )
+          connection.Database,        _ = result.GetStringValue( row, 4 )
+          connection.ConnectionDate,  _ = result.GetSQLDateTime( row, 4 )
+          connection.LastActivity,    _ = result.GetSQLDateTime( row, 6 )
+          connectionList                = append( connectionList, connection )
         }
         result.Free()
         return connectionList, nil
@@ -124,16 +121,15 @@ func (this *SQCloud) ListDatabaseConnections( Database string ) ( []SQCloudConne
   if err == nil {
     if result != nil {
       if result.GetNumberOfColumns() == 2 {
-        rows :=result.GetNumberOfRows()
-        for row := uint( 0 ); row < rows; row++ {
-          connectionList = append( connectionList, SQCloudConnection{ 
-            ClientID: result.GetInt64Value( row, 1 ), 
-            Address:  "",
-            Username: "",
-            Database: Database,
-            ConnectionDate: time.Unix( 0, 0 ),
-            LastActivity: result.GetSQLDateTime( row, 2 ),
-          } )
+        for row, rows := uint64( 0 ), result.GetNumberOfRows(); row < rows; row++ {
+          connection := SQCloudConnection{}
+          connection.ClientID,        _ = result.GetInt64Value( row, 1 )
+          connection.Address            = ""
+          connection.Username           = ""
+          connection.Database           = Database
+          connection.ConnectionDate     = time.Unix( 0, 0 )
+          connection.LastActivity,    _ = result.GetSQLDateTime( row, 2 )
+          connectionList                = append( connectionList, connection )
         }
         result.Free()
         return connectionList, nil
@@ -147,22 +143,22 @@ func (this *SQCloud) ListDatabaseConnections( Database string ) ( []SQCloudConne
 }
 
 // ListDatabaseClientConnectionIds - INTERNAL SERVER COMMAND: Lists all connections with the specified DatabaseId on this SQLite Cloud Database Cluster.
+// GUB(andreas) Start index = 1
 func (this *SQCloud) ListDatabaseClientConnectionIds( DatabaseID uint64 ) ( []SQCloudConnection, error ) {
   connectionList := []SQCloudConnection{}
   result, err := this.Select( fmt.Sprintf( "LIST DATABASE CONNECTIONS ID %d", DatabaseID ) )
   if err == nil {
     if result != nil {
       if result.GetNumberOfColumns() == 2 {
-        rows :=result.GetNumberOfRows()
-        for row := uint( 1 ); row < rows; row++ {
-          connectionList = append( connectionList, SQCloudConnection{ 
-            ClientID: result.GetInt64Value( row, 1 ), 
-            Address:  "",
-            Username: "",
-            Database: "",
-            ConnectionDate: time.Unix( 0, 0 ),
-            LastActivity: result.GetSQLDateTime( row, 2 ),
-          } )
+        for row, rows := uint64( 1 ), result.GetNumberOfRows(); row < rows; row++ {
+          connection := SQCloudConnection{}
+          connection.ClientID,        _ = result.GetInt64Value( row, 1 )
+          connection.Address            = ""
+          connection.Username           = ""
+          connection.Database           = ""
+          connection.ConnectionDate     = time.Unix( 0, 0 )
+          connection.LastActivity,    _ = result.GetSQLDateTime( row, 2 )
+          connectionList                = append( connectionList, connection )
         }
         result.Free()
         return connectionList, nil
@@ -235,7 +231,7 @@ func (this *SQCloud) GetDatabase() ( string, error ) {
     if err != nil {
       return "", err
     }
-    return result.GetBuffer(), nil
+    return result.GetString()
   }
   return "", err
 }
@@ -247,7 +243,7 @@ func (this *SQCloud) GetDatabaseID() ( uint64, error ) {
   if result != nil {
     defer result.Free()
     if err != nil { return 0, err }
-    val, err := result.GetBufferAsInt64()
+    val, err := result.GetInt64()
     return uint64( val ), err
   }
   return 0, err
@@ -286,16 +282,16 @@ func (this *SQCloud) ListPlugins() ( []SQCloudPlugin, error ) {
   result, err := this.Select( "LIST PLUGINS" )
   if err == nil {
     if result != nil {
-      rows :=result.GetNumberOfRows()
-      for row := uint( 1 ); row < rows; row++ {
+      for row, rows := uint64( 1 ), result.GetNumberOfRows(); row < rows; row++ {
         if result.GetNumberOfColumns() == 5 {
-          pluginList = append( pluginList, SQCloudPlugin{ 
-            Name:        result.CGetStringValue( row, 0 ), 
-            Type:        result.CGetStringValue( row, 1 ),
-            Version:     result.CGetStringValue( row, 2 ),
-            Copyright:   result.CGetStringValue( row, 3 ),
-            Description: result.CGetStringValue( row, 4 ),
-          } )
+          plugin := SQCloudPlugin{}
+          plugin.Name       , _ =  result.GetStringValue( row, 0 )
+          plugin.Type       , _ =  result.GetStringValue( row, 1 )
+          plugin.Version    , _ =  result.GetStringValue( row, 2 )
+          plugin.Copyright  , _ =  result.GetStringValue( row, 3 )
+          plugin.Description, _ =  result.GetStringValue( row, 4 )
+          pluginList            = append( pluginList, plugin )
+
         } else {
           result.Free()
           return []SQCloudPlugin{}, errors.New( "ERROR: Query returned not 5 Columns (-1)" )
@@ -326,7 +322,7 @@ func (this *SQCloud) GetKey( Key string ) ( string, error ) {
     if err != nil {
       return "", err
     }
-    return result.GetBuffer(), nil
+    return result.GetString()
   }
   return "", err
 }
@@ -386,7 +382,7 @@ func (this *SQCloud) Ping() error {
     defer result.Free()
 
     if err == nil {
-      if retval, err := result.GetBufferAsString(); retval == "PONG" {
+      if retval, err := result.GetString(); retval == "PONG" {
         return err // should be nil on success...
       } else {
         return errors.New( "ERROR: Unexpected result (-1)" )

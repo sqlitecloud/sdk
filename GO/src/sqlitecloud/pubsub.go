@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///             
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 0.0.1
-//     //             ///   ///  ///    Date        : 2021/08/13
+//     ///             ///  ///         Version     : 1.0.0
+//     //             ///   ///  ///    Date        : 2021/08/31
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///     
 //   ///     //////////   ///  ///      Description : GO Methods related to the
@@ -31,13 +31,14 @@ package sqlitecloud
 
 // GetUUID returns the UUID as string
 func (this *SQCloud ) GetUUID() string {
-  return this.UUID // this.CGetCloudUUID()
+  return this.uuid // this.CGetCloudUUID()
 }
 
 // SetPubSubOnly
 // BUG(andreas): TODO, postponed by Marco
-func (this *SQCloud ) SetPubSubOnly() *SQCloudResult {
-  return this.CSetPubSubOnly()
+func (this *SQCloud ) SetPubSubOnly() *Result {
+//##  return this.CSetPubSubOnly()
+return nil
 }
 
 
