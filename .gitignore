@@ -1,13 +1,5 @@
-C/cli/sqlitecloud-cli.xcodeproj/project.xcworkspace/contents.xcworkspacedata
 C/cli/sqlitecloud-cli.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
-C/cli/sqlitecloud-cli.xcodeproj/project.xcworkspace/xcuserdata/marco.xcuserdatad/UserInterfaceState.xcuserstate
-C/cli/sqlitecloud-cli.xcodeproj/xcuserdata/marco.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
 C/cli/sqlitecloud-cli.xcodeproj/xcuserdata/marco.xcuserdatad/xcschemes/xcschememanagement.plist
-C/cli/sqlitecloud-cli.xcodeproj/xcshareddata/xcschemes/sqlitecloud-cli.xcscheme
-C/cli/sqlitecloud-cli.xcodeproj/project.xcworkspace/xcuserdata/marco.xcuserdatad/UserInterfaceState.xcuserstate
-C/cli/sqlitecloud-cli.xcodeproj/project.xcworkspace/xcuserdata/marco.xcuserdatad/UserInterfaceState.xcuserstate
-
-
 bin
 *.db
 .DS_Store
@@ -16,7 +8,6 @@ bin
 sqlitecloud-cli
 SQLiteCloud.sdk.tmproj
 example-session.txt
-*.a
 *.o
 Arbeitszeiten.txt
 test1
@@ -24,9 +15,8 @@ github.com
 golang.org
 honnef.co
 mvdan.cc
+*.xcworkspacedata
 *.xcuserstate
-*.xcuserstate
-*.xcuserstate
-C/cli/sqlitecloud-cli.xcodeproj/project.xcworkspace/xcuserdata/marco.xcuserdatad/UserInterfaceState.xcuserstate
-C/cli/sqlitecloud-cli.xcodeproj/project.xcworkspace/xcuserdata/marco.xcuserdatad/UserInterfaceState.xcuserstate
-C/cli/sqlitecloud-cli.xcodeproj/xcshareddata/xcschemes/sqlitecloud-cli.xcscheme
+*.xcscheme
+*.xcexplist
+*.xcbkptlist
