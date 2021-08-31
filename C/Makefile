@@ -1,7 +1,22 @@
 AR        := ar
 CC        := gcc
-INCLUDES  := -I. -Icli
+INCLUDES  := -I. -Icli -I./SSL/include
 OPTIONS   := -Wno-macro-redefined -Wno-shift-negative-value -Os
+
+ifeq ($(OS),Windows_NT)
+	# Windows
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Darwin)
+		# MacOS
+		LDFLAGS = -lpthread -ltls
+		LIBFLAGS = -L./SSL/macos_fat
+	else
+		# Linux
+		LDFLAGS = -lpthread -ltls
+		LIBFLAGS = -L./SSL/linux_64bit
+	endif
+endif
 
 lz4.o:	lz4.c lz4.h
 	$(CC) $(OPTIONS) $(INCLUDES) lz4.c -c -o lz4.o
@@ -21,7 +36,7 @@ libsqcloud.dylib: lz4.o sqcloud.o
 all:	lz4.o
 
 cli:	libsqcloud.a cli/linenoise.c cli/linenoise.h cli/main.c
-	$(CC) $(OPTIONS) $(INCLUDES) cli/*.c libsqcloud.a -o sqlitecloud-cli
+	$(CC) $(OPTIONS) $(INCLUDES) cli/*.c libsqcloud.a -o sqlitecloud-cli ${LIBFLAGS} ${LDFLAGS}
 
 clean:
 	rm -rf *.o *.a *.so *.dylib

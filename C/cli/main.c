@@ -20,6 +20,8 @@
 // MARK: -
 
 static bool skip_ok = false;
+static bool quiet = false;
+void internal_rowset_dump (SQCloudResult *result, uint32_t maxline, bool quiet);
 
 void do_print (SQCloudConnection *conn, SQCloudResult *res) {
     // res NULL means to read error message and error code from conn
@@ -47,7 +49,7 @@ void do_print (SQCloudConnection *conn, SQCloudResult *res) {
             break;
             
         case RESULT_ROWSET:
-            SQCloudRowsetDump(res, 0);
+            internal_rowset_dump(res, 0, quiet);
             break;
     }
     
@@ -109,24 +111,26 @@ int main(int argc, char * argv[]) {
     int port = SQCLOUD_DEFAULT_PORT;
     bool compression = false;
     bool insecure = false;
-    
+
     int c;
     SQCloudConfig config = {0};
+    config.family = SQCLOUD_IPv4;
     
-    while ((c = getopt (argc, argv, "h:p:f:cir:s:t:")) != -1) {
+    while ((c = getopt (argc, argv, "h:p:f:ciqr:s:t:")) != -1) {
         switch (c) {
             case 'h': hostname = optarg; break;
             case 'p': port = atoi(optarg); break;
             case 'f': filename = optarg; break;
             case 'c': compression = true; break;
             case 'i': insecure = true; break;
+            case 'q': quiet = true; break;
             case 'r': root_certificate_path = optarg; break;
             case 's': client_certificate_path = optarg; break;
             case 't': client_certificate_key_path = optarg; break;
         }
     }
     
-    printf("sqlitecloud-cli version %s (build date %s)\n", CLI_VERSION, CLI_BUILD_DATE);
+    if (!quiet) printf("sqlitecloud-cli version %s (build date %s)\n", CLI_VERSION, CLI_BUILD_DATE);
     
     // setup TLS config parameter
     #ifndef SQLITECLOUD_DISABLE_TSL
