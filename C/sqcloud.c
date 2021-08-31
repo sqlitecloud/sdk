@@ -12,6 +12,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <sys/time.h>
+#include <ctype.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -1420,7 +1421,7 @@ void internal_rowset_dump (SQCloudResult *result, uint32_t maxline, bool quiet) 
 // MARK: - URL -
 
 static int char2hex (int c) {
-    if (isnumber(c)) return (c - '0');
+    if (isdigit(c)) return (c - '0');
     c = toupper(c);
     if (c >='A' && c <='F') return (c - 'A' + 0x0A);
     return -1;
