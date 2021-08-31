@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///             
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 0.0.1
-//     //             ///   ///  ///    Date        : 2021/08/13
+//     ///             ///  ///         Version     : 1.0.0
+//     //             ///   ///  ///    Date        : 2021/08/31
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///     
 //   ///     //////////   ///  ///      Description : GO Functions for parsing
@@ -18,11 +18,8 @@
 package sqlitecloud
 
 import "fmt"
-//import "os"
-//import "bufio"
 import "strings"
 import "errors"
-//import "time"
 import "strconv"
 
 // Helper functions

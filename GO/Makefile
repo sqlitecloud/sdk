@@ -61,16 +61,8 @@ bin/dump3:	sdk src/Test/dump3.go
 
 test:	sdk bin/test1 bin/server bin/dump1 bin/dump2 bin/dump3
 
-# CSDK
-src/sqlitecloud/libsqcloud.a:	
-	make -C ../C libsqcloud.a
-	cp ../C/libsqcloud.a  src/sqlitecloud/libsqcloud.a
-
-csdk:	src/sqlitecloud/libsqcloud.a
-
-
 # GO SDK
-sdk:	install-prerequirements proxy src/sqlitecloud/*.go
+sdk:	install-prerequirements src/sqlitecloud/*.go
 
 
 # CLI App
@@ -85,7 +77,7 @@ github:
 diff:
 	git difftool
 	
-checksec:	gosec
+checksec:	gosec src/sqlitecloud/*.go
 	./bin/gosec ./src/sqlitecloud/
 	# ./bin/gosec ./src/CLI/
 
@@ -95,32 +87,8 @@ doc:	godoc
 	@( sleep 1 && open http://localhost:6060/pkg/sqlitecloud/ ) &
 	@./bin/godoc -http=:6060 -index -play -goroot ./src/sqlitecloud
 
-src/sqlitecloud/synthesized-c-proxy.go: ../C/lz4.h ../C/sqcloud_private.h ../C/sqcloud.h ../C/lz4.c ../C/sqcloud.c
-	echo "package sqlitecloud" > src/sqlitecloud/synthesized-c-proxy.go
-	echo "" >> src/sqlitecloud/synthesized-c-proxy.go
-	echo "// #cgo CFLAGS: -Wno-multichar -Wno-macro-redefined " >> src/sqlitecloud/synthesized-c-proxy.go
-	echo "// #cgo LDFLAGS: -L. " >> src/sqlitecloud/synthesized-c-proxy.go
-	echo "// #include <stdlib.h>" >> src/sqlitecloud/synthesized-c-proxy.go
-  
-	sed '/#include "lz4.h"/q' ../C/lz4.c | sed '/#include "lz4.h"/d' | sed 's/^/\/\/ /' >> src/sqlitecloud/synthesized-c-proxy.go
-	cat ../C/lz4.h | sed 's/^/\/\/ /' >> src/sqlitecloud/synthesized-c-proxy.go
-	sed -n -e '/#include "lz4.h"/,$$p' ../C/lz4.c | tail -n +2 | sed 's/^/\/\/ /' >> src/sqlitecloud/synthesized-c-proxy.go
-  
-	sed '/#include "lz4.h"/q' ../C/sqcloud.c | sed '/#include "lz4.h"/d' | sed 's/^/\/\/ /' >> src/sqlitecloud/synthesized-c-proxy.go
-	cat ../C/sqcloud.h | sed 's/^/\/\/ /' >> src/sqlitecloud/synthesized-c-proxy.go
-	sed -n -e '/#include "sqcloud.h"/,$$p' ../C/sqcloud.c | tail -n +2 | sed 's/^/\/\/ /' >> src/sqlitecloud/synthesized-c-proxy.go
-  
-	echo "import \"C\"" >> src/sqlitecloud/synthesized-c-proxy.go
-	echo "import \"unsafe\"" >> src/sqlitecloud/synthesized-c-proxy.go
-  
-	cat src/sqlitecloud/c_proxy.stubs >> src/sqlitecloud/synthesized-c-proxy.go
-
-proxy: src/sqlitecloud/synthesized-c-proxy.go
-	
 clean:
 	rm -rf rm -rf src/github.com src/golang.org/
-	rm -rf src/Test/test1  src/sqlitecloud/libsqcloud.a
-	# rm src/SQLiteCloud/c.go
-
+	rm -rf src/Test/test1
 
 all: sdk cli test

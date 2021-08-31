@@ -2,12 +2,12 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///             
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 0.0.2
-//     //             ///   ///  ///    Date        : 2021/08/18
+//     ///             ///  ///         Version     : 1.0.0
+//     //             ///   ///  ///    Date        : 2021/08/31
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///     
 //   ///     //////////   ///  ///      Description : GO Methods related to the 
-//   ////                ///  ///                     SQCloudResult class.
+//   ////                ///  ///                     Result class.
 //     ////     //////////   ///        
 //        ////            ////          
 //          ////     /////              
@@ -17,10 +17,6 @@
 
 package sqlitecloud
 
-// #include <stdlib.h>
-// #include "../../../C/sqcloud.h"
-import "C"
-
 import "fmt"
 import "os"
 
@@ -29,26 +25,9 @@ import "strings"
 import "errors"
 import "time"
 import "io"
-import "strconv"
 import "encoding/json"
 import "golang.org/x/term"
 
-// SQCloudResType
-const RESULT_OK           = C.RESULT_OK
-const RESULT_ERROR        = C.RESULT_ERROR
-const RESULT_STRING       = C.RESULT_STRING
-const RESULT_INTEGER      = C.RESULT_INTEGER
-const RESULT_FLOAT        = C.RESULT_FLOAT
-const RESULT_ROWSET       = C.RESULT_ROWSET
-const RESULT_NULL         = C.RESULT_NULL
-const RESULT_JSON         = C.RESULT_JSON
-
-// SQCloudValueType
-const VALUE_INTEGER       = C.VALUE_INTEGER
-const VALUE_FLOAT         = C.VALUE_FLOAT
-const VALUE_TEXT          = C.VALUE_TEXT
-const VALUE_BLOB          = C.VALUE_BLOB
-const VALUE_NULL          = C.VALUE_NULL
 
 const OUTFORMAT_LIST      = 0
 const OUTFORMAT_CSV       = 1
@@ -62,54 +41,53 @@ const OUTFORMAT_TABLE     = 8
 const OUTFORMAT_BOX       = 9
 const OUTFORMAT_XML       = 10
 
-type SQCloudResult struct {
-  result *C.struct_SQCloudResult
+// The Result is either a Literal or a RowSet
+type Result struct {
+  value             Value
 
-  Rows            uint
-  Columns         uint
-
-  ColumnWidth     []uint
-  HeaderWidth     []uint
-  MaxHeaderWidth  uint
-
-  Type            uint
-  ErrorCode       int
-  ErrorMessage    string
+  rows              []ResultRow
+  ColumnNames       []string
+  ColumnWidth       []uint64
+  MaxHeaderWidth    uint64
 }
+
+func (this *Result ) Rows() []ResultRow { return this.rows }
 
 // ResultSet Methods (100% GO)
 
 // GetType returns the type of this query result as an integer (see: RESULT_ constants).
-func (this *SQCloudResult ) GetType() uint {
-  return this.Type
-}
+func (this *Result ) GetType() byte { return this.value.GetType() }
 
 // IsOK returns true if this query result if of type "RESULT_OK", false otherwise.
-func (this *SQCloudResult ) IsOK() bool {
-  return this.Type == RESULT_OK
-}
+func (this *Result ) IsOK()     bool { return this.value.IsOK() }
 
 // GetNumberOfRows returns the number of rows in this query result
-func (this *SQCloudResult ) GetNumberOfRows() uint {
-  return this.Rows
-}
+func (this *Result ) GetNumberOfRows() uint64 { 
+  switch {
+  case !this.IsRowSet():  return 0
+  default:                return uint64( len( this.rows ) )
+  }
+} 
 
 // GetNumberOfColumns returns the number of columns in this query result
-func (this *SQCloudResult ) GetNumberOfColumns() uint {
-  return this.Columns
+func (this *Result ) GetNumberOfColumns() uint64 { 
+  switch {
+  case !this.IsRowSet():  return 0
+  default:                return uint64( len( this.ColumnWidth ) )
+  }
 }
 
 // Dump outputs this query result to the screen.
-// Warning: No line truncation is used. If you want to truncation the output to a certain width, use: SQCloudResult.DumpToScreen( width )
-func (this *SQCloudResult ) Dump() {
+// Warning: No line truncation is used. If you want to truncation the output to a certain width, use: Result.DumpToScreen( width )
+func (this *Result ) Dump() {
   w := 0
   if width, _, err := term.GetSize( 0 ); err == nil { w = width }
   this.DumpToScreen( uint( w ) )
 }
 
 // ToJSON returns a JSON representation of this query result.
-// BUG(andreas): The SQCloudResult.ToJSON method is not implemented yet.
-func (this *SQCloudResult ) ToJSON() string {
+// BUG(andreas): The Result.ToJSON method is not implemented yet.
+func (this *Result ) ToJSON() string {
   return "todo" // Use Writer into Buffer
 }
 
@@ -117,198 +95,163 @@ func (this *SQCloudResult ) ToJSON() string {
 
 // GetMaxColumnLength returns the number of runes of the value in the specified column with the maximum length in this query result.
 // The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
-func (this *SQCloudResult ) GetMaxColumnLength( Column uint ) uint {
-  return this.ColumnWidth[ Column ]
+func (this *Result ) GetMaxColumnWidth( Column uint64 ) ( uint64, error ) {
+  switch {
+  case !this.IsRowSet():                    return 0, errors.New( "Not a RowSet" )
+  case Column >= this.GetNumberOfColumns(): return 0, errors.New( "Column Index out of bounds" )
+  default:                                  return this.ColumnWidth[ Column ], nil
+  }
 }
 // GetNameWidth returns the number of runes of the column name in the specified column.
 // The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
-func (this *SQCloudResult ) GetNameWidth( Column uint ) uint {
-  return this.HeaderWidth[ Column ]
+func (this *Result ) GetNameLength( Column uint64 ) ( uint64, error ) {
+  switch {
+  case !this.IsRowSet():                    return 0, errors.New( "Not a RowSet" )
+  case Column >= this.GetNumberOfColumns(): return 0, errors.New( "Column Index out of bounds" )
+  default:                                  return uint64( len( this.ColumnNames[ Column ] ) ), nil
+  }
 }
 // GetMaxNameWidth returns the number of runes of the longest column name.
-func (this *SQCloudResult ) GetMaxNameWidth() uint {
-  return this.MaxHeaderWidth
-}
+func (this *Result ) GetMaxNameWidth() uint64 { return this.MaxHeaderWidth }
 
 // Additional Data Access Functions (100% GO)
 
 // IsError returns true if this query result is of type "RESULT_ERROR", false otherwise.
-func (this *SQCloudResult ) IsError() bool {
-  return this.Type == RESULT_ERROR
-}
+func (this *Result ) IsError()        bool { return this.value.IsError() }
 
 // IsNull returns true if this query result is of type "RESULT_NULL", false otherwise.
-func (this *SQCloudResult ) IsNull() bool {
-  return this.Type == RESULT_NULL
-}
+func (this *Result ) IsNULL()           bool { return this.value.IsNULL() }
 
 // IsJson returns true if this query result is of type "RESULT_JSON", false otherwise.
-func (this *SQCloudResult ) IsJson() bool {
-  return this.Type == RESULT_JSON
-}
+func (this *Result ) IsJSON()           bool { return this.value.IsJSON() }
 
 // IsString returns true if this query result is of type "RESULT_STRING", false otherwise.
-func (this *SQCloudResult ) IsString() bool {
-  return this.Type == RESULT_STRING
-}
+func (this *Result ) IsString()         bool { return this.value.IsString() }
 
 // IsInteger returns true if this query result is of type "RESULT_INTEGER", false otherwise.
-func (this *SQCloudResult ) IsInteger() bool {
-  return this.Type == RESULT_INTEGER
-}
+func (this *Result ) IsInteger()      bool { return this.value.IsInteger() }
 
 // IsFloat returns true if this query result is of type "RESULT_FLOAT", false otherwise.
-func (this *SQCloudResult ) IsFloat() bool {
-  return this.Type == RESULT_FLOAT
-}
+func (this *Result ) IsFloat()        bool { return this.value.IsFloat() }
+
+// IsPSUB returns true if this query result is of type "RESULT_XXXXXXX", false otherwise.
+func (this *Result ) IsPSUB()           bool { return this.value.IsPSUB() }
+
+// IsCommand returns true if this query result is of type "RESULT_XXXXXXX", false otherwise.
+func (this *Result ) IsCommand()      bool { return this.value.IsCommand() }
+
+// IsReconnect returns true if this query result is of type "RESULT_XXXXXXX", false otherwise.
+func (this *Result ) IsReconnect()    bool { return this.value.IsReconnect() }
+
+func (this *Result ) IsBLOB()               bool { return this.value.IsBLOB() }
+
+// IsText returns true if this query result is of type "RESULT_JSON", "RESULT_STRING", "RESULT_INTEGER" or "RESULT_FLOAT", false otherwise.
+func (this *Result ) IsText()       bool { return this.value.IsText() }
 
 // IsRowSet returns true if this query result is of type "RESULT_ROWSET", false otherwise.
-func (this *SQCloudResult ) IsRowSet() bool {
-  return this.Type == RESULT_ROWSET
-}
-
-// IsTextual returns true if this query result is of type "RESULT_JSON", "RESULT_STRING", "RESULT_INTEGER" or "RESULT_FLOAT", false otherwise.
-func (this *SQCloudResult ) IsTextual() bool {
-  return this.IsJson() || this.IsString() || this.IsInteger() || this.IsFloat()
-}
-
-// Additional ResultSet Methods (100% GO)
-
-// GetSQLDateTime parses this query result value in Row and Column as an SQL-DateTime and returns its value.
-// The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
-// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
-func (this *SQCloudResult ) GetSQLDateTime( Row uint, Column uint ) time.Time {
-  datetime, _ := time.Parse( "2006-01-02 15:04:05", this.CGetStringValue( Row, Column ) )
-  return datetime
-} 
-
-// ResultSet Methods (C SDK)
-
-// GetBuffer returns the buffer of this query result as string.
-func (this *SQCloudResult ) GetBuffer() string {
-  return this.CGetResultBuffer()
-}
-
-func (this *SQCloudResult ) GetBufferAsString() ( string, error ) {
-  if this.IsString() {
-    return this.GetBuffer(), nil
+func (this *Result ) IsRowSet()        bool { 
+  switch {
+  case !this.value.IsRowSet():    return false
+  case this.rows == nil:          return false
+  case this.ColumnNames == nil:   return false
+  case this.ColumnWidth == nil:   return false
+  case this.MaxHeaderWidth == 0:  return false
+  default:                        return true
   }
-  return "", errors.New( "Result is not a string" )
 }
+func (this *Result ) IsLiteral()        bool { return !this.IsRowSet() }
 
-func (this *SQCloudResult ) GetBufferAsJSON() ( object interface{}, err error ) {
-  if this.IsJson() {
-    err = json.Unmarshal( []byte( this.GetBuffer() ), object)
-    return
-  }
-  return "", errors.New( "Result is not a JSON object" )
-}
-
-func (this *SQCloudResult ) GetBufferAsInt32() ( int32, error ) {
-  if this.IsInteger() {
-    value64, err := strconv.ParseInt( this.GetBuffer(), 0, 32 )
-    return int32( value64 ), err
-  }
-  return 0, errors.New( "Result is not an integer number" )
-}
-func (this *SQCloudResult ) GetBufferAsInt64() ( int64, error ) {
-  if this.IsInteger() {
-    return strconv.ParseInt( this.GetBuffer(), 0, 64 )
-  }
-  return 0, errors.New( "Result is not an integer number" )
-}
-
-func (this *SQCloudResult ) GetBufferAsFloat32() ( float32, error ) {
-  if this.IsFloat() {
-    value64, err := strconv.ParseFloat( this.GetBuffer(), 32 )
-    return float32( value64 ), err
-  }
-  return 0, errors.New( "Result is not a float number" )
-}
-func (this *SQCloudResult ) GetBufferAsFloat64() ( float64, error ) {
-  if this.IsFloat() {
-    return strconv.ParseFloat( this.GetBuffer(), 64 )
-  }
-  return 0, errors.New( "Result is not a float number" )
-}
+// ResultSet Buffer/Scalar Methods
 
 // GetLength returns the length of the buffer of this query result.
-func (this *SQCloudResult ) GetLength() uint {
-  return this.CGetResultLen()
+func (this *Result ) GetBufferLengthXXX() ( uint64, error ) {
+  switch {
+  case this.IsRowSet(): return 0, errors.New( "Not a scalar value" )
+  default:              return this.value.GetLength(), nil
+  }
 }
 
-// GetLength returns the maximum length of the buffer of this query result.
-// BUG(andreas): What is this GetMaxLength for?
-func (this *SQCloudResult ) GetMaxLength() uint32 {
-  return this.CGetMaxLen()
+// GetBuffer returns the buffer of this query result as string.
+func (this *Result ) GetBuffer() []byte { return this.value.GetBuffer() } 
+  
+func (this *Result ) GetString() ( string, error ) { 
+  switch {
+  case this.IsRowSet(): return "", errors.New( "Not a literal" )
+  default:              return this.value.GetString(), nil
+  }
+}
+
+func (this *Result ) GetJSON() ( object interface{}, err error ) {
+  switch {
+  case !this.IsJSON(): return nil, errors.New( "Not a JSON object" )
+  default:
+    err = json.Unmarshal( this.value.GetBuffer(), object )
+    return
+  }
+}
+
+func (this *Result ) GetInt32() ( int32, error ) {
+  switch {
+  case !this.IsInteger(): return 0, errors.New( "Not an integer value" )
+  default:                return this.value.GetInt32()
+  }
+}
+func (this *Result ) GetInt64() ( int64, error ) {
+  switch {
+  case !this.IsInteger(): return 0, errors.New( "Not an integer value" )
+  default:                return this.value.GetInt64()
+  }
+}
+
+func (this *Result ) GetFloat32() ( float32, error ) {
+  switch {
+  case !this.IsFloat():   return 0, errors.New( "Not a float value" )
+  default:                return this.value.GetFloat32()
+  }
+}
+
+func (this *Result ) GetFloat64() ( float64, error ) {
+  switch {
+  case !this.IsFloat():   return 0, errors.New( "Not a float value" )
+  default:                return this.value.GetFloat64()
+  }
+}
+
+func (this *Result ) GetError() ( int, string, error ) {
+  switch {
+  case !this.IsError():   return 0, "", errors.New( "Not an error" )
+  default:                return this.value.GetError()
+  }
+}
+func (this *Result ) GetErrorAsString() string {
+  switch code, message, err := this.GetError(); {
+  case err != nil:  return fmt.Sprintf( "INTERNAL ERROR: %s", err.Error() )
+  default:          return fmt.Sprintf( "ERROR: %s (%d)", message, code )
+  }
 }
 
 // Free frees all memory allocated by this query result.
-func (this *SQCloudResult ) Free() {
-  this.CFree()
-  this.result         = nil
-  this.Rows           = 0
-  this.Columns        = 0
-  this.ColumnWidth    = []uint{}
-  this.HeaderWidth    = []uint{}
+func (this *Result ) Free() {
+  this.value          = Value{ Type: 0, Buffer: nil } // GC
+  this.rows           = []ResultRow{}                 // GC
+  this.ColumnNames    = []string{}                    // GC
+  this.ColumnWidth    = []uint64{}                    // GC
   this.MaxHeaderWidth = 0
-  this.Type           = 0
-  this.ErrorCode      = 0
-  this.ErrorMessage   = ""
 }
 
-// GetValueType returns the type of the value in row Row and column Column of this query result.
-// The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
-// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
-// Possible return types are: VALUE_INTEGER, VALUE_FLOAT, VALUE_TEXT, VALUE_BLOB, VALUE_NULL
-func (this *SQCloudResult ) GetValueType( Row uint, Column uint ) int {
-  return this.CGetValueType( Row, Column )
-}
 
-// GetColumnName returns the column name in column Column of this query result.
+// GetName returns the column name in column Column of this query result.
 // The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
-func (this *SQCloudResult ) GetColumnName( Column uint ) string {
-  return this.CGetColumnName( Column )
-}
-
-// GetStringValue returns the contents in row Row and column Column of this query result as string.
-// The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
-// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
-func (this *SQCloudResult ) GetStringValue( Row uint, Column uint ) string {
-  return this.CGetStringValue( Row, Column )
-}
-
-// GetInt32Value returns the contents in row Row and column Column of this query result as int32.
-// The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
-// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
-func (this *SQCloudResult ) GetInt32Value( Row uint, Column uint ) int32 {
-  return this.CGetInt32Value( Row, Column )
-}
-
-// GetInt64Value returns the contents in row Row and column Column of this query result as int64.
-// The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
-// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
-func (this *SQCloudResult ) GetInt64Value( Row uint, Column uint ) int64 {
-  return this.CGetInt64Value( Row, Column )
-}
-
-// GetFloat32Value returns the contents in row Row and column Column of this query result as float32.
-// The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
-// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
-func (this *SQCloudResult ) GetFloat32Value( Row uint, Column uint ) float32 {
-  return this.CGetFloat32Value( Row, Column )
-}
-
-// GetFloat64Value returns the contents in row Row and column Column of this query result as float64.
-// The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
-// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
-func (this *SQCloudResult ) GetFloat64Value( Row uint, Column uint ) float64 {
-  return this.CGetFloat64Value( Row, Column )
+func (this *Result ) GetName( Column uint64 ) ( string, error ) {
+  switch {
+  case Column >= this.GetNumberOfColumns(): return "", errors.New( "Column Index out of bounds" )
+  default:                                  return this.ColumnNames[ Column ], nil
+  }
 }
 
 // DumpToScreen outputs this query result to the screen.
-// The output is truncated at a maximum line width of MaxLineLength runes (compare: SQCloudResult.Dump())
-func (this *SQCloudResult ) DumpToScreen( MaxLineLength uint ) {
+// The output is truncated at a maximum line width of MaxLineLength runes (compare: Result.Dump())
+func (this *Result ) DumpToScreen( MaxLineLength uint ) {
   this.DumpToWriter( bufio.NewWriter( os.Stdout ), OUTFORMAT_BOX, false, "│", "NULL", "\r\n", MaxLineLength, false )
 }
 
@@ -317,35 +260,108 @@ func (this *SQCloudResult ) DumpToScreen( MaxLineLength uint ) {
 // GetRow returns a pointer to the row Row of this query result.
 // The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
 // If the index row can not be found, nil is returned instead.
-func (this *SQCloudResult ) GetRow( Row uint ) ( *SQCloudResultRow ) {
-  if Row >= this.Rows {
-    return nil
+func (this *Result ) GetRow( Row uint64 ) ( *ResultRow, error ) {
+  switch {
+  case !this.IsRowSet():              return nil, errors.New( "Not a Rowset" )
+  case Row >= this.GetNumberOfRows(): return nil, errors.New( "Row index is out of bounds" )
+  default:                            return &this.rows[ Row ], nil
   }
-  row := SQCloudResultRow{
-    result  : this,
-    row     : Row,
-    rows    : this.Rows,
-    columns : this.Columns,
-  }
-  return &row
 }
 
 // GetFirstRow returns the first row of this query result.
 // If this query result has no row's, nil is returned instead.
-func (this *SQCloudResult ) GetFirstRow() *SQCloudResultRow {
-  return this.GetRow( 0 )
-}
+func (this *Result ) GetFirstRow() ( *ResultRow, error ) { return this.GetRow( 0 ) }
 
 // GetLastRow returns the first row of this query result.
 // If this query result has no row's, nil is returned instead.
-func (this *SQCloudResult ) GetLastRow() *SQCloudResultRow {
-  switch this.Rows {
-  case 0:  return nil
-  default: return this.GetRow( this.Rows - 1 )
+func (this *Result ) GetLastRow() ( *ResultRow, error ) { return this.GetRow( this.GetNumberOfRows() - 1 ) }
+
+
+
+
+
+// Additional Row Methods <- sollte es eigentlich nicht geben!!!!!
+
+func (this *Result ) GetValue( Row uint64, Column uint64 ) ( *Value, error ) {
+  switch row, err := this.GetRow( Row ); {
+  case err != nil:                      return nil, err
+  default:                              return row.GetValue( Column )
   }
 }
 
-/// Dump Method (100% GO)
+// GetValueType returns the type of the value in row Row and column Column of this query result.
+// The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
+// Possible return types are: VALUE_INTEGER, VALUE_FLOAT, VALUE_TEXT, VALUE_BLOB, VALUE_NULL
+func (this *Result ) GetValueType( Row uint64, Column uint64 ) ( byte, error ) {
+  switch value, err := this.GetValue( Row, Column ); {
+  case err != nil:    return '_', err
+  default:            return value.GetType(), nil
+  }
+}
+
+// GetStringValue returns the contents in row Row and column Column of this query result as string.
+// The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
+func (this *Result ) GetStringValue( Row uint64, Column uint64 ) ( string, error ) {
+  switch value, err := this.GetValue( Row, Column ); {
+  case err != nil:    return "", err
+  default:            return value.GetString(), nil
+  }
+}
+
+// GetInt32Value returns the contents in row Row and column Column of this query result as int32.
+// The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
+func (this *Result ) GetInt32Value( Row uint64, Column uint64 ) ( int32, error ) {
+  switch value, err := this.GetValue( Row, Column ); {
+  case err != nil:    return 0, err
+  default:            return value.GetInt32()
+  }
+}
+
+// GetInt64Value returns the contents in row Row and column Column of this query result as int64.
+// The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
+func (this *Result ) GetInt64Value( Row uint64, Column uint64 ) ( int64, error ) {
+  switch value, err := this.GetValue( Row, Column ); {
+    case err != nil:    return 0, err
+    default:            return value.GetInt64()
+    }
+}
+
+// GetFloat32Value returns the contents in row Row and column Column of this query result as float32.
+// The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
+func (this *Result ) GetFloat32Value( Row uint64, Column uint64 ) ( float32, error ) {
+  switch value, err := this.GetValue( Row, Column ); {
+  case err != nil:    return 0, err
+  default:            return value.GetFloat32()
+  }
+}
+
+// GetFloat64Value returns the contents in row Row and column Column of this query result as float64.
+// The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
+func (this *Result ) GetFloat64Value( Row uint64, Column uint64 ) ( float64, error ) {
+  switch value, err := this.GetValue( Row, Column ); {
+  case err != nil:    return 0, err
+  default:            return value.GetFloat64()
+  }
+}
+
+// GetSQLDateTime parses this query result value in Row and Column as an SQL-DateTime and returns its value.
+// The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
+// The Column index is an unsigned int in the range of 0...GetNumberOfColumns() - 1.
+func (this *Result ) GetSQLDateTime( Row uint64, Column uint64 ) ( time.Time, error ) {
+  switch value, err := this.GetValue( Row, Column ); {
+  case err != nil:    return time.Unix( 0, 0 ), err
+  default:            return value.GetSQLDateTime()
+  }
+} 
+
+
+////////////////////////////
 
 func trimStringToMaxLength( Buffer string, MaxLineLength uint ) string {
   switch {
@@ -358,21 +374,22 @@ func renderCenteredString( Buffer string, Width int ) string {
   return fmt.Sprintf( "%[1]*s", -Width, fmt.Sprintf( "%[1]*s", ( Width + len( Buffer ) ) / 2, Buffer ) )
 }
 
-func (this *SQCloudResult) renderHorizontalTableLine( Left string, Fill string, Separator string, Right string ) string {
+func (this *Result) renderHorizontalTableLine( Left string, Fill string, Separator string, Right string ) string {
   outBuffer := ""
   for _, columnWidth := range this.ColumnWidth {
     outBuffer = fmt.Sprintf( "%s%s%s", outBuffer, strings.Repeat( Fill, int( columnWidth + 2 ) ), Separator )
   }
   return fmt.Sprintf( "%s%s%s", Left, strings.TrimRight( outBuffer, Separator ), Right )
 }
-func (this *SQCloudResult) renderTableColumnNames( Left string, Separator string, Right string ) string {
+func (this *Result) renderTableColumnNames( Left string, Separator string, Right string ) string {
   outBuffer := ""
   for forThisColumn, columnWidth := range this.ColumnWidth {
-    outBuffer = fmt.Sprintf( "%s%s%s", outBuffer, renderCenteredString( this.GetColumnName( uint( forThisColumn ) ), int( columnWidth + 2 ) ), Separator )
+    columnName, _ := this.GetName( uint64( forThisColumn ) )
+    outBuffer      = fmt.Sprintf( "%s%s%s", outBuffer, renderCenteredString( columnName, int( columnWidth + 2 ) ), Separator )
   }
   return fmt.Sprintf( "%s%s%s", Left, strings.TrimRight( outBuffer, Separator ), Right )
 }
-func (this *SQCloudResult) renderTableHeader( Format int, Separator string, NewLine string, MaxLineLength uint ) string {
+func (this *Result) renderTableHeader( Format int, Separator string, NewLine string, MaxLineLength uint ) string {
   switch( Format ) {
     case OUTFORMAT_JSON: return fmt.Sprintf( "[%s", NewLine )
 
@@ -398,7 +415,7 @@ func (this *SQCloudResult) renderTableHeader( Format int, Separator string, NewL
       return "" // No header
   }
 }
-func (this *SQCloudResult) renderTableFooter( Format int, NewLine string, MaxLineLength uint ) string {
+func (this *Result) renderTableFooter( Format int, NewLine string, MaxLineLength uint ) string {
   switch( Format ) {
     case OUTFORMAT_JSON:  return trimStringToMaxLength( "]", MaxLineLength )                                                  + NewLine
     case OUTFORMAT_TABLE: return trimStringToMaxLength( this.renderHorizontalTableLine( "+", "-", "+", "+" ), MaxLineLength ) + NewLine
@@ -413,7 +430,7 @@ func (this *SQCloudResult) renderTableFooter( Format int, NewLine string, MaxLin
 // The Separator argument specifies the column separating string (default: '|'). 
 // All lines are truncated at MaxLineLeength. A MaxLineLangth of '0' means no truncation. 
 // If this query result is of type RESULT_OK and SuppressOK is set to false, an "OK" string is written to the buffer, otherwise nothing is written to the buffer.
-func (this *SQCloudResult) DumpToWriter( Out *bufio.Writer, Format int, NoHeader bool, Separator string, NullValue string, NewLine string, MaxLineLength uint, SuppressOK bool ) ( int, error ) {
+func (this *Result) DumpToWriter( Out *bufio.Writer, Format int, NoHeader bool, Separator string, NullValue string, NewLine string, MaxLineLength uint, SuppressOK bool ) ( int, error ) {
   if sep, err := GetDefaultSeparatorForOutputFormat( Format ); err != nil {
     return 0, err
   } else if strings.ToUpper( strings.TrimSpace( Separator ) ) == "<AUTO>" {
@@ -424,25 +441,25 @@ func (this *SQCloudResult) DumpToWriter( Out *bufio.Writer, Format int, NoHeader
 
   // fmt.Printf( "Type = %d\r\n", this.Type )
 
-
-  switch this.Type {
-  case RESULT_OK:
+  switch {
+  case this.IsOK():
     if SuppressOK {
       return 0, nil
     } else {
       return io.WriteString( Out, fmt.Sprintf( "OK%s", NewLine ) )
     }
     
-  case RESULT_NULL:
+  case this.IsNULL():
     return io.WriteString( Out, fmt.Sprintf( "%s%s", NullValue, NewLine ) )
 
-  case RESULT_ERROR:
-    return io.WriteString( Out, fmt.Sprintf( "ERROR: %s (%d)%s", this.ErrorMessage, this.ErrorCode, NewLine ) )
+  case this.IsError():
+    return io.WriteString( Out, fmt.Sprintf( "%s%s", this.GetErrorAsString(), NewLine ) )
 
-  case RESULT_STRING, RESULT_INTEGER, RESULT_FLOAT, RESULT_JSON:
-    return io.WriteString( Out, this.CGetResultBuffer() + NewLine )
+  case this.IsString(), this.IsInteger(), this.IsFloat(), this.IsJSON():
+    return io.WriteString( Out, string( this.GetBuffer() ) + NewLine )
+    return 0, nil
 
-  case RESULT_ROWSET: 
+  case this.IsRowSet(): 
     var totalOutputLength int = 0
 
     if !NoHeader { // Render Table Header incl. new line
@@ -454,7 +471,7 @@ func (this *SQCloudResult) DumpToWriter( Out *bufio.Writer, Format int, NoHeader
     }
 
     // Render Table Body incl. new line
-    for row := this.GetFirstRow(); row != nil; row = row.Next() {
+    for row, err := this.GetFirstRow(); err == nil && row != nil; row = row.Next() {
       if len, err := row.DumpToWriter( Out, Format, Separator, NullValue, NewLine, MaxLineLength ); err == nil {
         totalOutputLength += len
       } else {
@@ -505,5 +522,147 @@ func GetDefaultSeparatorForOutputFormat( Format int ) ( string, error ) {
   case OUTFORMAT_HTML, OUTFORMAT_XML:                       return "",    nil
   case OUTFORMAT_BOX:                                       return "│",   nil
   default:                                                  return "",    errors.New( "Unknown output format" )
+  }
+}
+
+//////
+// is called from connection.Select
+func( this *SQCloud ) readResult() ( *Result, error ) {
+  ErrorResult := Result{
+    value:          Value{ Type: '-', Buffer: []byte( "100000 Unknown internal error" ) }, // This is an unset Value
+    rows:           nil,
+
+    ColumnNames:    nil,
+    ColumnWidth:    nil,
+    MaxHeaderWidth: 0,
+  }
+  result := ErrorResult
+
+  var rowIndex      uint64 = 0
+  
+  for { // loop through all chunks
+
+    if chunk, err := this.readNextRawChunk(); err != nil {  
+      ErrorResult.value.Buffer = []byte( fmt.Sprintf( "100001 Internal Error: SQCloud.readNextRawChunk (%s)", err.Error() ) )
+      return &ErrorResult, err 
+
+    } else {
+
+      var offset        uint64 = 1 // skip the first type byte
+
+      if err := chunk.Uncompress(); err != nil { 
+        ErrorResult.value.Buffer = []byte( fmt.Sprintf( "100002 Internal Error: Chunk.Uncompress (%s)", err.Error() ) )
+        return &ErrorResult, err 
+
+      } else {
+
+        switch Type := chunk.GetType(); Type {
+        case '%':                     return nil, errors.New( "Nested compression" )
+
+          // Values
+        case '_':                     fallthrough // NULL
+        case ':', ',':                fallthrough // INT, FLOAT
+        case '+', '!', '$', '-', '#': fallthrough // String, C-String, BLOB, Error-String, JSON-String
+        case '|':                     fallthrough // PSUB
+        case '^':                     fallthrough // Command
+        case '@':                                 // Reconnect
+          result.value.Type = Type
+          if bytesRead, err := result.value.readBufferAt( chunk, offset ); err != nil {
+            return nil, err 
+          } else {
+            offset += bytesRead
+          }
+
+          if Type == '|' {
+            println( "Do the PSUB magic, open a second connection to the server and enter: " + result.value.GetString() )
+          }
+
+          return &result, nil
+
+          // RowSet
+        case '/', '*':
+
+          var bytesRead     uint64 = 0
+          var LEN           uint64 = 0
+          var IDX           uint64 = 1
+          var NROWS         uint64 = 0
+          var NCOLS         uint64 = 0
+
+          if   LEN, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err }
+          offset += bytesRead
+
+          if Type == '/' {
+            if IDX, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err }
+            offset += bytesRead
+          }
+
+          if NROWS, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err } // 0..rows-1
+          offset += bytesRead
+
+          if NCOLS, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err } // 0..columns-1
+          offset += bytesRead
+
+          LEN = LEN + offset // check for overreading...
+
+          if Type == '/' && NROWS == 0 && NCOLS == 0 { return &result, nil }
+
+          if IDX == 1 {
+            result.rows           = []ResultRow{}
+            result.ColumnNames    = make( []string,     int( NCOLS ) )
+            result.ColumnWidth    = make( []uint64,     int( NCOLS ) )
+            result.MaxHeaderWidth = 0  
+
+            for column := uint64( 0 ); column < NCOLS; column++ { // Read in the column names, use the result.value as scratch variable
+              switch val, bytesRead, err := chunk.readValueAt( offset ); { 
+              case err != nil:      return nil, err
+              case !val.IsString(): return nil, errors.New( "Invalid Column name" )
+              default:
+                result.ColumnNames[ column ] = val.GetString()
+                result.ColumnWidth[ column ] = val.GetLength()
+                if result.MaxHeaderWidth < result.ColumnWidth[ column ] { result.MaxHeaderWidth = result.ColumnWidth[ column ] }
+                offset += bytesRead
+              }
+            }
+          }
+
+          // read all the rows from this chunk
+          rows := make( []ResultRow, int( NROWS ) )
+          for row := uint64( 0 ); row < NROWS; row++ { 
+
+            rows[ row ].result  = &result
+            rows[ row ].index   = rowIndex
+            rows[ row ].columns = make( []Value, int( NCOLS ) )
+
+            rowIndex++
+
+            for column := uint64( 0 ); column < NCOLS; column++ { 
+              switch rows[ row ].columns[ column ], bytesRead, err = chunk.readValueAt( offset ); {
+              case err != nil: return nil, err
+              default:
+                columnLength := rows[ row ].columns[ column ].GetLength()
+                if result.ColumnWidth[ column ] < columnLength { result.ColumnWidth[ column ] = columnLength }
+                if result.MaxHeaderWidth        < columnLength { result.MaxHeaderWidth        = columnLength }
+                offset += bytesRead
+              }
+            }
+          }
+
+          result.rows = append( result.rows, rows... )
+
+          result.value.Type     = '*'
+          result.value.Buffer   = nil
+
+          if Type == '*' { return &result, nil } // return if it is a rowset
+                                                 // loop if it was a rowset chunk
+        case '{':   
+          result.value.Type = '#' // translate JSON Type to uniform '#'
+          result.value.Buffer = chunk.GetData() 
+          return &result, nil
+
+        default:
+          return nil, errors.New( "Unknown response type" )
+        }
+      }
+    }
   }
 }
