@@ -29,7 +29,7 @@ In SCSP, the type of data depends on the first byte:
 * For **Blob** the first byte is `$`
 * For **Rowset** the first byte is `*`
 * For **Rowset chunk** the first byte is `/`
-* For **Raw JSON** the first byte is `{` (NOT IMPLEMENTED)
+* For **Raw JSON** the first byte is `{` or `[` (NOT IMPLEMENTED)
 * For **JSON** the first byte is `#`
 * For **NULL** the first byte is `_`
 * For **Compressed** rowset the first byte is `%`
