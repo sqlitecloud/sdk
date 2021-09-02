@@ -59,7 +59,13 @@ bin/dump2:	sdk src/Test/dump2.go
 bin/dump3:	sdk src/Test/dump3.go
 	go build -o bin/dump3 src/Test/dump3.go
 
-test:	sdk bin/test1 bin/server bin/dump1 bin/dump2 bin/dump3
+bin/compress:	sdk src/Test/compress.go
+	go build -o bin/compress src/Test/compress.go
+		
+bin/literals:	sdk src/Test/literals.go
+	go build -o bin/literals src/Test/literals.go
+
+test:	bin/test1 bin/server bin/dump1 bin/dump2 bin/dump3 bin/compress bin/literals
 
 # GO SDK
 sdk:	install-prerequirements src/sqlitecloud/*.go

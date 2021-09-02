@@ -43,12 +43,14 @@ const OUTFORMAT_XML       = 10
 
 // The Result is either a Literal or a RowSet
 type Result struct {
-  value             Value
+	uncompressedChuckSizeSum	uint64
 
-  rows              []ResultRow
-  ColumnNames       []string
-  ColumnWidth       []uint64
-  MaxHeaderWidth    uint64
+  value             				Value
+
+  rows              				[]ResultRow
+  ColumnNames       				[]string
+  ColumnWidth       				[]uint64
+  MaxHeaderWidth    				uint64
 }
 
 func (this *Result ) Rows() []ResultRow { return this.rows }
@@ -163,8 +165,12 @@ func (this *Result ) IsLiteral()        bool { return !this.IsRowSet() }
 
 // ResultSet Buffer/Scalar Methods
 
-// GetLength returns the length of the buffer of this query result.
-func (this *Result ) GetBufferLengthXXX() ( uint64, error ) {
+// GetUncompressedChuckSizeSum returns the 
+func (this *Result ) GetUncompressedChuckSizeSum() uint64 { return this.uncompressedChuckSizeSum }
+
+
+// GetBufferLength returns the length of the buffer of this query result.
+func (this *Result ) GetBufferLength() ( uint64, error ) {
   switch {
   case this.IsRowSet(): return 0, errors.New( "Not a scalar value" )
   default:              return this.value.GetLength(), nil
@@ -529,12 +535,14 @@ func GetDefaultSeparatorForOutputFormat( Format int ) ( string, error ) {
 // is called from connection.Select
 func( this *SQCloud ) readResult() ( *Result, error ) {
   ErrorResult := Result{
-    value:          Value{ Type: '-', Buffer: []byte( "100000 Unknown internal error" ) }, // This is an unset Value
-    rows:           nil,
+    value:          					Value{ Type: '-', Buffer: []byte( "100000 Unknown internal error" ) }, // This is an unset Value
+    rows:           					nil,
 
-    ColumnNames:    nil,
-    ColumnWidth:    nil,
-    MaxHeaderWidth: 0,
+    ColumnNames:    					nil,
+    ColumnWidth:    					nil,
+    MaxHeaderWidth: 					0,
+
+		uncompressedChuckSizeSum: 0,
   }
   result := ErrorResult
 
@@ -542,19 +550,20 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
   
   for { // loop through all chunks
 
-    if chunk, err := this.readNextRawChunk(); err != nil {  
-      ErrorResult.value.Buffer = []byte( fmt.Sprintf( "100001 Internal Error: SQCloud.readNextRawChunk (%s)", err.Error() ) )
+    if chunk, err := this.readNextRawChunk(); err != nil {
+			ErrorResult.uncompressedChuckSizeSum = chunk.LEN
+      ErrorResult.value.Buffer 						 = []byte( fmt.Sprintf( "100001 Internal Error: SQCloud.readNextRawChunk (%s)", err.Error() ) )
       return &ErrorResult, err 
 
     } else {
 
-      var offset        uint64 = 1 // skip the first type byte
-
       if err := chunk.Uncompress(); err != nil { 
-        ErrorResult.value.Buffer = []byte( fmt.Sprintf( "100002 Internal Error: Chunk.Uncompress (%s)", err.Error() ) )
+				ErrorResult.uncompressedChuckSizeSum = chunk.LEN
+        ErrorResult.value.Buffer 						 = []byte( fmt.Sprintf( "100002 Internal Error: Chunk.Uncompress (%s)", err.Error() ) )
         return &ErrorResult, err 
 
       } else {
+				result.uncompressedChuckSizeSum += chunk.LEN
 
         switch Type := chunk.GetType(); Type {
         case '%':                     return nil, errors.New( "Nested compression" )
@@ -567,21 +576,19 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
         case '^':                     fallthrough // Command
         case '@':                                 // Reconnect
           result.value.Type = Type
-          if bytesRead, err := result.value.readBufferAt( chunk, offset ); err != nil {
-            return nil, err 
-          } else {
-            offset += bytesRead
+          switch bytesRead, err := result.value.readBufferAt( chunk, 1 ); {
+					case err != nil: 						return nil, err 
+					case bytesRead == 0: 				return nil, errors.New( "No Data" )
+					case Type == '|':
+						println( "Do the PSUB magic, open a second connection to the server and enter: " + result.value.GetString() )
+																			fallthrough
+					default:										return &result, nil
           }
-
-          if Type == '|' {
-            println( "Do the PSUB magic, open a second connection to the server and enter: " + result.value.GetString() )
-          }
-
-          return &result, nil
 
           // RowSet
         case '/', '*':
 
+					var offset        uint64 = 1 // skip the first type byte
           var bytesRead     uint64 = 0
           var LEN           uint64 = 0
           var IDX           uint64 = 1
@@ -653,7 +660,8 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
           result.value.Buffer   = nil
 
           if Type == '*' { return &result, nil } // return if it is a rowset
-                                                 // loop if it was a rowset chunk
+					this.sendString( "OK" )								 // ask the server for the next chunk and loop (Thank's Andrea)
+
         case '{':   
           result.value.Type = '#' // translate JSON Type to uniform '#'
           result.value.Buffer = chunk.GetData() 

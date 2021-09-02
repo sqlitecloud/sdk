@@ -92,6 +92,7 @@ func (this *SQCloud) ListConnections() ( []SQCloudConnection, error ) {
   result, err := this.Select( "LIST CONNECTIONS" )
   if err == nil {
     if result != nil {
+			defer result.Free()
       if result.GetNumberOfColumns() == 6 {
         for row, rows := uint64( 0 ), result.GetNumberOfRows(); row <  rows; row++ {
           connection := SQCloudConnection{}
@@ -103,10 +104,8 @@ func (this *SQCloud) ListConnections() ( []SQCloudConnection, error ) {
           connection.LastActivity,    _ = result.GetSQLDateTime( row, 6 )
           connectionList                = append( connectionList, connection )
         }
-        result.Free()
         return connectionList, nil
       }
-      result.Free()
       return []SQCloudConnection{}, errors.New( "ERROR: Query returned not 6 Columns (-1)" )
     }
     return []SQCloudConnection{}, errors.New( "ERROR: Query returned no result (-1)" )
