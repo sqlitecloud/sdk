@@ -1,23 +1,22 @@
 //
 //                    ////              SQLite Cloud
-//        ////////////  ///             
+//        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
 //     ///             ///  ///         Version     : 1.0.0
-//     //             ///   ///  ///    Date        : 2021/08/31
+//     //             ///   ///  ///    Date        : 2021/09/02
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
-//   ///             ///   ///  ///     
+//   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : Simple SQLite Cloud server
 //   ////                ///  ///                     test. Creates a table,
 //     ////     //////////   ///                      insertes some values, uses
 //        ////            ////                        C-SDK's Dump function.
-//          ////     /////              
+//          ////     /////
 //             ///                      Copyright   : 2021 by SQLite Cloud Inc.
 //
 // -----------------------------------------------------------------------TAB=2
 
 package main
 
-import "fmt"
 import "sqlitecloud"
 
 func main() {
@@ -31,7 +30,7 @@ func main() {
     db.Execute( `INSERT INTO Dummy ( FirstName, LastName, ZIP, City, Address ) VALUES( 'Some', 'One', 96450, 'Coburg', "Mohrenstrasse 1" )` )
     db.Execute( `INSERT INTO Dummy ( FirstName, LastName, ZIP, City, Address ) VALUES( 'Someone', 'Else', 96145, 'Sesslach', 'Raiffeisenstrasse 6' )` )
     db.Execute( `INSERT INTO Dummy ( FirstName, LastName, ZIP, City, Address ) VALUES( 'One', 'More', 91099, 'Poxdorf', "Langholzstr. 4" )` )
- 
+
     if res, err := db.Select( "SELECT * FROM Dummy" ); res != nil {
       defer res.Free()
 

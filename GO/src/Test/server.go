@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///             
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 0.0.1
-//     //             ///   ///  ///    Date        : 2021/08/13
+//     ///             ///  ///         Version     : 1.0.0
+//     //             ///   ///  ///    Date        : 2021/09/02
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///     
 //   ///     //////////   ///  ///      Description : Test program for the 
@@ -24,7 +24,7 @@ import "sqlitecloud"
 func main() {
   fmt.Printf( "Server API test...\r\n")
 
-  db := sqlitecloud.New()
+  db := sqlitecloud.New( false, 10 )
 
 	// This one works
 	// err := db.Connect( "dev1.sqlitecloud.io", 8860, "user", "password", "X", 10, "NO", 0 ) // Host, Port, Username, Password, Database, Timeout, Compression, Family
@@ -143,7 +143,7 @@ func main() {
     if commands, err := db.ListCommands(); err != nil {
       fail( err.Error() )
     } else {
-      if len( commands ) != 27 {
+      if len( commands ) != 28 {
         fail( "Ivalid result." )
       }
     }
