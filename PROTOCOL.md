@@ -36,6 +36,7 @@ In SCSP, the type of data depends on the first byte:
 * For **PSUB** the first byte is `|`
 * For **Command** the first byte is `^`
 * For **Reconnect** the first byte is `@`
+* For **Array** the first byte is `=`
 
 If the encoding does not include an explicit LEN value then the whole encoded value is terminated by a ` ` space character.
 
@@ -130,5 +131,12 @@ The format is `@LEN COMMAND`. The whole command is built by four parts:
 4. COMMAND is the raw string to be parsed and to be used to close current connection and reconnect to a new host.
 **This reply is not used in the current implementation.**
 
+### SCSP Array
+The format is `=LEN N VALUE1 VALUE2 ... VALUEN`. The whole command is built by N+3 parts:
+1. The single `=` character
+2. LEN is a string representation of the whole command. LEN does not include the length of the first `=LEN ` part.
+3. N is the number of items in the array
+4. N values separated by a space ` ` character
+
 ---
-```Last revision: August 26th, 2021```
+```Last revision: September 2nd, 2021```
