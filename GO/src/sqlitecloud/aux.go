@@ -56,11 +56,13 @@ func (this *SQCloud) AutoCommit( Enabled bool ) {
 func (this *SQCloud) GetAutocompleteTokens() ( tokens []string ) {
   if tables, err := this.ListTables(); err == nil {
     for _, table := range tables {
-      tokens = append( tokens, table )
-      for _, column := range this.ListColumns( table ) {
-        tokens = append( tokens, fmt.Sprintf( "%s", column ) )
-        tokens = append( tokens, fmt.Sprintf( "%s.%s", table, column ) )
-      }
+			if table != "sqlite_sequence" {
+				tokens = append( tokens, table )
+				for _, column := range this.ListColumns( table ) {
+					tokens = append( tokens, fmt.Sprintf( "%s", column ) )
+					tokens = append( tokens, fmt.Sprintf( "%s.%s", table, column ) )
+				}
+			}
     }
   }
   return
