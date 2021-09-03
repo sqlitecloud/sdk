@@ -31,16 +31,18 @@ typedef void (*SQCloudPubSubCB)    (SQCloudConnection *connection, SQCloudResult
 
 // configuration struct to be passed to the connect function (currently unused)
 typedef struct SQCloudConfigStruct {
-    const char  *username;
-    const char  *password;
-    const char  *database;
-    int         timeout;
-    int         family;             // can be: AF_INET, AF_INET6 or AF_UNSPEC
+    const char      *username;
+    const char      *password;
+    const char      *database;
+    int             timeout;
+    int             family;             // can be: AF_INET, AF_INET6 or AF_UNSPEC
+    bool            compression;        // compression flag
+    bool            sqlite_mode;        // special sqlite compatibility mode
     #ifndef SQLITECLOUD_DISABLE_TSL
-    const char  *tls_root_certificate;
-    const char  *tls_certificate;
-    const char  *tls_certificate_key;
-    bool        insecure;           // flag to disable TLS
+    const char      *tls_root_certificate;
+    const char      *tls_certificate;
+    const char      *tls_certificate_key;
+    bool            insecure;           // flag to disable TLS
     #endif
 } SQCloudConfig;
 
@@ -51,6 +53,7 @@ typedef enum {
     RESULT_INTEGER,
     RESULT_FLOAT,
     RESULT_ROWSET,
+    RESULT_ARRAY,
     RESULT_NULL,
     RESULT_JSON
 } SQCloudResType;
@@ -112,7 +115,16 @@ int32_t SQCloudRowsetInt32Value (SQCloudResult *result, uint32_t row, uint32_t c
 int64_t SQCloudRowsetInt64Value (SQCloudResult *result, uint32_t row, uint32_t col);
 float SQCloudRowsetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col);
 double SQCloudRowsetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t col);
-void SQCloudRowsetDump (SQCloudResult *result, uint32_t maxline);
+void SQCloudRowsetDump (SQCloudResult *result, uint32_t maxline, bool quiet);
+
+SQCloudValueType SQCloudArrayValueType (SQCloudResult *result, uint32_t index);
+uint32_t SQCloudArrayCount (SQCloudResult *result);
+char *SQCloudArrayValue (SQCloudResult *result, uint32_t index, uint32_t *len);
+int32_t SQCloudArrayInt32Value (SQCloudResult *result, uint32_t index);
+int64_t SQCloudArrayInt64Value (SQCloudResult *result, uint32_t index);
+float SQCloudArrayFloatValue (SQCloudResult *result, uint32_t index);
+double SQCloudArrayDoubleValue (SQCloudResult *result, uint32_t index);
+void SQCloudArrayDump (SQCloudResult *result);
 
 #ifdef __cplusplus
 }
