@@ -24,7 +24,7 @@ import "sqlitecloud"
 func main() {
   fmt.Printf( "Server API test...\r\n")
 
-  db := sqlitecloud.New( false, 10 )
+  db := sqlitecloud.New( "", 10 )
 
 	// This one works
 	// err := db.Connect( "dev1.sqlitecloud.io", 8860, "user", "password", "X", 10, "NO", 0 ) // Host, Port, Username, Password, Database, Timeout, Compression, Family
