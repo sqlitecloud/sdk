@@ -1,43 +1,48 @@
 //
 //                    ////              SQLite Cloud
-//        ////////////  ///             
+//        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
 //     ///             ///  ///         Version     : 1.0.0
 //     //             ///   ///  ///    Date        : 2021/08/26
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
-//   ///             ///   ///  ///     
+//   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : Go Methods related to the
-//   ////                ///  ///                     SQCloud class for managing 
+//   ////                ///  ///                     SQCloud class for managing
 //     ////     //////////   ///                      the connection and executing
 //        ////            ////                        queries.
-//          ////     /////              
+//          ////     /////
 //             ///                      Copyright   : 2021 by SQLite Cloud Inc.
 //
 // -----------------------------------------------------------------------TAB=2
 
-
 // Package sqlitecloud provides an easy to use GO driver for connecting to and using the SQLite Cloud Database server.
 package sqlitecloud
 
-import "fmt"
-import "strings"
-import "errors"
-import "strconv"
-import "net"
-import "crypto/tls"
-import "time"
-import "github.com/xo/dburl"
+import (
+  "crypto/tls"
+  "crypto/x509"
+  "errors"
+  "fmt"
+  "io/ioutil"
+  "net"
+  "strconv"
+  "strings"
+  "time"
+
+  "github.com/xo/dburl"
+)
 
 type SQCloud struct {
   sock          *net.Conn
-  psub_sock     *net.Conn
+
+  psub          *SQCloud
 
   Host          string
   Port          int
   Username      string
   Password      string
   Database      string
-  SSL           bool
+  cert          *tls.Config
   Timeout       time.Duration
   Family        int
 
@@ -90,11 +95,11 @@ func ParseConnectionString( ConnectionString string ) ( Host string, Port int, U
       case "timeout":
         if timeout, err = strconv.Atoi( lastLiteral ); err != nil {
           return "", -1, "", "", "", -1, "", err
-        } 
+        }
 
       case "compress":
         compress = strings.ToUpper( lastLiteral )
-      
+
       default: // Ignore
       }
     }
@@ -107,13 +112,13 @@ func ParseConnectionString( ConnectionString string ) ( Host string, Port int, U
 
 // CheckConnectionParameter checks the given connection arguments for validly.
 // Host is either a resolve able hostname or an IP address.
-// Port is an unsigned int number between 1 and 65535. 
-// Timeout must be 0 (=no timeout) or a positive number. 
+// Port is an unsigned int number between 1 and 65535.
+// Timeout must be 0 (=no timeout) or a positive number.
 // Compress must be "NO" or "LZ4".
 // Username, Password and Database are ignored.
 // If a given value does not fulfill the above criteria's, an error is returned.
 func (this *SQCloud) CheckConnectionParameter( Host string, Port int, Username string, Password string, Database string, Timeout int, Compress string ) error {
-  
+
   if strings.TrimSpace( Host ) == ""  {
     return errors.New( fmt.Sprintf( "Invalid hostname (%s)", Host ) )
   }
@@ -159,22 +164,46 @@ func (this *SQCloud) reset() {
 
 // New creates an empty connection and resets it.
 // A pointer to the newly created connection is returned (see: Connect).
-func New( UseSSL bool, TimeOut uint ) *SQCloud {
-  connection := SQCloud{  sock        : nil,
-                          psub_sock   : nil,
-                          Host        : "", 
-                          Port        : -1, 
-                          Username    : "", 
-                          Password    : "", 
-                          Database    : "", 
-                          SSL         : UseSSL, 
-                          Timeout     : time.Duration( TimeOut ) * time.Second, 
-                          Family      : 1, 
-                          uuid        : "", 
-                          secret      : "",
-                          ErrorCode   : 0, 
-                          ErrorMessage: "", 
-                        }
+func New( Certificate string, TimeOut uint ) *SQCloud {
+  connection := SQCloud{
+    sock        : nil,
+
+    psub        : nil,
+
+    Host        : "",
+    Port        : -1,
+    Username    : "",
+    Password    : "",
+    Database    : "",
+    cert        : nil,
+    Timeout     : time.Duration( TimeOut ) * time.Second,
+    Family      : 1,
+    uuid        : "",
+    secret      : "",
+    ErrorCode   : 0,
+    ErrorMessage: "",
+  }
+
+  switch strings.ToUpper( strings.TrimSpace( Certificate ) ) {
+  case "":                    break             // unencrypted connection
+  case "<USE INTERNAL PEM>":  Certificate = PEM // use internal Certificate
+  default:
+    switch pem, err := ioutil.ReadFile( Certificate ); {
+      case err != nil:   return nil
+      default:           Certificate = string( pem )
+    }
+  }
+
+  if len( Certificate ) != 0 {
+    pool := x509.NewCertPool()
+    if !pool.AppendCertsFromPEM( []byte( Certificate ) ) { return nil }
+
+    connection.cert = &tls.Config {
+      RootCAs:            pool,
+      InsecureSkipVerify: true,
+    }
+  }
+
   return &connection
 }
 
@@ -189,7 +218,7 @@ func Connect( ConnectionString string ) ( *SQCloud, error ) {
   if Port == 0    { Port    = 8860  }
   if Timeout == 0 { Timeout = 10    }
 
-  connection := New( false, uint( Timeout ) ) // allways works
+  connection := New( "", uint( Timeout ) ) // allways works
 
   if err = connection.Connect( Host, Port, Username, Password, Database, uint( Timeout ), Compress, 0 ); err != nil {
     connection.Close()
@@ -205,8 +234,8 @@ func Connect( ConnectionString string ) ( *SQCloud, error ) {
 
 // Connect connects to a SQLite Cloud server instance using the given arguments.
 // If Connect is called on an already established connection, the old connection is closed first.
-// All arguments are checked for valid values (see: CheckConnectionParameter). An error is returned if the protocol Family was not '0', 
-// invalid argument values where given or the connection could not be established. 
+// All arguments are checked for valid values (see: CheckConnectionParameter). An error is returned if the protocol Family was not '0',
+// invalid argument values where given or the connection could not be established.
 func (this *SQCloud) Connect( Host string, Port int, Username string, Password string, Database string, Timeout uint, Compression string, Family int ) error {
   this.reset() // also closes an open connection
 
@@ -221,7 +250,7 @@ func (this *SQCloud) Connect( Host string, Port int, Username string, Password s
     this.Database = Database
     this.Timeout  = time.Duration( Timeout ) * time.Second
     this.Family   = Family
-  
+
     return this.reconnect()
   }
 }
@@ -236,9 +265,9 @@ func (this *SQCloud) reconnect() error {
   dialer.Timeout   = this.Timeout
   dialer.DualStack = true
 
-  switch this.SSL {
-  case true:
-    if tls_c, err := tls.DialWithDialer( &dialer, "tcp", fmt.Sprintf( "%s:%d", this.Host, this.Port ), nil ); err != nil {
+  switch {
+  case this.cert != nil:
+    if tls_c, err := tls.DialWithDialer( &dialer, "tcp", fmt.Sprintf( "%s:%d", this.Host, this.Port ), this.cert ); err != nil {
       this.ErrorCode    = -1
       this.ErrorMessage = err.Error()
       return err
@@ -269,11 +298,11 @@ func (this *SQCloud) reconnect() error {
 func (this *SQCloud) Close() error {
   var err_sock, err_psub_sock error
 
-  if this.sock != nil       { err_sock      = ( *this.sock ).Close()      } 
-  if this.psub_sock != nil  { err_psub_sock = ( *this.psub_sock ).Close() } 
+  if this.sock != nil       { err_sock      = ( *this.sock ).Close()      }
+//XXXif this.psub_sock != nil  { err_psub_sock = ( *this.psub_sock ).Close() }
 
   this.sock       = nil
-  this.psub_sock  = nil
+//XXXthis.psub_sock  = nil
 
   this.resetError()
 
@@ -306,7 +335,7 @@ func (this *SQCloud) Compress( CompressMode string ) error {
 // true is returned, if the connection is established and actually working, false otherwise.
 func (this *SQCloud) IsConnected() bool {
   switch {
-  case this.sock == nil:    return false 
+  case this.sock == nil:    return false
   case this.Ping() != nil:  return false
   default:                  return true
   }
@@ -346,7 +375,7 @@ func (this *SQCloud ) GetError() ( int, error ) { return this.GetErrorCode(), th
 
 // Select executes a query on an open SQLite Cloud database connection.
 // If an error occurs during the execution of the query, nil and an error describing the problem is returned.
-// On successful execution, a pointer to the result is returned. 
+// On successful execution, a pointer to the result is returned.
 func ( this *SQCloud ) Select( SQL string ) ( *Result, error ) {
   this.resetError()
 
