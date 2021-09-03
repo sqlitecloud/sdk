@@ -127,8 +127,10 @@ func (this *Chunk ) readUntilAt( offset uint64, terminator byte ) ( token []byte
     case this.RAW == nil:                                 return []byte{}, 0, false, errors.New( "Nil chunk" )
     case bytesRead > 50:                                  return []byte{}, 0, false, errors.New( "Overflow" )
     case offset + bytesRead     >= rawLength:  						return []byte{}, 0, false, io.EOF
-		case offset + bytesRead + 1 == rawLength:							return this.RAW[ offset : offset + bytesRead + 1 ], bytesRead + 1, false, nil	// this can happen on buffer end
-    case this.RAW[ offset + bytesRead ] != terminator:    continue
+		case offset + bytesRead + 1 == rawLength && this.RAW[ offset + bytesRead ] != terminator:							return this.RAW[ offset : offset + bytesRead + 1 ], bytesRead + 1, false, nil	// this can happen on buffer end
+		case offset + bytesRead + 1 == rawLength:							return this.RAW[ offset : offset + bytesRead ], bytesRead + 1, true, nil	// this can happen on buffer end
+
+		case this.RAW[ offset + bytesRead ] != terminator:    continue
     case bytesRead == 0:                                  return []byte{}, 0, true, nil 																						// terminator on first byte
     default:                                              return this.RAW[ offset : offset + bytesRead ], bytesRead, true, nil
     }
