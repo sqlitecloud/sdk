@@ -21,7 +21,6 @@
 
 static bool skip_ok = false;
 static bool quiet = false;
-void internal_rowset_dump (SQCloudResult *result, uint32_t maxline, bool quiet);
 
 void do_print (SQCloudConnection *conn, SQCloudResult *res) {
     // res NULL means to read error message and error code from conn
@@ -48,18 +47,22 @@ void do_print (SQCloudConnection *conn, SQCloudResult *res) {
             printf("%.*s", SQCloudResultLen(res), SQCloudResultBuffer(res));
             break;
             
+        case RESULT_ARRAY:
+            SQCloudArrayDump(res);
+            break;
+            
         case RESULT_ROWSET:
-            internal_rowset_dump(res, 0, quiet);
+            SQCloudRowsetDump(res, 0, quiet);
             break;
     }
     
     printf("\n\n");
-    SQCloudResultFree(res);
 }
 
 void do_command (SQCloudConnection *conn, char *command) {
     SQCloudResult *res = SQCloudExec(conn, command);
     do_print(conn, res);
+    SQCloudResultFree(res);
 }
 
 void do_command_without_ok_reply (SQCloudConnection *conn, char *command) {
@@ -104,6 +107,7 @@ void pubsub_callback (SQCloudConnection *connection, SQCloudResult *result, void
 int main(int argc, char * argv[]) {
     const char *hostname = "localhost";
     const char *filename = NULL;
+    const char *database = NULL;
     const char *root_certificate_path = NULL;
     const char *client_certificate_path = NULL;
     const char *client_certificate_key_path = NULL;
@@ -111,12 +115,13 @@ int main(int argc, char * argv[]) {
     int port = SQCLOUD_DEFAULT_PORT;
     bool compression = false;
     bool insecure = false;
+    bool sqlite = false;
 
     int c;
     SQCloudConfig config = {0};
     config.family = SQCLOUD_IPv4;
     
-    while ((c = getopt (argc, argv, "h:p:f:ciqr:s:t:")) != -1) {
+    while ((c = getopt (argc, argv, "h:p:f:ciqxr:s:t:d:")) != -1) {
         switch (c) {
             case 'h': hostname = optarg; break;
             case 'p': port = atoi(optarg); break;
@@ -124,6 +129,8 @@ int main(int argc, char * argv[]) {
             case 'c': compression = true; break;
             case 'i': insecure = true; break;
             case 'q': quiet = true; break;
+            case 'x': sqlite = true; break;
+            case 'd': database = optarg; break;
             case 'r': root_certificate_path = optarg; break;
             case 's': client_certificate_path = optarg; break;
             case 't': client_certificate_key_path = optarg; break;
@@ -140,6 +147,10 @@ int main(int argc, char * argv[]) {
     if (client_certificate_key_path) config.tls_certificate_key = client_certificate_key_path;
     #endif
     
+    if (sqlite) config.sqlite_mode = true;
+    if (compression) config.compression = true;
+    if (database) config.database = database;
+    
     // try to connect to hostname:port
     SQCloudConnection *conn = SQCloudConnect(hostname, port, &config);
     if (SQCloudIsError(conn)) {
@@ -151,11 +162,6 @@ int main(int argc, char * argv[]) {
     
     // load history file
     linenoiseHistoryLoad(CLI_HISTORY_FILENAME);
-    
-    // activate compression
-    if (compression) {
-        do_command_without_ok_reply(conn, "SET KEY CLIENT_COMPRESSION TO 1");
-    }
     
     if (filename) {
         bool should_continue = do_process_file(conn, filename);
