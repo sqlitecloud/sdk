@@ -38,6 +38,7 @@ typedef struct SQCloudConfigStruct {
     int             family;             // can be: AF_INET, AF_INET6 or AF_UNSPEC
     bool            compression;        // compression flag
     bool            sqlite_mode;        // special sqlite compatibility mode
+    bool            zero_text;          // flag to tell the server to zero-terminate strings
     #ifndef SQLITECLOUD_DISABLE_TSL
     const char      *tls_root_certificate;
     const char      *tls_certificate;
