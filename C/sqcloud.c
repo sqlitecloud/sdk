@@ -54,11 +54,13 @@
 #define closesocket(s)                      close(s)
 #endif
 
+#ifndef mem_alloc
 #define mem_realloc                         realloc
 #define mem_zeroalloc(_s)                   calloc(1,_s)
 #define mem_alloc(_s)                       malloc(_s)
 #define mem_free(_s)                        free(_s)
 #define string_dup(_s)                      strdup(_s)
+#endif
 #define MIN(a,b)                            (((a)<(b))?(a):(b))
 
 #define MAX_SOCK_LIST                       6           // maximum number of socket descriptor to try to connect to
