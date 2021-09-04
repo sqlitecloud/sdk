@@ -1083,7 +1083,7 @@ abort_read:
 
 static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool mainfd) {
     // most of the time one read will be sufficient
-    char header[1024];
+    char header[4096];
     char *buffer = (char *)&header;
     uint32_t blen = sizeof(header);
     uint32_t tread = 0;
@@ -1266,6 +1266,10 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
     
     if (config->compression) {
         len += snprintf(&buffer[len], sizeof(buffer) - len, "SET KEY CLIENT_COMPRESSION TO 1;");
+    }
+    
+    if (config->zero_text) {
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET KEY CLIENT_ZEROTEXT TO 1;");
     }
     
     if (len > 0) {
@@ -1788,6 +1792,10 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
         else if (strcasecmp(key, "sqlite")) {
             int sqlite_mode = (int)strtol(value, NULL, 0);
             config->sqlite_mode = (sqlite_mode > 0) ? true : false;
+        }
+        else if (strcasecmp(key, "zerotext")) {
+            int zero_text = (int)strtol(value, NULL, 0);
+            config->zero_text = (zero_text > 0) ? true : false;
         }
         #ifndef SQLITECLOUD_DISABLE_TSL
         else if (strcasecmp(key, "insecure")) {

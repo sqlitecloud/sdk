@@ -119,10 +119,11 @@ int main(int argc, char * argv[]) {
     bool compression = false;
     bool insecure = false;
     bool sqlite = false;
+    bool zerotext = false;
     int family = SQCLOUD_IPv4;
     
     int c;
-    while ((c = getopt (argc, argv, "h:p:f:ciqxr:s:t:d:y:")) != -1) {
+    while ((c = getopt (argc, argv, "h:p:f:ciqxzr:s:t:d:y:")) != -1) {
         switch (c) {
             case 'h': hostname = optarg; break;
             case 'p': port = atoi(optarg); break;
@@ -131,6 +132,7 @@ int main(int argc, char * argv[]) {
             case 'i': insecure = true; break;
             case 'q': quiet = true; break;
             case 'x': sqlite = true; break;
+            case 'z': zerotext = true; break;
             case 'd': database = optarg; break;
             case 'r': root_certificate_path = optarg; break;
             case 's': client_certificate_path = optarg; break;
@@ -157,6 +159,7 @@ int main(int argc, char * argv[]) {
     #endif
     
     if (sqlite) config.sqlite_mode = true;
+    if (zerotext) config.zero_text = true;
     if (compression) config.compression = true;
     if (database) config.database = database;
     
