@@ -133,6 +133,7 @@ struct SQCloudResult {
     double          time;                   // full execution time (latency + server side time)
     bool            externalbuffer;         // true if the buffer is managed by the caller code
                                             // false if the buffer can be freed by the SQCloudResultFree func
+    uint32_t        nheader;                // number of character in the first part of the header (which is usually skipped)
     
     // used in TYPE_ROWSET only
     uint32_t        nrows;                  // number of rows
@@ -575,6 +576,7 @@ static SQCloudResult *internal_parse_array (SQCloudConnection *connection, char 
     rowset->tag = RESULT_ARRAY;
     rowset->rawbuffer = buffer;
     rowset->blen = blen;
+    rowset->nheader = bstart;
     
     // =LEN N VALUE1 VALUE2 ... VALUEN
     uint32_t start1 = 0;
@@ -584,6 +586,7 @@ static SQCloudResult *internal_parse_array (SQCloudConnection *connection, char 
     rowset->data = (char **) mem_alloc(rowset->ndata * sizeof(char *));
     if (!rowset->data) {
         internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory for SQCloudResult: %d.", rowset->ndata * sizeof(char *));
+        mem_free(rowset);
         return NULL;
     }
     
@@ -715,6 +718,7 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
     rowset->rawbuffer = buffer;
     rowset->blen = blen;
     rowset->balloc = blen;
+    rowset->nheader = bstart;
     
     rowset->nrows = nrows;
     rowset->ncols = ncols;
@@ -781,6 +785,7 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
         rowset->bnum = DEFAULT_CHUCK_NBUFFERS;
         rowset->buffers[0] = buffer;
         rowset->bcount = 1;
+        rowset->nheader = bstart;
         
         rowset->brows = nrows + DEFAULT_CHUNK_MINROWS;
         rowset->nrows = nrows;
@@ -1003,6 +1008,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             
         case CMD_RAWJSON: {
             // handle JSON here
+            // a JSON parser must process raw buffer
             return &SQCloudResultNULL;
         }
     }
@@ -1752,7 +1758,10 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     char username[512];
     char password[512];
     int rc = url_extract_username_password(&s[n], username, password);
-    if (rc == -1) return NULL;
+    if (rc == -1) {
+        mem_free(config);
+        return NULL;
+    }
     if (rc) {
         config->username = string_dup(username);
         config->password = string_dup(password);
@@ -1763,7 +1772,10 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     char hostname[512];
     char port_s[512];
     rc = url_extract_hostname_port(&s[n], hostname, port_s);
-    if (rc <= 0) return NULL;
+    if (rc <= 0) {
+        mem_free(config);
+        return NULL;
+    }
     int port = (int)strtol(port_s, NULL, 0);
     if (port <= 0) port = SQCLOUD_DEFAULT_PORT;
     
@@ -1771,7 +1783,10 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     n += rc;
     char database[512];
     rc = url_extract_database(&s[n], database);
-    if (rc == -1) return NULL;
+    if (rc == -1) {
+        mem_free(config);
+        return NULL;
+    }
     if (rc > 0) {
         config->database = string_dup(database);
     }
@@ -1993,8 +2008,9 @@ char *SQCloudRowsetValue (SQCloudResult *result, uint32_t row, uint32_t col, uin
     // The *len var must contain the remaining length of the buffer pointed by
     // result->data[row*result->ncols+col]. The caller should not be aware of the
     // internal implementation of this buffer, so it must be set here.
-    *len = result->blen - (uint32_t)(result->data[row*result->ncols+col] - result->rawbuffer);
-    return internal_parse_value(result->data[row*result->ncols+col], len, NULL);
+    char *value = result->data[row*result->ncols+col];
+    *len = (value) ? result->blen - (uint32_t)(value - result->rawbuffer) + result->nheader : 2;
+    return internal_parse_value(value, len, NULL);
 }
 
 int32_t SQCloudRowsetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col) {
@@ -2065,8 +2081,9 @@ char *SQCloudArrayValue (SQCloudResult *result, uint32_t index, uint32_t *len) {
     // The *len var must contain the remaining length of the buffer pointed by
     // result->data[index]. The caller should not be aware of the
     // internal implementation of this buffer, so it must be set here.
-    *len = result->blen - (uint32_t)(result->data[index] - result->rawbuffer);
-    return internal_parse_value(result->data[index], len, NULL);
+    char *value = result->data[index];
+    *len = (value) ? result->blen - (uint32_t)(value - result->rawbuffer) + result->nheader : 2;
+    return internal_parse_value(value, len, NULL);
 }
 
 int32_t SQCloudArrayInt32Value (SQCloudResult *result, uint32_t index) {
