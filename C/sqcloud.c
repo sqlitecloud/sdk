@@ -1796,34 +1796,38 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     char key[512];
     char value[512];
     while ((rc = url_extract_keyvalue(&s[n], key, value)) > 0) {
-        if (strcasecmp(key, "timeout")) {
+        if (strcasecmp(key, "timeout") == 0) {
             int timeout = (int)strtol(value, NULL, 0);
             config->timeout = (timeout > 0) ? timeout : 0;
         }
-        else if (strcasecmp(key, "compression")) {
+        else if (strcasecmp(key, "compression") == 0) {
             int compression = (int)strtol(value, NULL, 0);
             config->compression = (compression > 0) ? true : false;
         }
-        else if (strcasecmp(key, "sqlite")) {
+        else if (strcasecmp(key, "sqlite") == 0) {
             int sqlite_mode = (int)strtol(value, NULL, 0);
             config->sqlite_mode = (sqlite_mode > 0) ? true : false;
         }
-        else if (strcasecmp(key, "zerotext")) {
+        else if (strcasecmp(key, "zerotext") == 0) {
             int zero_text = (int)strtol(value, NULL, 0);
             config->zero_text = (zero_text > 0) ? true : false;
         }
+        else if (strcasecmp(key, "memory") == 0) {
+            int in_memory = (int)strtol(value, NULL, 0);
+            if (in_memory) config->database = string_dup(":memory:");
+        }
         #ifndef SQLITECLOUD_DISABLE_TSL
-        else if (strcasecmp(key, "insecure")) {
+        else if (strcasecmp(key, "insecure") == 0) {
             int insecure = (int)strtol(value, NULL, 0);
             config->insecure = (insecure > 0) ? true : false;
         }
-        else if (strcasecmp(key, "root_certificate")) {
+        else if (strcasecmp(key, "root_certificate") == 0) {
             config->tls_root_certificate = strdup(value);
         }
-        else if (strcasecmp(key, "client_certificate")) {
+        else if (strcasecmp(key, "client_certificate") == 0) {
             config->tls_certificate = strdup(value);
         }
-        else if (strcasecmp(key, "client_certificate_key")) {
+        else if (strcasecmp(key, "client_certificate_key") == 0) {
             config->tls_certificate_key = strdup(value);
         }
         #endif
@@ -1904,7 +1908,20 @@ int SQCloudErrorCode (SQCloudConnection *connection) {
 }
 
 const char *SQCloudErrorMsg (SQCloudConnection *connection) {
-    return (connection) ? connection->errmsg : "Not enoght memory to allocate a SQCloudConnection.";
+    return (connection) ? connection->errmsg : "Not enough memory to allocate a SQCloudConnection.";
+}
+
+void SQCloudErrorReset (SQCloudConnection *connection) {
+    connection->errcode = 0;
+    connection->errmsg[0] = 0;
+}
+
+void SQCloudErrorSetCode (SQCloudConnection *connection, int errcode) {
+    connection->errcode = errcode;
+}
+
+void SQCloudErrorSetMsg (SQCloudConnection *connection, char *errmsg) {
+    snprintf(connection->errmsg, sizeof(connection->errmsg), "%s", errmsg);
 }
 
 // MARK: -
@@ -1915,6 +1932,10 @@ SQCloudResType SQCloudResultType (SQCloudResult *result) {
 
 bool SQCloudResultIsOK (SQCloudResult *result) {
     return (result == &SQCloudResultOK);
+}
+
+bool SQCloudResultIsError (SQCloudResult *result) {
+    return (!result);
 }
 
 uint32_t SQCloudResultLen (SQCloudResult *result) {
@@ -2011,6 +2032,12 @@ char *SQCloudRowsetValue (SQCloudResult *result, uint32_t row, uint32_t col, uin
     char *value = result->data[row*result->ncols+col];
     *len = (value) ? result->blen - (uint32_t)(value - result->rawbuffer) + result->nheader : 2;
     return internal_parse_value(value, len, NULL);
+}
+
+uint32_t SQCloudRowSetValueLen (SQCloudResult *result, uint32_t row, uint32_t col) {
+    uint32_t len = 0;
+    SQCloudRowsetValue(result, row, col, &len);
+    return len;
 }
 
 int32_t SQCloudRowsetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col) {
