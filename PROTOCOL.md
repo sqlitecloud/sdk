@@ -90,7 +90,7 @@ The format is `/LEN IDX NROWS NCOLS DATA`. The command is equal to the SCSP Rows
 2. IDX represents the index of the chunk. The first chunk has IDX equals to 1 (0 is reserved for the latest chunk)
 3. NROWS represents the number of rows contained in the chunk. The total number of rows in the final Rowset will be the sum of each NROWS contained in each chunk
 4. NCOLS will be the same for all chunks, which means that it does not need to be computed (as a sum) in the final Rowset, and it means that a logical line is never break
-5. To mark the end of the Rowset, the special string `/LEN 0 0 0` is sent (LEN is always 5 in this case)
+5. To mark the end of the Rowset, the special string `/LEN 0 0 0 ` is sent (LEN is always 6 in this case)
 6. After receiving a chuck the client must send an ACK message `+2 OK` to the server (to notify that it is ready to receive the next chunk). Any other ACK message is considered an ABORT and the Rowset processing is immediately aborted.
 
 ### SCSP RAW JSON
