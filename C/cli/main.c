@@ -13,6 +13,9 @@
 #include "sqcloud.h"
 #include "linenoise.h"
 
+// Linux only macro necessary to include non standard functions (like strcasestr)
+#define _GNU_SOURCE
+
 #define CLI_HISTORY_FILENAME    ".sqlitecloud_history.txt"
 #define CLI_VERSION             "1.0"
 #define CLI_BUILD_DATE          __DATE__
@@ -116,12 +119,11 @@ int main(int argc, char * argv[]) {
     bool compression = false;
     bool insecure = false;
     bool sqlite = false;
-
-    int c;
-    SQCloudConfig config = {0};
-    config.family = SQCLOUD_IPv4;
+    bool zerotext = false;
+    int family = SQCLOUD_IPv4;
     
-    while ((c = getopt (argc, argv, "h:p:f:ciqxr:s:t:d:")) != -1) {
+    int c;
+    while ((c = getopt (argc, argv, "h:p:f:ciqxzr:s:t:d:y:")) != -1) {
         switch (c) {
             case 'h': hostname = optarg; break;
             case 'p': port = atoi(optarg); break;
@@ -130,14 +132,23 @@ int main(int argc, char * argv[]) {
             case 'i': insecure = true; break;
             case 'q': quiet = true; break;
             case 'x': sqlite = true; break;
+            case 'z': zerotext = true; break;
             case 'd': database = optarg; break;
             case 'r': root_certificate_path = optarg; break;
             case 's': client_certificate_path = optarg; break;
             case 't': client_certificate_key_path = optarg; break;
+            case 'y':
+                if (strcasestr(optarg, "IPv6") == 0) {family = SQCLOUD_IPv6;}
+                else if (strcasestr(optarg, "IPany") == 0) {family = SQCLOUD_IPany;}
+                break;
         }
     }
     
     if (!quiet) printf("sqlitecloud-cli version %s (build date %s)\n", CLI_VERSION, CLI_BUILD_DATE);
+    
+    // setup config
+    SQCloudConfig config = {0};
+    config.family = family;
     
     // setup TLS config parameter
     #ifndef SQLITECLOUD_DISABLE_TSL
@@ -148,6 +159,7 @@ int main(int argc, char * argv[]) {
     #endif
     
     if (sqlite) config.sqlite_mode = true;
+    if (zerotext) config.zero_text = true;
     if (compression) config.compression = true;
     if (database) config.database = database;
     

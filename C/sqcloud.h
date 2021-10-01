@@ -15,8 +15,8 @@
 extern "C" {
 #endif
 
-#define SQCLOUD_SDK_VERSION         "0.5.0"
-#define SQCLOUD_SDK_VERSION_NUM     0x000500
+#define SQCLOUD_SDK_VERSION         "0.5.1"
+#define SQCLOUD_SDK_VERSION_NUM     0x000501
 #define SQCLOUD_DEFAULT_PORT        8860
 #define SQCLOUD_DEFAULT_TIMEOUT     12
 
@@ -38,6 +38,7 @@ typedef struct SQCloudConfigStruct {
     int             family;             // can be: AF_INET, AF_INET6 or AF_UNSPEC
     bool            compression;        // compression flag
     bool            sqlite_mode;        // special sqlite compatibility mode
+    bool            zero_text;          // flag to tell the server to zero-terminate strings
     #ifndef SQLITECLOUD_DISABLE_TSL
     const char      *tls_root_certificate;
     const char      *tls_certificate;
@@ -97,12 +98,16 @@ SQCloudResult *SQCloudSetPubSubOnly (SQCloudConnection *connection);
 bool SQCloudIsError (SQCloudConnection *connection);
 int SQCloudErrorCode (SQCloudConnection *connection);
 const char *SQCloudErrorMsg (SQCloudConnection *connection);
+void SQCloudErrorReset (SQCloudConnection *connection);
+void SQCloudErrorSetCode (SQCloudConnection *connection, int errcode);
+void SQCloudErrorSetMsg (SQCloudConnection *connection, char *errmsg);
 
 SQCloudResType SQCloudResultType (SQCloudResult *result);
 uint32_t SQCloudResultLen (SQCloudResult *result);
 char *SQCloudResultBuffer (SQCloudResult *result);
 void SQCloudResultFree (SQCloudResult *result);
 bool SQCloudResultIsOK (SQCloudResult *result);
+bool SQCloudResultIsError (SQCloudResult *result);
 
 SQCloudValueType SQCloudRowsetValueType (SQCloudResult *result, uint32_t row, uint32_t col);
 uint32_t SQCloudRowsetRowsMaxColumnLength (SQCloudResult *result, uint32_t col);
@@ -111,6 +116,7 @@ uint32_t SQCloudRowsetRows (SQCloudResult *result);
 uint32_t SQCloudRowsetCols (SQCloudResult *result);
 uint32_t SQCloudRowsetMaxLen (SQCloudResult *result);
 char *SQCloudRowsetValue (SQCloudResult *result, uint32_t row, uint32_t col, uint32_t *len);
+uint32_t SQCloudRowSetValueLen (SQCloudResult *result, uint32_t row, uint32_t col);
 int32_t SQCloudRowsetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col);
 int64_t SQCloudRowsetInt64Value (SQCloudResult *result, uint32_t row, uint32_t col);
 float SQCloudRowsetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col);
