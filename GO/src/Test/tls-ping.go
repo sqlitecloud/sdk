@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///             
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.0.0
-//     //             ///   ///  ///    Date        : 2021/08/18
+//     ///             ///  ///         Version     : 1.0.1
+//     //             ///   ///  ///    Date        : 2021/10/01
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///     
 //   ///     //////////   ///  ///      Description : Minimal SQLite Cloud SDK
@@ -21,19 +21,14 @@ import "fmt"
 import "sqlitecloud"
 
 func main() {
-	db  := sqlitecloud.New( "<USE INTERNAL PEM>", 10 )
-  err := db.Connect( "***REMOVED***", 9860, "", "", "X", 10, "NO", 0 )
+	   db  := sqlitecloud.New( "<USE INTERNAL PEM>", 10 )
+  if err := db.Connect( "***REMOVED***", 9860, "", "", "X", 10, "NO", 0 ); err != nil { panic( err ) }
 
-  if err == nil {
-    defer db.Close()
+	defer db.Close()
 
-		fmt.Printf( "PING..." )
-		if db.Ping() == nil { 
-			fmt.Printf( "PONG!\r\n" ) 
-		}	else {
-			fmt.Printf( "⚡️.\r\n" )
-		}
-		return
-	}
-  panic( err )
+	fmt.Printf( "PING?..." )
+	switch db.Ping() {
+	case nil: fmt.Printf( "PONG!\r\n" ) 
+	default: 	fmt.Printf( "⚡️.\r\n" )
+	}  
 }
