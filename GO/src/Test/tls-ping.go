@@ -21,14 +21,14 @@ import "fmt"
 import "sqlitecloud"
 
 func main() {
-	   db  := sqlitecloud.New( "<USE INTERNAL PEM>", 10 )
+     db  := sqlitecloud.New( "<USE INTERNAL PEM>", 10 )
   if err := db.Connect( "dev1.sqlitecloud.io", 9860, "", "", "X", 10, "NO", 0 ); err != nil { panic( err ) }
 
-	defer db.Close()
+  defer db.Close()
 
-	fmt.Printf( "PING?..." )
-	switch db.Ping() {
-	case nil: fmt.Printf( "PONG!\r\n" ) 
-	default: 	fmt.Printf( "⚡️.\r\n" )
-	}  
+  fmt.Printf( "PING?..." )
+  switch db.Ping() {
+  case nil: fmt.Printf( "PONG!\r\n" ) 
+  default:  fmt.Printf( "⚡️.\r\n" )
+  }  
 }
