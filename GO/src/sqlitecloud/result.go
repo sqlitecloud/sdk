@@ -1,16 +1,16 @@
 //
 //                    ////              SQLite Cloud
-//        ////////////  ///             
+//        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.0.0
-//     //             ///   ///  ///    Date        : 2021/08/31
+//     ///             ///  ///         Version     : 1.1.0
+//     //             ///   ///  ///    Date        : 2021/10/01
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
-//   ///             ///   ///  ///     
-//   ///     //////////   ///  ///      Description : GO Methods related to the 
+//   ///             ///   ///  ///
+//   ///     //////////   ///  ///      Description : GO Methods related to the
 //   ////                ///  ///                     Result class.
-//     ////     //////////   ///        
-//        ////            ////          
-//          ////     /////              
+//     ////     //////////   ///
+//        ////            ////
+//          ////     /////
 //             ///                      Copyright   : 2021 by SQLite Cloud Inc.
 //
 // -----------------------------------------------------------------------TAB=2
@@ -43,14 +43,14 @@ const OUTFORMAT_XML       = 10
 
 // The Result is either a Literal or a RowSet
 type Result struct {
-	uncompressedChuckSizeSum	uint64
+  uncompressedChuckSizeSum  uint64
 
-  value             				Value
+  value                     Value
 
-  rows              				[]ResultRow
-  ColumnNames       				[]string
-  ColumnWidth       				[]uint64
-  MaxHeaderWidth    				uint64
+  rows                      []ResultRow
+  ColumnNames               []string
+  ColumnWidth               []uint64
+  MaxHeaderWidth            uint64
 }
 
 func (this *Result ) Rows() []ResultRow { return this.rows }
@@ -64,15 +64,15 @@ func (this *Result ) GetType() byte { return this.value.GetType() }
 func (this *Result ) IsOK()     bool { return this.value.IsOK() }
 
 // GetNumberOfRows returns the number of rows in this query result
-func (this *Result ) GetNumberOfRows() uint64 { 
+func (this *Result ) GetNumberOfRows() uint64 {
   switch {
   case !this.IsRowSet():  return 0
   default:                return uint64( len( this.rows ) )
   }
-} 
+}
 
 // GetNumberOfColumns returns the number of columns in this query result
-func (this *Result ) GetNumberOfColumns() uint64 { 
+func (this *Result ) GetNumberOfColumns() uint64 {
   switch {
   case !this.IsRowSet():  return 0
   default:                return uint64( len( this.ColumnWidth ) )
@@ -151,7 +151,7 @@ func (this *Result ) IsBLOB()               bool { return this.value.IsBLOB() }
 func (this *Result ) IsText()       bool { return this.value.IsText() }
 
 // IsRowSet returns true if this query result is of type "RESULT_ROWSET", false otherwise.
-func (this *Result ) IsRowSet()        bool { 
+func (this *Result ) IsRowSet()        bool {
   switch {
   case !this.value.IsRowSet():    return false
   case this.rows == nil:          return false
@@ -165,7 +165,7 @@ func (this *Result ) IsLiteral()        bool { return !this.IsRowSet() }
 
 // ResultSet Buffer/Scalar Methods
 
-// GetUncompressedChuckSizeSum returns the 
+// GetUncompressedChuckSizeSum returns the
 func (this *Result ) GetUncompressedChuckSizeSum() uint64 { return this.uncompressedChuckSizeSum }
 
 
@@ -178,13 +178,17 @@ func (this *Result ) GetBufferLength() ( uint64, error ) {
 }
 
 // GetBuffer returns the buffer of this query result as string.
-func (this *Result ) GetBuffer() []byte { return this.value.GetBuffer() } 
-  
-func (this *Result ) GetString() ( string, error ) { 
+func (this *Result ) GetBuffer() []byte { return this.value.GetBuffer() }
+
+func (this *Result ) GetString() ( string, error ) {
   switch {
   case this.IsRowSet(): return "", errors.New( "Not a literal" )
   default:              return this.value.GetString(), nil
   }
+}
+func (this *Result ) GetString_() string { 
+  value, _ := this.GetString()
+  return value
 }
 
 func (this *Result ) GetJSON() ( object interface{}, err error ) {
@@ -195,6 +199,10 @@ func (this *Result ) GetJSON() ( object interface{}, err error ) {
     return
   }
 }
+func (this *Result ) GetJSON_() ( object interface{} ) { 
+  value, _ := this.GetJSON()
+  return value
+}
 
 func (this *Result ) GetInt32() ( int32, error ) {
   switch {
@@ -202,11 +210,20 @@ func (this *Result ) GetInt32() ( int32, error ) {
   default:                return this.value.GetInt32()
   }
 }
+func (this *Result ) GetInt32_() int32 { 
+  value, _ := this.GetInt32()
+  return value
+}
+
 func (this *Result ) GetInt64() ( int64, error ) {
   switch {
   case !this.IsInteger(): return 0, errors.New( "Not an integer value" )
   default:                return this.value.GetInt64()
   }
+}
+func (this *Result ) GetInt64_() int64 { 
+  value, _ := this.GetInt64()
+  return value
 }
 
 func (this *Result ) GetFloat32() ( float32, error ) {
@@ -215,12 +232,20 @@ func (this *Result ) GetFloat32() ( float32, error ) {
   default:                return this.value.GetFloat32()
   }
 }
+func (this *Result ) GetFloat32_() float32 { 
+  value, _ := this.GetFloat32()
+  return value
+}
 
 func (this *Result ) GetFloat64() ( float64, error ) {
   switch {
   case !this.IsFloat():   return 0, errors.New( "Not a float value" )
   default:                return this.value.GetFloat64()
   }
+}
+func (this *Result ) GetFloat64_() float64 { 
+  value, _ := this.GetFloat64()
+  return value
 }
 
 func (this *Result ) GetError() ( int, string, error ) {
@@ -229,6 +254,11 @@ func (this *Result ) GetError() ( int, string, error ) {
   default:                return this.value.GetError()
   }
 }
+func (this *Result ) GetError_() ( int, string ) { 
+  code, message, _ := this.GetError()
+  return code, message
+}
+
 func (this *Result ) GetErrorAsString() string {
   switch code, message, err := this.GetError(); {
   case err != nil:  return fmt.Sprintf( "INTERNAL ERROR: %s", err.Error() )
@@ -253,6 +283,10 @@ func (this *Result ) GetName( Column uint64 ) ( string, error ) {
   case Column >= this.GetNumberOfColumns(): return "", errors.New( "Column Index out of bounds" )
   default:                                  return this.ColumnNames[ Column ], nil
   }
+}
+func (this *Result ) GetName_( Column uint64 ) string { 
+  value, _ := this.GetName( Column )
+  return value
 }
 
 // DumpToScreen outputs this query result to the screen.
@@ -305,6 +339,10 @@ func (this *Result ) GetValueType( Row uint64, Column uint64 ) ( byte, error ) {
   default:            return value.GetType(), nil
   }
 }
+func (this *Result ) GetValueType_( Row uint64, Column uint64 ) byte { 
+  value, _ := this.GetValueType( Row, Column )
+  return value
+}
 
 // GetStringValue returns the contents in row Row and column Column of this query result as string.
 // The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
@@ -314,6 +352,10 @@ func (this *Result ) GetStringValue( Row uint64, Column uint64 ) ( string, error
   case err != nil:    return "", err
   default:            return value.GetString(), nil
   }
+}
+func (this *Result ) GetStringValue_( Row uint64, Column uint64 ) string { 
+  value, _ := this.GetStringValue( Row, Column )
+  return value
 }
 
 // GetInt32Value returns the contents in row Row and column Column of this query result as int32.
@@ -325,6 +367,10 @@ func (this *Result ) GetInt32Value( Row uint64, Column uint64 ) ( int32, error )
   default:            return value.GetInt32()
   }
 }
+func (this *Result ) GetInt32Value_( Row uint64, Column uint64 ) int32 { 
+  value, _ := this.GetInt32Value( Row, Column )
+  return value
+}
 
 // GetInt64Value returns the contents in row Row and column Column of this query result as int64.
 // The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
@@ -334,6 +380,10 @@ func (this *Result ) GetInt64Value( Row uint64, Column uint64 ) ( int64, error )
     case err != nil:    return 0, err
     default:            return value.GetInt64()
     }
+}
+func (this *Result ) GetInt64Value_( Row uint64, Column uint64 ) int64 { 
+  value, _ := this.GetInt64Value( Row, Column )
+  return value
 }
 
 // GetFloat32Value returns the contents in row Row and column Column of this query result as float32.
@@ -345,6 +395,10 @@ func (this *Result ) GetFloat32Value( Row uint64, Column uint64 ) ( float32, err
   default:            return value.GetFloat32()
   }
 }
+func (this *Result ) GetFloat32Value_( Row uint64, Column uint64 ) float32 { 
+  value, _ := this.GetFloat32Value( Row, Column )
+  return value
+}
 
 // GetFloat64Value returns the contents in row Row and column Column of this query result as float64.
 // The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
@@ -355,6 +409,10 @@ func (this *Result ) GetFloat64Value( Row uint64, Column uint64 ) ( float64, err
   default:            return value.GetFloat64()
   }
 }
+func (this *Result ) GetFloat64Value_( Row uint64, Column uint64 ) float64 { 
+  value, _ := this.GetFloat64Value( Row, Column )
+  return value
+}
 
 // GetSQLDateTime parses this query result value in Row and Column as an SQL-DateTime and returns its value.
 // The Row index is an unsigned int in the range of 0...GetNumberOfRows() - 1.
@@ -364,7 +422,11 @@ func (this *Result ) GetSQLDateTime( Row uint64, Column uint64 ) ( time.Time, er
   case err != nil:    return time.Unix( 0, 0 ), err
   default:            return value.GetSQLDateTime()
   }
-} 
+}
+func (this *Result ) GetSQLDateTime_( Row uint64, Column uint64 ) time.Time { 
+  value, _ := this.GetSQLDateTime( Row, Column )
+  return value
+}
 
 
 ////////////////////////////
@@ -433,8 +495,8 @@ func (this *Result) renderTableFooter( Format int, NewLine string, MaxLineLength
 
 // DumpToWriter renders this query result into the buffer of an io.Writer.
 // The output Format can be specified and must be one of the following values: OUTFORMAT_LIST, OUTFORMAT_CSV, OUTFORMAT_QUOTE, OUTFORMAT_TABS, OUTFORMAT_LINE, OUTFORMAT_JSON, OUTFORMAT_HTML, OUTFORMAT_MARKDOWN, OUTFORMAT_TABLE, OUTFORMAT_BOX
-// The Separator argument specifies the column separating string (default: '|'). 
-// All lines are truncated at MaxLineLeength. A MaxLineLangth of '0' means no truncation. 
+// The Separator argument specifies the column separating string (default: '|').
+// All lines are truncated at MaxLineLeength. A MaxLineLangth of '0' means no truncation.
 // If this query result is of type RESULT_OK and SuppressOK is set to false, an "OK" string is written to the buffer, otherwise nothing is written to the buffer.
 func (this *Result) DumpToWriter( Out *bufio.Writer, Format int, NoHeader bool, Separator string, NullValue string, NewLine string, MaxLineLength uint, SuppressOK bool ) ( int, error ) {
   if sep, err := GetDefaultSeparatorForOutputFormat( Format ); err != nil {
@@ -454,7 +516,7 @@ func (this *Result) DumpToWriter( Out *bufio.Writer, Format int, NoHeader bool, 
     } else {
       return io.WriteString( Out, fmt.Sprintf( "OK%s", NewLine ) )
     }
-    
+
   case this.IsNULL():
     return io.WriteString( Out, fmt.Sprintf( "%s%s", NullValue, NewLine ) )
 
@@ -465,7 +527,7 @@ func (this *Result) DumpToWriter( Out *bufio.Writer, Format int, NoHeader bool, 
     return io.WriteString( Out, string( this.GetBuffer() ) + NewLine )
     return 0, nil
 
-  case this.IsRowSet(): 
+  case this.IsRowSet():
     var totalOutputLength int = 0
 
     if !NoHeader { // Render Table Header incl. new line
@@ -492,7 +554,7 @@ func (this *Result) DumpToWriter( Out *bufio.Writer, Format int, NoHeader bool, 
         return len + totalOutputLength, err
       }
     }
-  
+
     Out.Flush()
     return totalOutputLength, nil
 
@@ -535,35 +597,35 @@ func GetDefaultSeparatorForOutputFormat( Format int ) ( string, error ) {
 // is called from connection.Select
 func( this *SQCloud ) readResult() ( *Result, error ) {
   ErrorResult := Result{
-    value:          					Value{ Type: '-', Buffer: []byte( "100000 Unknown internal error" ) }, // This is an unset Value
-    rows:           					nil,
+    value:                    Value{ Type: '-', Buffer: []byte( "100000 Unknown internal error" ) }, // This is an unset Value
+    rows:                     nil,
 
-    ColumnNames:    					nil,
-    ColumnWidth:    					nil,
-    MaxHeaderWidth: 					0,
+    ColumnNames:              nil,
+    ColumnWidth:              nil,
+    MaxHeaderWidth:           0,
 
-		uncompressedChuckSizeSum: 0,
+    uncompressedChuckSizeSum: 0,
   }
   result := ErrorResult
 
   var rowIndex      uint64 = 0
-  
+
   for { // loop through all chunks
 
     if chunk, err := this.readNextRawChunk(); err != nil {
-			ErrorResult.uncompressedChuckSizeSum = chunk.LEN
-      ErrorResult.value.Buffer 						 = []byte( fmt.Sprintf( "100001 Internal Error: SQCloud.readNextRawChunk (%s)", err.Error() ) )
-      return &ErrorResult, err 
+      ErrorResult.uncompressedChuckSizeSum = chunk.LEN
+      ErrorResult.value.Buffer             = []byte( fmt.Sprintf( "100001 Internal Error: SQCloud.readNextRawChunk (%s)", err.Error() ) )
+      return &ErrorResult, err
 
     } else {
 
-      if err := chunk.Uncompress(); err != nil { 
-				ErrorResult.uncompressedChuckSizeSum = chunk.LEN
-        ErrorResult.value.Buffer 						 = []byte( fmt.Sprintf( "100002 Internal Error: Chunk.Uncompress (%s)", err.Error() ) )
-        return &ErrorResult, err 
+      if err := chunk.Uncompress(); err != nil {
+        ErrorResult.uncompressedChuckSizeSum = chunk.LEN
+        ErrorResult.value.Buffer             = []byte( fmt.Sprintf( "100002 Internal Error: Chunk.Uncompress (%s)", err.Error() ) )
+        return &ErrorResult, err
 
       } else {
-				result.uncompressedChuckSizeSum += chunk.LEN
+        result.uncompressedChuckSizeSum += chunk.LEN
 
         switch Type := chunk.GetType(); Type {
         case '%':                     return nil, errors.New( "Nested compression" )
@@ -577,18 +639,18 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
         case '@':                                 // Reconnect
           result.value.Type = Type
           switch bytesRead, err := result.value.readBufferAt( chunk, 1 ); {
-					case err != nil: 						return nil, err 
-					case bytesRead == 0: 				return nil, errors.New( "No Data" )
-					case Type == '|':
-						println( "Do the PSUB magic, open a second connection to the server and enter: " + result.value.GetString() )
-																			fallthrough
-					default:										return &result, nil
+          case err != nil:            return nil, err
+          case bytesRead == 0:        return nil, errors.New( "No Data" )
+          case Type == '|':
+            println( "Do the PSUB magic, open a second connection to the server and enter: " + result.value.GetString() )
+                                      fallthrough
+          default:                    return &result, nil
           }
 
           // RowSet
         case '/', '*':
 
-					var offset        uint64 = 1 // skip the first type byte
+          var offset        uint64 = 1 // skip the first type byte
           var bytesRead     uint64 = 0
           var LEN           uint64 = 0
           var IDX           uint64 = 1
@@ -617,10 +679,10 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
             result.rows           = []ResultRow{}
             result.ColumnNames    = make( []string,     int( NCOLS ) )
             result.ColumnWidth    = make( []uint64,     int( NCOLS ) )
-            result.MaxHeaderWidth = 0  
+            result.MaxHeaderWidth = 0
 
             for column := uint64( 0 ); column < NCOLS; column++ { // Read in the column names, use the result.value as scratch variable
-              switch val, bytesRead, err := chunk.readValueAt( offset ); { 
+              switch val, bytesRead, err := chunk.readValueAt( offset ); {
               case err != nil:      return nil, err
               case !val.IsString(): return nil, errors.New( "Invalid Column name" )
               default:
@@ -634,7 +696,7 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
 
           // read all the rows from this chunk
           rows := make( []ResultRow, int( NROWS ) )
-          for row := uint64( 0 ); row < NROWS; row++ { 
+          for row := uint64( 0 ); row < NROWS; row++ {
 
             rows[ row ].result  = &result
             rows[ row ].index   = rowIndex
@@ -642,7 +704,7 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
 
             rowIndex++
 
-            for column := uint64( 0 ); column < NCOLS; column++ { 
+            for column := uint64( 0 ); column < NCOLS; column++ {
               switch rows[ row ].columns[ column ], bytesRead, err = chunk.readValueAt( offset ); {
               case err != nil: return nil, err
               default:
@@ -660,11 +722,11 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
           result.value.Buffer   = nil
 
           if Type == '*' { return &result, nil } // return if it is a rowset
-					this.sendString( "OK" )								 // ask the server for the next chunk and loop (Thank's Andrea)
+          this.sendString( "OK" )                // ask the server for the next chunk and loop (Thank's Andrea)
 
-        case '{':   
+        case '{':
           result.value.Type = '#' // translate JSON Type to uniform '#'
-          result.value.Buffer = chunk.GetData() 
+          result.value.Buffer = chunk.GetData()
           return &result, nil
 
         default:
