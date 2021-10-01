@@ -54,11 +54,13 @@
 #define closesocket(s)                      close(s)
 #endif
 
+#ifndef mem_alloc
 #define mem_realloc                         realloc
 #define mem_zeroalloc(_s)                   calloc(1,_s)
 #define mem_alloc(_s)                       malloc(_s)
 #define mem_free(_s)                        free(_s)
 #define string_dup(_s)                      strdup(_s)
+#endif
 #define MIN(a,b)                            (((a)<(b))?(a):(b))
 
 #define MAX_SOCK_LIST                       6           // maximum number of socket descriptor to try to connect to
@@ -131,6 +133,7 @@ struct SQCloudResult {
     double          time;                   // full execution time (latency + server side time)
     bool            externalbuffer;         // true if the buffer is managed by the caller code
                                             // false if the buffer can be freed by the SQCloudResultFree func
+    uint32_t        nheader;                // number of character in the first part of the header (which is usually skipped)
     
     // used in TYPE_ROWSET only
     uint32_t        nrows;                  // number of rows
@@ -573,6 +576,7 @@ static SQCloudResult *internal_parse_array (SQCloudConnection *connection, char 
     rowset->tag = RESULT_ARRAY;
     rowset->rawbuffer = buffer;
     rowset->blen = blen;
+    rowset->nheader = bstart;
     
     // =LEN N VALUE1 VALUE2 ... VALUEN
     uint32_t start1 = 0;
@@ -582,6 +586,7 @@ static SQCloudResult *internal_parse_array (SQCloudConnection *connection, char 
     rowset->data = (char **) mem_alloc(rowset->ndata * sizeof(char *));
     if (!rowset->data) {
         internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory for SQCloudResult: %d.", rowset->ndata * sizeof(char *));
+        mem_free(rowset);
         return NULL;
     }
     
@@ -713,6 +718,7 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
     rowset->rawbuffer = buffer;
     rowset->blen = blen;
     rowset->balloc = blen;
+    rowset->nheader = bstart;
     
     rowset->nrows = nrows;
     rowset->ncols = ncols;
@@ -779,6 +785,7 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
         rowset->bnum = DEFAULT_CHUCK_NBUFFERS;
         rowset->buffers[0] = buffer;
         rowset->bcount = 1;
+        rowset->nheader = bstart;
         
         rowset->brows = nrows + DEFAULT_CHUNK_MINROWS;
         rowset->nrows = nrows;
@@ -1001,6 +1008,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             
         case CMD_RAWJSON: {
             // handle JSON here
+            // a JSON parser must process raw buffer
             return &SQCloudResultNULL;
         }
     }
@@ -1081,7 +1089,7 @@ abort_read:
 
 static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool mainfd) {
     // most of the time one read will be sufficient
-    char header[1024];
+    char header[4096];
     char *buffer = (char *)&header;
     uint32_t blen = sizeof(header);
     uint32_t tread = 0;
@@ -1264,6 +1272,10 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
     
     if (config->compression) {
         len += snprintf(&buffer[len], sizeof(buffer) - len, "SET KEY CLIENT_COMPRESSION TO 1;");
+    }
+    
+    if (config->zero_text) {
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET KEY CLIENT_ZEROTEXT TO 1;");
     }
     
     if (len > 0) {
@@ -1746,7 +1758,10 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     char username[512];
     char password[512];
     int rc = url_extract_username_password(&s[n], username, password);
-    if (rc == -1) return NULL;
+    if (rc == -1) {
+        mem_free(config);
+        return NULL;
+    }
     if (rc) {
         config->username = string_dup(username);
         config->password = string_dup(password);
@@ -1757,7 +1772,10 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     char hostname[512];
     char port_s[512];
     rc = url_extract_hostname_port(&s[n], hostname, port_s);
-    if (rc <= 0) return NULL;
+    if (rc <= 0) {
+        mem_free(config);
+        return NULL;
+    }
     int port = (int)strtol(port_s, NULL, 0);
     if (port <= 0) port = SQCLOUD_DEFAULT_PORT;
     
@@ -1765,7 +1783,10 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     n += rc;
     char database[512];
     rc = url_extract_database(&s[n], database);
-    if (rc == -1) return NULL;
+    if (rc == -1) {
+        mem_free(config);
+        return NULL;
+    }
     if (rc > 0) {
         config->database = string_dup(database);
     }
@@ -1775,30 +1796,38 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     char key[512];
     char value[512];
     while ((rc = url_extract_keyvalue(&s[n], key, value)) > 0) {
-        if (strcasecmp(key, "timeout")) {
+        if (strcasecmp(key, "timeout") == 0) {
             int timeout = (int)strtol(value, NULL, 0);
             config->timeout = (timeout > 0) ? timeout : 0;
         }
-        else if (strcasecmp(key, "compression")) {
+        else if (strcasecmp(key, "compression") == 0) {
             int compression = (int)strtol(value, NULL, 0);
             config->compression = (compression > 0) ? true : false;
         }
-        else if (strcasecmp(key, "sqlite")) {
+        else if (strcasecmp(key, "sqlite") == 0) {
             int sqlite_mode = (int)strtol(value, NULL, 0);
             config->sqlite_mode = (sqlite_mode > 0) ? true : false;
         }
+        else if (strcasecmp(key, "zerotext") == 0) {
+            int zero_text = (int)strtol(value, NULL, 0);
+            config->zero_text = (zero_text > 0) ? true : false;
+        }
+        else if (strcasecmp(key, "memory") == 0) {
+            int in_memory = (int)strtol(value, NULL, 0);
+            if (in_memory) config->database = string_dup(":memory:");
+        }
         #ifndef SQLITECLOUD_DISABLE_TSL
-        else if (strcasecmp(key, "insecure")) {
+        else if (strcasecmp(key, "insecure") == 0) {
             int insecure = (int)strtol(value, NULL, 0);
             config->insecure = (insecure > 0) ? true : false;
         }
-        else if (strcasecmp(key, "root_certificate")) {
+        else if (strcasecmp(key, "root_certificate") == 0) {
             config->tls_root_certificate = strdup(value);
         }
-        else if (strcasecmp(key, "client_certificate")) {
+        else if (strcasecmp(key, "client_certificate") == 0) {
             config->tls_certificate = strdup(value);
         }
-        else if (strcasecmp(key, "client_certificate_key")) {
+        else if (strcasecmp(key, "client_certificate_key") == 0) {
             config->tls_certificate_key = strdup(value);
         }
         #endif
@@ -1879,7 +1908,20 @@ int SQCloudErrorCode (SQCloudConnection *connection) {
 }
 
 const char *SQCloudErrorMsg (SQCloudConnection *connection) {
-    return (connection) ? connection->errmsg : "Not enoght memory to allocate a SQCloudConnection.";
+    return (connection) ? connection->errmsg : "Not enough memory to allocate a SQCloudConnection.";
+}
+
+void SQCloudErrorReset (SQCloudConnection *connection) {
+    connection->errcode = 0;
+    connection->errmsg[0] = 0;
+}
+
+void SQCloudErrorSetCode (SQCloudConnection *connection, int errcode) {
+    connection->errcode = errcode;
+}
+
+void SQCloudErrorSetMsg (SQCloudConnection *connection, char *errmsg) {
+    snprintf(connection->errmsg, sizeof(connection->errmsg), "%s", errmsg);
 }
 
 // MARK: -
@@ -1890,6 +1932,10 @@ SQCloudResType SQCloudResultType (SQCloudResult *result) {
 
 bool SQCloudResultIsOK (SQCloudResult *result) {
     return (result == &SQCloudResultOK);
+}
+
+bool SQCloudResultIsError (SQCloudResult *result) {
+    return (!result);
 }
 
 uint32_t SQCloudResultLen (SQCloudResult *result) {
@@ -1983,8 +2029,15 @@ char *SQCloudRowsetValue (SQCloudResult *result, uint32_t row, uint32_t col, uin
     // The *len var must contain the remaining length of the buffer pointed by
     // result->data[row*result->ncols+col]. The caller should not be aware of the
     // internal implementation of this buffer, so it must be set here.
-    *len = result->blen - (uint32_t)(result->data[row*result->ncols+col] - result->rawbuffer);
-    return internal_parse_value(result->data[row*result->ncols+col], len, NULL);
+    char *value = result->data[row*result->ncols+col];
+    *len = (value) ? result->blen - (uint32_t)(value - result->rawbuffer) + result->nheader : 2;
+    return internal_parse_value(value, len, NULL);
+}
+
+uint32_t SQCloudRowSetValueLen (SQCloudResult *result, uint32_t row, uint32_t col) {
+    uint32_t len = 0;
+    SQCloudRowsetValue(result, row, col, &len);
+    return len;
 }
 
 int32_t SQCloudRowsetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col) {
@@ -2055,8 +2108,9 @@ char *SQCloudArrayValue (SQCloudResult *result, uint32_t index, uint32_t *len) {
     // The *len var must contain the remaining length of the buffer pointed by
     // result->data[index]. The caller should not be aware of the
     // internal implementation of this buffer, so it must be set here.
-    *len = result->blen - (uint32_t)(result->data[index] - result->rawbuffer);
-    return internal_parse_value(result->data[index], len, NULL);
+    char *value = result->data[index];
+    *len = (value) ? result->blen - (uint32_t)(value - result->rawbuffer) + result->nheader : 2;
+    return internal_parse_value(value, len, NULL);
 }
 
 int32_t SQCloudArrayInt32Value (SQCloudResult *result, uint32_t index) {
