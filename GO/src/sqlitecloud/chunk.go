@@ -123,40 +123,40 @@ func (this *Chunk ) readValueAt( offset uint64 ) ( Value, uint64, error ) {
 }
 
 func (this *Value ) readBufferAt( chunk *Chunk, offset uint64 ) ( uint64, error ) {
-	var bytesLeft uint64 = 0
-	if chunk.GetChunkSize() > offset { bytesLeft = chunk.GetChunkSize() - offset }
-	this.Buffer = nil
+  var bytesLeft uint64 = 0
+  if chunk.GetChunkSize() > offset { bytesLeft = chunk.GetChunkSize() - offset }
+  this.Buffer = nil
 
   switch this.Type {
-	case '_': return 1, nil
+  case '_': return 1, nil
 
   case '+', '!', '-', ':', ',', '$', '#', '^', '@':
     var TRIM  uint64 = 0  // Trims if it is a the C-String
 
     switch this.Type {
-    case ':':							// Space terminated INT
-			// MaxInt64         = 18446744073709551615                            		= 20 bytes
-			// MinInt64         = -9223372036854775807                            		= 20 bytes <- MAX LEN
-			if bytesLeft > 20 { bytesLeft = 20 }
-			fallthrough
+    case ':':             // Space terminated INT
+      // MaxInt64         = 18446744073709551615                                = 20 bytes
+      // MinInt64         = -9223372036854775807                                = 20 bytes <- MAX LEN
+      if bytesLeft > 20 { bytesLeft = 20 }
+      fallthrough
 
-		case ',': 						// Space terminated FLOAT
-  		// MaxFloat32       = 3.40282346638528859811704183484516925440e+38        = 44 bytes
-  		// SmalestFloat32   = 1.401298464324817070923729583289916131280e-45       = 45 bytes
-  		// FaxFloat64       = 1.79769313486231570814527423731704356798070e+308    = 48 bytes
-  		// SmallestFloat64  = 4.9406564584124654417656879286822137236505980e-324  = 50 bytes <- MAX LEN
-			if bytesLeft > 50 { bytesLeft = 50 }
+    case ',':             // Space terminated FLOAT
+      // MaxFloat32       = 3.40282346638528859811704183484516925440e+38        = 44 bytes
+      // SmalestFloat32   = 1.401298464324817070923729583289916131280e-45       = 45 bytes
+      // FaxFloat64       = 1.79769313486231570814527423731704356798070e+308    = 48 bytes
+      // SmallestFloat64  = 4.9406564584124654417656879286822137236505980e-324  = 50 bytes <- MAX LEN
+      if bytesLeft > 50 { bytesLeft = 50 }
 
-			bytesRead := uint64( 0 );
-			for ; bytesRead < bytesLeft; bytesRead++ {
-				if chunk.RAW[ offset + bytesRead ] == ' ' { 
-					bytesRead++
-					break 
-				}
-				this.Buffer = chunk.RAW[ offset : offset + 1 + bytesRead ]
-			}
-			if len( this.Buffer ) == 0 { return 0, errors.New( "End Of Chunk" ) }
-			return bytesRead, nil
+      bytesRead := uint64( 0 );
+      for ; bytesRead < bytesLeft; bytesRead++ {
+        if chunk.RAW[ offset + bytesRead ] == ' ' { 
+          bytesRead++
+          break 
+        }
+        this.Buffer = chunk.RAW[ offset : offset + 1 + bytesRead ]
+      }
+      if len( this.Buffer ) == 0 { return 0, errors.New( "End Of Chunk" ) }
+      return bytesRead, nil
 
 
     case '!':                 // Zero terminated C-String
