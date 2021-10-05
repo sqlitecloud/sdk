@@ -21,6 +21,7 @@ import "fmt"
 import "os"
 
 import "bufio"
+import "bytes"
 import "strings"
 import "errors"
 import "time"
@@ -28,6 +29,7 @@ import "io"
 import "encoding/json"
 import "golang.org/x/term"
 
+var rowsetChunkEndPatterns = []([]byte){ []byte( "5 0 0 0" ), []byte( "6 0 0 0 " ), []byte( "8 0 0 0 0 " ) }
 
 const OUTFORMAT_LIST      = 0
 const OUTFORMAT_CSV       = 1
@@ -608,6 +610,7 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
   }
   result := ErrorResult
 
+	
   var rowIndex      uint64 = 0
 
   for { // loop through all chunks
@@ -657,6 +660,12 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
           var NROWS         uint64 = 0
           var NCOLS         uint64 = 0
 
+					// Detect end of Rowset Chunk directly without parsing...
+					if Type == '/' {
+						for _, pattern := range rowsetChunkEndPatterns {
+							if chunk.RAW[ offset ] == pattern[ 0 ] && bytes.Equal( chunk.RAW[ offset : offset + uint64( len( pattern ) ) ], pattern ) { return &result, nil }
+					} }
+					
           if   LEN, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err }
           offset += bytesRead
 
