@@ -15,10 +15,7 @@
 //
 // -----------------------------------------------------------------------TAB=2
 
-
-// Package sqlitecloud provides an easy to use GO driver for connecting to and using the SQLite Cloud Database server.
 package sqlitecloud
-
 
 import "fmt"
 import "errors"
@@ -27,7 +24,6 @@ import "net"
 import "io"
 import "time"
 import "github.com/pierrec/lz4"
-
 
 type Chunk struct {
   DataBufferOffset  uint64
@@ -39,10 +35,10 @@ func( this *Chunk ) GetType()              byte { return this.RAW[ 0 ]          
 func( this *Chunk ) IsCompressed()         bool { return this.GetType() == '%'                           }
 func( this* Chunk ) GetChunkSize()         uint64 { return uint64( len( this.RAW ) ) }
 func( this* Chunk ) GetData()              []byte {
-  if this.RAW == nil { return []byte{ '_', ' ' } }
-  return this.RAW[ this.DataBufferOffset : ]
-  //return this.RAW[ this.DataBufferOffset : this.DataBufferOffset + this.LEN ]
-}
+	switch this.RAW {
+	case nil: return []byte{ '_', ' ' }
+	default: 	return this.RAW[ this.DataBufferOffset : ]
+} }
 
 func( this* Chunk ) Uncompress() error {
   // %TLEN CLEN ULEN *0 NROWS NCOLS <Compressed DATA>
@@ -137,18 +133,27 @@ func (this *Chunk ) readUntilAt( offset uint64, terminator byte ) ( token []byte
   }
 }
 
-// value = 123, bytesRead = 4
-func (this *Chunk ) readUInt64At( offset uint64 ) ( value uint64,  bytesRead uint64, err error ) {
-  switch val, bytesRead, terminatorFound, err := this.readUntilAt( offset, ' ' ); {
-  case err != nil:        return 0, 0, err
-  case bytesRead == 0:    return 0, 0, errors.New( "No Integer found" )
-  default:
-    switch value, err = strconv.ParseUint( string( val ), 10, 64 ); {
-    case err != nil:      return 0, 0, err;
-    case terminatorFound: return value, bytesRead + 1, nil
-    default:              return value, bytesRead    , nil
-    }
-  }
+func (this *Chunk ) readUInt64At( offset uint64 ) ( uint64, uint64, error ) {
+	if this.RAW == nil 		{ return 0, 0, errors.New( "Nil chunk" ) }
+
+	var zero 				uint64 = uint64( '0' ) 
+	var val  				uint64 = 0
+	var bytesRead 	uint64 = 0
+	var maxLEN 			int = len( this.RAW ) - int( offset )	// 0...end of chunk																				
+	
+	if maxLEN < 0 	{ maxLEN = 0 	}
+	if maxLEN > 20	{ maxLEN = 20 } 											// MaxInt64 = 18446744073709551615 
+
+	for {
+		if bytesRead == uint64( maxLEN ) { return val, bytesRead, nil }
+		switch c := this.RAW[ bytesRead + offset ]; c {
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':  val = val * 10 + ( uint64( c ) - zero )
+		case ' ':																								return val, bytesRead + 1, nil
+		default:                                                return 0, 0, errors.New( "Invalid rune" )
+		}
+		bytesRead++
+	}
+	return 0, 0, errors.New( "Overflow" )
 }
 
 func (this *Chunk ) readValueAt( offset uint64 ) ( Value, uint64, error ) {
