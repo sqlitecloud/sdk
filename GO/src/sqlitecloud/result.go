@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.1.0
-//     //             ///   ///  ///    Date        : 2021/10/01
+//     ///             ///  ///         Version     : 1.1.1
+//     //             ///   ///  ///    Date        : 2021/10/05
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : GO Methods related to the
