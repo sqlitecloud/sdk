@@ -1844,7 +1844,7 @@ SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command) 
 void SQCloudDisconnect (SQCloudConnection *connection) {
     if (!connection) return;
     
-    // free TSL
+    // free TLS
     #ifndef SQLITECLOUD_DISABLE_TSL
     if (connection->tls_context) {
         tls_close(connection->tls_context);
