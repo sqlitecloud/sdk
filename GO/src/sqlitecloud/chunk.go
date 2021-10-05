@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.0.0
-//     //             ///   ///  ///    Date        : 2021/08/26
+//     ///             ///  ///         Version     : 1.0.3
+//     //             ///   ///  ///    Date        : 2021/10/05
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : Go Methods related to the
@@ -31,8 +31,8 @@ type Chunk struct {
   RAW               []byte
 }
 
-func( this *Chunk ) GetType()              byte { return this.RAW[ 0 ]                                   }
-func( this *Chunk ) IsCompressed()         bool { return this.GetType() == '%'                           }
+func( this *Chunk ) GetType()              byte   { return this.RAW[ 0 ]             }
+func( this *Chunk ) IsCompressed()         bool   { return this.GetType() == '%'     }
 func( this* Chunk ) GetChunkSize()         uint64 { return uint64( len( this.RAW ) ) }
 func( this* Chunk ) GetData()              []byte {
   switch this.RAW {
@@ -45,7 +45,7 @@ func( this* Chunk ) Uncompress() error {
   // %TLEN CLEN ULEN /0 NROWS NCOLS <Compressed DATA>
 
   if this.RAW == nil      { return errors.New( "Nil pointer exception" ) }
-  if !this.IsCompressed() { return nil }
+  if !this.IsCompressed() { return nil                                   }
 
   var err           error
 
@@ -91,7 +91,7 @@ func( this* Chunk ) Uncompress() error {
 }
 
 func (this *Chunk ) readUInt64At( offset uint64 ) ( uint64, uint64, error ) {
-  if this.RAW == nil    { return 0, 0, errors.New( "Nil chunk" ) }
+  if this.RAW == nil { return 0, 0, errors.New( "Nil chunk" ) }
 
   var zero        uint64 = uint64( '0' ) 
   var val         uint64 = 0
@@ -158,7 +158,6 @@ func (this *Value ) readBufferAt( chunk *Chunk, offset uint64 ) ( uint64, error 
       if len( this.Buffer ) == 0 { return 0, errors.New( "End Of Chunk" ) }
       return bytesRead, nil
 
-
     case '!':                 // Zero terminated C-String
       TRIM = 1                // Cut one byte off the buffer / dont copy the zero byte of the C string
       fallthrough
@@ -175,13 +174,19 @@ func (this *Value ) readBufferAt( chunk *Chunk, offset uint64 ) ( uint64, error 
   return 0, errors.New( "Unsuported type" )
 }
 
-////
-
-// BUG(andreas): Könnte evtl nicht alles raus sendemn, Schleife fehlt
 func ( this *SQCloud ) sendString( data string ) ( int, error ) {
-  if err := this.reconnect(); err != nil { return 0, err }
-  ( *this.sock ).SetWriteDeadline( time.Now().Add( this.Timeout ) )
-  return (*this.sock).Write( []byte( fmt.Sprintf( "+%d %s", len( data ), data ) ) )
+  var err         error
+  var bytesSent   int
+  var bytesToSend int
+
+  if err = this.reconnect()                                                 ; err != nil { return 0, err }
+  if err = ( *this.sock ).SetWriteDeadline( time.Now().Add( this.Timeout ) ); err != nil { return 0, err }
+
+  rawBuffer  := []byte( fmt.Sprintf( "+%d %s", len( data ), data ) )
+  bytesToSend = len( rawBuffer )
+
+  if bytesSent, err = (*this.sock).Write( rawBuffer )                       ; err != nil { return bytesSent, err }
+  if bytesSent != bytesToSend                                                            { return bytesSent, errors.New( "Partitial data sent" ) }
 }
 
 
