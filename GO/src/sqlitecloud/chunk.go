@@ -35,9 +35,9 @@ func( this *Chunk ) GetType()              byte { return this.RAW[ 0 ]          
 func( this *Chunk ) IsCompressed()         bool { return this.GetType() == '%'                           }
 func( this* Chunk ) GetChunkSize()         uint64 { return uint64( len( this.RAW ) ) }
 func( this* Chunk ) GetData()              []byte {
-	switch this.RAW {
-	case nil: return []byte{ '_', ' ' }
-	default: 	return this.RAW[ this.DataBufferOffset : ]
+  switch this.RAW {
+  case nil: return []byte{ '_', ' ' }
+  default:  return this.RAW[ this.DataBufferOffset : ]
 } }
 
 func( this* Chunk ) Uncompress() error {
@@ -90,70 +90,27 @@ func( this* Chunk ) Uncompress() error {
   return nil
 }
 
-// offset = *, terminator = "*", input = nil      (len=?) ===> token = "",      bytesRead = 0,  err = "Nil chunk"
-// offset = 0, terminator = " ", input = ""       (len=0) ===> token = "",      bytesRead = 0,  err = io.EOF
-// offset = 0, terminator = " ", input = "50.."   (len=0) ===> token = "",      bytesRead = 0,  err = io.EOF
-// offset = 0, terminator = " ", input = "51.."   (len=0) ===> token = "",      bytesRead = 0,  err = "Overflow"
-// offset = 0, terminator = " ", input = "51.. "  (len=0) ===> token = "",      bytesRead = 0,  err = "Overflow"
-// offset = 0, terminator = " ", input = " "      (len=1) ===> token = "",      bytesRead = 1,  err = nil
-// offset = 0, terminator = " ", input = "1"      (len=1) ===> token = "1",     bytesRead = 1,  err = io.EOF
-// offset = 0, terminator = " ", input = "1 "     (len=2) ===> token = "1",     bytesRead = 2,  err = nil
-// offset = 0, terminator = " ", input = "12"     (len=2) ===> token = "12",    bytesRead = 2,  err = io.EOF
-// offset = 0, terminator = " ", input = "12 "    (len=4) ===> token = "12",    bytesRead = 3,  err = nil
-// offset = 0, terminator = " ", input = "50.. "  (len=0) ===> token = "50..",  bytesRead = 51, err = nil
-
-// Offset = 0                 Offset = 1
-// "_ " -> 1, "_", nil        "_ "    ->
-// ":123 " -> 4, ":123", nil  ":123 " -> 3, "123", nil
-// terminator will be included in the byteRead counter, but not in the token
-// bool = isEOF = !isEOF = token found
-func (this *Chunk ) readUntilAt( offset uint64, terminator byte ) ( token []byte, bytesRead uint64, terminatorFound bool, err error ) {
-  // MaxFloat32       = 3.40282346638528859811704183484516925440e+38        = 44 bytes
-  // SmalestFloat32   = 1.401298464324817070923729583289916131280e-45       = 45 bytes
-  // FaxFloat64       = 1.79769313486231570814527423731704356798070e+308    = 48 bytes
-  // SmallestFloat64  = 4.9406564584124654417656879286822137236505980e-324  = 50 bytes
-  // MaxInt64         = 18446744073709551615                                = 20 bytes
-  // MinInt64         = -9223372036854775807                                = 20 bytes
-
-  // Max length of token to expect = 50 (SmallestFloat64) = 0..49
-  // plus 1 (for trailing terminator) = 0...50
-
-  for bytesRead, rawLength := uint64( 0 ), this.GetChunkSize();; bytesRead++ {
-    switch {
-    case this.RAW == nil:                                 return []byte{}, 0, false, errors.New( "Nil chunk" )
-    case bytesRead > 50:                                  return []byte{}, 0, false, errors.New( "Overflow" )
-    case offset + bytesRead     >= rawLength:             return []byte{}, 0, false, io.EOF
-    case offset + bytesRead + 1 == rawLength && this.RAW[ offset + bytesRead ] != terminator:             return this.RAW[ offset : offset + bytesRead + 1 ], bytesRead + 1, false, nil // this can happen on buffer end
-    case offset + bytesRead + 1 == rawLength:             return this.RAW[ offset : offset + bytesRead ], bytesRead + 1, true, nil  // this can happen on buffer end
-
-    case this.RAW[ offset + bytesRead ] != terminator:    continue
-    case bytesRead == 0:                                  return []byte{}, 0, true, nil                                             // terminator on first byte
-    default:                                              return this.RAW[ offset : offset + bytesRead ], bytesRead, true, nil
-    }
-  }
-}
-
 func (this *Chunk ) readUInt64At( offset uint64 ) ( uint64, uint64, error ) {
-	if this.RAW == nil 		{ return 0, 0, errors.New( "Nil chunk" ) }
+  if this.RAW == nil    { return 0, 0, errors.New( "Nil chunk" ) }
 
-	var zero 				uint64 = uint64( '0' ) 
-	var val  				uint64 = 0
-	var bytesRead 	uint64 = 0
-	var maxLEN 			int = len( this.RAW ) - int( offset )	// 0...end of chunk																				
-	
-	if maxLEN < 0 	{ maxLEN = 0 	}
-	if maxLEN > 20	{ maxLEN = 20 } 											// MaxInt64 = 18446744073709551615 
+  var zero        uint64 = uint64( '0' ) 
+  var val         uint64 = 0
+  var bytesRead   uint64 = 0
+  var maxLEN      int = len( this.RAW ) - int( offset ) // 0...end of chunk                                       
+  
+  if maxLEN < 0   { maxLEN = 0  }
+  if maxLEN > 20  { maxLEN = 20 }                       // MaxInt64 = 18446744073709551615 (len=20)
 
-	for {
-		if bytesRead == uint64( maxLEN ) { return val, bytesRead, nil }
-		switch c := this.RAW[ bytesRead + offset ]; c {
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':  val = val * 10 + ( uint64( c ) - zero )
-		case ' ':																								return val, bytesRead + 1, nil
-		default:                                                return 0, 0, errors.New( "Invalid rune" )
-		}
-		bytesRead++
-	}
-	return 0, 0, errors.New( "Overflow" )
+  for {
+    if bytesRead == uint64( maxLEN ) { return val, bytesRead, nil }
+    switch c := this.RAW[ bytesRead + offset ]; c {
+    case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':  val = val * 10 + ( uint64( c ) - zero )
+    case ' ':                                               return val, bytesRead + 1, nil
+    default:                                                return 0, 0, errors.New( "Invalid rune" )
+    }
+    bytesRead++
+  }
+  return 0, 0, errors.New( "Overflow" )
 }
 
 func (this *Chunk ) readValueAt( offset uint64 ) ( Value, uint64, error ) {
@@ -166,23 +123,41 @@ func (this *Chunk ) readValueAt( offset uint64 ) ( Value, uint64, error ) {
 }
 
 func (this *Value ) readBufferAt( chunk *Chunk, offset uint64 ) ( uint64, error ) {
-  switch this.Type {
-  case '+', '!', '-', ':', ',', '$', '#', '_', '^', '@':
-    var TRIM  uint64 = 0      // Trims if it is a the C-String
+	var bytesLeft uint64 = 0
+	if chunk.GetChunkSize() > offset { bytesLeft = chunk.GetChunkSize() - offset }
+	this.Buffer = nil
 
-    this.Buffer = nil
+  switch this.Type {
+	case '_': return 1, nil
+
+  case '+', '!', '-', ':', ',', '$', '#', '^', '@':
+    var TRIM  uint64 = 0  // Trims if it is a the C-String
 
     switch this.Type {
-    case '_', ':', ',':       // Space terminated values (NULL, INT, FLOAT)
-      switch token, len, terminatorFound, err := chunk.readUntilAt( offset, ' ' ); {
-      case err != nil:        return 0, err
-      case this.Type == '_':  return 2, nil // NULL
-      case len == 0:          return 0, errors.New( "End Of Chunk" )
-      case terminatorFound:   this.Buffer = token
-                              return len + 1, nil
-      default:                this.Buffer = token
-                              return len, nil
-      }
+    case ':':							// Space terminated INT
+			// MaxInt64         = 18446744073709551615                            		= 20 bytes
+			// MinInt64         = -9223372036854775807                            		= 20 bytes <- MAX LEN
+			if bytesLeft > 20 { bytesLeft = 20 }
+			fallthrough
+
+		case ',': 						// Space terminated FLOAT
+  		// MaxFloat32       = 3.40282346638528859811704183484516925440e+38        = 44 bytes
+  		// SmalestFloat32   = 1.401298464324817070923729583289916131280e-45       = 45 bytes
+  		// FaxFloat64       = 1.79769313486231570814527423731704356798070e+308    = 48 bytes
+  		// SmallestFloat64  = 4.9406564584124654417656879286822137236505980e-324  = 50 bytes <- MAX LEN
+			if bytesLeft > 50 { bytesLeft = 50 }
+
+			bytesRead := uint64( 0 );
+			for ; bytesRead < bytesLeft; bytesRead++ {
+				if chunk.RAW[ offset + bytesRead ] == ' ' { 
+					bytesRead++
+					break 
+				}
+				this.Buffer = chunk.RAW[ offset : offset + 1 + bytesRead ]
+			}
+			if len( this.Buffer ) == 0 { return 0, errors.New( "End Of Chunk" ) }
+			return bytesRead, nil
+
 
     case '!':                 // Zero terminated C-String
       TRIM = 1                // Cut one byte off the buffer / dont copy the zero byte of the C string
@@ -205,7 +180,6 @@ func (this *Value ) readBufferAt( chunk *Chunk, offset uint64 ) ( uint64, error 
 // BUG(andreas): Könnte evtl nicht alles raus sendemn, Schleife fehlt
 func ( this *SQCloud ) sendString( data string ) ( int, error ) {
   if err := this.reconnect(); err != nil { return 0, err }
-//fmt.Printf( "Sending >+%d %s<\r\n", len( data ), data )
   ( *this.sock ).SetWriteDeadline( time.Now().Add( this.Timeout ) )
   return (*this.sock).Write( []byte( fmt.Sprintf( "+%d %s", len( data ), data ) ) )
 }
