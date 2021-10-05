@@ -138,8 +138,8 @@ int main(int argc, char * argv[]) {
             case 's': client_certificate_path = optarg; break;
             case 't': client_certificate_key_path = optarg; break;
             case 'y':
-                if (strcasestr(optarg, "IPv6") == 0) {family = SQCLOUD_IPv6;}
-                else if (strcasestr(optarg, "IPany") == 0) {family = SQCLOUD_IPany;}
+                if (strcasestr(optarg, "IPv6") != 0) {family = SQCLOUD_IPv6;}
+                else if (strcasestr(optarg, "IPany") != 0) {family = SQCLOUD_IPany;}
                 break;
         }
     }
