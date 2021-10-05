@@ -29,19 +29,19 @@ import "io"
 import "encoding/json"
 import "golang.org/x/term"
 
-var rowsetChunkEndPatterns = []([]byte){ []byte( "5 0 0 0" ), []byte( "6 0 0 0 " ), []byte( "8 0 0 0 0 " ) }
+var rowsetChunkEndPatterns  = []([]byte){ []byte( "5 0 0 0" ), []byte( "6 0 0 0 " ), []byte( "8 0 0 0 0 " ) }
 
-const OUTFORMAT_LIST      = 0
-const OUTFORMAT_CSV       = 1
-const OUTFORMAT_QUOTE     = 2
-const OUTFORMAT_TABS      = 3
-const OUTFORMAT_LINE      = 4
-const OUTFORMAT_JSON      = 5
-const OUTFORMAT_HTML      = 6
-const OUTFORMAT_MARKDOWN  = 7
-const OUTFORMAT_TABLE     = 8
-const OUTFORMAT_BOX       = 9
-const OUTFORMAT_XML       = 10
+const OUTFORMAT_LIST        = 0
+const OUTFORMAT_CSV         = 1
+const OUTFORMAT_QUOTE       = 2
+const OUTFORMAT_TABS        = 3
+const OUTFORMAT_LINE        = 4
+const OUTFORMAT_JSON        = 5
+const OUTFORMAT_HTML        = 6
+const OUTFORMAT_MARKDOWN    = 7
+const OUTFORMAT_TABLE       = 8
+const OUTFORMAT_BOX         = 9
+const OUTFORMAT_XML         = 10
 
 // The Result is either a Literal or a RowSet
 type Result struct {
@@ -610,7 +610,7 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
   }
   result := ErrorResult
 
-	
+  
   var rowIndex      uint64 = 0
 
   for { // loop through all chunks
@@ -660,12 +660,12 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
           var NROWS         uint64 = 0
           var NCOLS         uint64 = 0
 
-					// Detect end of Rowset Chunk directly without parsing...
-					if Type == '/' {
-						for _, pattern := range rowsetChunkEndPatterns {
-							if chunk.RAW[ offset ] == pattern[ 0 ] && bytes.Equal( chunk.RAW[ offset : offset + uint64( len( pattern ) ) ], pattern ) { return &result, nil }
-					} }
-					
+          // Detect end of Rowset Chunk directly without parsing...
+          if Type == '/' {
+            for _, pattern := range rowsetChunkEndPatterns {
+              if chunk.RAW[ offset ] == pattern[ 0 ] && bytes.Equal( chunk.RAW[ offset : offset + uint64( len( pattern ) ) ], pattern ) { return &result, nil }
+          } }
+          
           if   LEN, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err }
           offset += bytesRead
 
