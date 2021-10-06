@@ -21,16 +21,19 @@ endif
 lz4.o:	lz4.c lz4.h
 	$(CC) $(OPTIONS) $(INCLUDES) lz4.c -c -o lz4.o
 	
-sqcloud.o:	sqcloud.c sqcloud.h sqcloud_private.h
+base64.o:	base64.c base64.h
+	$(CC) $(OPTIONS) $(INCLUDES) base64.c -c -o base64.o
+	
+sqcloud.o:	sqcloud.c sqcloud.h
 	$(CC) $(OPTIONS) $(INCLUDES) sqcloud.c -c -o sqcloud.o
 
-libsqcloud.a: lz4.o sqcloud.o
+libsqcloud.a: lz4.o base64.o sqcloud.o
 	$(AR) rcs libsqcloud.a *.o
 
-libsqcloud.so: lz4.o sqcloud.o
+libsqcloud.so: lz4.o base64.o sqcloud.o
 	$(CC) -fPIC -shared *.o -o libsqcloud.so
 	
-libsqcloud.dylib: lz4.o sqcloud.o
+libsqcloud.dylib: lz4.o base64.o sqcloud.o
 	$(CC) -dynamiclib -install_name -flat_namespace *.o -o libsqcloud.dylib
 
 all:	lz4.o
