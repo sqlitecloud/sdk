@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.0.0
-//     //             ///   ///  ///    Date        : 2021/08/26
+//     ///             ///  ///         Version     : 1.1.1
+//     //             ///   ///  ///    Date        : 2021/10/08
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : Go Methods related to the
@@ -15,7 +15,6 @@
 //
 // -----------------------------------------------------------------------TAB=2
 
-// Package sqlitecloud provides an easy to use GO driver for connecting to and using the SQLite Cloud Database server.
 package sqlitecloud
 
 import (
@@ -57,7 +56,7 @@ type SQCloud struct {
 func init() {
   dburl.Register( dburl.Scheme {
     Driver: "sc", // sqlitecloud
-    Generator: dburl.GenFromURL("sqlitecloud://user:pass@host.com:8860/dbname?timeout=10&compress=NO"),
+    Generator: dburl.GenFromURL( "sqlitecloud://user:pass@host.com:8860/dbname?timeout=10&compress=NO&tls=INTERN" ),
     Transport: dburl.TransportTCP,
     Opaque: false,
     Aliases: []string{ "sqlitecloud" },
@@ -71,8 +70,8 @@ func init() {
 // An empty string ("") or -1 is returned as the corresponding return value, if a component of the connection string was not present.
 // No plausibility checks are done (see: CheckConnectionParameter).
 // If the connection string could not be parsed, an error is returned.
-func ParseConnectionString( ConnectionString string ) ( Host string, Port int, Username string, Password string, Database string, Timeout int, Compress string, err error ) {
-  u, err := dburl.Parse( ConnectionString ) // sqlitecloud://dev1.sqlitecloud.io/X?timeout=14&compress=LZ4
+func ParseConnectionString( ConnectionString string ) ( Host string, Port int, Username string, Password string, Database string, Timeout int, Compress string, Pem string, err error ) {
+  u, err := dburl.Parse( ConnectionString ) // sqlitecloud://dev1.sqlitecloud.io/X?timeout=14&compress=LZ4&tls=INTERN
   if err == nil {
 
     host      := u.Hostname()
@@ -81,11 +80,12 @@ func ParseConnectionString( ConnectionString string ) ( Host string, Port int, U
     database  := strings.TrimPrefix( u.Path, "/" )
     timeout   := 0
     compress  := "NO"
+    pem       := "INTERN"
     port      := 0
     sPort     := strings.TrimSpace( u.Port() )
     if len( sPort ) > 0 {
       if port, err = strconv.Atoi( sPort ); err != nil {
-        return "", -1, "", "", "", -1, "", err
+        return "", -1, "", "", "", -1, "", "", err
       }
     }
 
@@ -94,20 +94,26 @@ func ParseConnectionString( ConnectionString string ) ( Host string, Port int, U
       switch strings.ToLower( strings.TrimSpace( key ) ) {
       case "timeout":
         if timeout, err = strconv.Atoi( lastLiteral ); err != nil {
-          return "", -1, "", "", "", -1, "", err
+          return "", -1, "", "", "", -1, "", "", err
         }
 
-      case "compress":
-        compress = strings.ToUpper( lastLiteral )
-
-      default: // Ignore
+      case "compress":  compress = strings.ToUpper( lastLiteral )
+      case "tls":       pem      = parsePEMString( lastLiteral )
       }
     }
 
     // fmt.Printf( "NO ERROR: Host=%s, Port=%d, User=%s, Password=%s, Database=%s, Timeout=%d, Compress=%s\r\n", host, port, user, pass, database, timeout, compress )
-    return host, port, user, pass, database, timeout, compress, nil
+    return host, port, user, pass, database, timeout, compress, pem, nil
   }
-  return "", -1, "", "", "", -1, "", err
+  return "", -1, "", "", "", -1, "", "", err
+}
+
+func parsePEMString( Pem string ) string {
+  switch strings.ToUpper( strings.TrimSpace( Pem ) ) {
+  case "", "0", "N", "NO",  "FALSE", "OFF", "DISABLE", "DISABLED":                                return ""
+  case     "1", "Y", "YES", "TRUE",  "ON",  "ENABLE",  "ENABLED", "INTERN", "<USE INTERNAL PEM>": return "<USE INTERNAL PEM>"
+  default:                                                                                        return strings.TrimSpace( Pem )
+  }
 }
 
 // CheckConnectionParameter checks the given connection arguments for validly.
@@ -117,7 +123,7 @@ func ParseConnectionString( ConnectionString string ) ( Host string, Port int, U
 // Compress must be "NO" or "LZ4".
 // Username, Password and Database are ignored.
 // If a given value does not fulfill the above criteria's, an error is returned.
-func (this *SQCloud) CheckConnectionParameter( Host string, Port int, Username string, Password string, Database string, Timeout int, Compress string ) error {
+func (this *SQCloud) CheckConnectionParameter( Host string, Port int, Username string, Password string, Database string, Timeout int, Compress string, Pem string ) error {
 
   if strings.TrimSpace( Host ) == ""  {
     return errors.New( fmt.Sprintf( "Invalid hostname (%s)", Host ) )
@@ -141,6 +147,14 @@ func (this *SQCloud) CheckConnectionParameter( Host string, Port int, Username s
   switch strings.ToUpper( Compress ) {
   case "NO", "LZ4":
   default: return errors.New( fmt.Sprintf( "Invalid compression method (%s)", Compress ) )
+  }
+
+  switch trimmed := parsePEMString( Pem ); trimmed {
+  case "", "<USE INTERNAL PEM>":
+  default:
+    if _, err := ioutil.ReadFile( trimmed ); err != nil {
+      return errors.New( fmt.Sprintf( "Could not open PEM file in '%s'", trimmed ) )
+    }
   }
 
   return nil
@@ -184,13 +198,13 @@ func New( Certificate string, TimeOut uint ) *SQCloud {
     ErrorMessage: "",
   }
 
-  switch strings.ToUpper( strings.TrimSpace( Certificate ) ) {
+  switch trimmed := parsePEMString( Certificate ); trimmed {
   case "":                    break             // unencrypted connection
   case "<USE INTERNAL PEM>":  Certificate = PEM // use internal Certificate
   default:
-    switch pem, err := ioutil.ReadFile( Certificate ); {
-      case err != nil:   return nil
-      default:           Certificate = string( pem )
+    switch pem, err := ioutil.ReadFile( trimmed ); {
+    case err != nil:   return nil
+    default:           Certificate = string( pem )
     }
   }
 
@@ -212,22 +226,26 @@ func New( Certificate string, TimeOut uint ) *SQCloud {
 // Nil and an error is returned if the connection string had invalid values or a connection to the server could not be established,
 // otherwise, a pointer to the newly established connection is returned.
 func Connect( ConnectionString string ) ( *SQCloud, error ) {
-  Host, Port, Username, Password, Database, Timeout, Compress, err := ParseConnectionString( ConnectionString )
+  Host, Port, Username, Password, Database, Timeout, Compress, Pem, err := ParseConnectionString( ConnectionString )
 
   if err != nil   { return nil, err }
   if Port == 0    { Port    = 8860  }
   if Timeout == 0 { Timeout = 10    }
 
-  connection := New( "", uint( Timeout ) ) // allways works
+  switch strings.ToLower( strings.TrimSpace( Host ) ) {
+  case "127.0.0.1", "localhost", "::1": Timeout = 1
+  default:                              break
+  }
+
+  connection := New( Pem, uint( Timeout ) ) // allways works
 
   if err = connection.Connect( Host, Port, Username, Password, Database, uint( Timeout ), Compress, 0 ); err != nil {
     connection.Close()
     return nil, err
   } else {
     connection.Compress( Compress )
+    return connection, nil
   }
-
-  return connection, nil
 }
 
 // Connection Functions
@@ -239,7 +257,7 @@ func Connect( ConnectionString string ) ( *SQCloud, error ) {
 func (this *SQCloud) Connect( Host string, Port int, Username string, Password string, Database string, Timeout uint, Compression string, Family int ) error {
   this.reset() // also closes an open connection
 
-  switch err := this.CheckConnectionParameter( Host, Port, Username, Password, Database, int( Timeout ), Compression );  {
+  switch err := this.CheckConnectionParameter( Host, Port, Username, Password, Database, int( Timeout ), Compression, "" );  {
   case Family != 0: return errors.New( "Invalid Protocol Family" )
   case err != nil:  return err
   default:
@@ -403,11 +421,10 @@ func ( this *SQCloud ) Select( SQL string ) ( *Result, error ) {
 func (this *SQCloud) Execute( SQL string ) error {
   if result, err := this.Select( SQL ); result != nil {
     defer result.Free()
+
     if !result.IsOK() {
-      return errors.New( "ERROR: Unexpected Result Set (-1)")
+      return errors.New( "ERROR: Unexpected Result (-1)")
     }
     return err
-  } else {
-    return err
-  }
+  } else { return err }
 }
