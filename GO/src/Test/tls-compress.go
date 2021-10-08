@@ -1,16 +1,16 @@
 //
 //                    ////              SQLite Cloud
-//        ////////////  ///             
+//        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.0.0
-//     //             ///   ///  ///    Date        : 2021/08/31
+//     ///             ///  ///         Version     : 1.0.1
+//     //             ///   ///  ///    Date        : 2021/10/08
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
-//   ///             ///   ///  ///     
+//   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : SQLite Cloud server test
 //   ////                ///  ///                     Creates a table, inserts many
 //     ////     //////////   ///                      values, enables compress and
 //        ////            ////                        selectes all values.
-//          ////     /////              
+//          ////     /////
 //             ///                      Copyright   : 2021 by SQLite Cloud Inc.
 //
 // -----------------------------------------------------------------------TAB=2
@@ -22,7 +22,7 @@ import "math/rand"
 import "sqlitecloud"
 
 func main() {
-  db, err := sqlitecloud.Connect( "sqlitecloud://***REMOVED***/X" )
+  db, err := sqlitecloud.Connect( "sqlitecloud://***REMOVED***/X?&compress=LZ4" )
   if err == nil {
     defer db.Close()
 
