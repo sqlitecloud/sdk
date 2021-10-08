@@ -57,6 +57,10 @@ void do_print (SQCloudConnection *conn, SQCloudResult *res) {
         case RESULT_ROWSET:
             SQCloudRowsetDump(res, 0, quiet);
             break;
+            
+        case RESULT_BLOB:
+            printf("BLOB data with len: %d", SQCloudResultLen(res));
+            break;
     }
     
     printf("\n\n");

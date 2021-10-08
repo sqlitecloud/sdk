@@ -15,8 +15,8 @@
 extern "C" {
 #endif
 
-#define SQCLOUD_SDK_VERSION         "0.5.1"
-#define SQCLOUD_SDK_VERSION_NUM     0x000501
+#define SQCLOUD_SDK_VERSION         "0.5.5"
+#define SQCLOUD_SDK_VERSION_NUM     0x000505
 #define SQCLOUD_DEFAULT_PORT        8860
 #define SQCLOUD_DEFAULT_TIMEOUT     12
 
@@ -24,10 +24,12 @@ extern "C" {
 #define SQCLOUD_IPv4                2
 #define SQCLOUD_IPv6                30
 
+// MARK: -
+
 // opaque datatypes
 typedef struct SQCloudConnection    SQCloudConnection;
 typedef struct SQCloudResult        SQCloudResult;
-typedef void (*SQCloudPubSubCB)    (SQCloudConnection *connection, SQCloudResult *result, void *data);
+typedef void (*SQCloudPubSubCB)     (SQCloudConnection *connection, SQCloudResult *result, void *data);
 
 // configuration struct to be passed to the connect function (currently unused)
 typedef struct SQCloudConfigStruct {
@@ -35,15 +37,15 @@ typedef struct SQCloudConfigStruct {
     const char      *password;
     const char      *database;
     int             timeout;
-    int             family;             // can be: AF_INET, AF_INET6 or AF_UNSPEC
-    bool            compression;        // compression flag
-    bool            sqlite_mode;        // special sqlite compatibility mode
-    bool            zero_text;          // flag to tell the server to zero-terminate strings
+    int             family;                 // can be: AF_INET, AF_INET6 or AF_UNSPEC
+    bool            compression;            // compression flag
+    bool            sqlite_mode;            // special sqlite compatibility mode
+    bool            zero_text;              // flag to tell the server to zero-terminate strings
     #ifndef SQLITECLOUD_DISABLE_TSL
     const char      *tls_root_certificate;
     const char      *tls_certificate;
     const char      *tls_certificate_key;
-    bool            insecure;           // flag to disable TLS
+    bool            insecure;               // flag to disable TLS
     #endif
 } SQCloudConfig;
 
@@ -56,7 +58,8 @@ typedef enum {
     RESULT_ROWSET,
     RESULT_ARRAY,
     RESULT_NULL,
-    RESULT_JSON
+    RESULT_JSON,
+    RESULT_BLOB
 } SQCloudResType;
 
 typedef enum {
@@ -66,6 +69,22 @@ typedef enum {
     VALUE_BLOB = 4,
     VALUE_NULL = 5
 } SQCloudValueType;
+
+typedef enum {
+    ARRAY_TYPE_SQLITE_EXEC = 10,            // used in SQLITE_MODE only when a write statement is executed (instead of the OK reply)
+    ARRAY_TYPE_DB_STATUS = 11,
+    
+    ARRAY_TYPE_VM_DONE = 20,                // used in VM_STEP (when SQLITE_DONE is returned)
+    ARRAY_TYPE_VM_PREPARE = 21,             // used in VM_PREPARE
+    ARRAY_TYPE_VM_STEP = 22,                // unused in this version (will be used to step in a server-side rowset)
+    ARRAY_TYPE_VM_SQL = 23,
+    
+    ARRAY_TYPE_BLOB_OPEN = 30,              // used in BLOB_OPEN
+    
+    ARRAY_TYPE_BACKUP_INIT = 40,            // used in BACKUP_INIT
+    ARRAY_TYPE_BACKUP_STEP = 41,            // used in backupWrite (VFS)
+    ARRAY_TYPE_BACKUP_END = 42              // used in backupClose (VFS)
+} SQCloudArrayType;
 
 typedef enum {
     INTERNAL_ERRCODE_GENERIC = 100000,
@@ -87,28 +106,37 @@ typedef enum {
     CLOUD_ERRCODE_RAFT = 10006
 } CLOUD_ERRCODE;
 
+// MARK: -
+
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
 SQCloudConnection *SQCloudConnectWithString (const char *s);
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command);
+SQCloudResult *SQCloudRead (SQCloudConnection *connection);
 char *SQCloudUUID (SQCloudConnection *connection);
 void SQCloudDisconnect (SQCloudConnection *connection);
 void SQCloudSetPubSubCallback (SQCloudConnection *connection, SQCloudPubSubCB callback, void *data);
 SQCloudResult *SQCloudSetPubSubOnly (SQCloudConnection *connection);
 
+// Error
 bool SQCloudIsError (SQCloudConnection *connection);
 int SQCloudErrorCode (SQCloudConnection *connection);
 const char *SQCloudErrorMsg (SQCloudConnection *connection);
 void SQCloudErrorReset (SQCloudConnection *connection);
 void SQCloudErrorSetCode (SQCloudConnection *connection, int errcode);
-void SQCloudErrorSetMsg (SQCloudConnection *connection, char *errmsg);
+void SQCloudErrorSetMsg (SQCloudConnection *connection, const char *format, ...);
 
+// Result
 SQCloudResType SQCloudResultType (SQCloudResult *result);
 uint32_t SQCloudResultLen (SQCloudResult *result);
 char *SQCloudResultBuffer (SQCloudResult *result);
+int32_t SQCloudResultInt32 (SQCloudResult *result);
+int64_t SQCloudResultInt64 (SQCloudResult *result);
+double SQCloudResultDouble (SQCloudResult *result);
 void SQCloudResultFree (SQCloudResult *result);
 bool SQCloudResultIsOK (SQCloudResult *result);
 bool SQCloudResultIsError (SQCloudResult *result);
 
+// Rowset
 SQCloudValueType SQCloudRowsetValueType (SQCloudResult *result, uint32_t row, uint32_t col);
 uint32_t SQCloudRowsetRowsMaxColumnLength (SQCloudResult *result, uint32_t col);
 char *SQCloudRowsetColumnName (SQCloudResult *result, uint32_t col, uint32_t *len);
@@ -123,6 +151,7 @@ float SQCloudRowsetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col
 double SQCloudRowsetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t col);
 void SQCloudRowsetDump (SQCloudResult *result, uint32_t maxline, bool quiet);
 
+// Array
 SQCloudValueType SQCloudArrayValueType (SQCloudResult *result, uint32_t index);
 uint32_t SQCloudArrayCount (SQCloudResult *result);
 char *SQCloudArrayValue (SQCloudResult *result, uint32_t index, uint32_t *len);
@@ -131,6 +160,11 @@ int64_t SQCloudArrayInt64Value (SQCloudResult *result, uint32_t index);
 float SQCloudArrayFloatValue (SQCloudResult *result, uint32_t index);
 double SQCloudArrayDoubleValue (SQCloudResult *result, uint32_t index);
 void SQCloudArrayDump (SQCloudResult *result);
+
+// Base64
+char *SQCloudBinaryToB64 (char *dest, void const *src, size_t *size);
+void *SQCloudB64ToBinary (void *dest, char const *src, size_t *size);
+size_t SQCloudComputeB64Size (size_t binarySize);
 
 #ifdef __cplusplus
 }
