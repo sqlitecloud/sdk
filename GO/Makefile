@@ -44,28 +44,28 @@ ifeq ($(wildcard bin/gosec),)
 endif
 
 # Test Programs
-bin/test1:	sdk src/Test/test1.go
-	go build -o bin/test1 src/Test/test1.go
+bin/tls-test1:	sdk src/Test/tls-test1.go
+	go build -o bin/tls-test1 src/Test/tls-test1.go
 
-bin/server:	sdk src/Test/server.go
-	go build -o bin/server src/Test/server.go
+bin/tls-server:	sdk src/Test/tls-server.go
+	go build -o bin/tls-server src/Test/tls-server.go
 	
-bin/dump1:	sdk src/Test/dump1.go
-	go build -o bin/dump1 src/Test/dump1.go
+bin/tls-dump1:	sdk src/Test/tls-dump1.go
+	go build -o bin/tls-dump1 src/Test/tls-dump1.go
 	
-bin/dump2:	sdk src/Test/dump2.go
-	go build -o bin/dump2 src/Test/dump2.go
+bin/tls-dump2:	sdk src/Test/tls-dump2.go
+	go build -o bin/tls-dump2 src/Test/tls-dump2.go
 	
-bin/dump3:	sdk src/Test/dump3.go
-	go build -o bin/dump3 src/Test/dump3.go
+bin/tls-dump3:	sdk src/Test/tls-dump3.go
+	go build -o bin/tls-dump3 src/Test/tls-dump3.go
 
-bin/compress:	sdk src/Test/compress.go
-	go build -o bin/compress src/Test/compress.go
+bin/tls-compress:	sdk src/Test/tls-compress.go
+	go build -o bin/tls-compress src/Test/tls-compress.go
 		
-bin/literals:	sdk src/Test/literals.go
-	go build -o bin/literals src/Test/literals.go
+bin/tls-literals:	sdk src/Test/tls-literals.go
+	go build -o bin/tls-literals src/Test/tls-literals.go
 
-test:	bin/test1 bin/server bin/dump1 bin/dump2 bin/dump3 bin/compress bin/literals
+test:	bin/tls-test1 bin/tls-server bin/tls-dump1 bin/tls-dump2 bin/tls-dump3 bin/tls-compress bin/tls-literals
 
 # GO SDK
 sdk:	install-prerequirements src/sqlitecloud/*.go
