@@ -5,14 +5,16 @@
 //
 
 #include "lz4.h"
+#include "base64.h"
 #include "sqcloud.h"
+
 #include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <assert.h>
 #include <sys/time.h>
-#include <ctype.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -98,6 +100,8 @@
 
 #define DEFAULT_CHUCK_NBUFFERS              20
 #define DEFAULT_CHUNK_MINROWS               2000
+
+#define COMPUTE_BASE64_SIZE(_len)           (((_len + 3 - (_len % 3)) / 3) * 4)
 
 // MARK: - PROTOTYPES -
 
@@ -937,6 +941,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         case CMD_COMMAND:
         case CMD_STRING:
         case CMD_ARRAY:
+        case CMD_BLOB:
         case CMD_JSON: {
             // +LEN string
             uint32_t cstart = 0;
@@ -947,6 +952,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             else if (buffer[0] == CMD_PUBSUB) return internal_setup_pubsub(connection, &buffer[cstart+1], len);
             else if (buffer[0] == CMD_RECONNECT) return internal_reconnect(connection, &buffer[cstart+1], len);
             else if (buffer[0] == CMD_ARRAY) return internal_parse_array(connection, buffer, len, cstart+1);
+            else if (buffer[0] == CMD_BLOB) type = RESULT_BLOB;
             SQCloudResult *res = internal_rowset_type(connection, buffer, len, cstart+1, type);
             if (res) res->externalbuffer = externalbuffer;
             return res;
@@ -1754,6 +1760,9 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     SQCloudConfig *config = (SQCloudConfig *)mem_zeroalloc(sizeof(SQCloudConfig));
     if (!config) return NULL;
     
+    // default IPv4
+    config->family = SQCLOUD_IPv4;
+    
     // lookup for optional username/password
     char username[512];
     char password[512];
@@ -1841,6 +1850,10 @@ SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command) 
     return internal_run_command(connection, command, strlen(command), true);
 }
 
+SQCloudResult *SQCloudRead (SQCloudConnection *connection) {
+    return internal_socket_read(connection, true);
+}
+
 void SQCloudDisconnect (SQCloudConnection *connection) {
     if (!connection) return;
     
@@ -1920,8 +1933,11 @@ void SQCloudErrorSetCode (SQCloudConnection *connection, int errcode) {
     connection->errcode = errcode;
 }
 
-void SQCloudErrorSetMsg (SQCloudConnection *connection, char *errmsg) {
-    snprintf(connection->errmsg, sizeof(connection->errmsg), "%s", errmsg);
+void SQCloudErrorSetMsg (SQCloudConnection *connection, const char *format, ...) {
+    va_list arg;
+    va_start (arg, format);
+    vsnprintf(connection->errmsg, sizeof(connection->errmsg), format, arg);
+    va_end (arg);
 }
 
 // MARK: -
@@ -1944,6 +1960,30 @@ uint32_t SQCloudResultLen (SQCloudResult *result) {
 
 char *SQCloudResultBuffer (SQCloudResult *result) {
     return (result) ? result->buffer : NULL;
+}
+
+int32_t SQCloudResultInt32 (SQCloudResult *result) {
+    if ((!result) || (result->tag != RESULT_INTEGER)) return 0;
+    
+    char *buffer = result->buffer;
+    buffer[result->blen] = 0;
+    return (int32_t)strtol(buffer, NULL, 0);
+}
+
+int64_t SQCloudResultInt64 (SQCloudResult *result) {
+    if ((!result) || (result->tag != RESULT_INTEGER)) return 0;
+    
+    char *buffer = result->buffer;
+    buffer[result->blen] = 0;
+    return (int64_t)strtoll(buffer, NULL, 0);
+}
+
+double SQCloudResultDouble (SQCloudResult *result) {
+    if ((!result) || (result->tag != RESULT_FLOAT)) return 0.0;
+    
+    char *buffer = result->buffer;
+    buffer[result->blen] = 0;
+    return (double)strtod(buffer, NULL);
 }
 
 void SQCloudResultFree (SQCloudResult *result) {
@@ -2163,3 +2203,22 @@ void SQCloudArrayDump (SQCloudResult *result) {
         printf("[%d] %.*s\n", i, len, value);
     }
 }
+
+// MARK: -
+
+char *SQCloudBinaryToB64 (char *dest, void const *src, size_t *size) {
+    char *buffer = bintob64(dest, src, *size);
+    *size = (buffer) ? (buffer - dest) : 0;
+    return buffer;
+}
+
+void *SQCloudB64ToBinary (void *dest, char const *src, size_t *size) {
+    void *buffer = b64tobin(dest, src);
+    *size = (buffer) ? (buffer - dest) : 0;
+    return buffer;
+}
+
+size_t SQCloudComputeB64Size (size_t binarySize) {
+    return COMPUTE_BASE64_SIZE(binarySize);
+}
+
