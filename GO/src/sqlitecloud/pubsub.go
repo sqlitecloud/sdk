@@ -56,7 +56,7 @@ func (this *SQCloud ) GetUUID() string {
 
 // Listen subscribes this connection to the specified Channel.
 func (this *SQCloud) Listen( Channel string ) error { // add a call back function...
-	retun this.Execute( fmt.Sprintf( "LISTEN %s", SQCloudEnquoteString( Channel ) ) ); {
+	return this.Execute( fmt.Sprintf( "LISTEN %s", SQCloudEnquoteString( Channel ) ) )
 }
 
 // Notify sends a wakeup call to the channel Channel
