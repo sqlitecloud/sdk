@@ -74,9 +74,9 @@ typedef enum {
     ARRAY_TYPE_SQLITE_EXEC = 10,            // used in SQLITE_MODE only when a write statement is executed (instead of the OK reply)
     ARRAY_TYPE_DB_STATUS = 11,
     
-    ARRAY_TYPE_VM_DONE = 20,                // used in VM_STEP (when SQLITE_DONE is returned)
+    ARRAY_TYPE_VM_STEP = 20,                // used in VM_STEP (when SQLITE_DONE is returned)
     ARRAY_TYPE_VM_PREPARE = 21,             // used in VM_PREPARE
-    ARRAY_TYPE_VM_STEP = 22,                // unused in this version (will be used to step in a server-side rowset)
+    ARRAY_TYPE_VM_STEP_ONE = 22,            // unused in this version (will be used to step in a server-side rowset)
     ARRAY_TYPE_VM_SQL = 23,
     
     ARRAY_TYPE_BLOB_OPEN = 30,              // used in BLOB_OPEN
