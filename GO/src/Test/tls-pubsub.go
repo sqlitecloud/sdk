@@ -24,7 +24,7 @@ import "sqlitecloud"
 func main() {
   fmt.Printf( "Simple PSUB test...\r\n")
   
-  if db, _ := sqlitecloud.Connect( "sqlitecloud://dev1.sqlitecloud.io:9860/X?tls=NO" ); db != nil {
+  if db, _ := sqlitecloud.Connect( "sqlitecloud://dev1.sqlitecloud.io/X" ); db != nil {
     defer db.Close()
 
     db.Callback = func( JSON string ) {
