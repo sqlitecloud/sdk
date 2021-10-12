@@ -50,44 +50,44 @@ Usage:
   sqlc -?|--help|--version
 
 Arguments:
-	URL                      "sqlitecloud://user:pass@host.com:port/dbname?timeout=10&compress=NO"
-	FILE...                  Execute SQL commands from FILE(s) after connecting to the SQLite Cloud database
+  URL                      "sqlitecloud://user:pass@host.com:port/dbname?timeout=10&compress=NO"
+  FILE...                  Execute SQL commands from FILE(s) after connecting to the SQLite Cloud database
 
 Examples:
-	sqlc "sqlitecloud://user:pass@host.com:8860/dbname?timeout=10&compress=lz4&tls=intern"
-	sqlc --host ***REMOVED*** -u user --password=pass -d dbname -c LZ4 --tls=no
-	sqlc --version
-	sqlc -?
+  sqlc "sqlitecloud://user:pass@host.com:8860/dbname?timeout=10&compress=lz4&tls=intern"
+  sqlc --host ***REMOVED*** -u user --password=pass -d dbname -c LZ4 --tls=no
+  sqlc --version
+  sqlc -?
 
 General Options:
-	--cmd COMMAND            Run "COMMAND" before executing FILE... or reading from stdin
-	-l, --list               List available databases, then exit
-	-d, --dbname NAME        Use database NAME
-	-b, --bail               Stop after hitting an error
-	-?, --help               Show this screen
-	--version                Display version information
+  --cmd COMMAND            Run "COMMAND" before executing FILE... or reading from stdin
+  -l, --list               List available databases, then exit
+  -d, --dbname NAME        Use database NAME
+  -b, --bail               Stop after hitting an error
+  -?, --help               Show this screen
+  --version                Display version information
 
 Output Format Options:
-	-o, --output FILE        Switch to BATCH mode, execute SQL Commands and send output to FILE, then exit.
-													 In BATCH mode, the default output format is switched to QUOTE.
-	
-	--echo                   Disables --quiet, print command(s) before execution
-	--quiet                  Disables --echo, run command(s) quietly (no messages, only query output)
-	--noheader               Turn headers off
-	--nullvalue TEXT         Set text string for NULL values [default: "NULL"]
-	--newline SEP            Set output row separator [default: "\r\n"]
-	--separator SEP          Set output column separator [default::"|"]
-	--format (LIST|CSV|QUOTE|TABS|LINE|JSON|HTML|XML|MARKDOWN|TABLE|BOX)
-													 Specify the Output mode [default::BOX]
+  -o, --output FILE        Switch to BATCH mode, execute SQL Commands and send output to FILE, then exit.
+                           In BATCH mode, the default output format is switched to QUOTE.
+  
+  --echo                   Disables --quiet, print command(s) before execution
+  --quiet                  Disables --echo, run command(s) quietly (no messages, only query output)
+  --noheader               Turn headers off
+  --nullvalue TEXT         Set text string for NULL values [default: "NULL"]
+  --newline SEP            Set output row separator [default: "\r\n"]
+  --separator SEP          Set output column separator [default::"|"]
+  --format (LIST|CSV|QUOTE|TABS|LINE|JSON|HTML|XML|MARKDOWN|TABLE|BOX)
+                           Specify the Output mode [default::BOX]
 
 Connection Options:
-	-h, --host HOSTNAME      Connect to SQLite Cloud database server host name [default::localhost]
-	-p, --port PORT          Use specified port to connect to SQLIte Cloud database server [default::8860]
-	-u, --user USERNAME      Use USERNAME for authentication
-	-w, --password PASSWORD  Use PASSWORD for authentication
-	-t, --timeout SECS       Set Timeout for network operations to SECS seconds [default::10]
-	-c, --compress (NO|LZ4)  Use line compression [default::NO]
-	--tls [(NO|INTERN)|FILE] Encrypt the database connection with NO PEM, the internal PEM or the PEM in FILE [default::INTERN]
+  -h, --host HOSTNAME      Connect to SQLite Cloud database server host name [default::localhost]
+  -p, --port PORT          Use specified port to connect to SQLIte Cloud database server [default::8860]
+  -u, --user USERNAME      Use USERNAME for authentication
+  -w, --password PASSWORD  Use PASSWORD for authentication
+  -t, --timeout SECS       Set Timeout for network operations to SECS seconds [default::10]
+  -c, --compress (NO|LZ4)  Use line compression [default::NO]
+  --tls [(NO|INTERN)|FILE] Encrypt the database connection with NO PEM, the internal PEM or the PEM in FILE [default::INTERN]
 `
 
 var help = `
@@ -371,8 +371,8 @@ func main() {
         f.Close()
       }
 
-			prompt := "sqlc > "
-			prompt  = "\\H:\\p/\\d \\u >"
+      prompt := "sqlc > "
+      prompt  = "\\H:\\p/\\d\\u > "
 
 Loop: for {
         out.Flush()
@@ -471,9 +471,9 @@ func ExecuteBuffer( db *sqlitecloud.SQCloud, out *bufio.Writer, in *os.File, wid
       if strings.ToUpper( line ) == ".GOTO_PROMPT" {
         return nil // break out of sql script
       }
-			if strings.TrimSpace( line ) != "" {
-				Execute( db, out, line, width, Settings )
-			}
+      if strings.TrimSpace( line ) != "" {
+        Execute( db, out, line, width, Settings )
+      }
     }
     return scanner.Err() // nil or some error
   }
