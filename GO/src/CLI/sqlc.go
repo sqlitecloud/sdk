@@ -50,43 +50,43 @@ Usage:
   sqlc -?|--help|--version
 
 Arguments:
-  URL                      "sqlitecloud://user:pass@host.com:port/dbname?timeout=10&compress=NO"
-  FILE...                  Execute SQL commands from FILE(s) after connecting to the SQLite Cloud database
+	URL                      "sqlitecloud://user:pass@host.com:port/dbname?timeout=10&compress=NO"
+	FILE...                  Execute SQL commands from FILE(s) after connecting to the SQLite Cloud database
 
 Examples:
-  sqlc "sqlitecloud://user:pass@host.com:8860/dbname?timeout=10&compress=lz4&tls=intern"
-  sqlc --host ***REMOVED*** -u user --password=pass -d dbname -c LZ4 --tls=no
-  sqlc --version
-  sqlc -?
+	sqlc "sqlitecloud://user:pass@host.com:8860/dbname?timeout=10&compress=lz4&tls=intern"
+	sqlc --host ***REMOVED*** -u user --password=pass -d dbname -c LZ4 --tls=no
+	sqlc --version
+	sqlc -?
 
 General Options:
-  --cmd COMMAND            Run "COMMAND" before executing FILE... or reading from stdin
-  -l, --list               List available databases, then exit
-  -d, --dbname NAME        Use database NAME
-  -b, --bail               Stop after hitting an error
-  -?, --help               Show this screen
-  --version                Display version information
+	--cmd COMMAND            Run "COMMAND" before executing FILE... or reading from stdin
+	-l, --list               List available databases, then exit
+	-d, --dbname NAME        Use database NAME
+	-b, --bail               Stop after hitting an error
+	-?, --help               Show this screen
+	--version                Display version information
 
 Output Format Options:
-  -o, --output FILE        Switch to BATCH mode, execute SQL Commands and send output to FILE, then exit.
-                           In BATCH mode, the default output format is switched to QUOTE.
-
-  --echo                   Disables --quiet, print command(s) before execution
-  --quiet                  Disables --echo, run command(s) quietly (no messages, only query output)
-  --noheader               Turn headers off
-  --nullvalue TEXT         Set text string for NULL values [default: "NULL"]
-  --newline SEP            Set output row separator [default: "\r\n"]
-  --separator SEP          Set output column separator [default::"|"]
-  --format (LIST|CSV|QUOTE|TABS|LINE|JSON|HTML|XML|MARKDOWN|TABLE|BOX)
-                           Specify the Output mode [default::BOX]
+	-o, --output FILE        Switch to BATCH mode, execute SQL Commands and send output to FILE, then exit.
+													 In BATCH mode, the default output format is switched to QUOTE.
+	
+	--echo                   Disables --quiet, print command(s) before execution
+	--quiet                  Disables --echo, run command(s) quietly (no messages, only query output)
+	--noheader               Turn headers off
+	--nullvalue TEXT         Set text string for NULL values [default: "NULL"]
+	--newline SEP            Set output row separator [default: "\r\n"]
+	--separator SEP          Set output column separator [default::"|"]
+	--format (LIST|CSV|QUOTE|TABS|LINE|JSON|HTML|XML|MARKDOWN|TABLE|BOX)
+													 Specify the Output mode [default::BOX]
 
 Connection Options:
-  -h, --host HOSTNAME      Connect to SQLite Cloud database server host name [default::localhost]
-  -p, --port PORT          Use specified port to connect to SQLIte Cloud database server [default::8860]
-  -u, --user USERNAME      Use USERNAME for authentication
-  -w, --password PASSWORD  Use PASSWORD for authentication
-  -t, --timeout SECS       Set Timeout for network operations to SECS seconds [default::10]
-  -c, --compress (NO|LZ4)  Use line compression [default::NO]
+	-h, --host HOSTNAME      Connect to SQLite Cloud database server host name [default::localhost]
+	-p, --port PORT          Use specified port to connect to SQLIte Cloud database server [default::8860]
+	-u, --user USERNAME      Use USERNAME for authentication
+	-w, --password PASSWORD  Use PASSWORD for authentication
+	-t, --timeout SECS       Set Timeout for network operations to SECS seconds [default::10]
+	-c, --compress (NO|LZ4)  Use line compression [default::NO]
 	--tls [(NO|INTERN)|FILE] Encrypt the database connection with NO PEM, the internal PEM or the PEM in FILE [default::INTERN]
 `
 
@@ -135,7 +135,7 @@ type Parameter struct {
 
   Timeout       int         `docopt:"--timeout"`
   Compress      string      `docopt:"--compress"`
-	Tls           string 			`docopt:"--tls"`
+  Tls           string      `docopt:"--tls"`
   UseStdIn      bool        `docopt:"-"`
   Files         []string    `docopt:"<FILE>"`
 }
@@ -228,7 +228,7 @@ func parseParameters() ( Parameter, error ) {
                           p[ "--compress" ] = getFirstNoneEmptyString( []string{ dropError( p.String( "--compress" ) ), Compress                      } )
         if Port    > 0  { p[ "--port" ]     = getFirstNoneEmptyString( []string{ dropError( p.String( "--port" ) )    , fmt.Sprintf( "%d", Port     ) } ) }
         if Timeout > 0  { p[ "--timeout" ]  = getFirstNoneEmptyString( []string{ dropError( p.String( "--timeout" ) ) , fmt.Sprintf( "%d", Timeout  ) } ) }
-												  p[ "--tls" ]      = getFirstNoneEmptyString( []string{ dropError( p.String( "--tls" ) )     , Pam                           } )
+                          p[ "--tls" ]      = getFirstNoneEmptyString( []string{ dropError( p.String( "--tls" ) )     , Pam                           } )
       }
     } else {
       return Parameter{}, err
@@ -239,7 +239,7 @@ func parseParameters() ( Parameter, error ) {
     p[ "--port" ]       = getFirstNoneEmptyString( []string{ dropError( p.String( "--port" ) )    , "8860"      } )
     p[ "--timeout" ]    = getFirstNoneEmptyString( []string{ dropError( p.String( "--timeout" ) ) , "10"        } )
     p[ "--compress" ]   = getFirstNoneEmptyString( []string{ dropError( p.String( "--compress" ) ), "NO"        } )
-		p[ "--tls" ]   			= getFirstNoneEmptyString( []string{ dropError( p.String( "--tls" ) ), 			"INTERN"    } )
+    p[ "--tls" ]        = getFirstNoneEmptyString( []string{ dropError( p.String( "--tls" ) ),      "INTERN"    } )
     p[ "--separator" ]  = getFirstNoneEmptyString( []string{ dropError( p.String( "--separator" ) ), dropError( sqlitecloud.GetDefaultSeparatorForOutputFormat( outputformat ) ), "|" } )
 
     // Fix invalid(=unset) parameters, quotation & control-chars
@@ -251,7 +251,7 @@ func parseParameters() ( Parameter, error ) {
       }
     }
 
-    for k, v := range p { fmt.Printf( "%s='%v'\r\n", k, v ) }
+    // for k, v := range p { fmt.Printf( "%s='%v'\r\n", k, v ) }
 
     // Copy map data into Object
     if err := p.Bind( &parameter ); err != nil { return Parameter{}, err }
@@ -324,7 +324,7 @@ func main() {
       //print( out, fmt.Sprintf( "Connected to %s.", parameter.Host ), &parameter )
       //print( out, strings.Split( help, "\n" )[ 0 ], &parameter )
 
-			print( out, strings.ReplaceAll( banner, "<HOST>", parameter.Host ), &parameter )
+      print( out, strings.ReplaceAll( banner, "<HOST>", parameter.Host ), &parameter )
       print( out, "", &parameter )
 
       if parameter.List {
@@ -371,22 +371,22 @@ func main() {
         f.Close()
       }
 
+			prompt := "sqlc > "
+			prompt  = "\\H:\\p/\\d \\u >"
+
 Loop: for {
         out.Flush()
         db.Database, _ = db.GetDatabase()
 
-				//prompt := "\\H:\\d (\\T \\t \\w) > "
-				prompt := "sqlc > "
+        renderdPrompt := prompt
+        renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\H", parameter.Host )
+        renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\p", fmt.Sprintf( "%d", parameter.Port ) )
+        renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\u", parameter.User )
+        renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\d", db.Database )
 
-				renderdPrompt := prompt
-				renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\H", parameter.Host )
-				renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\p", string( parameter.Port ) )
-				renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\u", parameter.User )
-				renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\d", db.Database )
-
-				renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\T", time.Now().Format( "2006-01-02" ) )
-				renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\t", time.Now().Format( "15:04:05" ) )
-				renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\w", fmt.Sprintf( "/%s", dropError( os.Getwd() ) ) )
+        renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\T", time.Now().Format( "2006-01-02" ) )
+        renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\t", time.Now().Format( "15:04:05" ) )
+        renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\w", fmt.Sprintf( "/%s", dropError( os.Getwd() ) ) )
 
         go func() { dynamic_tokens = db.GetAutocompleteTokens() }() // Update the dynamic tokens in the background...
         command, err  := editor.Prompt(renderdPrompt )
@@ -404,7 +404,8 @@ Loop: for {
           case ".noheader":         parameter.NoHeader      = getNextTokenValueAsBool( out, parameter.NoHeader, tokens, &parameter )
           case ".width":            width                   = getNextTokenValueAsInteger( out, width, -1, tokens, &parameter )
           case ".nullvalue":        parameter.NullText      = getNextTokenValueAsString( out, parameter.NullText, "NULL", "", tokens, &parameter )
-					case ".newline":          parameter.NewLine       = getNextTokenValueAsString( out, parameter.NewLine, "\r\n", "", tokens, &parameter )
+          case ".newline":          parameter.NewLine       = getNextTokenValueAsString( out, parameter.NewLine, "\r\n", "", tokens, &parameter )
+          case ".prompt":           prompt                  = getNextTokenValueAsString( out, prompt, "sqlc >", "", tokens, &parameter )
           case ".separator":        parameter.Separator     = getNextTokenValueAsString( out, parameter.Separator, "<auto>", "", tokens, &parameter )
           case ".timeout":          parameter.Timeout       = getNextTokenValueAsInteger( out, parameter.Timeout, 10, tokens, &parameter )
           case ".compress":
@@ -467,10 +468,12 @@ func ExecuteBuffer( db *sqlitecloud.SQCloud, out *bufio.Writer, in *os.File, wid
   if scanner := bufio.NewScanner( in ); scanner != nil {
     for scanner.Scan() {
       line := scanner.Text()
-      if strings.ToUpper( line ) == ".PROMPT" {
+      if strings.ToUpper( line ) == ".GOTO_PROMPT" {
         return nil // break out of sql script
       }
-      Execute( db, out, line, width, Settings )
+			if strings.TrimSpace( line ) != "" {
+				Execute( db, out, line, width, Settings )
+			}
     }
     return scanner.Err() // nil or some error
   }
