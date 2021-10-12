@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.1.1
-//     //             ///   ///  ///    Date        : 2021/10/05
+//     ///             ///  ///         Version     : 1.2.0
+//     //             ///   ///  ///    Date        : 2021/10/12
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : GO Methods related to the
@@ -53,6 +53,15 @@ type Result struct {
   ColumnNames               []string
   ColumnWidth               []uint64
   MaxHeaderWidth            uint64
+}
+
+var OKResult = Result {
+  value:                    Value{ Type: '+', Buffer: []byte( "OK" ) }, // This is an unset Value
+  rows:                     nil,
+  ColumnNames:              nil,
+  ColumnWidth:              nil,
+  MaxHeaderWidth:           0,
+  uncompressedChuckSizeSum: 0,
 }
 
 func (this *Result ) Rows() []ResultRow { return this.rows }
@@ -121,39 +130,39 @@ func (this *Result ) GetMaxNameWidth() uint64 { return this.MaxHeaderWidth }
 // Additional Data Access Functions (100% GO)
 
 // IsError returns true if this query result is of type "RESULT_ERROR", false otherwise.
-func (this *Result ) IsError()        bool { return this.value.IsError() }
+func (this *Result ) IsError()              bool { return this.value.IsError() }
 
 // IsNull returns true if this query result is of type "RESULT_NULL", false otherwise.
-func (this *Result ) IsNULL()           bool { return this.value.IsNULL() }
+func (this *Result ) IsNULL()               bool { return this.value.IsNULL() }
 
 // IsJson returns true if this query result is of type "RESULT_JSON", false otherwise.
-func (this *Result ) IsJSON()           bool { return this.value.IsJSON() }
+func (this *Result ) IsJSON()               bool { return this.value.IsJSON() }
 
 // IsString returns true if this query result is of type "RESULT_STRING", false otherwise.
-func (this *Result ) IsString()         bool { return this.value.IsString() }
+func (this *Result ) IsString()             bool { return this.value.IsString() }
 
 // IsInteger returns true if this query result is of type "RESULT_INTEGER", false otherwise.
-func (this *Result ) IsInteger()      bool { return this.value.IsInteger() }
+func (this *Result ) IsInteger()            bool { return this.value.IsInteger() }
 
 // IsFloat returns true if this query result is of type "RESULT_FLOAT", false otherwise.
-func (this *Result ) IsFloat()        bool { return this.value.IsFloat() }
+func (this *Result ) IsFloat()              bool { return this.value.IsFloat() }
 
 // IsPSUB returns true if this query result is of type "RESULT_XXXXXXX", false otherwise.
-func (this *Result ) IsPSUB()           bool { return this.value.IsPSUB() }
+func (this *Result ) IsPSUB()               bool { return this.value.IsPSUB() }
 
 // IsCommand returns true if this query result is of type "RESULT_XXXXXXX", false otherwise.
-func (this *Result ) IsCommand()      bool { return this.value.IsCommand() }
+func (this *Result ) IsCommand()            bool { return this.value.IsCommand() }
 
 // IsReconnect returns true if this query result is of type "RESULT_XXXXXXX", false otherwise.
-func (this *Result ) IsReconnect()    bool { return this.value.IsReconnect() }
+func (this *Result ) IsReconnect()          bool { return this.value.IsReconnect() }
 
 func (this *Result ) IsBLOB()               bool { return this.value.IsBLOB() }
 
 // IsText returns true if this query result is of type "RESULT_JSON", "RESULT_STRING", "RESULT_INTEGER" or "RESULT_FLOAT", false otherwise.
-func (this *Result ) IsText()       bool { return this.value.IsText() }
+func (this *Result ) IsText()               bool { return this.value.IsText() }
 
 // IsRowSet returns true if this query result is of type "RESULT_ROWSET", false otherwise.
-func (this *Result ) IsRowSet()        bool {
+func (this *Result ) IsRowSet()             bool {
   switch {
   case !this.value.IsRowSet():    return false
   case this.rows == nil:          return false
@@ -163,7 +172,7 @@ func (this *Result ) IsRowSet()        bool {
   default:                        return true
   }
 }
-func (this *Result ) IsLiteral()        bool { return !this.IsRowSet() }
+func (this *Result ) IsLiteral()            bool { return !this.IsRowSet() }
 
 // ResultSet Buffer/Scalar Methods
 
@@ -601,13 +610,12 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
   ErrorResult := Result{
     value:                    Value{ Type: '-', Buffer: []byte( "100000 Unknown internal error" ) }, // This is an unset Value
     rows:                     nil,
-
     ColumnNames:              nil,
     ColumnWidth:              nil,
     MaxHeaderWidth:           0,
-
     uncompressedChuckSizeSum: 0,
   }
+
   result := ErrorResult
 
   
@@ -645,7 +653,71 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
           case err != nil:            return nil, err
           case bytesRead == 0:        return nil, errors.New( "No Data" )
           case Type == '|':
-            println( "Do the PSUB magic, open a second connection to the server and enter: " + result.value.GetString() )
+            pauth := result.GetString_()
+
+            if this.psub == nil {
+              tokens := append( strings.SplitN( pauth, " ", 3 ), []string{ "", "", "" }... ) // make sure that there are enough elements for max index 2
+            
+              this.psub = &SQCloud {
+                sock        : nil,
+                psub        : nil,
+            
+                Host        : this.Host,
+                Port        : this.Port,
+                Username    : "",
+                Password    : "",
+                Database    : "",
+                cert        : this.cert,
+                Timeout     : 0,
+                Family      : this.Family,
+                uuid        : tokens[ 1 ],
+                secret      : tokens[ 2 ],
+                ErrorCode   : 0,
+                ErrorMessage: "",
+              }
+
+              if err    := this.psub.reconnect(); err != nil { 
+                this.psub.Close()
+                this.psub = nil
+                return nil, err 
+              }
+
+              if _, err := this.psub.sendString( pauth ); err != nil { 
+                this.psub.Close() 
+                this.psub = nil
+                return nil, err 
+              }
+              if result2, err2 := this.psub.readResult(); result2 != nil {
+                defer result2.Free()
+
+                if err2 != nil {
+                  this.psub.Close()
+                  this.psub = nil
+                  return nil, err2                        
+                }
+
+                if !result2.IsString() || result2.GetString_() != "OK" { 
+                  this.psub.Close()
+                  this.psub = nil
+                  return nil, errors.New( "unexpected result" )   
+                }
+
+                go func() {
+                  for {
+                    result, err := this.psub.readResult()
+                    if result != nil    { defer result.Free() }
+                    if err != nil       { return              }
+                    if result == nil    { return              }
+                    if !result.IsJSON() { return              }
+
+                    this.Callback( result.GetString_() )
+                  }
+                }()
+              }
+            }
+            result = OKResult
+            result.uncompressedChuckSizeSum = chunk.LEN
+
                                       fallthrough
           default:                    return &result, nil
           }

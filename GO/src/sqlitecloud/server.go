@@ -24,12 +24,12 @@ import "errors"
 import "strconv"
 
 type SQCloudConnection struct {
-  ClientID        int64
-  Address         string
-  Username        string
-  Database        string
-  ConnectionDate  time.Time
-  LastActivity    time.Time
+  ClientID            int64
+  Address             string
+  Username            string
+  Database            string
+  ConnectionDate      time.Time
+  LastActivity        time.Time
 }
 
 type SQCloudInfo struct {
@@ -50,11 +50,11 @@ type SQCloudInfo struct {
 }
 
 type SQCloudPlugin struct {
-  Name        string
-  Type        string
-  Version     string
-  Copyright   string
-  Description string
+  Name                string
+  Type                string
+  Version             string
+  Copyright           string
+  Description         string
 }
 
 // Node Functions
@@ -92,7 +92,7 @@ func (this *SQCloud) ListConnections() ( []SQCloudConnection, error ) {
   result, err := this.Select( "LIST CONNECTIONS" )
   if err == nil {
     if result != nil {
-			defer result.Free()
+      defer result.Free()
       if result.GetNumberOfColumns() == 6 {
         for row, rows := uint64( 0 ), result.GetNumberOfRows(); row <  rows; row++ {
           connection := SQCloudConnection{}
@@ -344,32 +344,6 @@ func (this *SQCloud) ListClientKeys() ( []SQCloudKeyValues, error ) {
 // ListDatabaseKeys lists all server specific keys and values and returns an array of type SQCloudKeyValues.
 func (this *SQCloud) ListDatabaseKeys() ( []SQCloudKeyValues, error ) {
   return this.SelectKeyValues( "LIST DATABASE KEYS" )
-}
-
-// Channel Communication
-
-// Listen subscribes this connection to the specified Channel.
-// BUG(andreas): Postponed by Marco
-func (this *SQCloud) Listen( Channel string ) error { // add a call back function...
-  return this.Execute( fmt.Sprintf( "LISTEN %s", SQCloudEnquoteString( Channel ) ) )
-}
-
-// Notify sends a wakeup call to the channel Channel
-// BUG(andreas): Postponed by Marco
-func (this *SQCloud) Notify( Channel string ) error {
-  return this.Execute( fmt.Sprintf( "NOTIFY %s", SQCloudEnquoteString( Channel ) ) )
-}
-
-// SendNotificationMessage sends the message Message to the channel Channel
-// BUG(andreas): Postponed by Marco
-func (this *SQCloud) SendNotificationMessage( Channel string, Message string ) error {
-  return this.Execute( fmt.Sprintf( "NOTIFY %s %s", SQCloudEnquoteString( Channel ), SQCloudEnquoteString( Message ) ) )
-}
-
-// Unlisten unsubsribs this connection from the specified Channel.
-// BUG(andreas): Postponed by Marco
-func (this *SQCloud) Unlisten( Channel string ) error {
-  return this.Execute( fmt.Sprintf( "UNLISTEN %s", SQCloudEnquoteString( Channel ) ) )
 }
 
 /// Misc functions

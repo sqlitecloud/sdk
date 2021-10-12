@@ -35,7 +35,8 @@ type SQCloud struct {
   sock          *net.Conn
 
   psub          *SQCloud
-
+  Callback      func( string )
+  
   Host          string
   Port          int
   Username      string
@@ -183,6 +184,7 @@ func New( Certificate string, TimeOut uint ) *SQCloud {
     sock        : nil,
 
     psub        : nil,
+    Callback    : func( json string ) {}, // empty call back function
 
     Host        : "",
     Port        : -1,
@@ -314,13 +316,13 @@ func (this *SQCloud) reconnect() error {
 // Close closes the connection to the SQLite Cloud Database server.
 // The connection can later be reopened (see: reconnect)
 func (this *SQCloud) Close() error {
-  var err_sock, err_psub_sock error
+  var err_sock, err_psub error
 
-  if this.sock != nil       { err_sock      = ( *this.sock ).Close()      }
-//XXXif this.psub_sock != nil  { err_psub_sock = ( *this.psub_sock ).Close() }
+  if this.sock != nil  { err_sock = ( *this.sock ).Close() }
+  if this.psub != nil  { err_psub = ( *this.psub ).Close() }
 
-  this.sock       = nil
-//XXXthis.psub_sock  = nil
+  this.sock = nil
+  this.psub = nil
 
   this.resetError()
 
@@ -330,10 +332,10 @@ func (this *SQCloud) Close() error {
     return err_sock
   }
 
-  if err_psub_sock != nil {
+  if err_psub != nil {
     this.ErrorCode = -1
-    this.ErrorMessage = err_psub_sock.Error()
-    return err_psub_sock
+    this.ErrorMessage = err_psub.Error()
+    return err_psub
   }
   return nil
 }
@@ -397,7 +399,7 @@ func (this *SQCloud ) GetError() ( int, error ) { return this.GetErrorCode(), th
 func ( this *SQCloud ) Select( SQL string ) ( *Result, error ) {
   this.resetError()
 
-  this.sendString( SQL )
+  if _, err := this.sendString( SQL ); err != nil { return nil, err }
 
   switch result, err := this.readResult(); {
   case result == nil: return nil, errors.New( "nil" )

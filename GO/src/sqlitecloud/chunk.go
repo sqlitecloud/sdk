@@ -2,7 +2,7 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.0.3
+//     ///             ///  ///         Version     : 1.0.4
 //     //             ///   ///  ///    Date        : 2021/10/05
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
@@ -17,12 +17,12 @@
 
 package sqlitecloud
 
+import "io"
 import "fmt"
+import "net"
+import "time"
 import "errors"
 import "strconv"
-import "net"
-import "io"
-import "time"
 import "github.com/pierrec/lz4"
 
 type Chunk struct {
@@ -31,10 +31,10 @@ type Chunk struct {
   RAW               []byte
 }
 
-func( this *Chunk ) GetType()              byte   { return this.RAW[ 0 ]             }
-func( this *Chunk ) IsCompressed()         bool   { return this.GetType() == '%'     }
-func( this* Chunk ) GetChunkSize()         uint64 { return uint64( len( this.RAW ) ) }
-func( this* Chunk ) GetData()              []byte {
+func( this *Chunk ) GetType()      byte   { return this.RAW[ 0 ]             }
+func( this *Chunk ) IsCompressed() bool   { return this.GetType() == '%'     }
+func( this* Chunk ) GetChunkSize() uint64 { return uint64( len( this.RAW ) ) }
+func( this* Chunk ) GetData()      []byte {
   switch this.RAW {
   case nil: return []byte{ '_', ' ' }
   default:  return this.RAW[ this.DataBufferOffset : ]
@@ -130,7 +130,7 @@ func (this *Value ) readBufferAt( chunk *Chunk, offset uint64 ) ( uint64, error 
   switch this.Type {
   case '_': return 1, nil
 
-  case '+', '!', '-', ':', ',', '$', '#', '^', '@':
+  case '+', '!', '-', ':', ',', '$', '#', '^', '@', '|':
     var TRIM  uint64 = 0  // Trims if it is a the C-String
 
     switch this.Type {
@@ -179,14 +179,20 @@ func ( this *SQCloud ) sendString( data string ) ( int, error ) {
   var bytesSent   int
   var bytesToSend int
 
-  if err = this.reconnect()                                                 ; err != nil { return 0, err }
-  if err = ( *this.sock ).SetWriteDeadline( time.Now().Add( this.Timeout ) ); err != nil { return 0, err }
+  if err := this.reconnect()                                                           ; err != nil { return 0, err }
+  switch this.Timeout {
+  case 0:   if err := ( *this.sock ).SetWriteDeadline( time.Time{} );                    err != nil { return 0, err }
+  default:  if err := ( *this.sock ).SetWriteDeadline( time.Now().Add( this.Timeout ) ); err != nil { return 0, err }
+  }
+  
 
   rawBuffer  := []byte( fmt.Sprintf( "+%d %s", len( data ), data ) )
   bytesToSend = len( rawBuffer )
 
   if bytesSent, err = (*this.sock).Write( rawBuffer )                       ; err != nil { return bytesSent, err }
   if bytesSent != bytesToSend                                                            { return bytesSent, errors.New( "Partitial data sent" ) }
+
+  return bytesSent, nil
 }
 
 
@@ -199,8 +205,12 @@ func (this *SQCloud ) readNextRawChunk() ( *Chunk, error ) {
   snoop    := []byte{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 
   // Read first byte = Chunk Type
-  ( *this.sock ).SetReadDeadline( time.Now().Add( this.Timeout ) )
+  switch this.Timeout {
+  case 0:   if err := ( *this.sock ).SetReadDeadline( time.Time{} );                    err != nil { return &NULL, err }
+  default:  if err := ( *this.sock ).SetReadDeadline( time.Now().Add( this.Timeout ) ); err != nil { return &NULL, err }
+  }
   switch readCount, err := ( *this.sock ).Read( snoop[ 0 : 1 ] ); {
+
   case err == io.EOF:         return &NULL, errors.New( "EOF" )
   case err != nil:
     if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
@@ -215,8 +225,13 @@ func (this *SQCloud ) readNextRawChunk() ( *Chunk, error ) {
   default:
     // Reading second argument (NULL, INT/FLOAT, LEN) until first space
     for tokenLength := 1; tokenLength < len( snoop ); tokenLength++ {
-      ( *this.sock ).SetReadDeadline( time.Now().Add( this.Timeout ) )
+
+      switch this.Timeout {
+      case 0:   if err := ( *this.sock ).SetReadDeadline( time.Time{} );                    err != nil { return &NULL, err }
+      default:  if err := ( *this.sock ).SetReadDeadline( time.Now().Add( this.Timeout ) ); err != nil { return &NULL, err }
+      }
       switch readCount, err := ( *this.sock ).Read( snoop[ tokenLength : tokenLength + 1 ] ); {
+
       case err == io.EOF:     return &NULL, errors.New( "EOF" )
       case err != nil:
         if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
@@ -241,6 +256,9 @@ func (this *SQCloud ) readNextRawChunk() ( *Chunk, error ) {
           chunk.RAW = snoop[ 0 : tokenLength + 1 ]
           return &chunk, nil
 
+        case '#': 
+        fallthrough
+
         default:          // all other - except JSON RAW
           var LEN uint64
           if LEN, err = strconv.ParseUint( string( snoop[ 1 : tokenLength ] ), 10, 64 ); err != nil { return &NULL, err }
@@ -254,8 +272,13 @@ func (this *SQCloud ) readNextRawChunk() ( *Chunk, error ) {
 
           var totalBytesRead uint64 = 0
           for {
-            ( *this.sock ).SetReadDeadline( time.Now().Add( this.Timeout ) )
+
+            switch this.Timeout {
+            case 0:   if err := ( *this.sock ).SetReadDeadline( time.Time{} );                    err != nil { return &NULL, err }
+            default:  if err := ( *this.sock ).SetReadDeadline( time.Now().Add( this.Timeout ) ); err != nil { return &NULL, err }
+            }
             switch readCount, err := ( *this.sock ).Read( chunk.RAW[ uint64( tokenLength ) + totalBytesRead : ] ); {
+
             case err == io.EOF:
               totalBytesRead += uint64( readCount )
               if totalBytesRead == LEN {            return &chunk, nil }
