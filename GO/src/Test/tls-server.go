@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///             
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.0.0
-//     //             ///   ///  ///    Date        : 2021/09/02
+//     ///             ///  ///         Version     : 1.1.0
+//     //             ///   ///  ///    Date        : 2021/10/08
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///     
 //   ///     //////////   ///  ///      Description : Test program for the 
@@ -24,13 +24,8 @@ import "sqlitecloud"
 func main() {
   fmt.Printf( "Server API test...\r\n")
 
-  db := sqlitecloud.New( "", 10 )
-
-	// This one works
-	// err := db.Connect( "***REMOVED***", 8860, "user", "password", "X", 10, "NO", 0 ) // Host, Port, Username, Password, Database, Timeout, Compression, Family
-  
-	// This one does NOT work
-	err := db.Connect( "***REMOVED***", 8860, "user with space", "password with space", "X", 10, "NO", 0 ) // Host, Port, Username, Password, Database, Timeout, Compression, Family
+  db := sqlitecloud.New( "<USE INTERNAL PEM>", 10 )
+  err := db.Connect( "***REMOVED***", 8860, "user with space", "password with space", "X", 10, "NO", 0 ) // Host, Port, Username, Password, Database, Timeout, Compression, Family
   if err == nil {
     defer db.Close()
 
@@ -46,15 +41,11 @@ func main() {
     }
     fmt.Printf( "ok.\r\n" )
 
-		fmt.Printf( "Checking AUTH (with space)..." )
+    fmt.Printf( "Checking AUTH (with space)..." )
     if err := db.Auth( "user with space", "password with space"); err != nil { //  Username, Password
       fail( err.Error() )
     }
     fmt.Printf( "ok.\r\n" )
-
-
-
-
 
     fmt.Printf( "Checking CREATE DATABASE..." )
     if err := db.CreateDatabase( "xyz", "", "", false ); err != nil { // Database, Key, Encoding, NoError

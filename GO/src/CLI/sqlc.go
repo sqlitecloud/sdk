@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud CLI Application
-//     ///             ///  ///         Version     : 1.1.0
-//     //             ///   ///  ///    Date        : 2021/09/02
+//     ///             ///  ///         Version     : 1.1.1
+//     //             ///   ///  ///    Date        : 2021/10/08
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : Features: Connection Strings,
@@ -33,7 +33,7 @@ import "github.com/docopt/docopt-go"
 
 var app_name     = "sqlc"
 var long_name    = "SQLite Cloud Command Line Application"
-var version      = "version 1.1.0"
+var version      = "version 1.1.1"
 var copyright    = "(c) 2021 by SQLite Cloud Inc."
 var history_file = fmt.Sprintf( "~/.%s_history.txt", app_name )
 
@@ -54,8 +54,8 @@ Arguments:
   FILE...                  Execute SQL commands from FILE(s) after connecting to the SQLite Cloud database
 
 Examples:
-  sqlc "sqlitecloud://user:pass@host.com:8860/dbname?timeout=10&compress=lz4"
-  sqlc --host ***REMOVED*** -u user --password=pass -d dbname -c LZ4
+  sqlc "sqlitecloud://user:pass@host.com:8860/dbname?timeout=10&compress=lz4&tls=intern"
+  sqlc --host ***REMOVED*** -u user --password=pass -d dbname -c LZ4 --tls=no
   sqlc --version
   sqlc -?
 
@@ -87,6 +87,7 @@ Connection Options:
   -w, --password PASSWORD  Use PASSWORD for authentication
   -t, --timeout SECS       Set Timeout for network operations to SECS seconds [default::10]
   -c, --compress (NO|LZ4)  Use line compression [default::NO]
+	--tls [(NO|INTERN)|FILE] Encrypt the database connection with NO PEM, the internal PEM or the PEM in FILE [default::INTERN]
 `
 
 var help = `
@@ -134,6 +135,7 @@ type Parameter struct {
 
   Timeout       int         `docopt:"--timeout"`
   Compress      string      `docopt:"--compress"`
+	Tls           string 			`docopt:"--tls"`
   UseStdIn      bool        `docopt:"-"`
   Files         []string    `docopt:"<FILE>"`
 }
@@ -217,7 +219,7 @@ func parseParameters() ( Parameter, error ) {
 
     // If the connection string is set, parse and apply the connection string...
     if url, isSet := p[ "URL" ]; isSet && url != "<nil>" {
-      if Host, Port, Username, Password, Database, Timeout, Compress, err := sqlitecloud.ParseConnectionString( reflect.ValueOf( url ).String() ); err == nil {
+      if Host, Port, Username, Password, Database, Timeout, Compress, Pam, err := sqlitecloud.ParseConnectionString( reflect.ValueOf( url ).String() ); err == nil {
                           p[ "--host" ]     = getFirstNoneEmptyString( []string{ dropError( p.String( "--host" ) )    , Host                          } )
                           p[ "--user" ]     = getFirstNoneEmptyString( []string{ dropError( p.String( "--user" ) )    , Username                      } )
                           p[ "--password" ] = getFirstNoneEmptyString( []string{ dropError( p.String( "--password" ) ), Password                      } )
@@ -226,6 +228,7 @@ func parseParameters() ( Parameter, error ) {
                           p[ "--compress" ] = getFirstNoneEmptyString( []string{ dropError( p.String( "--compress" ) ), Compress                      } )
         if Port    > 0  { p[ "--port" ]     = getFirstNoneEmptyString( []string{ dropError( p.String( "--port" ) )    , fmt.Sprintf( "%d", Port     ) } ) }
         if Timeout > 0  { p[ "--timeout" ]  = getFirstNoneEmptyString( []string{ dropError( p.String( "--timeout" ) ) , fmt.Sprintf( "%d", Timeout  ) } ) }
+												  p[ "--tls" ]      = getFirstNoneEmptyString( []string{ dropError( p.String( "--tls" ) )     , Pam                           } )
       }
     } else {
       return Parameter{}, err
@@ -236,6 +239,7 @@ func parseParameters() ( Parameter, error ) {
     p[ "--port" ]       = getFirstNoneEmptyString( []string{ dropError( p.String( "--port" ) )    , "8860"      } )
     p[ "--timeout" ]    = getFirstNoneEmptyString( []string{ dropError( p.String( "--timeout" ) ) , "10"        } )
     p[ "--compress" ]   = getFirstNoneEmptyString( []string{ dropError( p.String( "--compress" ) ), "NO"        } )
+		p[ "--tls" ]   			= getFirstNoneEmptyString( []string{ dropError( p.String( "--tls" ) ), 			"INTERN"    } )
     p[ "--separator" ]  = getFirstNoneEmptyString( []string{ dropError( p.String( "--separator" ) ), dropError( sqlitecloud.GetDefaultSeparatorForOutputFormat( outputformat ) ), "|" } )
 
     // Fix invalid(=unset) parameters, quotation & control-chars
@@ -247,7 +251,7 @@ func parseParameters() ( Parameter, error ) {
       }
     }
 
-    //for k, v := range p { fmt.Printf( "%s='%v'\r\n", k, v ) }
+    for k, v := range p { fmt.Printf( "%s='%v'\r\n", k, v ) }
 
     // Copy map data into Object
     if err := p.Bind( &parameter ); err != nil { return Parameter{}, err }
@@ -311,7 +315,7 @@ func main() {
 
     // print( out, fmt.Sprintf( "%s %s, %s", long_name, version, copyright ), &parameter )
 
-    var db *sqlitecloud.SQCloud = sqlitecloud.New( false, uint( parameter.Timeout ) )
+    var db *sqlitecloud.SQCloud = sqlitecloud.New( parameter.Tls, uint( parameter.Timeout ) )
     if err := db.Connect( parameter.Host, parameter.Port, parameter.User, parameter.Password, parameter.Database, uint( parameter.Timeout ), parameter.Compress, 0 ); err != nil {
       fatal( out, fmt.Sprintf( "ERROR: %s.", err.Error() ), &parameter )
     } else {
@@ -320,7 +324,7 @@ func main() {
       //print( out, fmt.Sprintf( "Connected to %s.", parameter.Host ), &parameter )
       //print( out, strings.Split( help, "\n" )[ 0 ], &parameter )
 
-      print( out, strings.ReplaceAll( banner, "<HOST>", parameter.Host ), &parameter )
+			print( out, strings.ReplaceAll( banner, "<HOST>", parameter.Host ), &parameter )
       print( out, "", &parameter )
 
       if parameter.List {
@@ -370,8 +374,22 @@ func main() {
 Loop: for {
         out.Flush()
         db.Database, _ = db.GetDatabase()
+
+				//prompt := "\\H:\\d (\\T \\t \\w) > "
+				prompt := "sqlc > "
+
+				renderdPrompt := prompt
+				renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\H", parameter.Host )
+				renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\p", string( parameter.Port ) )
+				renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\u", parameter.User )
+				renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\d", db.Database )
+
+				renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\T", time.Now().Format( "2006-01-02" ) )
+				renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\t", time.Now().Format( "15:04:05" ) )
+				renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\w", fmt.Sprintf( "/%s", dropError( os.Getwd() ) ) )
+
         go func() { dynamic_tokens = db.GetAutocompleteTokens() }() // Update the dynamic tokens in the background...
-        command, err  := editor.Prompt( fmt.Sprintf( "%s:%s > ", parameter.Host, db.Database ) )
+        command, err  := editor.Prompt(renderdPrompt )
 
         switch err {
         case io.EOF: break
@@ -386,6 +404,7 @@ Loop: for {
           case ".noheader":         parameter.NoHeader      = getNextTokenValueAsBool( out, parameter.NoHeader, tokens, &parameter )
           case ".width":            width                   = getNextTokenValueAsInteger( out, width, -1, tokens, &parameter )
           case ".nullvalue":        parameter.NullText      = getNextTokenValueAsString( out, parameter.NullText, "NULL", "", tokens, &parameter )
+					case ".newline":          parameter.NewLine       = getNextTokenValueAsString( out, parameter.NewLine, "\r\n", "", tokens, &parameter )
           case ".separator":        parameter.Separator     = getNextTokenValueAsString( out, parameter.Separator, "<auto>", "", tokens, &parameter )
           case ".timeout":          parameter.Timeout       = getNextTokenValueAsInteger( out, parameter.Timeout, 10, tokens, &parameter )
           case ".compress":
