@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.0.0
-//     //             ///   ///  ///    Date        : 2021/08/31
+//     ///             ///  ///         Version     : 1.0.1
+//     //             ///   ///  ///    Date        : 2021/10/13
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : GO Methods related to the
@@ -33,6 +33,7 @@ func (this *Value) GetType() byte     {
   case '!':                             return '+'  // Translate C-String to String
   case '{':                             return '#'  // Translate RAW-JSON to JSON 
   case '*', '/':                        return '*'  // Translate to ROWSET
+  case '=':                             return '='  // Array
   case ':', ',', '+', '#', '$', 
        '^', '@', '-', '|', '_':   
     if this.Buffer == nil {             return '_'  // unset buffer translates to NULL
@@ -53,6 +54,7 @@ func (this *Value) IsCommand()   bool { return this.GetType() == '^' }
 func (this *Value) IsReconnect() bool { return this.GetType() == '@' }
 func (this *Value) IsError()     bool { return this.GetType() == '-' }
 func (this *Value) IsRowSet()    bool { return this.GetType() == '*' }
+func (this *Value) IsArray()     bool { return this.GetType() == '=' }
 
 func (this *Value) IsText()      bool { return this.IsString() || this.IsInteger() || this.IsFloat() || this.IsBLOB() }
 
