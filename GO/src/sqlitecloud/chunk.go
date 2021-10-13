@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.0.4
-//     //             ///   ///  ///    Date        : 2021/10/05
+//     ///             ///  ///         Version     : 1.1.1
+//     //             ///   ///  ///    Date        : 2021/10/13
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : Go Methods related to the
@@ -220,7 +220,7 @@ func (this *SQCloud ) readNextRawChunk() ( *Chunk, error ) {
     }
   case readCount < 1:         return &NULL, errors.New( "No Data" )
 
-  case snoop[ 0 ] == '{':     return &NULL, errors.New( "Not implmented" )
+  case snoop[ 0 ] == '{':     return &NULL, errors.New( "Not implmented" ) ///////////////////// <<< This blocks RAW JSON
 
   default:
     // Reading second argument (NULL, INT/FLOAT, LEN) until first space
@@ -256,7 +256,7 @@ func (this *SQCloud ) readNextRawChunk() ( *Chunk, error ) {
           chunk.RAW = snoop[ 0 : tokenLength + 1 ]
           return &chunk, nil
 
-        case '#': 
+        case '#':         // SCSP JSON
         fallthrough
 
         default:          // all other - except JSON RAW

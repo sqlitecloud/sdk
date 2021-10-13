@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.2.0
-//     //             ///   ///  ///    Date        : 2021/10/12
+//     ///             ///  ///         Version     : 1.2.1
+//     //             ///   ///  ///    Date        : 2021/10/13
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : GO Methods related to the
@@ -157,6 +157,8 @@ func (this *Result ) IsCommand()            bool { return this.value.IsCommand()
 func (this *Result ) IsReconnect()          bool { return this.value.IsReconnect() }
 
 func (this *Result ) IsBLOB()               bool { return this.value.IsBLOB() }
+
+func (this *Result ) IsArray()              bool { return this.value.IsArray() }
 
 // IsText returns true if this query result is of type "RESULT_JSON", "RESULT_STRING", "RESULT_INTEGER" or "RESULT_FLOAT", false otherwise.
 func (this *Result ) IsText()               bool { return this.value.IsText() }
@@ -538,6 +540,9 @@ func (this *Result) DumpToWriter( Out *bufio.Writer, Format int, NoHeader bool, 
     return io.WriteString( Out, string( this.GetBuffer() ) + NewLine )
     return 0, nil
 
+  case this.IsArray():
+    fallthrough
+
   case this.IsRowSet():
     var totalOutputLength int = 0
 
@@ -618,7 +623,6 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
 
   result := ErrorResult
 
-  
   var rowIndex      uint64 = 0
 
   for { // loop through all chunks
@@ -721,6 +725,46 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
                                       fallthrough
           default:                    return &result, nil
           }
+
+        // Array
+        case '=':
+          var offset    uint64 = 1 // skip the first type byte
+          var LEN       uint64 = 0
+          var N         uint64 = 0
+          var bytesRead uint64 = 0
+
+          if LEN, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err }
+          offset += bytesRead
+
+          println( LEN )
+
+          if N,   bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err } // 0..N-values
+          offset += bytesRead
+
+          result.rows           = make( []ResultRow, int( N ) )
+          result.ColumnNames    = []string{ "ARRAY" }
+          result.ColumnWidth    = []uint64{ 5 }
+          result.MaxHeaderWidth = 0
+
+          for row := uint64( 0 ); row < N; row++ {
+            result.rows[ row ].result  = &result
+            result.rows[ row ].index   = row
+            result.rows[ row ].columns = make( []Value, 1 )
+
+            switch result.rows[ row ].columns[ 0 ], bytesRead, err = chunk.readValueAt( offset ); {
+            case err != nil: return nil, err
+            default:
+              columnLength := result.rows[ row ].columns[ 0 ].GetLength()
+              if result.ColumnWidth[ 0 ] < columnLength { result.ColumnWidth[ 0 ] = columnLength }
+              if result.MaxHeaderWidth   < columnLength { result.MaxHeaderWidth   = columnLength }
+              offset += bytesRead
+            }
+          }
+
+          result.value.Type     = '='
+          result.value.Buffer   = nil
+
+          return &result, nil
 
           // RowSet
         case '/', '*':

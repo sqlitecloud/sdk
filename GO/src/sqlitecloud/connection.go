@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.1.1
-//     //             ///   ///  ///    Date        : 2021/10/08
+//     ///             ///  ///         Version     : 1.1.2
+//     //             ///   ///  ///    Date        : 2021/10/13
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : Go Methods related to the
@@ -46,8 +46,8 @@ type SQCloud struct {
   Timeout       time.Duration
   Family        int
 
-  uuid          string // 36 runes
-  secret        string // 36 runes
+  uuid          string // 36 runes -> remove maybe????
+  secret        string // 36 runes -> remove maybe????
 
   ErrorCode     int
   ErrorMessage  string
@@ -318,23 +318,20 @@ func (this *SQCloud) reconnect() error {
 func (this *SQCloud) Close() error {
   var err_sock, err_psub error
 
-  if this.sock != nil  { err_sock = ( *this.sock ).Close() }
-  if this.psub != nil  { err_psub = ( *this.psub ).Close() }
+  err_psub = this.psubClose()
 
+  if this.sock != nil { err_sock = ( *this.sock ).Close() }
   this.sock = nil
-  this.psub = nil
 
   this.resetError()
 
   if err_sock != nil {
-    this.ErrorCode = -1
-    this.ErrorMessage = err_sock.Error()
+    this.setError( -1, err_sock.Error() )
     return err_sock
   }
 
-  if err_psub != nil {
-    this.ErrorCode = -1
-    this.ErrorMessage = err_psub.Error()
+  if err_psub != nil { 
+    this.setError( -1, err_psub.Error() )
     return err_psub
   }
   return nil
@@ -363,11 +360,13 @@ func (this *SQCloud) IsConnected() bool {
 
 // Error Methods
 
-// resetError resets the error code and message of the last run command.
-func (this *SQCloud) resetError() {
-  this.ErrorCode    = 0
-  this.ErrorMessage = ""
+func (this *SQCloud) setError( ErrorCode int, ErrorMessage string ) {
+  this.ErrorCode    = ErrorCode
+  this.ErrorMessage = ErrorMessage
 }
+
+// resetError resets the error code and message of the last run command.
+func (this *SQCloud) resetError() { this.setError( 0, "" ) }
 
 // GetErrorCode returns the error code of the last unsuccessful command as an int value.
 // 0 is returned if the last command run successful.
