@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.2.1
-//     //             ///   ///  ///    Date        : 2021/10/13
+//     ///             ///  ///         Version     : 1.2.2
+//     //             ///   ///  ///    Date        : 2021/10/14
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : GO Methods related to the
@@ -166,12 +166,12 @@ func (this *Result ) IsText()               bool { return this.value.IsText() }
 // IsRowSet returns true if this query result is of type "RESULT_ROWSET", false otherwise.
 func (this *Result ) IsRowSet()             bool {
   switch {
-  case !this.value.IsRowSet():    return false
-  case this.rows == nil:          return false
-  case this.ColumnNames == nil:   return false
-  case this.ColumnWidth == nil:   return false
-  case this.MaxHeaderWidth == 0:  return false
-  default:                        return true
+  case !this.value.IsRowSet() && !this.value.IsArray(): return false
+  case this.rows == nil:                                return false
+  case this.ColumnNames == nil:                         return false
+  case this.ColumnWidth == nil:                         return false
+  case this.MaxHeaderWidth == 0:                        return false
+  default:                                              return true
   }
 }
 func (this *Result ) IsLiteral()            bool { return !this.IsRowSet() }
@@ -729,14 +729,11 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
         // Array
         case '=':
           var offset    uint64 = 1 // skip the first type byte
-          var LEN       uint64 = 0
           var N         uint64 = 0
           var bytesRead uint64 = 0
 
-          if LEN, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err }
+          if _, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err }
           offset += bytesRead
-
-          println( LEN )
 
           if N,   bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err } // 0..N-values
           offset += bytesRead
