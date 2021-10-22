@@ -1,0 +1,14 @@
+SELECT 1;
+--match type is rowset
+--match value 1 0 0
+-- doesn't work because rowsets don't have buffers... --match buffer 1
+--sleep 1000
+--task 1 NAME task1 sqlitecloud://dev1.sqlitecloud.io/X
+	SELECT 12345;
+	--match value 12345 0 0
+	--sleep 5000
+	SELECT 5555;
+--end
+SELECT 2
+--wait 1
+SELECT 1
