@@ -1,0 +1,28 @@
+--set dbname=tester_linearizable2.sqlite
+CREATE DATABASE {{.dbname}} IF NOT EXISTS; USE DATABASE {{.dbname}};
+--match type is ok
+CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
+--match type is ok
+BEGIN; INSERT INTO t1 (b) VALUES (1);
+--match type is ok
+
+--task 1 NAME task1_begin 
+    USE DATABASE {{.dbname}}
+	BEGIN; INSERT INTO t1 (b) VALUES (2); 
+    --match type is error
+    ---- database is locked
+    ROLLBACK
+    --match type is ok
+    --exit 0
+--end
+
+--wait 1
+COMMIT; 
+--match type is ok
+SELECT sum(b) FROM t1;
+--match value 1 0 0
+
+UNUSE DATABASE;
+--match type is ok
+DROP DATABASE {{.dbname}};
+--match type is ok

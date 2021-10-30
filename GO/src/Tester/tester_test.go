@@ -20,13 +20,11 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"encoding/base64"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
-	"math/big"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -35,6 +33,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"text/template"
 	"time"
 	"unicode"
 
@@ -43,7 +42,6 @@ import (
 
 // ----------------------------- Debugger -----------------------------
 
-var debug = true // true // false
 var logger = log.New(os.Stderr, "tester_test.go: ", log.LstdFlags|log.Lmicroseconds)
 
 func header(lvl, msg string) string {
@@ -75,10 +73,15 @@ func Debugf(format string, v ...interface{}) {
 // ----------------------------- Workers -----------------------------
 
 type task struct {
-	name    string
-	line    int
-	scanner *bufio.Scanner
-	file    *os.File
+	name       string
+	line       int
+	scanner    *bufio.Scanner
+	connstring string
+	file       *os.File
+}
+
+type statistics struct {
+	ntests int
 }
 
 type worker struct {
@@ -86,32 +89,54 @@ type worker struct {
 	// filec     chan *os.File
 	id        int
 	conn      *sqlitecloud.SQCloud
-	res       *sqlitecloud.Result
-	taskc     chan *task
-	stopc     chan struct{}
-	stopped   bool
-	wg        *sync.WaitGroup // WaitGroup used for --wait all
-	completec chan struct{}   // channel used to wake up a worker waiting for this one to complete
-	t         *testing.T
-	env       map[string]interface{}
+	res       *sqlitecloud.Result // last recived sqlitecloud result
+	reserr    error               // err returned by the execution of the last sqlite command
+	taskc     chan *task          // channel used to feed new tasks to the worker
+	completec chan struct{}       // channel used to wake up a worker waiting for this one to complete
+	exiting   bool                // flag set if the worker is exiting
+	t         *testing.T          //
+	stats     statistics          // thread safe, local for the worker
 }
 
-var workers map[int]*worker // = make(map[int]*worker)
+var (
+	workers  map[int]*worker        // = make(map[int]*worker)
+	wg       sync.WaitGroup         // WaitGroup used for --wait all
+	stopmu   sync.Mutex             // mutex used to protect the access to stopc and tstopped var
+	stopc    chan struct{}          // channel used to stop the execution of all the workers by calling close(stopc), for example in case of error
+	stopped  bool                   // flag to avoid calling multiple times close(stopc)
+	envMutex sync.RWMutex           //global envMutex, it's a pointer because mutexes cannot be copied
+	env      map[string]interface{} // global environment variables
+)
 
-func newWorker(id int, connstring string, wg *sync.WaitGroup, stopc chan struct{}, t *testing.T) (*worker, error) {
-	Debugf("w%d created with connstring: %s", id, connstring)
-	db, err := sqlitecloud.Connect(connstring) // "sqlitecloud://dev1.sqlitecloud.io/X"
-	if err != nil {
-		return nil, err
+func tryStopc() {
+	stopmu.Lock()
+	if !stopped {
+		stopped = true
+		close(stopc)
+		Debugf("Execution Stopped")
 	}
-	w := worker{id: id, conn: db, wg: wg}
-	// t.scannerc = make(chan *bufio.Scanner, 100)
-	// t.filec = make(chan *os.File, 100)
-	w.taskc = make(chan *task, 100)
-	w.completec = make(chan struct{}, 1)
-	w.stopc = stopc
-	w.t = t
-	w.env = make(map[string]interface{})
+	stopmu.Unlock()
+}
+
+func newWorker(id int, connstring string, t *testing.T) (*worker, error) {
+	Debugf("w%d created with connstring: %s", id, connstring)
+	w := worker{
+		id:        id,
+		conn:      nil,
+		res:       &sqlitecloud.Result{},
+		reserr:    nil,
+		taskc:     make(chan *task, 100),
+		completec: make(chan struct{}, 1),
+		exiting:   false,
+		t:         t,
+		stats:     statistics{},
+	}
+
+	// add the first task to connect to the server
+	wg.Add(1)
+	Debugf("w:%d add task %s", w.id, "-")
+
+	w.taskc <- &task{name: "-", connstring: connstring}
 	return &w, nil
 }
 
@@ -137,14 +162,82 @@ func initCommands() {
 	cs := [...]command{
 		{"--sleep %ms", commandSleep, nil},
 		{"--wait %workerid_or_all [%timeout_ms]", commandWait, nil},
-		{"--task %workerid [name %name] [%connectionstring]", commandTask, nil},
+		{"--dump ", commandDump, nil},      // dump the last result
+		{"--exit [%rc]", commandExit, nil}, // stop the worker, if rc>0 without shutting down the client.  (In other words, simulate a crash.)
+		{"--task %workerid_or_expr [name %name] [%connectionstring]", commandTask, nil},
 		{"--match type is %type", commandMatchType, nil},
 		{"--match buffer %string [%row %col]", commandMatchBuffer, nil},
 		{"--match value %value [%row %col]", commandMatchValue, nil},
 		{"--loop %var=%val; &expr; %var=&expr;", commandLoop, nil},
+		{"--set %var=&expr", commandSet, nil},
 	}
 	commands = append(commands, cs[:]...)
 }
+
+// command helpers
+
+// check if the input command line is the start of a statement which requires an endcommand
+// used to calculate the stack of nested statements
+func commandRequiresEnd(linebytes []byte) bool {
+	for _, commandprefix := range commandsRequiringEnd {
+		if bytes.HasPrefix(linebytes, commandprefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// check if the input bytes represents and end command (--end)
+// TODO: improve the parsing to check also the next bytes, not only the 5 bytes of "--end" because it can be followed by \n, by a space and other chars or directly by other characters (letters, digit, punctuation, etc.)
+func commandIsEnd(linebytes []byte) bool {
+	return bytes.HasPrefix(linebytes, endcommandb)
+}
+
+func newReaderUntilEnd(t *task) (*bytes.Reader, error) { // bufio.Scanner
+	// get all the code for this task until the endcommand (--end) of this statement
+	// consider nested statments requiring the endcommand (stack of nested statements)
+	// consume this code from the caller scanner
+	var b bytes.Buffer
+	stacklevel := 0
+	for t.scanner.Scan() {
+		t.line += 1
+
+		trimmedbytes := bytes.TrimLeft(t.scanner.Bytes(), " \t")
+		if commandRequiresEnd(trimmedbytes) {
+			stacklevel += 1
+		} else if commandIsEnd(trimmedbytes) {
+			if stacklevel == 0 {
+				break
+			} else {
+				stacklevel -= 1
+			}
+		}
+
+		_, err := b.Write(t.scanner.Bytes())
+		if err != nil {
+			return nil, err
+		}
+		b.Write([]byte("\n"))
+	}
+
+	// create a new reader with the code for the new task
+	return bytes.NewReader(b.Bytes()), nil
+	// return bufio.NewScanner(bytes.NewReader(b.Bytes())), nil
+}
+
+func interfaceToInt(interfaceval interface{}) (int, error) {
+	intval, ok := interfaceval.(int)
+	if !ok {
+		floatval, ok := interfaceval.(float64)
+		if !ok {
+			return 0, fmt.Errorf("can't convert %v to int", interfaceval)
+		}
+		intval = int(floatval)
+	}
+	return intval, nil
+}
+
+// commands functions
 
 func commandSleep(w *worker, args []string, opts []bool, t *task) error {
 	if len(args) < 1 {
@@ -186,7 +279,7 @@ func commandWait(w *worker, args []string, opts []bool, t *task) error {
 		if w.id != 0 {
 			return fmt.Errorf("only the main worker can use '--wait all'")
 		}
-		w.wg.Wait()
+		wg.Wait()
 	default:
 		waitwid, err := strconv.Atoi(args[0])
 		if err != nil {
@@ -209,49 +302,49 @@ func commandWait(w *worker, args []string, opts []bool, t *task) error {
 	return nil
 }
 
-// check if the input command line is the start of a statement which requires an endcommand
-// used to calculate the stack of nested statements
-func commandRequiresEnd(linebytes []byte) bool {
-	for _, commandprefix := range commandsRequiringEnd {
-		if bytes.HasPrefix(linebytes, commandprefix) {
-			return true
-		}
+func commandDump(w *worker, args []string, opts []bool, t *task) error {
+	if w.res == nil {
+		fmt.Printf("w%d error: %v\n", w.id, w.reserr)
+	} else {
+		w.res.Dump()
 	}
-	return false
+	return nil
 }
 
-// check if the input bytes represents and end command (--end)
-// TODO: improve the parsing to check also the next bytes, not only the 5 bytes of "--end" because it can be followed by \n, by a space and other chars or directly by other characters (letters, digit, punctuation, etc.)
-func commandIsEnd(linebytes []byte) bool {
-	return bytes.HasPrefix(linebytes, endcommandb)
-}
+func commandExit(w *worker, args []string, opts []bool, t *task) error {
+	if len(opts) < 1 {
+		return fmt.Errorf("missing arguments")
+	}
 
-func newReaderUntilEnd(t *task) (*bytes.Reader, error) { // bufio.Scanner
-	// get all the code for this task until the endcommand (--end) of this statement
-	// consider nested statments requiring the endcommand (stack of nested statements)
-	// consume this code from the caller scanner
-	var b bytes.Buffer
-	stacklevel := 0
-	for t.scanner.Scan() {
-		t.line += 1
-
-		trimmedbytes := bytes.TrimLeft(t.scanner.Bytes(), " \t")
-		if commandRequiresEnd(trimmedbytes) {
-			stacklevel += 1
-		} else if stacklevel == 0 && commandIsEnd(trimmedbytes) {
-			break
+	mustclose := true
+	if opts[0] {
+		if len(args) < 1 {
+			return fmt.Errorf("missing arguments")
 		}
 
-		_, err := b.Write(t.scanner.Bytes())
+		strval := args[0]
+		envMutex.RLock()
+		interfaceval, err := gval.Evaluate(strval, env)
+		envMutex.RUnlock()
 		if err != nil {
-			return nil, err
+			return fmt.Errorf("expected int arg, got %s (%v)", strval, err)
 		}
-		b.Write([]byte("\n"))
+
+		intval, err := interfaceToInt(interfaceval)
+		if err != nil {
+			return fmt.Errorf("expected int arg, got %s (%v)", strval, err)
+		}
+		mustclose = intval == 0
 	}
 
-	// create a new reader with the code for the new task
-	return bytes.NewReader(b.Bytes()), nil
-	// return bufio.NewScanner(bytes.NewReader(b.Bytes())), nil
+	if mustclose {
+		// Debugf("w%d closing connection", w.id)
+		if err := w.conn.Close(); err != nil {
+			w.t.Logf("w%d conn close error: %v", w.id, err)
+		}
+	}
+
+	return nil
 }
 
 func commandTask(w *worker, args []string, opts []bool, t *task) error {
@@ -268,10 +361,18 @@ func commandTask(w *worker, args []string, opts []bool, t *task) error {
 	}
 
 	iargs := 0
-	workerid, err := strconv.Atoi(args[iargs])
+	// workerid, err := strconv.Atoi(args[iargs])
+	envMutex.RLock()
+	interfaceval, err := gval.Evaluate(args[iargs], env)
+	envMutex.RUnlock()
 	iargs++
 	if err != nil {
-		err = fmt.Errorf("the first argument is invalid: %v\n", err)
+		return fmt.Errorf("expected int arg, got %s (%v)", args[iargs], err)
+	}
+
+	// transform the interface{} result of Evaluate to int
+	workerid, err := interfaceToInt(interfaceval)
+	if err != nil {
 		return err
 	}
 
@@ -289,13 +390,15 @@ func commandTask(w *worker, args []string, opts []bool, t *task) error {
 
 	taskworker, exists := workers[workerid]
 	if !exists {
-		if len(args) < 2 {
-			err := fmt.Errorf("missing arguments\n")
-			return err
+		var connstring string
+		if opts[1] {
+			connstring = args[iargs]
+			iargs++
+		} else {
+			connstring = *pconnstring
 		}
 
-		connstring := args[iargs]
-		taskworker, err = newWorker(workerid, connstring, w.wg, w.stopc, w.t)
+		taskworker, err = newWorker(workerid, connstring, w.t)
 		if err != nil {
 			return err
 		}
@@ -316,7 +419,14 @@ func commandTask(w *worker, args []string, opts []bool, t *task) error {
 
 	Debugf("w%d new task %s code(%s:%d-%d):\n", taskworker.id, tname, filepath.Base(t.file.Name()), tline, t.line)
 
-	w.wg.Add(1)
+	// clear completec before starting new task
+	select {
+	case <-w.completec:
+	default:
+	}
+
+	wg.Add(1)
+	Debugf("w:%d add task %s", taskworker.id, tname)
 	taskworker.taskc <- &task{name: tname, line: tline, scanner: taskscanner, file: t.file}
 
 	return nil
@@ -335,10 +445,22 @@ func commandMatchType(w *worker, args []string, opts []bool, t *task) error {
 	}
 
 	expected := args[0]
+
+	// check result error case (res == nil, reserr != nil)
+	if w.res == nil && strings.ToUpper(expected) != "ERROR" {
+		return fmt.Errorf("expected: %s, got error %v", expected, w.reserr)
+	}
+
 	match := false
 	switch strings.ToUpper(expected) {
+	case "OK":
+		match = w.res.IsOK()
 	case "ERROR":
-		match = w.res.IsError()
+		if w.res != nil {
+			match = w.res.IsError()
+		} else {
+			match = true
+		}
 	case "NULL":
 		match = w.res.IsNULL()
 	case "JSON":
@@ -371,38 +493,54 @@ func commandMatchType(w *worker, args []string, opts []bool, t *task) error {
 		return fmt.Errorf("expected: %s, got: %v", expected, w.res.GetType())
 	}
 
+	w.stats.ntests++
 	return nil
 }
 
-type resvalue interface {
-	IsOK() bool
-	IsNULL() bool
-	IsString() bool
-	IsJSON() bool
-	IsInteger() bool
-	IsFloat() bool
-	IsBLOB() bool
-	IsPSUB() bool
-	IsCommand() bool
-	IsReconnect() bool
-	IsError() bool
-	IsRowSet() bool
-	IsArray() bool
+// helper method to get the string value of a result or its value at ROW COL
+func getString(w *worker, args []string, opts []bool) (string, error) {
+	wantsrowsetval := opts[0]
+	var s string
+	if wantsrowsetval {
+		if len(args) < 3 {
+			return "", fmt.Errorf("missing arguments")
+		}
+		r, err := strconv.Atoi(args[1])
+		if err != nil {
+			return "", fmt.Errorf("invalid ROW argument %s", args[1])
+		}
+		c, err := strconv.Atoi(args[2])
+		if err != nil {
+			return "", fmt.Errorf("invalid COL argument %s", args[1])
+		}
 
-	GetBuffer() []byte
-	// GetString() string
-	//GetString() (string, error)
-	GetInt32() (int32, error)
-	GetInt64() (int64, error)
-	GetFloat32() (float32, error)
-	GetFloat64() (float64, error)
-	GetError() (int, string, error)
+		str, err := w.res.GetStringValue(uint64(r), uint64(c))
+		if err != nil {
+			return "", err
+		}
+
+		s = str
+
+	} else {
+		if w.res == nil {
+			return "", fmt.Errorf("invalid result")
+		}
+
+		// resbuffer = w.res.GetBuffer()
+		str, err := w.res.GetString()
+		if err != nil {
+			return "", err
+		}
+
+		s = str
+	}
+
+	return s, nil
 }
 
-// helper method to get the Value of a result or the Value at ROW COL with GetValue(row, col)
-func getResValue(w *worker, args []string, opts []bool) (*resvalue, error) {
+func getBuffer(w *worker, args []string, opts []bool) ([]byte, error) {
 	wantsrowsetval := opts[0]
-	var resvalue resvalue
+	var b []byte
 	if wantsrowsetval {
 		if len(args) < 3 {
 			return nil, fmt.Errorf("missing arguments")
@@ -421,18 +559,17 @@ func getResValue(w *worker, args []string, opts []bool) (*resvalue, error) {
 			return nil, err
 		}
 
-		resvalue = v
+		b = v.GetBuffer()
+
 	} else {
-		// TODO should get the Value from res and parse with the same code as before
 		if w.res == nil {
 			return nil, fmt.Errorf("invalid result")
 		}
 
-		resvalue = w.res
-		// resbuffer = w.res.GetBuffer()
+		b = w.res.GetBuffer()
 	}
 
-	return &resvalue, nil
+	return b, nil
 }
 
 func commandMatchBuffer(w *worker, args []string, opts []bool, t *task) error {
@@ -445,16 +582,21 @@ func commandMatchBuffer(w *worker, args []string, opts []bool, t *task) error {
 	}
 
 	expected := args[0]
-	rv, err := getResValue(w, args, opts)
+
+	if w.res == nil {
+		return fmt.Errorf("expected: %s, got error %v", expected, w.reserr)
+	}
+
+	b, err := getBuffer(w, args, opts)
 	if err != nil {
 		return err
 	}
-	resvalue := *rv
 
-	if res := bytes.Compare(resvalue.GetBuffer(), []byte(expected)); res != 0 {
-		return fmt.Errorf("expected: %s, got: %v", expected, resvalue.GetBuffer())
+	if res := bytes.Compare(b, []byte(expected)); res != 0 {
+		return fmt.Errorf("expected: %s, got: %v", expected, b)
 	}
 
+	w.stats.ntests++
 	return nil
 }
 
@@ -468,98 +610,74 @@ func commandMatchValue(w *worker, args []string, opts []bool, t *task) error {
 	}
 
 	expected := args[0]
-	rv, err := getResValue(w, args, opts)
+	envMutex.RLock()
+	expectedvalue, err := gval.Evaluate(expected, env)
+	envMutex.RUnlock()
+	expected = fmt.Sprint(expectedvalue)
+
+	// check result error case (res == nil, reserr != nil)
+	if w.res == nil {
+		return fmt.Errorf("expected: %s, got error %v", expected, w.reserr)
+	}
+
+	s, err := getString(w, args, opts)
 	if err != nil {
 		return err
 	}
-	resvalue := *rv
 
-	if resvalue.IsNULL() {
-		if strings.ToUpper(expected) != "NULL" {
-			return fmt.Errorf("expected: %s, got: NULL", expected)
-		}
-	} else if resvalue.IsString() || resvalue.IsJSON() {
-		// TODO: GetString() has different prototypes in Value and Result
-		// s, err := resvalue.GetString()
-		// if err != nil {
-		// 	return nil
-		// }
-
-		// if s != strings.ToUpper(expected) {
-		// 	return fmt.Errorf("Result value is %s, expected %s", s, expected)
-		// }
-	} else if resvalue.IsInteger() {
-		v, err := resvalue.GetInt32()
-		if err != nil {
-			return err
-		}
-		if expv, _ := strconv.Atoi(expected); v != int32(expv) {
-			return fmt.Errorf("expected: %s, got: %d", expected, v)
-		}
-	} else if resvalue.IsFloat() {
-		v, err := resvalue.GetFloat64()
-		if err != nil {
-			return err
-		}
-
-		expv, err := strconv.ParseFloat(expected, 64)
-		result := big.NewFloat(v).Cmp(big.NewFloat(expv))
-		if result != 0 {
-			return fmt.Errorf("expected: %s, got: %f", expected, v)
-		}
-	} else if resvalue.IsBLOB() {
-		data, err := base64.StdEncoding.DecodeString(expected)
-		if err != nil {
-			return err
-		}
-		if res := bytes.Compare(resvalue.GetBuffer(), data); res != 0 {
-			return fmt.Errorf("expected: %v, got: %v", data, resvalue.GetBuffer())
-		}
+	if s != expected {
+		return fmt.Errorf("expected: %s, got: %s", expected, s)
 	}
 
-	/*	TODO:
-		func (this *Value) IsPSUB()      bool { return this.GetType() == '|' }
-		func (this *Value) IsCommand()   bool { return this.GetType() == '^' }
-		func (this *Value) IsReconnect() bool { return this.GetType() == '@' }
-		func (this *Value) IsError()     bool { return this.GetType() == '-' }
-		func (this *Value) IsRowSet()    bool { return this.GetType() == '*' }
-		func (this *Value) IsArray()
-	*/
-
+	w.stats.ntests++
 	return nil
 }
 
-func copyMap(m map[string]interface{}) map[string]interface{} {
-	cp := make(map[string]interface{})
-	for k, v := range m {
-		vm, ok := v.(map[string]interface{})
-		if ok {
-			cp[k] = copyMap(vm)
-		} else {
-			cp[k] = v
-		}
-	}
+// func copyMap(m map[string]interface{}) map[string]interface{} {
+// 	cp := make(map[string]interface{})
+// 	for k, v := range m {
+// 		vm, ok := v.(map[string]interface{})
+// 		if ok {
+// 			cp[k] = copyMap(vm)
+// 		} else {
+// 			cp[k] = v
+// 		}
+// 	}
 
-	return cp
-}
+// 	return cp
+// }
 
-func boolExpr(w *worker, t *task, expression string, env map[string]interface{}) bool {
+func boolExpr(w *worker, t *task, expression string) bool {
+	envMutex.RLock()
 	value, err := gval.Evaluate(expression, env)
+	envMutex.RUnlock()
 	if err != nil {
+		envMutex.RLock()
 		w.t.Logf("WARNING: w%d %s:%d error evaluating expression:%s with env:%v", w.id, t.name, t.line, expression, env)
+		envMutex.RUnlock()
 		return false
 	}
 	return value.(bool)
 }
 
-func assignExpr(w *worker, t *task, key string, expression string, env map[string]interface{}) {
+func assignExpr(w *worker, t *task, key string, expression string) {
+	envMutex.RLock()
 	value, err := gval.Evaluate(expression, env)
+	envMutex.RUnlock()
 	if err != nil {
-		w.t.Logf("WARNING: w%d %s:%d error evaluating expression:%s with env:%v", w.id, t.name, t.line, expression, env)
-		return
+		// w.t.Logf("WARNING: w%d %s:%d error evaluating expression:%s with env:%v", w.id, t.name, t.line, expression, w.env)
+		value = expression
 	}
+
+	envMutex.Lock()
 	env[key] = value
-	Debugf("assignExpr env:%v", env)
+	envMutex.Unlock()
+
+	if debug {
+		envMutex.RLock()
+		Debugf("assignExpr env:%v", env)
+		envMutex.RUnlock()
+	}
 }
 
 func commandLoop(w *worker, args []string, opts []bool, t *task) error {
@@ -576,9 +694,6 @@ func commandLoop(w *worker, args []string, opts []bool, t *task) error {
 	condexpr := args[2]
 	finalvar := strings.Trim(args[3], " ")
 	finalexpr := args[4]
-
-	// copy the env variable and possibly override variables in the loop scope
-	loopenv := copyMap(w.env)
 
 	Debugf("loop initialization: var:%s, initvalue:%s", initvar, initexpr)
 	Debugf("loop condition:%s", condexpr)
@@ -602,16 +717,40 @@ func commandLoop(w *worker, args []string, opts []bool, t *task) error {
 	// perform the loop using [initialization]; [condition]; [final-expression];
 	// parse expressions with github.com/PaesslerAG/gval
 	// initial initiza
-	for assignExpr(w, t, initvar, initexpr, loopenv); boolExpr(w, t, condexpr, loopenv); assignExpr(w, t, finalvar, finalexpr, loopenv) {
+	for assignExpr(w, t, initvar, initexpr); boolExpr(w, t, condexpr); assignExpr(w, t, finalvar, finalexpr) {
 		loopreader.Seek(0, io.SeekStart)
 		t.scanner = bufio.NewScanner(loopreader)
 		t.line = loopscannerstartline
-		w.processTask(t)
+		err := w.processTask(t)
+		if err != nil {
+			return err
+		}
+		if w.exiting {
+			break
+		}
 	}
 
 	// restore the task with the saved scanner and line to restart the execution after the loop
 	t.scanner = stackedscanner
 	t.line = stackedline
+
+	return nil
+}
+
+func commandSet(w *worker, args []string, opts []bool, t *task) error {
+	if len(args) < 2 {
+		return fmt.Errorf("missing arguments")
+	}
+
+	varname := strings.Trim(args[0], " ")
+	expr := args[1]
+	assignExpr(w, t, varname, expr)
+
+	if debug {
+		envMutex.RLock()
+		Debugf("set var:%s, expr:%s, value:%v", varname, expr, env[varname])
+		envMutex.RUnlock()
+	}
 
 	return nil
 }
@@ -635,11 +774,11 @@ const (
 	EOF
 	WS
 	SEMICOLON
-	EQUALS
+	MATH
 
 	// Literals
 	IDENT // arguments %xxx
-	EXPR  // expressions $xx xx xx;
+	EXPR  // expressions &xx xx xx;
 
 	// Keyword
 	KEYWORD
@@ -648,7 +787,6 @@ const (
 var eof = rune(0)
 var identch = '%'
 var exprch = '&'
-var varch = '$'
 var optch = '['
 var optendch = ']'
 
@@ -660,16 +798,16 @@ func isSemicolon(ch rune) bool {
 	return ch == ';'
 }
 
-func isEquals(ch rune) bool {
-	return ch == '='
-}
-
 func isExprCh(ch rune) bool {
 	return ch == exprch
 }
 
 func isLetter(ch rune) bool {
 	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+}
+
+func isMath(ch rune) bool {
+	return unicode.Is(unicode.Sm, ch)
 }
 
 func isValidExprCh(ch rune) bool {
@@ -680,7 +818,7 @@ func isValidExprCh(ch rune) bool {
 }
 
 func isValidIdentCh(ch rune) bool {
-	if isSemicolon(ch) || isEquals(ch) || isStartOptional(ch) {
+	if isSemicolon(ch) || isMath(ch) || isStartOptional(ch) {
 		return false
 	}
 	return unicode.IsLetter(ch) || unicode.IsDigit(ch) || unicode.IsSymbol(ch) || unicode.IsPunct(ch) || ch == '_' || ch == '-' || ch == identch || ch == exprch
@@ -734,9 +872,9 @@ func (s *Scanner) Scan(istemplate bool, isopt bool) Token {
 	} else if isSemicolon(ch) {
 		s.unread()
 		return s.scanSemicolon()
-	} else if isEquals(ch) {
+	} else if isMath(ch) {
 		s.unread()
-		return s.scanEquals()
+		return s.scanMath()
 	} else if isExprCh(ch) {
 		s.unread()
 		return s.scanExpr(istemplate, isopt && istemplate)
@@ -788,12 +926,25 @@ func (s *Scanner) scanSemicolon() Token {
 }
 
 // scanEquals consumes the current rune
-func (s *Scanner) scanEquals() Token {
+func (s *Scanner) scanMath() Token {
 	// Create a buffer and read the current character into it.
 	var buf bytes.Buffer
 	buf.WriteRune(s.read())
 
-	return Token{EQUALS, buf.String(), false, false}
+	// Read every subsequent whitespace character into the buffer.
+	// Non-whitespace characters and EOF will cause the loop to exit.
+	for {
+		if ch := s.read(); ch == eof {
+			break
+		} else if !isMath(ch) {
+			s.unread()
+			break
+		} else {
+			buf.WriteRune(ch)
+		}
+	}
+
+	return Token{MATH, buf.String(), false, false}
 }
 
 // scanExpr consumes the current rune and all contiguous valid runes for expressions.
@@ -895,8 +1046,8 @@ func (p *Parser) scanIgnoreWhitespace(istemplate bool, isopt bool) (tok Token) {
 	return
 }
 
-// Parse a builtin command
-func (p *Parser) ParseCommand() ([]Token, error) {
+// Parse a builtin template
+func (p *Parser) ParseTemplate() ([]Token, error) {
 	var tokens []Token
 	tok := Token{}
 	for tok.id != EOF {
@@ -973,28 +1124,31 @@ func (p *Parser) Parse() (*command, []string, []bool, error) {
 					// an expression can be made by multiple IDENT tokens
 					// create the expression string by concatenating all next IDENT tokens until SEMICOLON,
 					// a space must be added between the tokens
-					for nextparsedtok.id == IDENT {
+					for nextparsedtok.id == IDENT || nextparsedtok.id == MATH {
 						expr.WriteString(nextparsedtok.lit)
-						expr.WriteString(" ")
 						if idx < len(tokens)-1 {
+							expr.WriteString(" ")
 							idx += 1
 							nextparsedtok = &tokens[idx]
 						} else {
 							// end of tokens, so stop
+							nextparsedtok = nil
 							break
 						}
 					}
 
-					// if the SEMICOLON has been reached, append the expr to args
-					if nextparsedtok.id == SEMICOLON {
+					// if the end of tokens or SEMICOLON has been reached, append the expr to args
+					if nextparsedtok == nil || nextparsedtok.id == SEMICOLON {
 						if ctok.islastopt {
-							args = append(args, expr.String())
+							args = append(args, strings.Trim(expr.String(), " "))
 							opts = append(opts, true)
 						} else {
-							args = append(args, expr.String())
+							args = append(args, strings.Trim(expr.String(), " "))
 						}
 						// unread the SEMICOLON token, it will match the next ctok
-						idx -= 1
+						if nextparsedtok != nil {
+							idx -= 1
+						}
 					} else if !ctok.isopt {
 						found = false
 						break
@@ -1009,7 +1163,7 @@ func (p *Parser) Parse() (*command, []string, []bool, error) {
 				}
 
 				// check if id and lit are equals between ctok and nextparsedtok
-				// for example SEMICOLON or EQUALS token ids
+				// for example SEMICOLON or MATH token ids
 				if nextparsedtok.id == ctok.id && ctok.lit == strings.ToUpper(nextparsedtok.lit) {
 					idx += 1
 					found = true
@@ -1053,33 +1207,86 @@ func (w *worker) runLoop() {
 		case task := <-w.taskc:
 			err := w.processTask(task)
 			if err != nil {
-				w.t.Errorf("w%d, task:%s(%d), %v", w.id, task.name, task.line, err)
 				iserror = true
+				w.t.Errorf("w%d, task:%s(:%d), %v", w.id, task.name, task.line, err)
 				Debugf("w%d failed task %s, error: %v", w.id, task.name, err)
 			} else {
 				Debugf("w%d completed task %s", w.id, task.name)
 			}
 
-		case <-w.stopc:
+			// nonblocking write, skip if nobody is waiting or channel is full
+			select {
+			case w.completec <- struct{}{}:
+			default:
+			}
+
+			Debugf("w:%d task %s done", w.id, task.name)
+			wg.Done()
+
+			if iserror {
+				tryStopc()
+			}
+
+			if w.exiting {
+				break
+			}
+
+		case <-stopc:
 			Debugf("w%d stopped", w.id)
+			if w.conn != nil {
+				if err := w.conn.Close(); err != nil {
+					w.t.Logf("w%d conn close error: %v", w.id, err)
+				}
+			}
+
+			// consume all pending tasks and call wg.Done() for each
+			end := false
+			for !end {
+				select {
+				case <-w.taskc:
+					select {
+					case w.completec <- struct{}{}:
+					default:
+					}
+					wg.Done()
+
+				default:
+					end = true
+				}
+			}
+
 			return
-		}
-
-		// nonblocking write, skip if nobody is waiting or channel is full
-		select {
-		case w.completec <- struct{}{}:
-		default:
-		}
-
-		w.wg.Done()
-
-		if iserror {
-			close(w.stopc)
 		}
 	}
 }
 
-func (w *worker) processTask(task *task) error { // scanner *bufio.Scanner
+func replaceEnvVarInSqlString(s string, w *worker) string {
+	tmpl, err := template.New("sql").Parse(s)
+	buf := &bytes.Buffer{}
+	envMutex.RLock()
+	if err = tmpl.Execute(buf, env); err != nil {
+		envMutex.RUnlock()
+		fmt.Println(err)
+		return s
+	}
+	envMutex.RUnlock()
+	return buf.String()
+}
+
+func (w *worker) processTask(task *task) error {
+	// check if this is a connect task
+	if w.conn == nil && task.connstring != "" {
+		var err error
+		if w.conn, err = sqlitecloud.Connect(task.connstring); err != nil {
+			w.conn = nil
+			return err
+		}
+		return nil
+	}
+
+	// it's a normal task
+	// the code can be from a scanner or from a file
+	// prepare the scanner from file if needed
 	if task.scanner == nil {
 		if task.file == nil {
 			return fmt.Errorf("invalid task")
@@ -1093,15 +1300,15 @@ func (w *worker) processTask(task *task) error { // scanner *bufio.Scanner
 
 	Debugf("w%d processing task %s (%s:%d)", w.id, task.name, filepath.Base(task.file.Name()), task.line)
 
+	// process the scanner line by line
 	task.scanner.Split(bufio.ScanLines)
 	for task.scanner.Scan() {
 		Debugf("w%d processing line: %s", w.id, task.scanner.Text())
 
 		// non-blocking test on stopc
 		select {
-		case <-w.stopc:
+		case <-stopc:
 			Debugf("w%d stopping processTask %s", w.id, task.name)
-			w.stopped = true
 			return nil
 		default:
 		}
@@ -1110,7 +1317,7 @@ func (w *worker) processTask(task *task) error { // scanner *bufio.Scanner
 		// scanner.Text() to avoid allocation
 		if bytes.HasPrefix(bytes.TrimLeft(task.scanner.Bytes(), " \t"), []byte("--")) {
 			// is a comment, maybe a test command
-			Debugf("Parsing command %s ...", task.scanner.Text())
+			Debugf("w%d parsing command %s ...", w.id, task.scanner.Text())
 			linereader := bytes.NewReader(task.scanner.Bytes())
 			p := NewParser(linereader)
 			c, args, opts, err := p.Parse()
@@ -1119,22 +1326,38 @@ func (w *worker) processTask(task *task) error { // scanner *bufio.Scanner
 				Debugf("... parse error: %v", err)
 			} else {
 				// command found
-				Debugf("w%d parsed command with args: %v", w.id, args)
+				Debugf("w%d parsed command %s with args: %v", w.id, c.template, args)
 				err = c.f(w, args, opts, task)
 				if err != nil {
 					return err
 				}
+
+				if w.exiting {
+					break
+				}
 			}
 		} else {
 			// not a command, pass it to sqlitecloud
-			if w.res != nil {
-				w.res.Free()
-			}
-			w.res, _ = w.conn.Select(task.scanner.Text())
+			sql := strings.Trim(task.scanner.Text(), " \t")
+			sql = replaceEnvVarInSqlString(sql, w)
 
-			if debug {
-				Debugf("w%d executing sqlite statement: %s...", w.id, task.scanner.Text())
-				w.res.Dump()
+			// execute sql, but skip if it is empty
+			if len(sql) > 0 {
+				if w.res != nil {
+					w.res.Free()
+				}
+
+				Debugf("w%d executing...: %s", w.id, sql)
+
+				// TODO: change the name of the function from Select to Execute
+				w.res, w.reserr = w.conn.Select(sql)
+
+				if debug {
+					Debugf("w%d executed: %s", w.id, sql)
+					if w.res != nil {
+						w.res.Dump()
+					}
+				}
 			}
 		}
 		task.line++
@@ -1143,13 +1366,6 @@ func (w *worker) processTask(task *task) error { // scanner *bufio.Scanner
 	return nil
 }
 
-func init() {
-	initCommands()
-}
-
-var ppath = flag.String("path", "tester-scripts", "File or Directory containing the test scripts")
-var pconnstring = flag.String("connstring", "sqlitecloud://dev1.sqlitecloud.io/X", "Connection string for the main worker")
-
 func processFile(t *testing.T, path string, connstring string) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -1157,19 +1373,28 @@ func processFile(t *testing.T, path string, connstring string) {
 		t.SkipNow()
 	}
 	// start default task
-	var wg sync.WaitGroup
-	stopc := make(chan struct{})
+	wg = sync.WaitGroup{}
+	stopc = make(chan struct{})
 	workers = make(map[int]*worker)
+	env = make(map[string]interface{})
+	envMutex = sync.RWMutex{}
 
-	stopped := false
 	task := task{name: filepath.Base(file.Name()), line: 1, file: file}
 	t.Run(task.name, func(t *testing.T) {
-		w, err := newWorker(0, connstring, &wg, stopc, t)
+		w, err := newWorker(0, connstring, t)
 		if err != nil {
 			w.t.Errorf("w%d, task:%s(l:%d), %v", w.id, task.name, task.line, err)
 			t.SkipNow()
 		}
 		workers[0] = w
+
+		// the connection task was added by newWorker()
+		// the main worker (0) doens't execute the run loop like other workers
+		// so get the conntask and run it synchronously before the main task from the script file
+		conntask := <-w.taskc
+		w.processTask(conntask)
+		Debugf("w:%d task %s done", w.id, conntask.name)
+		wg.Done()
 
 		err = w.processTask(&task)
 		if err != nil {
@@ -1178,34 +1403,60 @@ func processFile(t *testing.T, path string, connstring string) {
 			// Errorf("w%d, task:%s(%d), %v", w.id, task.name, task.line, err)
 		}
 
-		stopped = w.stopped
+		if !w.exiting {
+			// Debugf("w%d closing connection", w.id)
+			if err := w.conn.Close(); err != nil {
+				w.t.Logf("w%d conn close error: %v", w.id, err)
+			}
+		}
+
 	})
 
 	Debugf("w0 stopping ...")
-	if !stopped {
-		close(stopc)
-	}
+	tryStopc()
 
 	// give time to workers loops to close
 	time.Sleep(time.Duration(100) * time.Millisecond)
 	Debugf("w0 stopped")
+
+	printStats(t)
 }
+
+func printStats(t *testing.T) {
+	if !testing.Verbose() {
+		return
+	}
+
+	ntests := 0
+	for _, w := range workers {
+		ntests += w.stats.ntests
+	}
+	t.Logf("nWorkers: %d", len(workers))
+	t.Logf("nTests: %d", ntests)
+}
+
+func init() {
+	initCommands()
+}
+
+var ppath = flag.String("path", "scripts", "File or Directory containing the test scripts")
+var pconnstring = flag.String("connstring", "sqlitecloud://dev1.sqlitecloud.io/", "Connection string for the main worker")
+var pdebug = flag.Bool("debug", false, "Enable debug logs")
+var debug = false
 
 // func main() {
 func TestTester(t *testing.T) {
-	// path := "tester-scripts"
-	// connstring := "sqlitecloud://dev1.sqlitecloud.io/X"
-
 	// parse flags
 	flag.Parse()
 	path := *ppath
 	connstring := *pconnstring
+	debug = *pdebug
 
 	Debugf("Parsing commands ...")
 	for i, c := range commands {
 		r := strings.NewReader(c.template)
 		p := NewParser(r)
-		tokens, err := p.ParseCommand()
+		tokens, err := p.ParseTemplate()
 		Debugf("command:\"%s\", tokens: %v", c.template, tokens)
 		if err != nil {
 			fmt.Println(err)

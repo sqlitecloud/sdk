@@ -1,0 +1,7 @@
+--loop i=1; i <= 10; i = i+1;
+	--task i NAME looptask sqlitecloud://dev1.sqlitecloud.io/X
+		SELECT {{ .i }};
+		--match value i 0 0
+	--end
+--end
+--wait all

@@ -3,7 +3,7 @@ SELECT 1;
 --match value 1 0 0
 -- doesn't work because rowsets don't have buffers... --match buffer 1
 --sleep 1000
---task 1 NAME task1 sqlitecloud://dev1.sqlitecloud.io/X
+--task 1 NAME task1 
 	SELECT 12345;
 	--match value 12345 0 0
 	--sleep 5000

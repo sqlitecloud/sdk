@@ -1,0 +1,44 @@
+--set dbname=tester_linearizable3.sqlite
+CREATE DATABASE {{.dbname}} IF NOT EXISTS; USE DATABASE {{.dbname}};
+--match type is ok
+CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
+--match type is ok
+
+---- start explicit concurrent transaction, but don't commit yet
+BEGIN CONCURRENT; INSERT INTO t1 (b) VALUES (1);
+--match type is ok
+
+--task 1 NAME task1_begin 
+    USE DATABASE {{.dbname}}
+    ---- explicit concurrent transaction
+	BEGIN; INSERT INTO t1 (b) VALUES (2); 
+    --match type is ok
+    COMMIT
+    --match type is ok
+
+    ---- implicit concurrent transaction
+    INSERT INTO t1 (b) VALUES (3); 
+    --match type is ok
+    --exit 0
+--end
+
+--wait 1
+---- commit must return error: database is locked
+COMMIT; 
+--match type is error
+
+---- the transaction is still active because the commit failed, so new changes from worker 1 are not visible
+SELECT sum(b) FROM t1;
+--match value 1 0 0
+
+ROLLBACK;
+--match type is ok
+
+---- after rollback we must see all the changes
+SELECT sum(b) FROM t1;
+--match value 5 0 0
+
+UNUSE DATABASE;
+--match type is ok
+DROP DATABASE {{.dbname}};
+--match type is ok

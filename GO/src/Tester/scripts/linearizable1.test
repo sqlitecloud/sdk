@@ -1,0 +1,52 @@
+--set dbname=tester_linearizable1.sqlite
+CREATE DATABASE {{.dbname}} IF NOT EXISTS; USE DATABASE {{.dbname}};
+--match type is ok
+CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
+--match type is ok
+INSERT INTO t1 (b) VALUES (1);
+--match type is ok
+SELECT * FROM t1;
+--match value 1 0 0
+--match value 1 0 1
+
+--task 1 NAME task1_begin 
+    USE DATABASE {{.dbname}}
+    ---- the begin command doen't start a read transaction in snapshot isolation, it will start with the first select
+	BEGIN 
+--end
+
+--wait 1
+---- update the table on worker 0 
+INSERT INTO t1 (b) VALUES (2) 
+--match type is ok
+
+--task 1 NAME task1_select
+    ---- start a new read transaction in snapshot isolation on worker 1, it must see the last change from worker 0 
+	SELECT b FROM t1 ORDER by a DESC LIMIT 1;
+    --match value 2 0 0
+--end
+
+SELECT b FROM t1 ORDER by a DESC LIMIT 1;
+--match value 2 0 0
+--wait 1
+---- update the table on worker 0 while worker 1 has a read transaction 
+INSERT INTO t1 (b) VALUES (3) 
+--match type is ok
+
+--task 1 NAME task1_select
+    ---- execute the select on worker 1, it must not see the last change from worker 0 
+	SELECT b FROM t1 ORDER by a DESC LIMIT 1;
+    --match value 2 0 0
+    COMMIT
+    --exit 0
+--end
+
+SELECT b FROM t1 ORDER by a DESC LIMIT 1;
+--match value 3 0 0
+--wait 1
+UNUSE DATABASE;
+--match type is ok
+---- LIST CONNECTIONS
+---- --dump
+DROP DATABASE {{.dbname}};
+--match type is ok

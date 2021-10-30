@@ -1,0 +1,18 @@
+--set dbname=tester_sqlite1.sqlite
+CREATE DATABASE {{.dbname}} IF NOT EXISTS; USE DATABASE {{.dbname}};
+--match type is ok
+CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
+--match type is ok
+
+ROLLBACK
+--dump
+--match type is error
+
+COMMIT
+--dump
+--match type is error
+
+UNUSE DATABASE;
+--match type is ok
+DROP DATABASE {{.dbname}};
+--match type is ok

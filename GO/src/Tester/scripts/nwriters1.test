@@ -1,0 +1,33 @@
+--set dbname=tester_nwriters1.sqlite
+--set n=50
+CREATE DATABASE {{.dbname}} IF NOT EXISTS; USE DATABASE {{.dbname}};
+--match type is ok
+CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
+--match type is ok
+
+--loop i=1; i<=n; i=i+1;
+    --task i NAME connect 
+        USE DATABASE {{.dbname}}
+    --end 
+--end
+
+--wait all
+
+--loop i=1; i<=n; i=i+1;
+    --task i NAME insert
+        INSERT INTO t1 (b) VALUES ({{.i}});
+        --dump
+        --exit
+    --end
+--end
+
+--wait all
+
+SELECT * FROM t1;
+--dump
+
+--sleep 1000
+UNUSE DATABASE;
+--match type is ok
+DROP DATABASE {{.dbname}};
+--match type is ok
