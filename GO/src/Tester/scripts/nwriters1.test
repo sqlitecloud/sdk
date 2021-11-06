@@ -6,15 +6,8 @@ CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
 --match type is ok
 
 --loop i=1; i<=n; i=i+1;
-    --task i NAME connect 
-        USE DATABASE {{.dbname}}
-    --end 
---end
-
---wait all
-
---loop i=1; i<=n; i=i+1;
     --task i NAME insert
+        USE DATABASE {{.dbname}}
         INSERT INTO t1 (b) VALUES ({{.i}});
         --dump
         --exit
@@ -26,8 +19,13 @@ CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
 SELECT * FROM t1;
 --dump
 
---sleep 1000
 UNUSE DATABASE;
 --match type is ok
+
+--sleep 100
+LIST CONNECTIONS;
+-- --match cols 6
+LIST DATABASE CONNECTIONS {{.dbname}};
+--match rows 0
 DROP DATABASE {{.dbname}};
 --match type is ok

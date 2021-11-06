@@ -134,7 +134,7 @@ func newWorker(id int, connstring string, t *testing.T) (*worker, error) {
 
 	// add the first task to connect to the server
 	wg.Add(1)
-	Debugf("w:%d add task %s", w.id, "-")
+	Debugf("w%d add task %s", w.id, "-")
 
 	w.taskc <- &task{name: "-", connstring: connstring}
 	return &w, nil
@@ -168,6 +168,7 @@ func initCommands() {
 		{"--match type is %type", commandMatchType, nil},
 		{"--match buffer %string [%row %col]", commandMatchBuffer, nil},
 		{"--match value %value [%row %col]", commandMatchValue, nil},
+		{"--match [rows %nrows] [cols %ncols]", commandMatchRowsCols, nil},
 		{"--loop %var=%val; &expr; %var=&expr;", commandLoop, nil},
 		{"--set %var=&expr", commandSet, nil},
 	}
@@ -426,7 +427,7 @@ func commandTask(w *worker, args []string, opts []bool, t *task) error {
 	}
 
 	wg.Add(1)
-	Debugf("w:%d add task %s", taskworker.id, tname)
+	Debugf("w%d add task %s", taskworker.id, tname)
 	taskworker.taskc <- &task{name: tname, line: tline, scanner: taskscanner, file: t.file}
 
 	return nil
@@ -627,6 +628,48 @@ func commandMatchValue(w *worker, args []string, opts []bool, t *task) error {
 
 	if s != expected {
 		return fmt.Errorf("expected: %s, got: %s", expected, s)
+	}
+
+	w.stats.ntests++
+	return nil
+}
+
+func commandMatchRowsCols(w *worker, args []string, opts []bool, t *task) error {
+	if len(args) < 1 {
+		return fmt.Errorf("missing arguments")
+	}
+
+	if !w.res.IsRowSet() && !w.res.IsArray() {
+		// TODO: print the human-readable representation of the type
+		return fmt.Errorf("expected RowSet or Array, got %v", w.res.GetType())
+	}
+
+	idx := 0
+	optsnames := [2]string{"rows", "cols"}
+	for i, optname := range optsnames {
+		if opts[i] {
+			expected := args[idx]
+			idx++
+			envMutex.RLock()
+			expectedinterface, _ := gval.Evaluate(expected, env)
+			envMutex.RUnlock()
+
+			expectedint, err := interfaceToInt(expectedinterface)
+			if err != nil {
+				return fmt.Errorf("expected int arg, got %s (%v)", expected, err)
+			}
+
+			val := 0
+			if i == 0 {
+				val = int(w.res.GetNumberOfRows())
+			} else {
+				val = int(w.res.GetNumberOfColumns())
+			}
+
+			if val != expectedint {
+				return fmt.Errorf("expected %d %s, got %d", expectedint, optname, val)
+			}
+		}
 	}
 
 	w.stats.ntests++
@@ -1220,7 +1263,7 @@ func (w *worker) runLoop() {
 			default:
 			}
 
-			Debugf("w:%d task %s done", w.id, task.name)
+			Debugf("w%d task %s done", w.id, task.name)
 			wg.Done()
 
 			if iserror {
@@ -1277,10 +1320,13 @@ func (w *worker) processTask(task *task) error {
 	// check if this is a connect task
 	if w.conn == nil && task.connstring != "" {
 		var err error
+		Debugf("w%d connecting ...", w.id)
 		if w.conn, err = sqlitecloud.Connect(task.connstring); err != nil {
+			Debugf("w%d connection error %v", w.id, err)
 			w.conn = nil
 			return err
 		}
+		Debugf("w%d connected", w.id)
 		return nil
 	}
 
@@ -1392,9 +1438,13 @@ func processFile(t *testing.T, path string, connstring string) {
 		// the main worker (0) doens't execute the run loop like other workers
 		// so get the conntask and run it synchronously before the main task from the script file
 		conntask := <-w.taskc
-		w.processTask(conntask)
-		Debugf("w:%d task %s done", w.id, conntask.name)
+		err = w.processTask(conntask)
+		Debugf("w%d task %s done", w.id, conntask.name)
 		wg.Done()
+		if err != nil {
+			w.t.Errorf("w%d, task:%s(l:%d), %v", w.id, task.name, task.line, err)
+			t.SkipNow()
+		}
 
 		err = w.processTask(&task)
 		if err != nil {
