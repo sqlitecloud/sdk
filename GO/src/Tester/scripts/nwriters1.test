@@ -1,5 +1,5 @@
 --set dbname=tester_nwriters1.sqlite
---set n=50
+--set n=500
 CREATE DATABASE {{.dbname}} IF NOT EXISTS; USE DATABASE {{.dbname}};
 --match type is ok
 CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
@@ -9,7 +9,16 @@ CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
     --task i NAME insert
         USE DATABASE {{.dbname}}
         INSERT INTO t1 (b) VALUES ({{.i}});
-        --dump
+        ----dump
+        -- the following exit command is commented to avoid a tls handshake error with the localhost server on mac
+        ----exit
+    --end
+--end
+
+--wait all
+
+--loop i=1; i<=n; i=i+1;
+    --task i NAME exit
         --exit
     --end
 --end
@@ -22,10 +31,11 @@ SELECT * FROM t1;
 UNUSE DATABASE;
 --match type is ok
 
---sleep 100
+----sleep 100
 LIST CONNECTIONS;
 -- --match cols 6
 LIST DATABASE CONNECTIONS {{.dbname}};
+--dump
 --match rows 0
 DROP DATABASE {{.dbname}};
 --match type is ok

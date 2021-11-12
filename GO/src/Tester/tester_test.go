@@ -78,6 +78,7 @@ type task struct {
 	scanner    *bufio.Scanner
 	connstring string
 	file       *os.File
+	env        map[string]interface{} // local copy environment variables
 }
 
 type statistics struct {
@@ -104,7 +105,7 @@ var (
 	stopmu   sync.Mutex             // mutex used to protect the access to stopc and tstopped var
 	stopc    chan struct{}          // channel used to stop the execution of all the workers by calling close(stopc), for example in case of error
 	stopped  bool                   // flag to avoid calling multiple times close(stopc)
-	envMutex sync.RWMutex           //global envMutex, it's a pointer because mutexes cannot be copied
+	envMutex sync.RWMutex           // global envMutex, it's a pointer because mutexes cannot be copied
 	env      map[string]interface{} // global environment variables
 )
 
@@ -324,9 +325,7 @@ func commandExit(w *worker, args []string, opts []bool, t *task) error {
 		}
 
 		strval := args[0]
-		envMutex.RLock()
-		interfaceval, err := gval.Evaluate(strval, env)
-		envMutex.RUnlock()
+		interfaceval, err := gval.Evaluate(strval, t.env)
 		if err != nil {
 			return fmt.Errorf("expected int arg, got %s (%v)", strval, err)
 		}
@@ -338,11 +337,12 @@ func commandExit(w *worker, args []string, opts []bool, t *task) error {
 		mustclose = intval == 0
 	}
 
-	if mustclose {
+	if mustclose && w.conn != nil {
 		// Debugf("w%d closing connection", w.id)
 		if err := w.conn.Close(); err != nil {
 			w.t.Logf("w%d conn close error: %v", w.id, err)
 		}
+		w.conn = nil
 	}
 
 	return nil
@@ -363,9 +363,7 @@ func commandTask(w *worker, args []string, opts []bool, t *task) error {
 
 	iargs := 0
 	// workerid, err := strconv.Atoi(args[iargs])
-	envMutex.RLock()
-	interfaceval, err := gval.Evaluate(args[iargs], env)
-	envMutex.RUnlock()
+	interfaceval, err := gval.Evaluate(args[iargs], t.env)
 	iargs++
 	if err != nil {
 		return fmt.Errorf("expected int arg, got %s (%v)", args[iargs], err)
@@ -428,7 +426,12 @@ func commandTask(w *worker, args []string, opts []bool, t *task) error {
 
 	wg.Add(1)
 	Debugf("w%d add task %s", taskworker.id, tname)
-	taskworker.taskc <- &task{name: tname, line: tline, scanner: taskscanner, file: t.file}
+
+	envMutex.RLock()
+	taskenv := copyMap(env)
+	envMutex.RUnlock()
+
+	taskworker.taskc <- &task{name: tname, line: tline, scanner: taskscanner, file: t.file, env: taskenv}
 
 	return nil
 }
@@ -611,9 +614,7 @@ func commandMatchValue(w *worker, args []string, opts []bool, t *task) error {
 	}
 
 	expected := args[0]
-	envMutex.RLock()
-	expectedvalue, err := gval.Evaluate(expected, env)
-	envMutex.RUnlock()
+	expectedvalue, err := gval.Evaluate(expected, t.env)
 	expected = fmt.Sprint(expectedvalue)
 
 	// check result error case (res == nil, reserr != nil)
@@ -650,9 +651,7 @@ func commandMatchRowsCols(w *worker, args []string, opts []bool, t *task) error 
 		if opts[i] {
 			expected := args[idx]
 			idx++
-			envMutex.RLock()
-			expectedinterface, _ := gval.Evaluate(expected, env)
-			envMutex.RUnlock()
+			expectedinterface, _ := gval.Evaluate(expected, t.env)
 
 			expectedint, err := interfaceToInt(expectedinterface)
 			if err != nil {
@@ -676,42 +675,37 @@ func commandMatchRowsCols(w *worker, args []string, opts []bool, t *task) error 
 	return nil
 }
 
-// func copyMap(m map[string]interface{}) map[string]interface{} {
-// 	cp := make(map[string]interface{})
-// 	for k, v := range m {
-// 		vm, ok := v.(map[string]interface{})
-// 		if ok {
-// 			cp[k] = copyMap(vm)
-// 		} else {
-// 			cp[k] = v
-// 		}
-// 	}
+func copyMap(m map[string]interface{}) map[string]interface{} {
+	cp := make(map[string]interface{})
+	for k, v := range m {
+		vm, ok := v.(map[string]interface{})
+		if ok {
+			cp[k] = copyMap(vm)
+		} else {
+			cp[k] = v
+		}
+	}
 
-// 	return cp
-// }
+	return cp
+}
 
 func boolExpr(w *worker, t *task, expression string) bool {
-	envMutex.RLock()
-	value, err := gval.Evaluate(expression, env)
-	envMutex.RUnlock()
+	value, err := gval.Evaluate(expression, t.env)
 	if err != nil {
-		envMutex.RLock()
-		w.t.Logf("WARNING: w%d %s:%d error evaluating expression:%s with env:%v", w.id, t.name, t.line, expression, env)
-		envMutex.RUnlock()
+		w.t.Logf("WARNING: w%d %s:%d error evaluating expression:%s with env:%v", w.id, t.name, t.line, expression, t.env)
 		return false
 	}
 	return value.(bool)
 }
 
 func assignExpr(w *worker, t *task, key string, expression string) {
-	envMutex.RLock()
-	value, err := gval.Evaluate(expression, env)
-	envMutex.RUnlock()
+	value, err := gval.Evaluate(expression, t.env)
 	if err != nil {
 		// w.t.Logf("WARNING: w%d %s:%d error evaluating expression:%s with env:%v", w.id, t.name, t.line, expression, w.env)
 		value = expression
 	}
 
+	t.env[key] = value
 	envMutex.Lock()
 	env[key] = value
 	envMutex.Unlock()
@@ -790,9 +784,7 @@ func commandSet(w *worker, args []string, opts []bool, t *task) error {
 	assignExpr(w, t, varname, expr)
 
 	if debug {
-		envMutex.RLock()
-		Debugf("set var:%s, expr:%s, value:%v", varname, expr, env[varname])
-		envMutex.RUnlock()
+		Debugf("set var:%s, expr:%s, value:%v", varname, expr, t.env[varname])
 	}
 
 	return nil
@@ -1303,22 +1295,20 @@ func (w *worker) runLoop() {
 	}
 }
 
-func replaceEnvVarInSqlString(s string, w *worker) string {
+func replaceEnvVarInSqlString(s string, w *worker, t *task) string {
 	tmpl, err := template.New("sql").Parse(s)
 	buf := &bytes.Buffer{}
-	envMutex.RLock()
-	if err = tmpl.Execute(buf, env); err != nil {
-		envMutex.RUnlock()
+	if err = tmpl.Execute(buf, t.env); err != nil {
 		fmt.Println(err)
 		return s
 	}
-	envMutex.RUnlock()
 	return buf.String()
 }
 
 func (w *worker) processTask(task *task) error {
 	// check if this is a connect task
 	if w.conn == nil && task.connstring != "" {
+		// it's only a connection task
 		var err error
 		Debugf("w%d connecting ...", w.id)
 		if w.conn, err = sqlitecloud.Connect(task.connstring); err != nil {
@@ -1385,7 +1375,7 @@ func (w *worker) processTask(task *task) error {
 		} else {
 			// not a command, pass it to sqlitecloud
 			sql := strings.Trim(task.scanner.Text(), " \t")
-			sql = replaceEnvVarInSqlString(sql, w)
+			sql = replaceEnvVarInSqlString(sql, w, task)
 
 			// execute sql, but skip if it is empty
 			if len(sql) > 0 {
@@ -1425,7 +1415,11 @@ func processFile(t *testing.T, path string, connstring string) {
 	env = make(map[string]interface{})
 	envMutex = sync.RWMutex{}
 
-	task := task{name: filepath.Base(file.Name()), line: 1, file: file}
+	envMutex.RLock()
+	taskenv := copyMap(env)
+	envMutex.RUnlock()
+
+	task := task{name: filepath.Base(file.Name()), line: 1, file: file, env: taskenv}
 	t.Run(task.name, func(t *testing.T) {
 		w, err := newWorker(0, connstring, t)
 		if err != nil {
@@ -1458,6 +1452,7 @@ func processFile(t *testing.T, path string, connstring string) {
 			if err := w.conn.Close(); err != nil {
 				w.t.Logf("w%d conn close error: %v", w.id, err)
 			}
+			w.conn = nil
 		}
 
 	})
