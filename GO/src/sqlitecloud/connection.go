@@ -287,7 +287,7 @@ func (this *SQCloud) reconnect() error {
 
   switch {
   case this.cert != nil:
-    if tls_c, err := tls.DialWithDialer( &dialer, "tcp", fmt.Sprintf( "%s:%d", this.Host, this.Port ), this.cert ); err != nil {
+    if tls_c, err := tls.DialWithDialer( &dialer, "tcp", net.JoinHostPort(this.Host, strconv.Itoa(this.Port)), this.cert ); err != nil {
       this.ErrorCode    = -1
       this.ErrorMessage = err.Error()
       return err
@@ -297,7 +297,7 @@ func (this *SQCloud) reconnect() error {
     }
   default:
     // todo: use the dialer...
-    if c, err := net.DialTimeout( "tcp", fmt.Sprintf( "%s:%d", this.Host, this.Port ), this.Timeout ); err != nil {
+    if c, err := net.DialTimeout( "tcp", net.JoinHostPort(this.Host, strconv.Itoa(this.Port)), this.Timeout ); err != nil {
       this.ErrorCode    = -1
       this.ErrorMessage = err.Error()
       return err
