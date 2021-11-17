@@ -1,0 +1,5 @@
+{ 
+  ResponseID: 0,
+  Status:  0,
+  Message: "pong",
+}

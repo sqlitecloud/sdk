@@ -1,5 +1,5 @@
 # Pre-requirements
-install-prerequirements:	liner term docopt-go dburl lz4 godoc gosec
+install-prerequirements:	liner term docopt-go dburl lz4 godoc gosec gorilla ini go-svc kardianos
 
 # liner
 liner:
@@ -42,6 +42,30 @@ gosec:
 ifeq ($(wildcard bin/gosec),)
 	curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh
 endif
+
+
+# gorilla
+gorilla:
+ifeq ($(wildcard src/github.com/gorilla),)
+	go get github.com/gorilla/websocket
+	go get -u github.com/gorilla/mux
+endif
+
+# ini
+ini:
+ifeq ($(wildcard src/gopkg.in/ini.v1),)
+	git config --global http.sslverify "false"
+	go get gopkg.in/ini.v1
+	git config --global http.sslverify "true"
+endif
+
+# kardianos
+kardianos:
+ifeq ($(wildcard src/github.com/kardianos),)
+	go get github.com/kardianos/service
+endif
+
+
 
 # Test Programs
 bin/tls-test1:	sdk src/Test/tls-test1.go

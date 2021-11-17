@@ -1,0 +1,77 @@
+<HTML>
+  <HEAD>
+    <TITLE>
+      Hello SQLite Cloud
+    </TITLE>
+    <LINK rel="stylesheet" HREF="css/default.css">
+  </HEAD>
+  <BODY>
+    <DIV class="fireworks-container" STYLE="height: 100%;">
+      <IMG src="img/logo-t.png" STYLE="position: absolute; left: 50%; margin-left: -185px; margin-top: 150px;"/>
+    </DIV>
+  </BODY>
+  <SCRIPT src="js/fireworks.js"></SCRIPT>
+  <SCRIPT>
+    const container = document.querySelector('.fireworks-container')
+    const fireworksConfig = {
+        hue: {
+            min: 0,
+            max: 345
+        },
+        delay: {
+            min: 15,
+            max: 15
+        },
+        rocketsPoint: 50,
+        opacity: .5,
+        speed: 10,
+        acceleration: 1.2,
+        friction: .97,
+        gravity: 1.5,
+        particles: 90,
+        trace: 3,
+        explosion: 6,
+        autoresize: !0,
+        brightness: {
+            min: 50,
+            max: 80,
+            decay: {
+                min: .015,
+                max: .03
+            }
+        },
+        boundaries: {
+            x: 50,
+            y: 50,
+            width: container.clientWidth,
+            height: container.clientHeight,
+            visible: !1
+        },
+        sound: {
+            enabled: !1,
+            files: [document.location.origin + document.location.pathname + "sounds/explosion0.mp3", document.location.origin + document.location.pathname + "sounds/explosion1.mp3", document.location.origin + document.location.pathname + "sounds/explosion2.mp3"],
+            volume: {
+                min: 2,
+                max: 4
+            }
+        },
+        mouse: {
+            click: !0,
+            move: !1,
+            max: 1
+        }
+    },
+    backgroundConfig = {
+        backgroundColor: "#000000",
+        backgroundImage: "",
+        backgroundSize: "cover",
+        backgroundPosition: "50% 50%",
+        backgroundRepeat: "no-repeat",
+        container: !1,
+        fps: !1
+    };
+
+    const fireworks = new Fireworks(container, fireworksConfig )
+    fireworks.start()
+  </SCRIPT>
+</HTML>
