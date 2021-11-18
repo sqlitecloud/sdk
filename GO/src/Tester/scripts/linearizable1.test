@@ -38,6 +38,8 @@ INSERT INTO t1 (b) VALUES (3)
 	SELECT b FROM t1 ORDER by a DESC LIMIT 1;
     --match value 2 0 0
     COMMIT
+    UNUSE DATABASE;
+    --match type is ok
     --exit 0
 --end
 

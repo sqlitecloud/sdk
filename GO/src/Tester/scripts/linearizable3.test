@@ -19,6 +19,8 @@ BEGIN CONCURRENT; INSERT INTO t1 (b) VALUES (1);
     ---- implicit concurrent transaction
     INSERT INTO t1 (b) VALUES (3); 
     --match type is ok
+    UNUSE DATABASE;
+    --match type is ok
     --exit 0
 --end
 

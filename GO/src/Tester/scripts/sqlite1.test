@@ -5,11 +5,13 @@ CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
 --match type is ok
 
 ROLLBACK
---dump
+--** --dump
+--** expecting error: cannot rollback - no transaction is active
 --match type is error
 
 COMMIT
---dump
+--** --dump
+--** expecting error: cannot commit - no transaction is active
 --match type is error
 
 UNUSE DATABASE;

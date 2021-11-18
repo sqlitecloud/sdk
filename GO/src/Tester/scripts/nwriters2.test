@@ -1,7 +1,7 @@
---** launch n concurrent writers, can't be run concurrently multiple times because 
---** it check the number of connection at the end of the script and tries to delete the db
+--** launch n concurrent writers, it can be invoked multiple times concurrently
+--** for example using goreman (see Procfile)
 
---set dbname=tester_nwriters1.sqlite
+--set dbname=tester_nwriters2.sqlite
 --set n=500
 CREATE DATABASE {{.dbname}} IF NOT EXISTS; USE DATABASE {{.dbname}};
 --match type is ok
@@ -12,9 +12,9 @@ CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
     --task i NAME insert
         USE DATABASE {{.dbname}}
         INSERT INTO t1 (b) VALUES ({{.i}});
-        -- --dump
+        ----dump
         -- the following exit command is commented to avoid a tls handshake error with the localhost server on mac
-        -- --exit
+        ----exit
     --end
 --end
 
@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
 
 --wait all
 
--- this value can be less then "n" if some concurrent INSERT commands fail for concurrency issues
 SELECT COUNT(*) FROM t1;
 --dump
 
@@ -37,9 +36,3 @@ UNUSE DATABASE;
 
 ----sleep 100
 LIST CONNECTIONS;
--- --match cols 6
-LIST DATABASE CONNECTIONS {{.dbname}};
--- --dump
---match rows 0
-DROP DATABASE {{.dbname}};
---match type is ok
