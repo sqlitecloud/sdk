@@ -60,50 +60,75 @@ var copyright    = "(c) 2021 by SQLite Cloud Inc."
 var cfg *ini.File
 
 func main() {
-	// Read the .ini file -> https://github.com/go-ini/ini
-	var err error
-  if cfg, err = ini.Load( "sqliteweb.ini" ); err == nil {
+	// Read command line arguments
+	if p, err := docopt.ParseArgs( strings.ReplaceAll( usage, "::", ": " ), nil, fmt.Sprintf( "%s %s, %s", app_name, version, copyright ) ); err != nil {
+		panic( err )
+	} else {
 
-    // Overload the .ini file with the command line arguments
-		if p, err := docopt.ParseArgs( strings.ReplaceAll( usage, "::", ": " ), nil, fmt.Sprintf( "%s %s, %s", app_name, version, copyright ) ); err == nil {
+		// Look for a custom config file
+		configfile := "/etc/sqliteweb/sqliteweb.ini"
+		for key, a := range p {
+			switch key = strings.TrimSpace( strings.ToLower( key ) ); {
+			case a   == nil:  				continue;
+			case key == "--config": 	configfile = fmt.Sprintf( "%v", a )
+		} }
+
+		// Read the .ini file -> https://github.com/go-ini/ini
+		var err error
+  	if cfg, err = ini.Load( configfile ); err != nil {
+			fmt.Printf( "Fail to read file: %v", err )
+    	os.Exit(1)
+		} else {
+
+			// Overload the .ini file with the command line arguments
 			for key, a := range p {
 				if a != nil { 
 					value := fmt.Sprintf( "%v", a )
+					fmt.Printf( "%s = %v\r\n", key, a )
+
 					switch strings.TrimSpace( strings.ToLower( key ) ) {
-					case "--stubs":		cfg.Section( "stubs" ).	Key( "path" ).	 SetValue( value )
-					case "--www":	  	cfg.Section( "www" ).	  Key( "path" ).	 SetValue( value )
 					case "--address": cfg.Section( "server" ).Key( "address" ).SetValue( value )
 					case "--port": 		cfg.Section( "server" ).Key( "port"    ).SetValue( value )
+					case "--cert": 		cfg.Section( "server" ).Key( "cert_chain"	).SetValue( value )
+					case "--key": 		cfg.Section( "server" ).Key( "cert_key"   ).SetValue( value )
+
+					case "--www":	  	cfg.Section( "www" ).	  Key( "path" ).	 SetValue( value )
+					case "--api":			cfg.Section( "api" ).		Key( "path" ).	 SetValue( value )
 					default: // fmt.Printf( "%10s = %v\r\n", key, a )
 					}
 				}
 			}
+
+			// start the service -> https://github.com/kardianos/service
+			svcConfig := &service.Config {
+				Name:        app_name,  // "GoServiceExampleSimple",
+				DisplayName: long_name, // "Go Service Example",
+				Description: fmt.Sprintf( "%s %s, %s", long_name, version, copyright ), // "This is an example Go service.",
+			}
+
+			initializeSQLiteWeb()
+			SQLiteWeb.Address 	= cfg.Section( "server" ).Key( "address" ).String()
+			SQLiteWeb.Port 			= cfg.Section( "server" ).Key( "port" ).RangeInt( 8433, 0, 0xFFFF )
+		
+			SQLiteWeb.CertPath 	= cfg.Section( "server" ).Key( "cert_chain" ).String()
+			SQLiteWeb.KeyPath 	= cfg.Section( "server" ).Key( "cert_key" ).String()
+		
+			SQLiteWeb.WWWPath 	= cfg.Section( "www" ).   Key( "path" ).String()
+			SQLiteWeb.APIPath   = cfg.Section( "api" ). 	Key( "path" ).String()
+
+			SQLiteWeb.Auth.JWTSecret = []byte( cfg.Section( "auth" ).Key( "jwt_key" ).String() )
+			SQLiteWeb.Auth.JWTTTL    = cfg.Section( "auth" ).Key( "jwt_ttl" ).RangeInt64( 300, 0, 0xFFFF )
+
+			initStubs()
+			initWWW()
+
+			if s, err := service.New( SQLiteWeb, svcConfig ); err == nil {
+				err = s.Run()
+			} else {
+					// log.Fatal(err)
+				panic( err )
+			}
+
 		}
-		// start the service -> https://github.com/kardianos/service
-		svcConfig := &service.Config {
-			Name:        app_name,  // "GoServiceExampleSimple",
-			DisplayName: long_name, // "Go Service Example",
-			Description: fmt.Sprintf( "%s %s, %s", long_name, version, copyright ), // "This is an example Go service.",
-		}
-
-		initializeSQLiteWeb()
-		SQLiteWeb.Address 	= cfg.Section( "server" ).Key("address").String()
-		SQLiteWeb.Port 			= cfg.Section( "server" ).Key("port").RangeInt( 8433, 0, 0xFFFF )
-		SQLiteWeb.WWWPath 	= cfg.Section( "www" ).   Key("path").String()
-		SQLiteWeb.StubsPath = cfg.Section( "stubs" ). Key("path").String()
-
-		initStubs()
-		initWWW()
-
-		if s, err := service.New( SQLiteWeb, svcConfig ); err == nil {
-			err = s.Run()
-		} else {
-				// log.Fatal(err)
-			panic( err )
-		}
-
-  } else {
-		fmt.Printf( "Fail to read file: %v", err )
-    os.Exit(1)
-	}
+	}	
 }

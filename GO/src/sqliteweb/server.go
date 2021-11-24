@@ -37,8 +37,14 @@ type Server struct{
 	Address       string
 	Port          int   
 
+	Hostname			string
+	CertPath			string
+	KeyPath 			string
+
+	Auth 					AuthServer
+
 	WWWPath       string
-	StubsPath			string
+	APIPath				string
 
 	server  *http.Server
 	router  *mux.Router
@@ -52,8 +58,19 @@ func initializeSQLiteWeb() {
 		SQLiteWeb = &Server{
 			Address: 		"127.0.0.1",
 			Port: 			8433,
+
+			Hostname:		"",
+			CertPath:   "",
+			KeyPath:    "",
+
+			Auth:				AuthServer{
+				JWTSecret:  []byte( "" ),
+				JWTTTL:     0,	
+				Tokens:		map[string]TokenInfo{},
+			},
+
 			WWWPath: 		"",
-			StubsPath: 	"",
+			APIPath: 		"",
 			server: 		nil,
 			router: 		mux.NewRouter(),
 			ticker: 		nil,
@@ -74,6 +91,7 @@ func ( this *Server ) Start( s service.Service ) error {
 	this.server = &http.Server{
 		Addr:         fmt.Sprintf( "%s:%d", this.Address, this.Port ),
 		Handler:      this.router,
+		
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
@@ -94,9 +112,11 @@ func ( this *Server ) Start( s service.Service ) error {
 	return nil
 }
 func ( this *Server ) run() {
-	if this.server.ListenAndServe() != http.ErrServerClosed { // Diese Zeile hängt jetzt bis Shutdown aufgerufen wird...
+		if this.server.ListenAndServeTLS( this.CertPath, this.KeyPath ) != http.ErrServerClosed { // Diese Zeile hängt jetzt bis Shutdown aufgerufen wird...
 		// ich wurde friedlich per Shutdown beendet...
+		println( "Drin" )
 	}
+	println( "Ende" )
 	//this.Stop()
 }
 func (this *Server ) Stop( s service.Service ) error {

@@ -8,6 +8,11 @@ go get github.com/deadsy/go-cli
 go get github.com/docopt/docopt-go
 go get github.com/xo/dburl
 
+License: BSD2
+go get github.com/gorilla/websocket
+go get github.com/gorilla/mux
+
+
 License: BSD3
 go get github.com/pierrec/lz4
 go get -u golang.org/x/tools/cmd/godoc
@@ -23,3 +28,18 @@ https://github.com/deadsy/go-cli
 
 Interesting, but not used:
 https://github.com/lucasem/escaper
+
+
+"encoding/json"
+	"net/http"
+"github.com/gorilla/mux"
+
+
+"github.com/jmoiron/sqlx"
+_ "github.com/mattn/go-sqlite3"
+
+
+
+
+go get github.com/kardianos/service
+go get gopkg.in/ini.v1

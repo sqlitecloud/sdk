@@ -41,7 +41,7 @@ func init() {
 }
 
 func initStubs() {
-	if PathExists( SQLiteWeb.StubsPath ) {
+	if PathExists( SQLiteWeb.APIPath ) {
 		SQLiteWeb.router.HandleFunc( "/api/{endpoint:.*}", SQLiteWeb.stubHandler)
 	}	
 }
@@ -49,7 +49,7 @@ func initStubs() {
 func (this *Server) stubHandler(writer http.ResponseWriter, request *http.Request) {
 	v        := mux.Vars( request )
 	endpoint := strings.ReplaceAll( v[ "endpoint" ] + "/", "//", "/" )
-	file := fmt.Sprintf( "%s/%s%s.json", this.StubsPath, endpoint, strings.TrimSpace( strings.ToUpper( request.Method ) ) )
+	file := fmt.Sprintf( "%s/%s%s.json", this.APIPath, endpoint, strings.TrimSpace( strings.ToUpper( request.Method ) ) )
 	
 	println( file )
 

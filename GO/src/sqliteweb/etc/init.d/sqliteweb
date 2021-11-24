@@ -1,0 +1,49 @@
+#!/bin/sh
+# SQliteWeb start/stop script.
+
+# Comments to support chkconfig on RedHat Linux
+# chkconfig: 2345 64 36
+# description: WebInterface for the SQLite Cloud.
+
+# Comments to support LSB init script conventions
+### BEGIN INIT INFO
+# Provides: sqliteweb
+# Required-Start: $local_fs $network $remote_fs
+# Should-Start: ypbind nscd ldap ntpd xntpd
+# Required-Stop: $local_fs $network $remote_fs
+# Default-Start:  2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: start and stop SQLiteWeb
+# Description: WebInterface for the SQLite Cloud.
+### END INIT INFO
+
+mode=$1
+case "$mode" in
+	
+	'start')
+		# Start daemon
+		echo "Starting SQLiteWeb"
+		/opt/sqliteweb/sbin/sqliteweb_linux --config /opt/sqliteweb/etc/sqliteweb/sqliteweb.ini > /dev/null 2>&1 &
+    ;;
+
+ 	'stop')
+ 		# Stop daemon
+		echo "Shutting down SQLiteWeb"
+		killall sqliteweb_linux
+		;;
+		 
+	'restart')
+		# Restart daemon
+		echo "Restarting SQLiteWeb"
+		killall sqliteweb_linux
+		/opt/sqliteweb/sbin/sqliteweb_linux --config /opt/sqliteweb/etc/sqliteweb/sqliteweb.ini > /dev/null 2>&1 &
+		;;
+		
+	*)
+		# Usage
+		echo "Usage: $0  {start|stop|restart}"
+		exit 1
+		;;
+esac
+
+exit 0

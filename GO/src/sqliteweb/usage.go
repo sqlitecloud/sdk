@@ -24,17 +24,22 @@ Usage:
   sqliteweb -?|--help|--version
 
 Examples:
-  sqliteweb --address=0.0.0.0 --port 8433 --stubs=api
+  sqliteweb --config=../etc/sqliteweb.ini
   sqliteweb --version
   sqliteweb -?
 
 General Options:
-  --stubs <PATH>           Use PATH for dummy responses [default::api]
-  --www <PATH>             Use PATH for REACT Web Sites [default::www]
+  --config=<PATH>          Use config file in <PATH> [default: /etc/sqliteweb/sqliteweb.ini]
   -?, --help               Show this screen
   --version                Display version information
 
 Connection Options:
   -a, --address IP         Use IP address [default::0.0.0.0]
-  -p, --port PORT          Use Port [default::8860]
+  -p, --port PORT          Use Port [default::8433]
+  -c, --cert <FILE>        Use certificate chain in <FILE>        
+  -k, --key <FILE>         Use private certificate key in <FILE>
+
+Server Options:
+  --www=<PATH>             Server static web sites from <PATH>
+  --api=<PATH>             Server dummy REST stubs from <PATH>
 `
