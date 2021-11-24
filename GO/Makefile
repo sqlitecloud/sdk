@@ -1,5 +1,5 @@
 # Pre-requirements
-install-prerequirements:	liner term docopt-go dburl lz4 godoc gosec gorilla ini go-svc kardianos
+install-prerequirements:	liner term docopt-go dburl lz4 godoc gosec gorilla ini go-svc kardianos golang-jwt
 
 # liner
 liner:
@@ -66,6 +66,11 @@ ifeq ($(wildcard src/github.com/kardianos),)
 endif
 
 
+# golang-jwt
+golang-jwt:
+ifeq ($(wildcard src/github.com/golang-jwt),)
+	go get github.com/golang-jwt/jwt
+endif
 
 # Test Programs
 bin/tls-test1:	sdk src/Test/tls-test1.go
@@ -104,6 +109,44 @@ bin/sqlc:	sdk src/CLI/sqlc.go
 	
 cli: bin/sqlc
 
+
+# SqliteWeb
+bin/sqliteweb_osx: src/sqliteweb/*.go
+	go build -o bin/sqliteweb_osx src/sqliteweb/*.go
+	
+bin/sqliteweb_linux: src/sqliteweb/*.go
+	GOOS=linux go build -o bin/sqliteweb_linux src/sqliteweb/*.go
+	
+bin/sqliteweb_win: src/sqliteweb/*.go
+	GOOS=windows go build -o bin/sqliteweb_win src/sqliteweb/*.go
+
+id_rsa.pub:
+ifeq ($(wildcard  ~/.ssh/id_rsa.pub),)
+	ssh-keygen -t rsa
+endif
+
+web_install: id_rsa.pub
+	ssh-copy-id ***REMOVED***
+	
+web_update: bin/sqliteweb_linux
+	ssh ***REMOVED*** '/etc/init.d/sqliteweb stop'
+	scp bin/sqliteweb_linux web1.sqlitecloud.io:/opt/sqliteweb/sbin/.
+	ssh ***REMOVED*** '/etc/init.d/sqliteweb start &'
+	
+
+web_stop:
+	ssh ***REMOVED*** '/etc/init.d/sqliteweb stop'
+	
+web_start:
+	ssh ***REMOVED*** '/etc/init.d/sqliteweb start'
+	
+web_restart:
+	ssh ***REMOVED*** '/etc/init.d/sqliteweb restart'
+
+web_test:
+	@curl --silent --insecure https://web1.sqlitecloud.io:8433/api/v1/ping | grep -q "ResponseID" && echo "Ping...success." || echo "Ping...ERROR."
+	@curl --silent --insecure -X POST https://web1.sqlitecloud.io:8433/api/v1/auth -H 'Content-Type: application/json; charset=utf-8' -d '{"RequestID":1405,"Login":"admin","Password":"foo"}' | grep -q "ResponseID" && echo "Auth...success." || echo "Auth...ERROR."
+
 github:
 	open https://github.com/sqlitecloud/sdk 
 	
@@ -121,7 +164,7 @@ doc:	godoc
 	@./bin/godoc -http=:6060 -index -play -goroot ./src/sqlitecloud
 
 clean:
-	rm -rf rm -rf src/github.com src/golang.org/
-	rm -rf src/Test/test1
+	rm -rf rm -rf src/github.com src/golang.org/ src/honnef.co src/mvdan.cc src/gopkg.in
+	rm -rf bin/tls-* bin/dump* bin/selc* 
 
 all: sdk cli test
