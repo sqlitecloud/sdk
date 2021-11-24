@@ -9,3 +9,5 @@ export GOPATH=/Users/andrea/Documents/GitHub/SQLiteCloud/sdk/GO/
 ### Run a specific test on localhost, with debug mode enabled
 `go test -v -path=scripts/nwriters1.test -debug -connstring=sqlitecloud://localhost`
 
+### no tls
+`go test -v -path=scripts/nwriters1.test -debug -connstring=sqlitecloud://localhost?tls=no`

@@ -82,7 +82,9 @@ type task struct {
 }
 
 type statistics struct {
-	ntests int
+	failed        bool
+	nchecks       int
+	nfailedchecks int
 }
 
 type worker struct {
@@ -109,9 +111,9 @@ var (
 	env      map[string]interface{} // global environment variables
 )
 
-func tryStopc() {
+func tryStopc(force bool) {
 	stopmu.Lock()
-	if !stopped {
+	if !stopped && (skip || force) {
 		stopped = true
 		close(stopc)
 		Debugf("Execution Stopped")
@@ -134,9 +136,7 @@ func newWorker(id int, connstring string, t *testing.T) (*worker, error) {
 	}
 
 	// add the first task to connect to the server
-	wg.Add(1)
-	Debugf("w%d add task %s", w.id, "-")
-
+	Debugf("w%d connection task %s", w.id, connstring)
 	w.taskc <- &task{name: "-", connstring: connstring}
 	return &w, nil
 }
@@ -146,9 +146,10 @@ func newWorker(id int, connstring string, t *testing.T) (*worker, error) {
 type commandFunc func(w *worker, args []string, opts []bool, t *task) error // scanner *bufio.Scanner
 
 type command struct {
-	template string
-	f        commandFunc
-	tokens   []Token
+	template     string
+	desctription string
+	f            commandFunc
+	tokens       []Token
 }
 
 var commands = make([]command, 0, 50)
@@ -161,17 +162,18 @@ var endcommandb = []byte(endcommand)
 
 func initCommands() {
 	cs := [...]command{
-		{"--sleep %ms", commandSleep, nil},
-		{"--wait %workerid_or_all [%timeout_ms]", commandWait, nil},
-		{"--dump ", commandDump, nil},      // dump the last result
-		{"--exit [%rc]", commandExit, nil}, // stop the worker, if rc>0 without shutting down the client.  (In other words, simulate a crash.)
-		{"--task %workerid_or_expr [name %name] [%connectionstring]", commandTask, nil},
-		{"--match type is %type", commandMatchType, nil},
-		{"--match buffer %string [%row %col]", commandMatchBuffer, nil},
-		{"--match value %value [%row %col]", commandMatchValue, nil},
-		{"--match [rows %nrows] [cols %ncols]", commandMatchRowsCols, nil},
-		{"--loop %var=%val; &expr; %var=&expr;", commandLoop, nil},
-		{"--set %var=&expr", commandSet, nil},
+		{"--list commands", "List the tester builtin commands.", commandListCommands, nil},
+		{"--sleep %ms", "Pause for N milliseconds.", commandSleep, nil},
+		{"--wait %workerid_or_all [%timeout_ms]", "Wait until all tasks complete for the given client.  If WORKERID_OR_ALL is \"all\" then wait for all clients to complete, otherwise only for the specified WORKERID.  Wait no longer than TIMEOUT_MS milliseconds (default 10,000).", commandWait, nil},
+		{"--dump", "Dump the content of the last received response from the server.", commandDump, nil}, // dump the last result
+		{"--exit [%rc]", "Exit this worker.  If N>0 then exit without explicitly disconnecting (In other words, simulate a crash.).", commandExit, nil},
+		{"--task %workerid_or_expr [name %name] [%connectionstring]", "Assign work to a worker. Start the worker if it is not running already using the CONNECTIONSTRING (or the default connectionstring argument of the tester, if not specified)", commandTask, nil},
+		{"--match type is %type", "Check to see if last response type matches TYPE.  Report an error if not.", commandMatchType, nil},
+		{"--match buffer %string [%row %col]", "Check to see if last response buffer matches STRING. If the last response is an Array or a Rowset, the ROW and COL options can be use to check only the specified subvalue. Report an error if not.", commandMatchBuffer, nil},
+		{"--match value %value [%row %col]", "Check to see if last response value matches VALUE. If the last response is an Array or a Rowset, the ROW and COL options can be use to check only the specified subvalue. Report an error if not.", commandMatchValue, nil},
+		{"--match [rows %nrows] [cols %ncols]", "Check to see if last response has the specified number of ROW and/or COL (only works for Array and Rowset response). Report an error if not.", commandMatchRowsCols, nil},
+		{"--loop %var=%val; &expr; %var=&expr;", "Repeat the following snipped until the next matching --end using the specified init-clause, cond-expression and iteration-expression", commandLoop, nil},
+		{"--set %var=&expr", "Assign the EXPR result value to the variable VAR. Each task uses a local copy of the environment variables created during the creation of the task, so if a task is created inside a loop it will see the expected values of the variables involved in the iteration. On assignments, both the local copy of the env vars and the global env vars are updated.", commandSet, nil},
 	}
 	commands = append(commands, cs[:]...)
 }
@@ -240,6 +242,15 @@ func interfaceToInt(interfaceval interface{}) (int, error) {
 }
 
 // commands functions
+
+// list the tester builtin commands
+func commandListCommands(w *worker, args []string, opts []bool, t *task) error {
+	for _, c := range commands {
+		w.t.Logf("%s:", c.template)
+		w.t.Logf("\t\t%s:", c.desctription)
+	}
+	return nil
+}
 
 func commandSleep(w *worker, args []string, opts []bool, t *task) error {
 	if len(args) < 1 {
@@ -376,7 +387,7 @@ func commandTask(w *worker, args []string, opts []bool, t *task) error {
 	}
 
 	// get the initial line for the code of this task
-	tline := t.line
+	tline := t.line + 1
 
 	// get the task name from the first optional arg or set a default one
 	var tname string
@@ -450,8 +461,11 @@ func commandMatchType(w *worker, args []string, opts []bool, t *task) error {
 
 	expected := args[0]
 
+	w.stats.nchecks++
+
 	// check result error case (res == nil, reserr != nil)
 	if w.res == nil && strings.ToUpper(expected) != "ERROR" {
+		w.stats.nfailedchecks++
 		return fmt.Errorf("expected: %s, got error %v", expected, w.reserr)
 	}
 
@@ -494,10 +508,10 @@ func commandMatchType(w *worker, args []string, opts []bool, t *task) error {
 	}
 
 	if !match {
+		w.stats.nfailedchecks++
 		return fmt.Errorf("expected: %s, got: %v", expected, w.res.GetType())
 	}
 
-	w.stats.ntests++
 	return nil
 }
 
@@ -530,8 +544,16 @@ func getString(w *worker, args []string, opts []bool) (string, error) {
 			return "", fmt.Errorf("invalid result")
 		}
 
-		// resbuffer = w.res.GetBuffer()
-		str, err := w.res.GetString()
+		var str string
+		var err error
+		if w.res.IsArray() || w.res.IsRowSet() {
+			// it is an array or a rowset but the row/col aren't specified, use default row/col 0 0
+			str, err = w.res.GetStringValue(0, 0)
+		} else {
+			// resbuffer = w.res.GetBuffer()
+			str, err = w.res.GetString()
+		}
+
 		if err != nil {
 			return "", err
 		}
@@ -587,7 +609,10 @@ func commandMatchBuffer(w *worker, args []string, opts []bool, t *task) error {
 
 	expected := args[0]
 
+	w.stats.nchecks++
+
 	if w.res == nil {
+		w.stats.nfailedchecks++
 		return fmt.Errorf("expected: %s, got error %v", expected, w.reserr)
 	}
 
@@ -597,10 +622,10 @@ func commandMatchBuffer(w *worker, args []string, opts []bool, t *task) error {
 	}
 
 	if res := bytes.Compare(b, []byte(expected)); res != 0 {
+		w.stats.nfailedchecks++
 		return fmt.Errorf("expected: %s, got: %v", expected, b)
 	}
 
-	w.stats.ntests++
 	return nil
 }
 
@@ -614,24 +639,28 @@ func commandMatchValue(w *worker, args []string, opts []bool, t *task) error {
 	}
 
 	expected := args[0]
-	expectedvalue, err := gval.Evaluate(expected, t.env)
-	expected = fmt.Sprint(expectedvalue)
+	expectedeval, err := gval.Evaluate(expected, t.env)
+	expectedevalstring := fmt.Sprint(expectedeval)
+
+	w.stats.nchecks++
 
 	// check result error case (res == nil, reserr != nil)
 	if w.res == nil {
+		w.stats.nfailedchecks++
 		return fmt.Errorf("expected: %s, got error %v", expected, w.reserr)
 	}
 
 	s, err := getString(w, args, opts)
 	if err != nil {
+		w.stats.nfailedchecks++
 		return err
 	}
 
-	if s != expected {
+	if s != expected && s != expectedevalstring {
+		w.stats.nfailedchecks++
 		return fmt.Errorf("expected: %s, got: %s", expected, s)
 	}
 
-	w.stats.ntests++
 	return nil
 }
 
@@ -640,8 +669,11 @@ func commandMatchRowsCols(w *worker, args []string, opts []bool, t *task) error 
 		return fmt.Errorf("missing arguments")
 	}
 
+	w.stats.nchecks++
+
 	if !w.res.IsRowSet() && !w.res.IsArray() {
 		// TODO: print the human-readable representation of the type
+		w.stats.nfailedchecks++
 		return fmt.Errorf("expected RowSet or Array, got %v", w.res.GetType())
 	}
 
@@ -655,6 +687,7 @@ func commandMatchRowsCols(w *worker, args []string, opts []bool, t *task) error 
 
 			expectedint, err := interfaceToInt(expectedinterface)
 			if err != nil {
+				w.stats.nfailedchecks++
 				return fmt.Errorf("expected int arg, got %s (%v)", expected, err)
 			}
 
@@ -666,12 +699,12 @@ func commandMatchRowsCols(w *worker, args []string, opts []bool, t *task) error 
 			}
 
 			if val != expectedint {
+				w.stats.nfailedchecks++
 				return fmt.Errorf("expected %d %s, got %d", expectedint, optname, val)
 			}
 		}
 	}
 
-	w.stats.ntests++
 	return nil
 }
 
@@ -1243,23 +1276,29 @@ func (w *worker) runLoop() {
 			err := w.processTask(task)
 			if err != nil {
 				iserror = true
+				w.stats.failed = true
 				w.t.Errorf("w%d, task:%s(:%d), %v", w.id, task.name, task.line, err)
 				Debugf("w%d failed task %s, error: %v", w.id, task.name, err)
 			} else {
 				Debugf("w%d completed task %s", w.id, task.name)
 			}
 
-			// nonblocking write, skip if nobody is waiting or channel is full
-			select {
-			case w.completec <- struct{}{}:
-			default:
+			// only real tasks must notify the completec and the wg, not the helper connection tasks
+			if task.connstring == "" {
+				// nonblocking write, skip if nobody is waiting or channel is full
+				select {
+				case w.completec <- struct{}{}:
+				default:
+				}
+
+				Debugf("w%d task %s done", w.id, task.name)
+				wg.Done()
+			} else {
+				Debugf("w%d connection task %s connected", w.id, task.connstring)
 			}
 
-			Debugf("w%d task %s done", w.id, task.name)
-			wg.Done()
-
 			if iserror {
-				tryStopc()
+				tryStopc(false)
 			}
 
 			if w.exiting {
@@ -1278,11 +1317,12 @@ func (w *worker) runLoop() {
 			end := false
 			for !end {
 				select {
-				case <-w.taskc:
+				case t := <-w.taskc:
 					select {
 					case w.completec <- struct{}{}:
 					default:
 					}
+					Debugf("w%d task %s done (stopc)", w.id, t.name)
 					wg.Done()
 
 				default:
@@ -1307,7 +1347,11 @@ func replaceEnvVarInSqlString(s string, w *worker, t *task) string {
 
 func (w *worker) processTask(task *task) error {
 	// check if this is a connect task
-	if w.conn == nil && task.connstring != "" {
+	if w.conn == nil {
+		if task.connstring == "" {
+			return fmt.Errorf("Worker not connected")
+		}
+
 		// it's only a connection task
 		var err error
 		Debugf("w%d connecting ...", w.id)
@@ -1406,7 +1450,7 @@ func processFile(t *testing.T, path string, connstring string) {
 	file, err := os.Open(path)
 	if err != nil {
 		t.Errorf("w0, %v", err)
-		t.SkipNow()
+		trySkip(t)
 	}
 	// start default task
 	wg = sync.WaitGroup{}
@@ -1424,7 +1468,7 @@ func processFile(t *testing.T, path string, connstring string) {
 		w, err := newWorker(0, connstring, t)
 		if err != nil {
 			w.t.Errorf("w%d, task:%s(l:%d), %v", w.id, task.name, task.line, err)
-			t.SkipNow()
+			trySkip(t)
 		}
 		workers[0] = w
 
@@ -1433,38 +1477,40 @@ func processFile(t *testing.T, path string, connstring string) {
 		// so get the conntask and run it synchronously before the main task from the script file
 		conntask := <-w.taskc
 		err = w.processTask(conntask)
-		Debugf("w%d task %s done", w.id, conntask.name)
-		wg.Done()
+		Debugf("w%d connection task %s connected", w.id, conntask.connstring)
 		if err != nil {
 			w.t.Errorf("w%d, task:%s(l:%d), %v", w.id, task.name, task.line, err)
-			t.SkipNow()
+			w.stats.failed = true
+			trySkip(t)
 		}
 
 		err = w.processTask(&task)
 		if err != nil {
 			w.t.Errorf("w%d, task:%s(l:%d), %v", w.id, task.name, task.line, err)
-			t.SkipNow()
+			w.stats.failed = true
+			trySkip(t)
 			// Errorf("w%d, task:%s(%d), %v", w.id, task.name, task.line, err)
 		}
 
 		if !w.exiting {
 			// Debugf("w%d closing connection", w.id)
-			if err := w.conn.Close(); err != nil {
-				w.t.Logf("w%d conn close error: %v", w.id, err)
+			if w.conn != nil {
+				if err := w.conn.Close(); err != nil {
+					w.t.Logf("w%d conn close error: %v", w.id, err)
+				}
+				w.conn = nil
 			}
-			w.conn = nil
 		}
 
+		printStats(t)
 	})
 
 	Debugf("w0 stopping ...")
-	tryStopc()
+	tryStopc(true)
 
 	// give time to workers loops to close
 	time.Sleep(time.Duration(100) * time.Millisecond)
 	Debugf("w0 stopped")
-
-	printStats(t)
 }
 
 func printStats(t *testing.T) {
@@ -1472,12 +1518,23 @@ func printStats(t *testing.T) {
 		return
 	}
 
-	ntests := 0
+	nchecks := 0
+	nfailedchecks := 0
+	nfailedworkers := 0
 	for _, w := range workers {
-		ntests += w.stats.ntests
+		nchecks += w.stats.nchecks
+		nfailedchecks += w.stats.nfailedchecks
+		if w.stats.failed {
+			nfailedworkers += 1
+		}
 	}
-	t.Logf("nWorkers: %d", len(workers))
-	t.Logf("nTests: %d", ntests)
+	fmt.Printf("    --- STATS: %s workers:%d/%d, checks:%d/%d\n", t.Name(), len(workers)-nfailedworkers, len(workers), nchecks-nfailedchecks, nchecks)
+}
+
+func trySkip(t *testing.T) {
+	if skip {
+		t.SkipNow()
+	}
 }
 
 func init() {
@@ -1488,6 +1545,8 @@ var ppath = flag.String("path", "scripts", "File or Directory containing the tes
 var pconnstring = flag.String("connstring", "sqlitecloud://dev1.sqlitecloud.io/", "Connection string for the main worker")
 var pdebug = flag.Bool("debug", false, "Enable debug logs")
 var debug = false
+var pskip = flag.Bool("skip", false, "Skip immediately in case of errors")
+var skip = false
 
 // func main() {
 func TestTester(t *testing.T) {
@@ -1496,6 +1555,7 @@ func TestTester(t *testing.T) {
 	path := *ppath
 	connstring := *pconnstring
 	debug = *pdebug
+	skip = *pskip
 
 	Debugf("Parsing commands ...")
 	for i, c := range commands {

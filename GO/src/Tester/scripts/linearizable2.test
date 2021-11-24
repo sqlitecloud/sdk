@@ -9,9 +9,13 @@ BEGIN; INSERT INTO t1 (b) VALUES (1);
 --task 1 NAME task1_begin 
     USE DATABASE {{.dbname}}
 	BEGIN; INSERT INTO t1 (b) VALUES (2); 
+    --dump
     --match type is error
     ---- database is locked
     ROLLBACK
+    --dump
+    --match type is ok
+    UNUSE DATABASE;
     --match type is ok
     --exit 0
 --end
