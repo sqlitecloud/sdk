@@ -88,6 +88,8 @@ func (this *AuthServer) getAuthTokenFromHeader( Header http.Header ) string {
 }
 
 func (this *AuthServer) unAuth( writer http.ResponseWriter, request *http.Request ) {
+	this.cors( writer, request )
+
 	response := Response{
 		ResponseID: 0,
 		Status: 	  -1,
@@ -130,6 +132,8 @@ func (this *AuthServer) JWTAuth( nextHandler http.HandlerFunc ) http.HandlerFunc
 }
 
 func (this *AuthServer) auth( writer http.ResponseWriter, request *http.Request ) {
+	this.cors( writer, request )
+
 	// Read JSON Packet
 	var authRequest AuthRequest
 	json.NewDecoder( request.Body ).Decode( &authRequest ); 

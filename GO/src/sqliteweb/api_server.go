@@ -47,6 +47,8 @@ func initStubs() {
 }
 
 func (this *Server) stubHandler(writer http.ResponseWriter, request *http.Request) {
+	this.Auth.cors( writer, request )
+
 	v        := mux.Vars( request )
 	endpoint := strings.ReplaceAll( v[ "endpoint" ] + "/", "//", "/" )
 	file := fmt.Sprintf( "%s/%s%s.json", this.APIPath, endpoint, strings.TrimSpace( strings.ToUpper( request.Method ) ) )
@@ -56,6 +58,9 @@ func (this *Server) stubHandler(writer http.ResponseWriter, request *http.Reques
 	if PathExists( file ) {
 		dat, err := os.ReadFile( file )
 		if err == nil {
+
+			//this.cors( writer, request )
+
 			writer.Header().Set("Content-Type", "application-json")
 			writer.Header().Set("Content-Encoding", "utf-8")
 			writer.Write( dat )

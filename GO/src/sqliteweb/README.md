@@ -1,4 +1,4 @@
-[](http://)# SQLiteWeb Server
+# SQLiteWeb Server
 ## Getting started
 
 ### Requirements
@@ -9,7 +9,7 @@ cd sdk/GO
 export GOPATH=`pwd`
 echo $GOPATH
 ```
-This code snipped should output something like: `/Users/pfeil/GitHub/SqliteCloud/sdk/GO`
+This code snipped should output something like: `/Users/<your home directory>/GitHub/SqliteCloud/sdk/GO`
 
 2) Create a id_rsa.pub on your machine:
 
@@ -25,15 +25,15 @@ Don't worry - if you have done this already, the Makefile will detect this and l
 make web_install
 ```
 
-You will have to enter the root password for the server `web1.sqlitecloud.io`. If you want to use your own login name, change the Makefile accordingly. (replace 'root@web1...' with '<your login name>@web1...').
+You will have to enter the root password for the server `web1.sqlitecloud.io`. If you want to use your own login name, change the Makefile accordingly. (replace `root@web1.sqlitecloud.io` with `<your login name>@web1.sqlitecloud.io`).
 
-After this, you are ready to go and work with the SQLiteWeb server!
+After this, you are ready to work with the SQLiteWeb server!
 
 ### Compiling
 ```console
 make bin/sqliteweb_linux
 ```
-Will compile a fresh Linux binary. You can also build binaries for other platform's and OS'es (on the same machine) with:
+Will compile a fresh Linux binary. You can also build binaries for other platform's and OS'es (on your machine) with:
 
 ```console
 make bin/sqliteweb_osx
@@ -68,16 +68,16 @@ ON SERVER> ln -s /opt/sqliteweb/etc/init.d/sqliteweb /etc/.
 ```
 
 ## Installing/Updating the SQLiteWeb Server
-Now, you can upload/update the previously compile server executable to the server with a:
+Now, you can upload/update the previously compiled server executable to the server with a:
 
 ```console
 make web_update
 ```
 
-This command will stop the SQLiteWeb server on your remote host, compile a fresh local version (if necessary) and install the Linux binary on the remote host. If everything went without a problem, the new server is then started on the remote host.
+This command will at first stop the SQLiteWeb server on your remote host, then compile a fresh local version (if necessary) and after this install the Linux binary on the remote host. If everything went well, the new server is then started on the remote host again.
 
 ## Controlling the SQLiteWeb Server
-You can remote-control the SQLiteWeb server with the following commands
+You can **remote-control** the SQLiteWeb server with the following commands
 
 ```console
 make web_stop
@@ -99,7 +99,7 @@ Auth...success.
 ```
 
 # Using the SQLiteWeb Server
-The following tasks have to be done ON the remote host where the SQLiteWeb Server is running (not your local machine).
+The following tasks have to be done **ON the remote host** where the SQLiteWeb Server is running (not your local machine).
 
 ## Command line arguments:
 To see all possible command line arguments, enter the following command:
@@ -140,8 +140,14 @@ The basic idea here is, that all parameters are configured in a config.ini file.
 
 The default place where SQLiteWeb is looking for it's config.ini file is `/etc/sqliteweb/sqliteweb.ini`, but this config file can be located anywhere (like in /etc/sqliteweb.ini) or in `/opt/sqliteweb/etc/sqliteweb/sqliteweb.ini`. You can specify which configuration you want to use with the `--config` parameter.
 
+For example, a typical start command for **debugging** would look similar like this:
+
+```console
+ON SERVER> /opt/sqliteweb/sbin/sqliteweb_linux --config=/opt/sqliteweb/etc/sqliteweb/sqliteweb.ini
+```
+
 ## Configuration
-The SQLiteWeb Server is configured through a config file, normally located under: `/opt/sqliteweb/etc/sqliteweb/sqliteweb.ini` or `/etc/sqliteweb/sqliteweb.ini`. The config file looks like this:
+The SQLiteWeb Server is configured with a config file, normally located under: `/opt/sqliteweb/etc/sqliteweb/sqliteweb.ini` or `/etc/sqliteweb/sqliteweb.ini`. The config file looks like this:
 
 ```console
 [server]
@@ -182,9 +188,9 @@ ON YOU LOCAL MACHINE> make web_restart
 ```
 
 ### The [server] section of the configuration file
-- address: Sets the interface the server should use to serve the GUI and it's API: Common values are: 0.0.0.0 (serve on all interfaces), 127.0.0.1 (serve only on localhost), <your public ip> (serve to the outside world).
+- address: Sets the interface the server should use to serve the GUI and it's API: Common values are: 0.0.0.0 (serve on all interfaces), 127.0.0.1 (serve only on localhost), &quote network card ip address &quote (serve to the outside world).
 - port: Sets the server port to use (default is 8443)
-- hostname: this is important for the ssl encryption. Please set it to the name that the clients use to connect to this host.
+- hostname: This is important for the ssl encryption. Please set it to the name that the clients use to connect to this host.
 - cert_chain: This is the path to the certificate PEM file.
 - cert_key: This is the path to the key PEM file.
 - logfile: This is the path to the file where SQLiteWeb should write it's log messages.'
@@ -192,21 +198,20 @@ ON YOU LOCAL MACHINE> make web_restart
 ### The [auth] section of the configuration file
 - jwt_key: This is a static string of any length and complexity that is used as a secret to sign the JWT Access Token.
 - jwt_ttl: This is the TimeToLive before a JWT Token will auto-expire.
-- host: This is the hostname of the User Authentication server. This server must be another SQLiteCloud instants with the user credentials table.
-- port: This is the port of the User Authentication server (default is 8860)
-- login: This is the login name for logging in to the User Authentication server (default is admin).
-- password: This is the password for logging into the User Authentication server.
+- host: This is the hostname of the user authentication server. This server must be another SQLiteCloud instance with the user credentials table (users.sqlite).
+- port: This is the port of the user authentication server (default is 8860)
+- login: This is the login name for logging in to the user authentication server (default is admin).
+- password: This is the password for logging into the user authentication server.
 
 ### The [www] section of the configuration file
-- path: This is the path where (static) web-resources are served from. To access those resources, point your browser to the hostname and port specified in the [server] section. Example: [https://web1.sqlitecloud.io:8433/](https://web1.sqlitecloud.io:8433/)
-or [https://web1.sqlitecloud.io:8433/firework/](https://web1.sqlitecloud.io:8433/firework/)
+- path: This is the path where (static) web-resources are served from. To access those resources, point your browser to the hostname and port specified in the [server] section. Example: [https://web1.sqlitecloud.io:8443/](https://web1.sqlitecloud.io:8443/)
+or [https://web1.sqlitecloud.io:8443/firework/](https://web1.sqlitecloud.io:8443/firework/)
 
 
 ### The (dummy) [api] section of the configuration file
-- path: This is the folder path where the (dummy) API requests are specified in the form of the directory structure and the responses are specified by <HTTP VERB>.json. files. To access those dummy request/response pairs, point your browser, or JSON clien to the hostname and port specified in the [server] section and add the path: `/api/vi/` to it. Example: [https://web1.sqlitecloud.io:8433/api/v1/ping](https://web1.sqlitecloud.io:8433/api/v1/ping)
+- path: This is the folder path where the (dummy) API requests are specified in the form of the directory structure and the responses are specified by <HTTP VERB>.json. files. To access those dummy request/response pairs, point your browser, or JSON clien to the hostname and port specified in the [server] section and add the path: `/api/vi/` to it. Example: [https://web1.sqlitecloud.io:8443/api/v1/ping](https://web1.sqlitecloud.io:8443/api/v1/ping)
 
-####Please note: The path of the endpoint should start with: /api/v1/...
-
+**Please note: The path of the endpoint should start with: /api/v1/...**
 
 ## Serving the REACT GUI
 Put all of your REACT files into the specified www.path folder (normally: /opt/sqliteweb/www). The effect of uploading new files is immediately, no server reload is necessary. A typical www folder contents could look like this for example:
@@ -233,7 +238,7 @@ Put all of your REACT files into the specified www.path folder (normally: /opt/s
 /opt/sqliteweb/www/favicon.ico
 /opt/sqliteweb/www/robots.txt
 ```
-You can then access those files with your browser at this address: [https://web1.sqlitecloud.io:8433/](https://web1.sqlitecloud.io:8433/)
+You can then access those files with your browser at this address: [https://web1.sqlitecloud.io:8443/](https://web1.sqlitecloud.io:8443/)
 
 ## Using the JSON API
 To access the JSON API, call the required endpoint with the corresponding HTTP VERB.
@@ -241,7 +246,7 @@ To access the JSON API, call the required endpoint with the corresponding HTTP V
 #### Example:
 
 ```console
-curl --silent --insecure https://web1.sqlitecloud.io:8433/api/v1/ping 
+curl --silent --insecure https://web1.sqlitecloud.io:8443/api/v1/ping 
 ```
 
 The should output something like:
@@ -281,13 +286,13 @@ echo "eyJleHAiOjE2Mzc3NjEwNTUsImp0aSI6IjE0MDUiLCJpYXQiOjE2Mzc3NjA3NTUsIm5iZiI6MT
 
 The third part (`j4ECkdbLPzLnB76H5NK9X4cH4SGp-m7FYLfFApOwovM`) is the cryptographic signature over the first and second part. The signature is salted by the secret jwt_key string (see config file).
 
-### Authenticate / Login
+### Authenticate / Loggin in
 To authenticate to the server, call the authentication provider like this:
 
 #### Example:
 
 ```console
-curl --silent --insecure -X POST https://web1.sqlitecloud.io:8433/api/v1/auth -H 'Content-Type: application/json; charset=utf-8' -d '{"RequestID":1405,"Login":"admin","Password":"foo"}'
+curl --silent --insecure -X POST https://web1.sqlitecloud.io:8443/api/v1/auth -H 'Content-Type: application/json; charset=utf-8' -d '{"RequestID":1405,"Login":"admin","Password":"foo"}'
 ```
 
 The result should look like this:
@@ -296,8 +301,8 @@ The result should look like this:
 {"ResponseID":1405,"Status":0,"Message":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Mzc3NjEwNTUsImp0aSI6IjE0MDUiLCJpYXQiOjE2Mzc3NjA3NTUsIm5iZiI6MTYzNzc2MDc1NSwic3ViIjoiYXBpL3YxLyJ9.j4ECkdbLPzLnB76H5NK9X4cH4SGp-m7FYLfFApOwovM"}
 ```
 
-### Refresh the Token
-Calling this auth endpoint multiple times will create new JWT tokens and at the same time, will invalidate all previous tokens.
+### Refreshing the Token
+Calling this auth endpoint multiple times will create new JWT tokens and at the same time, will invalidate all the previous tokens for this user.
 
 This behavior can be used to refresh a JWT token that is about to expire. However, for this case, another (easier) way exists. You can send the old JWT Token to the authentication provider endpoint (without username and password) and receive a fresh token in return (the old token is invalid after this call).
 
@@ -306,7 +311,7 @@ This behavior can be used to refresh a JWT token that is about to expire. Howeve
 ```console
 curl --silent 
      --insecure 
-     -X POST https://web1.sqlitecloud.io:8433/api/v1/auth 
+     -X POST https://web1.sqlitecloud.io:8443/api/v1/auth 
      -H 'Content-Type: application/json; charset=utf-8' 
      -H 'Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Mzc3NjEwNTUsImp0aSI6IjE0MDUiLCJpYXQiOjE2Mzc3NjA3NTUsIm5iZiI6MTYzNzc2MDc1NSwic3ViIjoiYXBpL3YxLyJ9.j4ECkdbLPzLnB76H5NK9X4cH4SGp-m7FYLfFApOwovM'
 ```
@@ -316,7 +321,7 @@ Will give you a new JWT Token like this for Example:
 {"ResponseID":1405,"Status":0,"Message":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Mzc3NjEwNTUsImp0aSI6IjE0MDUiLCJpYXQiOjE2Mzc3NjA3NTUsIm5iZiI6MTYzNzc2MDc1NSwic3ViIjoiYXBpL3YxLyJ9.j4ECkdbLPzLnB76H5NK9X4cH4SGp-m7FYLfFApOwovM"}
 ```
 
-### UnAuthenticate / Logout
+### UnAuthenticate / Loging out
 To render the actual JWT Token as invalid, just call the authentication provider with the DELETE HTTP Verb. This operation is equivalent with immediately logging out of the service.
 
 #### Example:
@@ -324,7 +329,7 @@ To render the actual JWT Token as invalid, just call the authentication provider
 ```console
 curl --silent 
      --insecure 
-     -X DELETE https://web1.sqlitecloud.io:8433/api/v1/auth 
+     -X DELETE https://web1.sqlitecloud.io:8443/api/v1/auth 
      -H 'Content-Type: application/json; charset=utf-8' 
      -H 'Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Mzc3NjEwNTUsImp0aSI6IjE0MDUiLCJpYXQiOjE2Mzc3NjA3NTUsIm5iZiI6MTYzNzc2MDc1NSwic3ViIjoiYXBpL3YxLyJ9.j4ECkdbLPzLnB76H5NK9X4cH4SGp-m7FYLfFApOwovM'
 ```
@@ -375,4 +380,4 @@ echo "}                 " >> /opt/sqliteweb/api/v1/ping/GET.json
 
 However, it is strongly recommended, that you use the editor of your choice or upload this file from your local machine.
 
-####Please note: A dummy endpoint does not evaluate any dynamic input data from the request - whatsoever.
+**Please note: A dummy endpoint does not evaluate any dynamic input data from the request - whatsoever.**
