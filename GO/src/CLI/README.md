@@ -408,6 +408,33 @@ Rows: 3 - Cols: 6: 229 Bytes Time: 82.797135ms
 dev1.sqlitecloud.io:X > 
 ```
 
+### Setting the prompt
+One can set the user promt ether with the `--promt <format>` command line switch or within the app with a `.promt <format>`. The follwoing format strings will automatically be replaced by it's actual values:
+
+(https://wiki.ubuntuusers.de/Bash/Prompt/)
+
+| Format String | Meaning | Example replacement |
+|:---|:---|:---|
+| \H | Database Host name | dev1.sqlitecloud.io |
+| \p | Database Port      | 8860 |
+| \u | Username      | marco |
+| \d | Database name | X |
+| \ | Actual Date | 2021-10-08 |
+| \t | Actual Time | 14:37:32 |
+| \w | Local path | ~ |
+
+The following prebuild patterns are available as a shortcut:
+
+| Shortcut | Definition | Example |
+|:---|:---|:---|
+| default | ``$host$:$dbname$ >`` | dev1.sqlitecloud.io:X >_ |
+| simple | ``sqlc >`` | sqlc >_ |
+| full | ``$host$:$dbname$ $user$> `` | dev1.sqlitecloud.io:X pfeil> _ |
+
+### Using Synthax Highlighting
+One can switch synthax highlighting on with ``.synthax color``. There is also a monocrome synthax highlighting mode available that is VT100 compatible and uses only bold and italic character representations. You can switch into this simple VT100 mode with ``.synthax vt100``. To switch synthay highlighting off, please enter ``.synthax off``. Synthax highlighting is set to color in interactive mode by default. Synthay highlighting is automatically switched off in batch mode.
+
+
 ### Exiting the app
 ```console
 dev1.sqlitecloud.io:X > .exit
@@ -438,10 +465,10 @@ echo "LIST DATABASES" > script.sql; ./bin/sqlc sqlitecloud://dev1.sqlitecloud.io
 ## ToDos
 - [ ] --promt
 - [ ] --reconnect
-- [ ] When started without a host, localhost is assumed. If no database server is running on the localhost, a 10 second timeout will occure.
+- [x] When started without a host, localhost is assumed. If no database server is running on the localhost, a 10 second timeout will occure.
 - [ ] Make internal .dot commands available in batch files
 - [ ] Test for "empty commands"
 - [ ] Add --log feature
-- [ ] Drop the table "sqlite_sequence" from dynamic autocomplete scanning
+- [x] Drop the table "sqlite_sequence" from dynamic autocomplete scanning
 - [ ] Implement the Auth command to use the Password feature
 - [ ] Add more Test example commands
