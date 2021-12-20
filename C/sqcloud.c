@@ -1265,7 +1265,7 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
     int len = 0;
     
     if (config->username && config->password && strlen(config->username) && strlen(config->password)) {
-        len += snprintf(&buffer[len], sizeof(buffer) - len, "AUTH USER %s PASS %s;", config->username, config->password);
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "AUTH USER %s PASSWORD %s;", config->username, config->password);
     }
     
     if (config->database && strlen(config->database)) {
@@ -1356,6 +1356,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     freeaddrinfo(addr_list);
     
     // calculate the connection timeout and reset timers
+    // if timeout is <= 0 then it is set to SQCLOUD_DEFAULT_TIMEOUT for the connect phase
     int connect_timeout = (config && config->timeout > 0) ? config->timeout : SQCLOUD_DEFAULT_TIMEOUT;
     time_t start = time(NULL);
     time_t now = start;

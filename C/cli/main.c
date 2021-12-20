@@ -25,18 +25,42 @@
 static bool skip_ok = false;
 static bool quiet = false;
 
-void do_print (SQCloudConnection *conn, SQCloudResult *res) {
+static void do_print_usage (void) {
+    printf("Usage: sqlitecloud-cli [options]\n");
+    printf("Options:\n");
+    printf("  -v                    print usage and exit\n");
+    printf("  -h HOSTNAME           hostname to connect to (default localhost)\n");
+    printf("  -p PORT               port to connect to (default %d)\n", SQCLOUD_DEFAULT_PORT);
+    printf("  -f FILEPATH           file path with commands to execute\n");
+    printf("  -d DATABASE           database name\n");
+    printf("  -r ROOT_CERTIFICATE   path to root certificate for TLS connection\n");
+    printf("  -s CLI_CERTIFICATE    path to client certificate for TLS connection\n");
+    printf("  -t CLI_KEY            path to client key certificate for TLS connection\n");
+    printf("  -u TIMEOUT            connection timeout in seconds (default no timeout)\n");
+    printf("  -y IP                 connection type (IPv4, IPv6 or IPany, default IPv4)\n");
+    printf("  -n USERNAME           authentication username\n");
+    printf("  -m PASSWORD           authentication password\n");
+    printf("  -c                    activate compression\n");
+    printf("  -i                    activate insecure mode (non TLS connection)\n");
+    printf("  -q                    activate quite mode (disable output print)\n");
+    printf("  -x                    activate special sqlite mode\n");
+    printf("  -z                    request zero-terminated strings in all replies\n");
+}
+
+bool do_print (SQCloudConnection *conn, SQCloudResult *res) {
     // res NULL means to read error message and error code from conn
     SQCloudResType type = SQCloudResultType(res);
+    bool result = true;
     
     switch (type) {
         case RESULT_OK:
-            if (skip_ok) return;
+            if (skip_ok) return true;
             printf("OK");
             break;
             
         case RESULT_ERROR:
             printf("ERROR: %s (%d)", SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
+            result = false;
             break;
             
         case RESULT_NULL:
@@ -64,18 +88,21 @@ void do_print (SQCloudConnection *conn, SQCloudResult *res) {
     }
     
     printf("\n\n");
+    return result;
 }
 
-void do_command (SQCloudConnection *conn, char *command) {
+bool do_command (SQCloudConnection *conn, char *command) {
     SQCloudResult *res = SQCloudExec(conn, command);
-    do_print(conn, res);
+    bool result = do_print(conn, res);
     SQCloudResultFree(res);
+    return result;
 }
 
-void do_command_without_ok_reply (SQCloudConnection *conn, char *command) {
+bool do_command_without_ok_reply (SQCloudConnection *conn, char *command) {
     skip_ok = true;
-    do_command(conn, command);
+    bool result = do_command(conn, command);
     skip_ok = false;
+    return result;
 }
 
 bool do_process_file (SQCloudConnection *conn, const char *filename) {
@@ -113,22 +140,27 @@ void pubsub_callback (SQCloudConnection *connection, SQCloudResult *result, void
 // % sqlitecloud-cli -h HOST -p PORT -f FILE -c -i -r root_certificate -s client_certificate -t client_certificate_key
 int main(int argc, char * argv[]) {
     const char *hostname = "localhost";
+    const char *username = NULL;
+    const char *password = NULL;
     const char *filename = NULL;
     const char *database = NULL;
     const char *root_certificate_path = NULL;
     const char *client_certificate_path = NULL;
     const char *client_certificate_key_path = NULL;
     
+    int family = SQCLOUD_IPv4;
     int port = SQCLOUD_DEFAULT_PORT;
+    int timeout = 0;
+    
     bool compression = false;
     bool insecure = false;
     bool sqlite = false;
     bool zerotext = false;
-    int family = SQCLOUD_IPv4;
     
     int c;
-    while ((c = getopt (argc, argv, "h:p:f:ciqxzr:s:t:d:y:")) != -1) {
+    while ((c = getopt (argc, argv, "h:p:f:vciqxzr:s:t:d:y:u:n:m:")) != -1) {
         switch (c) {
+            case 'v': do_print_usage(); return 0;
             case 'h': hostname = optarg; break;
             case 'p': port = atoi(optarg); break;
             case 'f': filename = optarg; break;
@@ -141,18 +173,28 @@ int main(int argc, char * argv[]) {
             case 'r': root_certificate_path = optarg; break;
             case 's': client_certificate_path = optarg; break;
             case 't': client_certificate_key_path = optarg; break;
+            case 'u': timeout = atoi(optarg); break;
             case 'y':
                 if (strcasestr(optarg, "IPv6") != 0) {family = SQCLOUD_IPv6;}
                 else if (strcasestr(optarg, "IPany") != 0) {family = SQCLOUD_IPany;}
                 break;
+            case 'n': username = optarg; break;
+            case 'm': password = optarg; break;
         }
     }
     
     if (!quiet) printf("sqlitecloud-cli version %s (build date %s)\n", CLI_VERSION, CLI_BUILD_DATE);
     
+    // sanity check username and password (both are required if one is set)
+    if ((username != NULL && password == NULL) || (username == NULL && password != NULL)) {
+        printf("Please provide both username and password for authentication.\n");
+        return -1;
+    }
+    
     // setup config
     SQCloudConfig config = {0};
     config.family = family;
+    config.timeout = timeout;
     
     // setup TLS config parameter
     #ifndef SQLITECLOUD_DISABLE_TSL
@@ -166,6 +208,8 @@ int main(int argc, char * argv[]) {
     if (zerotext) config.zero_text = true;
     if (compression) config.compression = true;
     if (database) config.database = database;
+    if (username) config.username = username;
+    if (password) config.password = password;
     
     // try to connect to hostname:port
     SQCloudConnection *conn = SQCloudConnect(hostname, port, &config);
