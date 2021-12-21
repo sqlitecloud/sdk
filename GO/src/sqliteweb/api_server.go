@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud Web Server
-//     ///             ///  ///         Version     : 0.1.0
-//     //             ///   ///  ///    Date        : 2021/12/16
+//     ///             ///  ///         Version     : 0.1.1
+//     //             ///   ///  ///    Date        : 2021/12/20
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description :
@@ -131,7 +131,7 @@ func (this *Server) stubHandler(writer http.ResponseWriter, request *http.Reques
     }
   }
   path = fmt.Sprintf( "%s%s.", path, strings.TrimSpace( strings.ToUpper( request.Method ) ) )
-  fmt.Printf( "PATH=%s\r\n", path )
+  //fmt.Printf( "PATH=%s\r\n", path )
 
   switch {
   case PathExists( fmt.Sprintf( "%slua", path ) ):
@@ -147,7 +147,7 @@ func (this *Server) stubHandler(writer http.ResponseWriter, request *http.Reques
     l.Register( "SetHeader", func(L *lua.State) int {
       if key, ok := L.ToString( 1 ); ok {
         if value, ok := L.ToString( 2 ); ok {
-          fmt.Printf( "SET HEADER: %s:%s\r\n", key, value )
+          //fmt.Printf( "SET HEADER: %s:%s\r\n", key, value )
           writer.Header().Set( key, value )
         }
       }
@@ -156,7 +156,7 @@ func (this *Server) stubHandler(writer http.ResponseWriter, request *http.Reques
 
     l.Register( "Write", func(L *lua.State) int {
       if data, ok := L.ToString( 1 ); ok { 
-        fmt.Printf( "WRITE: %s\r\n", data ) 
+        //fmt.Printf( "WRITE: %s\r\n", data ) 
         writer.Write( []byte( data ) )
       }
       return 0
@@ -185,7 +185,7 @@ func (this *Server) stubHandler(writer http.ResponseWriter, request *http.Reques
     fmt.Printf( "will execute lua script: '%s'\r\n", path )
     fmt.Printf( "%v\r\n", args )
 
-    // lua.DoFile( l, "/Users/pfeil/GitHub/SqliteCloud/sdk/GO/src/sqliteweb/api/json.lua" )
+    lua.DoString( l, fmt.Sprintf( `package.path = "%s"`, this.LUAPath ) )
 
     err = lua.DoFile( l, fmt.Sprintf( "%slua", path ) )
     if err != nil {

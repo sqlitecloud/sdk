@@ -381,3 +381,118 @@ echo "}                 " >> /opt/sqliteweb/api/v1/ping/GET.json
 However, it is strongly recommended, that you use the editor of your choice or upload this file from your local machine.
 
 **Please note: A dummy endpoint does not evaluate any dynamic input data from the request - whatsoever.**
+
+## Using Lua to write endpoints
+Lua version 5.2 is built right into the executable of sqliteweb. No external dll's or shared object files are required.
+
+Using Lua endpoints is straight forward and pretty much the same as using dummy.json files. To use Lua endpoints, you first have to create the corresponding folder structure, beginning with: `/api/v1/`. Then add the desired endpoint name like `luatest/` followed by one of the supported Verbs (see above) and an `.lua`. A Complete Lua endpoint path could look like this for example:
+
+```console
+/api/v1/luatest/GET.lua
+```
+
+To execute this endpoint, point your browser or REST client to:
+
+````console
+https://web1.sqlitecloud.io:8443/api/v1/luatest/
+````
+In real life, you would most probably want to use some variable components in your endpoint path, like this for example:
+
+````console
+https://web1.sqlitecloud.io:8443/api/v1/node/{nodeID}
+````
+To implement this, you have to create the folder structure like this:
+
+````console
+/api/v1/node/{0}
+````
+
+You can add as many variable path components into your endpoint as you want, this could look like this for example:
+
+
+````console
+/api/v1/stat/{0}/{1}/
+````
+
+And then call it like this:
+
+````console
+https://web1.sqlitecloud.io:8443/api/v1/stat/cpu/1/
+````
+
+Those variable path components must be numbered like this {0}, {1}...{n}. No number must be used twice an a path. The variable path components can be of any data type (no type check is done). The variable endpoint path components are passed to the lua script in a global `args[0,1...n]` array. It is up to the programmer to do the type checks in lua.
+
+This simple lua program demonstrate how to work with the variable path components:
+
+````lua
+print( args[ 0 ] ) --- please note, args[0] is always the script name
+print( args[ 1 ] ) --- args[ 1 ] is what was {0} in the path 
+print( args[ 2 ] ) --- this means, everything is shifted up by one position
+````
+
+It is very easy to create valid REST/JSON packages with Lua. To do this, the following commands where added to the Language:
+
+````lua
+SetHeader( "HeaderName", "HeaderValue" )
+SetStatus( statusCode )
+Write( data )
+````
+
+To write a very basic "Hello SQLiteCloud program, the following code is necessary:"
+
+````lua
+SetHeader( "Content-Type", "application/json" )
+SetHeader( "Content-Encoding", "utf-8" )
+Write( '{ "Message": "Hello SQLite Cloud"}' )
+SetStatus( 200 )
+````
+
+However, it is not very useful to create JSON packages like this. To create JSON packages, a JSON Lua package can be used. Those packages can be stored anywhere. The default path is: `/opt/sqliteweb/lib/`. To change this path, a new section in `/etc/sqliteweb/sqliteweb.ini` was added:
+
+````console
+[lua]
+  package.path  = /opt/sqliteweb/lib/?.lua
+````
+In this folder, you can find a file called: `json.lua`
+To use it in your Lua endpoint, write something like this:
+
+````lua
+json = require "json"
+````
+
+From now on, working with JSON is very easy. To parse the JSON data that was send - for example - in the body of a POST request, you can write:
+
+````lua
+request = json.decode( body )
+````
+Please note: `body` is a special predefined variable that was added to the Lua language to help and make it very easy for the programmer to access the body data of a request. It is so to say the opposite of the Write() function call.
+
+A more complete Lua Example, that demonstrates JSON Packet parsing as well as the creation, makes use of variable path components and is doing a SQL SELECT in one of the nodes could look like this:
+
+````lua
+json = require "json"
+
+SetHeader( "Content-Type", "application/json" )
+SetHeader( "Content-Encoding", "utf-8" )
+
+request = json.decode( body )
+
+result = queryNode( "SELECT * FROM Dummy" )
+
+Response = {
+  Request = request,
+  Parameter = {
+    First  = args[ 1 ],
+    Second = args[ 2 ]
+  },
+
+  ResponseID = request[ 'RequestID' ],
+  Status = 0,
+  Message = "OK",
+
+  QueryResult = result
+}
+
+Write( json.encode( Response ) )
+SetStatus( 200 )
+````

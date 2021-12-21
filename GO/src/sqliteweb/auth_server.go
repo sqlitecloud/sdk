@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud Web Server
-//     ///             ///  ///         Version     : 0.0.1
-//     //             ///   ///  ///    Date        : 2021/12/17
+//     ///             ///  ///         Version     : 0.1.1
+//     //             ///   ///  ///    Date        : 2021/12/20
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description :
@@ -76,25 +76,47 @@ func init() {
 }
 
 func (this *AuthServer) getUserID( Login string, Password string ) int64 {
-  if this.db == nil {
-    if this.db = sqlitecloud.New( this.cert, 10 ); this.db != nil { 
-      if err := this.db.Connect( this.host, this.port, this.login, this.password, "users.sqlite", 10, "NO", 0 ); err != nil {
-        this.db.Close()
-        this.db = nil
-        return -1 
-  } } }
+  var res *sqlitecloud.Result = nil
+  var err error
 
-  if this.db == nil { return -1 }
+  if this.db != nil {
+    if res, err = this.db.Select( fmt.Sprintf( "SELECT id FROM User WHERE email IS '%s' AND password IS '%s' LIMIT 0, 1;", Login, Password ) ); err != nil || res == nil {
+      this.db.Close()
+      this.db = nil
+      res     = nil
+    }
+  }
+
+  if this.db == nil { 
+    if this.db = sqlitecloud.New( this.cert, 10 ) ; this.db == nil { 
+      return -1 
+    }
+
+    if err := this.db.Connect( this.host, this.port, this.login, this.password, "users.sqlite", 10, "NO", 0 ); err != nil {
+      this.db.Close()
+      this.db = nil
+      return -2
+    }
+  }
   
-  if res, err := this.db.Select( fmt.Sprintf( "SELECT id FROM User WHERE email IS '%s' AND password IS '%s' LIMIT 0, 1;", Login, Password ) ); res != nil {
-    defer res.Free()
+  if res == nil {
+    if res, err = this.db.Select( fmt.Sprintf( "SELECT id FROM User WHERE email IS '%s' AND password IS '%s' LIMIT 0, 1;", Login, Password ) ); err != nil {
+      if res != nil { res.Free() }
+      res = nil
+    }
+  }
 
-    if err == nil {
-      if res.GetNumberOfRows() == 1 { 
-        return res.GetInt64Value_( 0, 0 ) 
-  } } }
+  if res == nil {
+    this.db.Close()
+    this.db = nil
+    return -3
+  }
 
-  return -1
+  defer res.Free()
+  if res.GetNumberOfRows() != 1 || res.GetNumberOfColumns() != 1 {
+    return 0
+  }
+  return res.GetInt64Value_( 0, 0 ) 
 }
 
 func (this *AuthServer) getAuthorization( Header http.Header ) string {
@@ -164,64 +186,68 @@ func (this *AuthServer) auth( writer http.ResponseWriter, request *http.Request 
     delete( this.Tokens, token )
   }
   
-  if authRequest.Login == "" || authRequest.Password == "" {
-    writer.WriteHeader( http.StatusBadRequest )
-    return
-  }
-  
-  now    := time.Now().Unix()
-  claims := &jwt.StandardClaims {
-    Id:         "0",
-    // Issuer:     long_name,
-    IssuedAt:   now,
-    NotBefore:  now,
-    ExpiresAt:  now + this.JWTTTL,
-    Subject:    this.Realm,
-  }
-
-  // Check credentials
-  if userID := this.getUserID( authRequest.Login, authRequest.Password ); userID < 0 {
-    writer.WriteHeader( http.StatusUnauthorized )
-    return
-  } else {
-    claims.Id = fmt.Sprintf( "%d", userID )
-  }
-
-  // Delete double logins
-  for t, ti := range this.Tokens {
-    if ti.Login == authRequest.Login && ti.Password == authRequest.Password {
-      delete( this.Tokens, t )
-    }
-  }
-
-  Token            := jwt.NewWithClaims( jwt.SigningMethodHS256, claims )
-  TokenString, err := Token.SignedString( this.JWTSecret ) // = Header, Payload, Signature
-
-  if err != nil {
-    writer.WriteHeader( http.StatusInternalServerError )
-    return
-  }
-
   response := Response {
     ResponseID: authRequest.RequestID,
-    Status:     0,
-    Message:    TokenString,
+    Status:     1,
+    Message:    "Wrong Credentials",
   }
 
-  if jResponse, err := json.Marshal( response ); err == nil {
-
-    writer.Header().Set( "Content-Type", "application/json" )
-    writer.Header().Set( "Content-Encoding", "utf-8" )
-    writer.Write( jResponse )
-
-    TokenString = "Bearer " + TokenString
-    this.Tokens[ TokenString ] = TokenInfo {
-      Credentials:        authRequest.Credentials,
-      ExpiresAt:          now + this.JWTTTL,
-      RequestsPerSecond:  1000,
-      RequestLeft:        1000,
+  if authRequest.Login == "" || authRequest.Password == "" {
+    writer.WriteHeader( http.StatusBadRequest )
+  
+  } else {
+    now    := time.Now().Unix()
+    claims := &jwt.StandardClaims {
+      Id:         "0",
+      Issuer:     long_name,
+      IssuedAt:   now,
+      NotBefore:  now,
+      ExpiresAt:  now + this.JWTTTL,
+      Subject:    this.Realm,
     }
+  
+    // Check credentials
+    if userID := this.getUserID( authRequest.Login, authRequest.Password ); userID < 1 {
+      writer.WriteHeader( http.StatusUnauthorized )
 
+    } else {
+      claims.Id = fmt.Sprintf( "%d", userID )
+
+      // Delete double logins
+      for t, ti := range this.Tokens {
+        if ti.Login == authRequest.Login && ti.Password == authRequest.Password {
+          delete( this.Tokens, t )
+        }
+      }
+
+      Token            := jwt.NewWithClaims( jwt.SigningMethodHS256, claims )
+      TokenString, err := Token.SignedString( this.JWTSecret ) // = Header, Payload, Signature
+
+      if err != nil {
+        response.Status = 2
+        response.Message = "Intenal Server Error"
+        writer.WriteHeader( http.StatusInternalServerError )
+
+      } else {
+        response.Status  = 0
+        response.Message = TokenString
+      
+        TokenString = "Bearer " + TokenString
+        this.Tokens[ TokenString ] = TokenInfo {
+          Credentials:        authRequest.Credentials,
+          ExpiresAt:          now + this.JWTTTL,
+          RequestsPerSecond:  1000,
+          RequestLeft:        1000,
+        }
+      }
+    }
+  }
+
+  writer.Header().Set( "Content-Type", "application/json" )
+  writer.Header().Set( "Content-Encoding", "utf-8" )
+
+  if jResponse, err := json.Marshal( response ); err == nil {
+    writer.Write( jResponse )
   } else {
     http.Error( writer, err.Error(), http.StatusInternalServerError )
   }

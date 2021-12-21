@@ -1,4 +1,4 @@
-json = require "api.json"
+json = require "json"
 
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )

@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud Web Server
-//     ///             ///  ///         Version     : 0.0.1
-//     //             ///   ///  ///    Date        : 2021/11/17
+//     ///             ///  ///         Version     : 0.1.1
+//     //             ///   ///  ///    Date        : 2021/12/20
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : 
@@ -46,6 +46,7 @@ type Server struct{
   WWWPath       string
   WWW404URL     string
   APIPath       string
+  LUAPath       string
 
   server  *http.Server
   router  *mux.Router
@@ -73,6 +74,7 @@ func initializeSQLiteWeb() {
       WWWPath:    "",
       WWW404URL:  "/",
       APIPath:    "",
+      LUAPath:    "",
       server:     nil,
       router:     mux.NewRouter(),
       ticker:     nil,

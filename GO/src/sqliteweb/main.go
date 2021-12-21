@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud Web Server
-//     ///             ///  ///         Version     : 0.0.1
-//     //             ///   ///  ///    Date        : 2021/11/17
+//     ///             ///  ///         Version     : 0.1.1
+//     //             ///   ///  ///    Date        : 2021/12/20
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : 
@@ -117,6 +117,8 @@ func main() {
       SQLiteWeb.WWW404URL       = cfg.Section( "www" ).   Key( "404" ).MustString( "/" )
 
       SQLiteWeb.APIPath         = cfg.Section( "api" ).   Key( "path" ).String()
+
+      SQLiteWeb.LUAPath         = cfg.Section( "lua" ).   Key( "package.path" ).String()
 
       SQLiteWeb.Auth.Realm      = cfg.Section( "auth" ).  Key( "jwt_realm" ).String()
       SQLiteWeb.Auth.JWTTTL     = cfg.Section( "auth" ).  Key( "jwt_ttl" ).RangeInt64( 300, 0, 0xFFFF )
