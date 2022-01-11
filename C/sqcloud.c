@@ -1707,10 +1707,12 @@ bool _reserved1 (SQCloudConnection *connection, const char *command, bool (*forw
     return true;
 }
 
-SQCloudResult *_reserved2 (SQCloudConnection *connection, const char *UUID) {
-    char command[512];
-    snprintf(command, sizeof(command), "SET CLIENT UUID TO %s", UUID);
-    return internal_run_command(connection, command, strlen(command), true);
+SQCloudResult *_reserved2 (SQCloudConnection *connection, const char *username, const char *passwordhash, const char *UUID) {
+    char buffer[1024];
+    int len = 0;
+    len += snprintf(&buffer[len], sizeof(buffer) - len, "AUTH USER %s HASH %s;", username, passwordhash);
+    len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT UUID TO %s;", UUID);
+    return internal_run_command(connection, buffer, strlen(buffer), true);
 }
 
 SQCloudResult *_reserved3 (char *buffer, uint32_t blen, uint32_t cstart, SQCloudResult *chunk) {
