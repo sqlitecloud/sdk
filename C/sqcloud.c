@@ -1023,7 +1023,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
     return NULL;
 }
 
-static bool internal_socker_forward_read (SQCloudConnection *connection, bool (*forward_cb) (char *buffer, size_t blen, void *xdata), void *xdata) {
+static bool internal_socket_forward_read (SQCloudConnection *connection, bool (*forward_cb) (char *buffer, size_t blen, void *xdata), void *xdata) {
     char sbuffer[8129];
     uint32_t blen = sizeof(sbuffer);
     uint32_t cstart = 0;
@@ -1178,6 +1178,41 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool 
 abort_read:
     if (original != (char *)&header) mem_free(original);
     return NULL;
+}
+
+static bool internal_socket_raw_write (SQCloudConnection *connection, const char *buffer) {
+    // this function is used only to debug possible security issues
+    int fd = connection->fd;
+    #ifndef SQLITECLOUD_DISABLE_TSL
+    struct tls *tls = connection->tls_context;
+    #endif
+    
+    size_t len = strlen(buffer);
+    size_t written = 0;
+    while (len > 0) {
+        #ifndef SQLITECLOUD_DISABLE_TSL
+        ssize_t nwrote = (tls) ? tls_write(tls, buffer, len) : writesocket(fd, buffer, len);
+        if ((tls) && (nwrote == TLS_WANT_POLLIN || nwrote == TLS_WANT_POLLOUT)) continue;
+        #else
+        ssize_t nwrote = writesocket(fd, buffer, len);
+        #endif
+        
+        if (nwrote < 0) {
+            const char *msg = "";
+            #ifndef SQLITECLOUD_DISABLE_TSL
+            if (tls) msg = tls_error(tls);
+            #endif
+            return internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while writing data: %s (%s).", strerror(errno), msg);
+        } else if (nwrote == 0) {
+            return true;
+        } else {
+            written += nwrote;
+            buffer += nwrote;
+            len -= nwrote;
+        }
+    }
+    
+    return true;
 }
 
 static bool internal_socket_write (SQCloudConnection *connection, const char *buffer, size_t len, bool mainfd) {
@@ -1703,7 +1738,7 @@ static int url_extract_keyvalue (const char *s, char b1[512], char b2[512]) {
 bool _reserved1 (SQCloudConnection *connection, const char *command, bool (*forward_cb) (char *buffer, size_t blen, void *xdata), void *xdata) {
     if (!forward_cb) return false;
     if (!internal_socket_write(connection, command, strlen(command), true)) return false;
-    if (!internal_socker_forward_read(connection, forward_cb, xdata)) return false;
+    if (!internal_socket_forward_read(connection, forward_cb, xdata)) return false;
     return true;
 }
 
@@ -1728,6 +1763,15 @@ uint32_t _reserved4 (char *buffer, uint32_t blen, uint32_t *cstart) {
 
 bool _reserved5 (SQCloudResult *res) {
     return res->ischunk;
+}
+
+bool _reserved6 (SQCloudConnection *connection, const char *buffer) {
+    internal_clear_error(connection);
+    return internal_socket_raw_write(connection, buffer);
+}
+
+SQCloudResult *_reserved7 (SQCloudConnection *connection) {
+    return internal_socket_read(connection, true);
 }
 
 // MARK: - PUBLIC -
