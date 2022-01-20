@@ -19,6 +19,13 @@
 #define CLI_HISTORY_FILENAME    ".sqlitecloud_history.txt"
 #define CLI_VERSION             "1.0"
 #define CLI_BUILD_DATE          __DATE__
+#define CLI_DEBUG_MODE          1
+
+#if CLI_DEBUG_MODE
+// MARK: -
+bool _reserved6 (SQCloudConnection *connection, const char *buffer);
+SQCloudResult *_reserved7 (SQCloudConnection *connection);
+#endif
 
 // MARK: -
 
@@ -98,6 +105,19 @@ bool do_command (SQCloudConnection *conn, char *command) {
     return result;
 }
 
+#if CLI_DEBUG_MODE
+bool do_raw_command (SQCloudConnection *conn, char *command) {
+    if (strlen(command) == 0) {
+        SQCloudResult *res = _reserved7(conn);
+        bool result = do_print(conn, res);
+        SQCloudResultFree(res);
+        return result;
+    } else {
+        return _reserved6(conn, command);
+    }
+}
+#endif
+
 bool do_command_without_ok_reply (SQCloudConnection *conn, char *command) {
     skip_ok = true;
     bool result = do_command(conn, command);
@@ -156,9 +176,10 @@ int main(int argc, char * argv[]) {
     bool insecure = false;
     bool sqlite = false;
     bool zerotext = false;
+    bool rawmode = false;
     
     int c;
-    while ((c = getopt (argc, argv, "h:p:f:vciqxzr:s:t:d:y:u:n:m:")) != -1) {
+    while ((c = getopt (argc, argv, "h:p:f:vciqwxzr:s:t:d:y:u:n:m:")) != -1) {
         switch (c) {
             case 'v': do_print_usage(); return 0;
             case 'h': hostname = optarg; break;
@@ -180,6 +201,9 @@ int main(int argc, char * argv[]) {
                 break;
             case 'n': username = optarg; break;
             case 'm': password = optarg; break;
+            #if CLI_DEBUG_MODE
+            case 'w': rawmode = true; break; // don't use rawmode if you don't know what you are doing
+            #endif
         }
     }
     
@@ -239,7 +263,11 @@ int main(int argc, char * argv[]) {
             linenoiseHistorySave(CLI_HISTORY_FILENAME);
         }
         if (strncmp(command, "EXIT", 4) == 0) break;
+        #if CLI_DEBUG_MODE
+        (rawmode) ? do_raw_command(conn, command) : do_command(conn, command);
+        #else
         do_command(conn, command);
+        #endif
         if (strncmp(command, "QUIT", 4) == 0) break;
     }
     if (command) free(command);
