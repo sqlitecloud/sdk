@@ -57,6 +57,8 @@ For example to send the string "Hello World!" the command would be: `!13 Hello W
 ### SCSP Errors
 The format is `-LEN ERRCODE STRING`. Error replies are only sent by the server when something wrong happens. The first ERRCODE field in the error represents a numeric error code. The remaining string is the error message itself. The error code is useful for clients to distinguish among different error conditions without having to do pattern matching in the error message, that may change. LEN does not include the length of the first `-LEN ` part.
 
+If `ERRCODE` contains an extended error code (optional) then the `ERRCODE` format is `ERRCODE:EXTERRCODE`.
+
 - ERROCODE < 10,000 are SQLite error codes as reported by https://www.sqlite.org/rescode.html
 - ERRCODE >= 10,000 and <100,000 are SQLite Cloud error codes
 - ERROCODE >= 100,000 are generated internally by the SDK
