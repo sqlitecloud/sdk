@@ -15,8 +15,8 @@
 extern "C" {
 #endif
 
-#define SQCLOUD_SDK_VERSION         "0.5.5"
-#define SQCLOUD_SDK_VERSION_NUM     0x000505
+#define SQCLOUD_SDK_VERSION         "0.6.0"
+#define SQCLOUD_SDK_VERSION_NUM     0x000600
 #define SQCLOUD_DEFAULT_PORT        8860
 #define SQCLOUD_DEFAULT_TIMEOUT     12
 
@@ -37,7 +37,7 @@ typedef struct SQCloudConfigStruct {
     const char      *password;
     const char      *database;
     int             timeout;
-    int             family;                 // can be: AF_INET, AF_INET6 or AF_UNSPEC
+    int             family;                 // can be: SQCLOUD_IPv4, SQCLOUD_IPv6 or SQCLOUD_IPany
     bool            compression;            // compression flag
     bool            sqlite_mode;            // special sqlite compatibility mode
     bool            zero_text;              // flag to tell the server to zero-terminate strings
@@ -119,7 +119,9 @@ SQCloudResult *SQCloudSetPubSubOnly (SQCloudConnection *connection);
 
 // Error
 bool SQCloudIsError (SQCloudConnection *connection);
+bool SQCloudIsSQLiteError (SQCloudConnection *connection);
 int SQCloudErrorCode (SQCloudConnection *connection);
+int SQCloudExtendedErrorCode (SQCloudConnection *connection);
 const char *SQCloudErrorMsg (SQCloudConnection *connection);
 void SQCloudErrorReset (SQCloudConnection *connection);
 void SQCloudErrorSetCode (SQCloudConnection *connection, int errcode);
