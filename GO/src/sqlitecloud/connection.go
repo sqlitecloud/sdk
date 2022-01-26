@@ -50,6 +50,7 @@ type SQCloud struct {
   secret        string // 36 runes -> remove maybe????
 
   ErrorCode     int
+  ExtErrorCode  int
   ErrorMessage  string
 }
 
@@ -375,6 +376,10 @@ func (this *SQCloud) resetError() { this.setError( 0, "" ) }
 // 0 is returned if the last command run successful.
 func (this *SQCloud ) GetErrorCode() int { return this.ErrorCode }
 
+// GetExtErrorCode returns the error code of the last unsuccessful command as an int value.
+// 0 is returned if the last command run successful.
+func (this *SQCloud ) GetExtErrorCode() int { return this.ExtErrorCode }
+
 // IsError checks the successful execution of the last method call / command.
 // true is returned if the last command resulted in an error, false otherwise.
 func (this *SQCloud) IsError() bool { return this.GetErrorCode() != 0 }
@@ -390,7 +395,7 @@ func (this *SQCloud ) GetErrorMessage() error {
 
 // GetError returned the error code and message of the last unsuccessful command.
 // 0 and nil is returned if the last command run successful.
-func (this *SQCloud ) GetError() ( int, error ) { return this.GetErrorCode(), this.GetErrorMessage() }
+func (this *SQCloud ) GetError() ( int, int, error ) { return this.GetErrorCode(), this.GetExtErrorCode(), this.GetErrorMessage() }
 
 
 // Data Access Functions
@@ -407,12 +412,12 @@ func ( this *SQCloud ) Select( SQL string ) ( *Result, error ) {
   case result == nil: return nil, errors.New( "nil" )
 
   case result.IsError():
-    this.ErrorCode, this.ErrorMessage, _ = result.GetError()
+    this.ErrorCode, this.ExtErrorCode, this.ErrorMessage, _ = result.GetError()
     result.Free()
     return nil, errors.New( this.ErrorMessage )
 
   case err != nil:
-    this.ErrorCode, this.ErrorMessage = 100000, err.Error()
+    this.ErrorCode, this.ExtErrorCode, this.ErrorMessage = 100000, 0, err.Error()
     result.Free()
     return nil, err
 

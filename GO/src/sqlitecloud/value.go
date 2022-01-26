@@ -80,15 +80,23 @@ func (this *Value) GetFloat32() (float32, error) {
 }
 func (this *Value) GetFloat64() (float64, error) { return strconv.ParseFloat( this.GetString(), 64) }
 
-func (this *Value) GetError() (ErrorCode int, ErrorMessage string, err error) {
+func (this *Value) GetError() (ErrorCode int, ExtErrorCode int, ErrorMessage string, err error) {
   ErrorCode = 0
+  ExtErrorCode = 0
+  isExt := false
   for i, LEN, buffer := uint64(0), this.GetLength(), this.GetBuffer(); i < LEN; i++ {
     switch c := buffer[i]; c {
-    case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':  ErrorCode = ErrorCode*10 + int(c) - int('0')
-    default:                                                return ErrorCode, string(buffer[i+1:]), nil
+    case ':': isExt = true
+    case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+      if isExt == false { 
+        ErrorCode = ErrorCode*10 + int(c) - int('0')
+      } else {
+        ExtErrorCode = ExtErrorCode*10 + int(c) - int('0')
+      }
+    default:                                                return ErrorCode, ExtErrorCode, string(buffer[i+1:]), nil
     }
   }
-  return -1, this.GetString(), errors.New("Invalid error format")
+  return -1, 0, this.GetString(), errors.New("Invalid error format")
 }
 
 // Aux Methods
