@@ -301,6 +301,14 @@ func (this *SQCloud) reconnect() error {
     }
   }
 
+  if strings.TrimSpace(this.Username) != "" {
+	if err := this.Auth(this.Username, this.Password); err != nil {
+		this.ErrorCode = -1
+		this.ErrorMessage = err.Error()
+		return err
+	}
+  }
+
   if strings.TrimSpace( this.Database ) != "" {
     this.UseDatabase( this.Database )
   }
