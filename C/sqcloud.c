@@ -1042,7 +1042,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
     return NULL;
 }
 
-static bool internal_socket_forward_read (SQCloudConnection *connection, bool (*forward_cb) (char *buffer, size_t blen, void *xdata), void *xdata) {
+static bool internal_socket_forward_read (SQCloudConnection *connection, bool (*forward_cb) (char *buffer, size_t blen, void *xdata, void *xdata2), void *xdata, void *xdata2) {
     char sbuffer[8129];
     uint32_t blen = sizeof(sbuffer);
     uint32_t cstart = 0;
@@ -1087,7 +1087,7 @@ static bool internal_socket_forward_read (SQCloudConnection *connection, bool (*
         }
         
         // forward read to callback
-        bool result = forward_cb(buffer, nread, xdata);
+        bool result = forward_cb(buffer, nread, xdata, xdata2);
         if (!result) goto abort_read;
         
         // update internal counter
@@ -1754,17 +1754,19 @@ static int url_extract_keyvalue (const char *s, char b1[512], char b2[512]) {
 
 // MARK: - RESERVED -
 
-bool _reserved1 (SQCloudConnection *connection, const char *command, bool (*forward_cb) (char *buffer, size_t blen, void *xdata), void *xdata) {
+bool _reserved1 (SQCloudConnection *connection, const char *command, bool (*forward_cb) (char *buffer, size_t blen, void *xdata, void *xdata2), void *xdata, void *xdata2) {
     if (!forward_cb) return false;
     if (!internal_socket_write(connection, command, strlen(command), true)) return false;
-    if (!internal_socket_forward_read(connection, forward_cb, xdata)) return false;
+    if (!internal_socket_forward_read(connection, forward_cb, xdata, xdata2)) return false;
     return true;
 }
 
 SQCloudResult *_reserved2 (SQCloudConnection *connection, const char *username, const char *passwordhash, const char *UUID) {
     char buffer[1024];
     int len = 0;
-    len += snprintf(&buffer[len], sizeof(buffer) - len, "AUTH USER %s HASH %s;", username, passwordhash);
+    if (username) {
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "AUTH USER %s HASH %s;", username, passwordhash);
+    }
     len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT UUID TO %s;", UUID);
     return internal_run_command(connection, buffer, strlen(buffer), true);
 }

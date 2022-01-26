@@ -17,7 +17,7 @@
 #define sqcloud_parse_number            _reserved4
 #define sqcloud_result_is_chunk         _reserved5
 
-bool SQCloudForwardExec(SQCloudConnection *connection, const char *command, bool (*forward_cb) (char *buffer, size_t blen, void *xdata), void *xdata);
+bool SQCloudForwardExec(SQCloudConnection *connection, const char *command, bool (*forward_cb) (char *buffer, size_t blen, void *xdata, void *xdata2), void *xdata, void *xdata2);
 SQCloudResult *SQCloudSetupForwardConnection (SQCloudConnection *connection, const char *username, const char *passwordhash, const char *UUID);
 
 SQCloudResult *sqcloud_parse_buffer (char *buffer, uint32_t blen, uint32_t cstart, SQCloudResult *chunk);
