@@ -275,7 +275,6 @@ func (this *Result ) GetError_() ( int, string ) {
 func (this *Result ) GetErrorAsString() string {
   switch code, extcode, message, err := this.GetError(); {
   case err != nil:  return fmt.Sprintf( "INTERNAL ERROR: %s", err.Error() )
-  default:          return fmt.Sprintf( "ERROR: %s (%d)", message, code )
   default:
     if extcode == 0 {
       return fmt.Sprintf( "ERROR: %s (%d)", message, code )
