@@ -2,7 +2,7 @@
 --** it check the number of connection at the end of the script and tries to delete the db
 
 --set dbname=tester_nwriters1.sqlite
---set n=500
+--set n=50
 CREATE DATABASE {{.dbname}} IF NOT EXISTS; USE DATABASE {{.dbname}};
 --match type is ok
 CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;

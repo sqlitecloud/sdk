@@ -85,6 +85,7 @@ type statistics struct {
 	failed        bool
 	nchecks       int
 	nfailedchecks int
+	nretries      int
 }
 
 type worker struct {
@@ -1431,11 +1432,23 @@ func (w *worker) processTask(task *task) error {
 
 				// TODO: change the name of the function from Select to Execute
 				w.res, w.reserr = w.conn.Select(sql)
+				
+				// if err is busy then retry, no more than retrytimes
+				retrytimes := 10
+				for i := 1; w.reserr != nil && w.conn.ErrorCode == 5 && i < retrytimes; i++ { 
+					// TODO: in case of explicit transaction, we should retry the full transaction instead of single commands
+					Debugf("w%d busy error, retry(%d): %s", w.id, i, sql)
+					w.stats.nretries++
+					w.res, w.reserr = w.conn.Select(sql)
+				}
 
 				if debug {
 					Debugf("w%d executed: %s", w.id, sql)
 					if w.res != nil {
 						w.res.Dump()
+					}
+					if w.reserr != nil {
+						println(w.reserr.Error())
 					}
 				}
 			}
@@ -1521,14 +1534,16 @@ func printStats(t *testing.T) {
 	nchecks := 0
 	nfailedchecks := 0
 	nfailedworkers := 0
+	nretries := 0
 	for _, w := range workers {
 		nchecks += w.stats.nchecks
 		nfailedchecks += w.stats.nfailedchecks
 		if w.stats.failed {
 			nfailedworkers += 1
 		}
+		nretries += w.stats.nretries
 	}
-	fmt.Printf("    --- STATS: %s workers:%d/%d, checks:%d/%d\n", t.Name(), len(workers)-nfailedworkers, len(workers), nchecks-nfailedchecks, nchecks)
+	fmt.Printf("    --- STATS: %s workers:%d/%d, checks:%d/%d, retries:%d\n", t.Name(), len(workers)-nfailedworkers, len(workers), nchecks-nfailedchecks, nchecks, nretries)
 }
 
 func trySkip(t *testing.T) {

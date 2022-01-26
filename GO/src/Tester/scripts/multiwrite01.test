@@ -6,11 +6,19 @@
 
 --set dbname=tester_multiwrite01.sqlite
   CREATE DATABASE {{.dbname}} IF NOT EXISTS; USE DATABASE {{.dbname}};
+  DROP TABLE IF EXISTS t1;
+  CREATE TABLE t1(a INTEGER PRIMARY KEY, b);
+  DROP TABLE IF EXISTS t2;
+  CREATE TABLE t2(a INTEGER PRIMARY KEY, b);
+  DROP TABLE IF EXISTS t3;
+  CREATE TABLE t3(a INTEGER PRIMARY KEY, b);
+  DROP TABLE IF EXISTS t4;
+  CREATE TABLE t4(a INTEGER PRIMARY KEY, b);
+  DROP TABLE IF EXISTS t5;
+  CREATE TABLE t5(a INTEGER PRIMARY KEY, b);
 
 --task 1 name build-t1
   USE DATABASE {{.dbname}};
-  DROP TABLE IF EXISTS t1;
-  CREATE TABLE t1(a INTEGER PRIMARY KEY, b);
   --sleep 1
   INSERT INTO t1 VALUES(1, randomblob(2000));
   INSERT INTO t1 VALUES(2, randomblob(1000));
@@ -46,8 +54,6 @@
 
 --task 2 name build-t2
   USE DATABASE {{.dbname}};
-  DROP TABLE IF EXISTS t2;
-  CREATE TABLE t2(a INTEGER PRIMARY KEY, b);
   --sleep 1
   INSERT INTO t2 VALUES(1, randomblob(2000));
   INSERT INTO t2 VALUES(2, randomblob(1000));
@@ -82,8 +88,6 @@
 
 --task 3 name build-t3
   USE DATABASE {{.dbname}};
-  DROP TABLE IF EXISTS t3;
-  CREATE TABLE t3(a INTEGER PRIMARY KEY, b);
   --sleep 1
   INSERT INTO t3 VALUES(1, randomblob(2000));
   INSERT INTO t3 VALUES(2, randomblob(1000));
@@ -118,8 +122,6 @@
 
 --task 4 name build-t4
   USE DATABASE {{.dbname}};
-  DROP TABLE IF EXISTS t4;
-  CREATE TABLE t4(a INTEGER PRIMARY KEY, b);
   --sleep 1
   INSERT INTO t4 VALUES(1, randomblob(2000));
   INSERT INTO t4 VALUES(2, randomblob(1000));
@@ -154,8 +156,6 @@
 
 --task 5 name build-t5
   USE DATABASE {{.dbname}};
-  DROP TABLE IF EXISTS t5;
-  CREATE TABLE t5(a INTEGER PRIMARY KEY, b);
   --sleep 1
   INSERT INTO t5 VALUES(1, randomblob(2000));
   INSERT INTO t5 VALUES(2, randomblob(1000));
@@ -404,35 +404,45 @@ PRAGMA integrity_check(10);
   UPDATE t1 SET b=randomblob(20000);
   --sleep 5
   UPDATE t1 SET b='x'||a||'y';
+  --dump
   SELECT a FROM t1 WHERE b='x63y';
+  --dump
   --match value 63
 --end
 --task 2
   UPDATE t2 SET b=randomblob(20000);
   --sleep 5
   UPDATE t2 SET b='x'||a||'y';
+  --dump
   SELECT a FROM t2 WHERE b='x63y';
+  --dump
   --match value 63
 --end
 --task 3
   UPDATE t3 SET b=randomblob(20000);
   --sleep 5
   UPDATE t3 SET b='x'||a||'y';
+  --dump
   SELECT a FROM t3 WHERE b='x63y';
+  --dump
   --match value 63
 --end
 --task 4
   UPDATE t4 SET b=randomblob(20000);
   --sleep 5
   UPDATE t4 SET b='x'||a||'y';
+  --dump
   SELECT a FROM t4 WHERE b='x63y';
+  --dump
   --match value 63
 --end
 --task 5
   UPDATE t5 SET b=randomblob(20000);
   --sleep 5
   UPDATE t5 SET b='x'||a||'y';
+  --dump
   SELECT a FROM t5 WHERE b='x63y';
+  --dump
   --match value 63
 --end
 --wait all
@@ -531,5 +541,5 @@ PRAGMA integrity_check(10);
 
 UNUSE DATABASE;
 --match type is ok
-DROP DATABASE {{.dbname}};
+-- DROP DATABASE {{.dbname}};
 --match type is ok
