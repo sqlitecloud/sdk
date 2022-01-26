@@ -234,11 +234,6 @@ func Connect( ConnectionString string ) ( *SQCloud, error ) {
   if Port == 0    { Port    = 8860  }
   if Timeout == 0 { Timeout = 10    }
 
-  switch strings.ToLower( strings.TrimSpace( Host ) ) {
-  case "127.0.0.1", "localhost", "::1": Timeout = 1
-  default:                              break
-  }
-
   connection := New( Pem, uint( Timeout ) ) // allways works
 
   if err = connection.Connect( Host, Port, Username, Password, Database, uint( Timeout ), Compress, 0 ); err != nil {
