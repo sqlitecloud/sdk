@@ -261,21 +261,27 @@ func (this *Result ) GetFloat64_() float64 {
   return value
 }
 
-func (this *Result ) GetError() ( int, string, error ) {
+func (this *Result ) GetError() ( int, int, string, error ) {
   switch {
-  case !this.IsError():   return 0, "", errors.New( "Not an error" )
+  case !this.IsError():   return 0, 0,  "", errors.New( "Not an error" )
   default:                return this.value.GetError()
   }
 }
 func (this *Result ) GetError_() ( int, string ) { 
-  code, message, _ := this.GetError()
+  code, _, message, _ := this.GetError()
   return code, message
 }
 
 func (this *Result ) GetErrorAsString() string {
-  switch code, message, err := this.GetError(); {
+  switch code, extcode, message, err := this.GetError(); {
   case err != nil:  return fmt.Sprintf( "INTERNAL ERROR: %s", err.Error() )
   default:          return fmt.Sprintf( "ERROR: %s (%d)", message, code )
+  default:
+    if extcode == 0 {
+      return fmt.Sprintf( "ERROR: %s (%d)", message, code )
+    } else {
+      return fmt.Sprintf( "ERROR: %s (%d:%d)", message, code, extcode )
+    }
   }
 }
 
