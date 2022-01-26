@@ -512,6 +512,8 @@ func (this *Result) renderTableFooter( Format int, NewLine string, MaxLineLength
 // All lines are truncated at MaxLineLeength. A MaxLineLangth of '0' means no truncation.
 // If this query result is of type RESULT_OK and SuppressOK is set to false, an "OK" string is written to the buffer, otherwise nothing is written to the buffer.
 func (this *Result) DumpToWriter( Out *bufio.Writer, Format int, NoHeader bool, Separator string, NullValue string, NewLine string, MaxLineLength uint, SuppressOK bool ) ( int, error ) {
+  defer Out.Flush()
+
   if sep, err := GetDefaultSeparatorForOutputFormat( Format ); err != nil {
     return 0, err
   } else if strings.ToUpper( strings.TrimSpace( Separator ) ) == "<AUTO>" {
@@ -538,7 +540,6 @@ func (this *Result) DumpToWriter( Out *bufio.Writer, Format int, NoHeader bool, 
 
   case this.IsString(), this.IsInteger(), this.IsFloat(), this.IsJSON():
     return io.WriteString( Out, string( this.GetBuffer() ) + NewLine )
-    return 0, nil
 
   case this.IsArray():
     fallthrough
