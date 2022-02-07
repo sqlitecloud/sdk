@@ -2,7 +2,7 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///             
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
-//     ///             ///  ///         Version     : 1.0.0
+//     ///             ///  ///         Version     : 1.0.1
 //     //             ///   ///  ///    Date        : 2021/08/31
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///     
@@ -179,7 +179,7 @@ func (this *SQCloud) Auth( Username string, Password string ) error {
     sql += fmt.Sprintf( " USER %s", SQCloudEnquoteString( Username ) )
   }
   if strings.TrimSpace( Password ) != "" {
-    sql += fmt.Sprintf( " PASS %s", SQCloudEnquoteString( Password ) )
+    sql += fmt.Sprintf( " PASSWORD %s", SQCloudEnquoteString( Password ) )
   }
   return this.Execute( sql )
 }

@@ -80,7 +80,7 @@ func (this *AuthServer) getUserID( Login string, Password string ) int64 {
   var err error
 
   if this.db != nil {
-    if res, err = this.db.Select( fmt.Sprintf( "SELECT id FROM User WHERE email IS '%s' AND password IS '%s' LIMIT 0, 1;", Login, Password ) ); err != nil || res == nil {
+    if res, err = this.db.Select( fmt.Sprintf( "SELECT id FROM User WHERE email = '%s' AND password = '%s' AND enabled = 1 LIMIT 1;", Login, Password ) ); err != nil || res == nil {
       this.db.Close()
       this.db = nil
       res     = nil
@@ -100,7 +100,7 @@ func (this *AuthServer) getUserID( Login string, Password string ) int64 {
   }
   
   if res == nil {
-    if res, err = this.db.Select( fmt.Sprintf( "SELECT id FROM User WHERE email IS '%s' AND password IS '%s' LIMIT 0, 1;", Login, Password ) ); err != nil {
+    if res, err = this.db.Select( fmt.Sprintf( "SELECT id FROM User WHERE email = '%s' AND password = '%s' AND enabled = 1 LIMIT 1;", Login, Password ) ); err != nil {
       if res != nil { res.Free() }
       res = nil
     }
