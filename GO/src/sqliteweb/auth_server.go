@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud Web Server
-//     ///             ///  ///         Version     : 0.1.1
-//     //             ///   ///  ///    Date        : 2021/12/20
+//     ///             ///  ///         Version     : 0.2.0
+//     //             ///   ///  ///    Date        : 2022/02/08
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description :
@@ -18,12 +18,16 @@
 package main
 
 import (
-  "fmt"
-  "time"
-  "net/http"
-  "sqlitecloud"
-  "encoding/json"
-  "github.com/golang-jwt/jwt"
+	"encoding/json"
+	"fmt"
+	"net"
+	"net/http"
+	"sqlitecloud"
+	"strings"
+	"time"
+	"strconv"
+
+	"github.com/golang-jwt/jwt"
 )
 
 type Credentials struct {
@@ -37,21 +41,8 @@ type AuthRequest struct {
 }
 
 type Response struct {
-  ResponseID int
   Status     int
   Message    string
-}
-
-type CustomClaims struct {
-  Credentials
-  jwt.StandardClaims
-} 
-
-type TokenInfo struct {
-  Credentials
-  ExpiresAt         int64
-  RequestsPerSecond int64
-  RequestLeft       int64
 }
 
 type AuthServer struct {
@@ -65,22 +56,41 @@ type AuthServer struct {
   login         string
   password      string
   cert          string
-  Tokens        map[string]TokenInfo
 }
 
 func init() {
   initializeSQLiteWeb()
 
-  SQLiteWeb.router.HandleFunc( "/api/v1/auth", SQLiteWeb.Auth.auth ).Methods( "POST" )
-  SQLiteWeb.router.HandleFunc( "/api/v1/auth", SQLiteWeb.Auth.JWTAuth( SQLiteWeb.Auth.unAuth ) ).Methods( "DELETE" )
+  SQLiteWeb.router.HandleFunc( "/dashboard/v1/auth", SQLiteWeb.Auth.auth ).Methods( "POST" )
+	SQLiteWeb.router.HandleFunc( "/dashboard/v1/auth", SQLiteWeb.Auth.JWTAuth( SQLiteWeb.Auth.reAuth ) ).Methods( "GET" )
 }
 
-func (this *AuthServer) getUserID( Login string, Password string ) int64 {
-  var res *sqlitecloud.Result = nil
+/*
+ * return >0 = success: UserID
+ * return -1 = invalid credentials
+ * return -2 = wrong credentials
+ * return -3 = Internal error: could not create connection to auth server
+ * return -4 = Internal error: could not connect to auth server
+ * return -5 = Internal error: could not send auth query
+ * return -6 = Internal error: invalid response from db
+*/
+func (this *AuthServer) lookupUserID( Login string, Password string ) int64 {
+	var res *sqlitecloud.Result = nil
   var err error
 
+	Login    = strings.TrimSpace( Login )
+	Password = strings.TrimSpace( Password )
+
+	if Login    == "" { return -1 }
+	if Password == "" { return -1 }
+
+	Login    = sqlitecloud.SQCloudEnquoteString( Login )
+	Password = sqlitecloud.SQCloudEnquoteString( Password )
+
+	query   := fmt.Sprintf( "SELECT id FROM User WHERE email = '%s' AND password = '%s' AND enabled = 1 LIMIT 1;", Login, Password )
+
   if this.db != nil {
-    if res, err = this.db.Select( fmt.Sprintf( "SELECT id FROM User WHERE email = '%s' AND password = '%s' AND enabled = 1 LIMIT 1;", Login, Password ) ); err != nil || res == nil {
+    if res, err = this.db.Select( query ); err != nil || res == nil {
       this.db.Close()
       this.db = nil
       res     = nil
@@ -89,18 +99,18 @@ func (this *AuthServer) getUserID( Login string, Password string ) int64 {
 
   if this.db == nil { 
     if this.db = sqlitecloud.New( this.cert, 10 ) ; this.db == nil { 
-      return -1 
+      return -3 
     }
 
     if err := this.db.Connect( this.host, this.port, this.login, this.password, "users.sqlite", 10, "NO", 0 ); err != nil {
       this.db.Close()
       this.db = nil
-      return -2
+      return -4
     }
   }
   
   if res == nil {
-    if res, err = this.db.Select( fmt.Sprintf( "SELECT id FROM User WHERE email = '%s' AND password = '%s' AND enabled = 1 LIMIT 1;", Login, Password ) ); err != nil {
+    if res, err = this.db.Select( query ); err != nil {
       if res != nil { res.Free() }
       res = nil
     }
@@ -109,139 +119,175 @@ func (this *AuthServer) getUserID( Login string, Password string ) int64 {
   if res == nil {
     this.db.Close()
     this.db = nil
-    return -3
+    return -5
   }
 
   defer res.Free()
   if res.GetNumberOfRows() != 1 || res.GetNumberOfColumns() != 1 {
-    return 0
+    return -6
   }
   return res.GetInt64Value_( 0, 0 ) 
 }
 
-func (this *AuthServer) getAuthorization( Header http.Header ) string {
+func (this *AuthServer) getAuthorization( Header http.Header ) ( string, error ) {
   switch {
-    case      Header[ "Authorization" ] == nil: return ""
-    case len( Header[ "Authorization" ] ) < 1:  return ""
-    default:                                    return Header[ "Authorization" ][ 0 ] // or better the last?
+    case      Header[ "Authorization" ] == nil: fallthrough
+    case len( Header[ "Authorization" ] ) < 1:  return "", fmt.Errorf( "Authorization header not found" )
+    default:                                    
+			for _, header := range Header[ "Authorization" ] {
+				if strings.HasPrefix( header, "Bearer " ) { return header[ 7: ], nil }
+			}
+			return Header[ "Authorization" ][ 0 ], nil
   }
 }
+func (this *AuthServer) decodeClaims( tokenString string ) ( *jwt.StandardClaims, error ) {
+	//SigningMethodHS256
+	token, err := jwt.ParseWithClaims( tokenString, &jwt.StandardClaims{}, func( token *jwt.Token ) ( interface{}, error ) {
+		if _, ok := token.Method.( *jwt.SigningMethodHMAC ); !ok  {
+			return nil, fmt.Errorf( "Unexpected signing method: '%v'", token.Header[ "alg" ] )
+		}
+		return this.JWTSecret, nil
+	} )
 
-func (this *AuthServer) unAuth( writer http.ResponseWriter, request *http.Request ) {
-  this.cors( writer, request )
+	switch {
+	case err   != nil: 		return nil, err
+	case token == nil: 		return nil, fmt.Errorf( "Could not parse token" )
+	case !token.Valid: 		return nil, fmt.Errorf( "Invalid token" )
+	default:
+		switch claims, ok := token.Claims.(*jwt.StandardClaims); {
+		case !ok:        		return nil, fmt.Errorf( "No claims found" )
+		case claims == nil: return nil, fmt.Errorf( "Could not parse token claims" )
+		default: 						return claims, nil
+	} }
+}
+func (this *AuthServer) verifyClaims( claims *jwt.StandardClaims, reader *http.Request ) error {
+	now        := time.Now().Unix()
+	ip, _, err := net.SplitHostPort( reader.RemoteAddr )
+	uip      	 := net.ParseIP( ip )
 
-  response := Response{
-    ResponseID: 0,
-    Status:     -1,
-    Message:    "ERROR: Token not found.",
-  }
-
-  if token := SQLiteWeb.Auth.getAuthorization( request.Header ); token != "" {
-    delete( this.Tokens, token )
-    response.Status  = 0;
-    response.Message = ""
-  } 
-
-  if jResponse, err := json.Marshal( response ); err == nil {
-    writer.Header().Set( "Content-Type", "application/json" )
-    writer.Header().Set( "Content-Encoding", "utf-8" )
-    writer.Write( jResponse )
-  } else {
-    http.Error( writer, err.Error(), http.StatusInternalServerError )
-  }
+	switch {
+		case err    != nil    														: return err
+		case uip    == nil   															: return fmt.Errorf( "Invalid ClientIP" )
+		case claims == nil																: return fmt.Errorf( "Nil Claims" )
+		case !claims.VerifyAudience( uip.String(), true )	: return fmt.Errorf( "Invalid Audience" )
+		case !claims.VerifyExpiresAt( now, true )					: return fmt.Errorf( "Clain has expired" )
+		case !claims.VerifyIssuedAt( now, true )					: return fmt.Errorf( "Invalid Issue Date" )
+		case !claims.VerifyIssuer( long_name, true )			: return fmt.Errorf( "Invalidf Issuer" )
+		case !claims.VerifyNotBefore( now, true )					: return fmt.Errorf( "Claim from the future" )
+		case claims.Subject != this.Realm									: return fmt.Errorf( "Invalid SUbject" )
+		default																						: return nil
+	}
 }
 
-func (this *AuthServer) tokenExists( Token string ) bool {
-  _, exits := this.Tokens[ Token ]
-  return exits
-}
+
 
 func (this *AuthServer) JWTAuth( nextHandler http.HandlerFunc ) http.HandlerFunc {
   return func( writer http.ResponseWriter, reader *http.Request ) {
-    switch t, ok := this.Tokens[ SQLiteWeb.Auth.getAuthorization( reader.Header ) ]; {
-    case !ok:                             fallthrough
-    case t.ExpiresAt < time.Now().Unix(): fallthrough
-    case t.RequestLeft < 1:
-      writer.Header().Set( "WWW-Authenticate", fmt.Sprintf( "Bearer realm=\"%s\"", this.Realm ) )
-      writer.WriteHeader( http.StatusUnauthorized )
-    default:
-      t.RequestLeft--
-      nextHandler.ServeHTTP( writer, reader )
-    }
-  }
+
+		switch token, err := SQLiteWeb.Auth.getAuthorization( reader.Header ); {
+		case err   != nil																		: fallthrough
+		case token == "" 																		: this.challengeAuth( writer )
+		default:
+			switch claims, err := SQLiteWeb.Auth.decodeClaims( token ); {
+			case err != nil   														  	: fallthrough
+			case this.verifyClaims( claims, reader ) != nil   : this.challengeAuth( writer )
+			default																						: nextHandler.ServeHTTP( writer, reader )
+	} } }
 }
+
+////
 
 func (this *AuthServer) auth( writer http.ResponseWriter, request *http.Request ) {
   this.cors( writer, request )
 
-  // Read JSON Packet
   var authRequest AuthRequest
-  json.NewDecoder( request.Body ).Decode( &authRequest ); 
 
-  // Read & Overwrite from (old) Token
-  token := SQLiteWeb.Auth.getAuthorization( request.Header )
-  if t, ok := this.Tokens[ token ]; ok {
-    authRequest.Login    = t.Login
-    authRequest.Password = t.Password
-    delete( this.Tokens, token )
-  }
-  
+  switch err := json.NewDecoder( request.Body ).Decode( &authRequest ); {
+	case err != nil	: this.sendError( writer, 1, err.Error(), http.StatusBadRequest )
+	default					: this.authorize( writer, request, this.lookupUserID( authRequest.Login, authRequest.Password ) )
+	}
+}
+
+func (this *AuthServer) reAuth( writer http.ResponseWriter, request *http.Request ) {
+	this.cors( writer, request )
+	
+	token, _ := SQLiteWeb.Auth.getAuthorization( request.Header )
+	claims, _ := SQLiteWeb.Auth.decodeClaims( token )
+
+	switch userID, err := strconv.ParseInt( claims.Id, 10, 64 ); {
+	case err != nil	: this.sendError( writer, 3, err.Error(), http.StatusBadRequest )
+	case userID < 0	:	this.sendError( writer, 4, "Invalid UserID", http.StatusBadRequest )
+	default					: this.authorize( writer, request, userID )
+	}
+}
+
+///
+
+func (this *AuthServer) challengeAuth( writer http.ResponseWriter ) {
+	writer.Header().Set( "WWW-Authenticate", fmt.Sprintf( "Bearer realm=\"%s\"", this.Realm ) )
+	writer.WriteHeader( http.StatusUnauthorized )
+}
+
+/*
+ * error codes: 0 = ok
+ *              1 = bad request / could not parse json
+ *              2 = invalid Cliaten id
+ *              3 = wrong credentials (invalid/wrong format)
+ *              4 = wrong credentials (not found on auth server)
+ *              5 = insternal server error
+*/
+func (this *AuthServer) authorize( writer http.ResponseWriter, request *http.Request, userID int64 ) {
   response := Response {
-    ResponseID: authRequest.RequestID,
-    Status:     1,
-    Message:    "Wrong Credentials",
+    Status:     5,
+    Message:    "Internal Server Error",
   }
 
-  if authRequest.Login == "" || authRequest.Password == "" {
-    writer.WriteHeader( http.StatusBadRequest )
-  
-  } else {
-    now    := time.Now().Unix()
-    claims := &jwt.StandardClaims {
-      Id:         "0",
+	now      := time.Now().Unix()
+	ip, _, _ := net.SplitHostPort( request.RemoteAddr )
+	uip      := net.ParseIP( ip )
+
+	switch {
+	case uip == nil:
+		response.Status  = 2
+		response.Message = "Invalid ClientIP"
+		writer.WriteHeader( http.StatusBadRequest )
+
+	case userID == -1:
+		response.Status  = 3
+		response.Message = "Wrong Credentials"
+		writer.WriteHeader( http.StatusBadRequest )
+
+	case userID == -2:
+		response.Status  = 4
+		response.Message = "Wrong Credentials"
+		writer.WriteHeader( http.StatusUnauthorized )
+
+	case userID == -3 || userID == -4 || userID == -5:
+		writer.WriteHeader( http.StatusInternalServerError )
+
+	default:
+
+		claims := &jwt.StandardClaims {
+			Audience:   uip.String(),
+			ExpiresAt:  now + this.JWTTTL,
+      Id:         fmt.Sprintf( "%d", userID ),
+			IssuedAt:   now,
       Issuer:     long_name,
-      IssuedAt:   now,
       NotBefore:  now,
-      ExpiresAt:  now + this.JWTTTL,
       Subject:    this.Realm,
     }
   
-    // Check credentials
-    if userID := this.getUserID( authRequest.Login, authRequest.Password ); userID < 1 {
-      writer.WriteHeader( http.StatusUnauthorized )
+    Token            := jwt.NewWithClaims( jwt.SigningMethodHS256, claims )
+    TokenString, err := Token.SignedString( this.JWTSecret ) // = Header, Payload, Signature
+
+    if err != nil {
+      writer.WriteHeader( http.StatusInternalServerError )
 
     } else {
-      claims.Id = fmt.Sprintf( "%d", userID )
-
-      // Delete double logins
-      for t, ti := range this.Tokens {
-        if ti.Login == authRequest.Login && ti.Password == authRequest.Password {
-          delete( this.Tokens, t )
-        }
-      }
-
-      Token            := jwt.NewWithClaims( jwt.SigningMethodHS256, claims )
-      TokenString, err := Token.SignedString( this.JWTSecret ) // = Header, Payload, Signature
-
-      if err != nil {
-        response.Status = 2
-        response.Message = "Intenal Server Error"
-        writer.WriteHeader( http.StatusInternalServerError )
-
-      } else {
-        response.Status  = 0
-        response.Message = TokenString
-      
-        TokenString = "Bearer " + TokenString
-        this.Tokens[ TokenString ] = TokenInfo {
-          Credentials:        authRequest.Credentials,
-          ExpiresAt:          now + this.JWTTTL,
-          RequestsPerSecond:  1000,
-          RequestLeft:        1000,
-        }
-      }
+      response.Status  = 0
+      response.Message = TokenString
     }
-  }
+	}
 
   writer.Header().Set( "Content-Type", "application/json" )
   writer.Header().Set( "Content-Encoding", "utf-8" )
@@ -251,4 +297,11 @@ func (this *AuthServer) auth( writer http.ResponseWriter, request *http.Request 
   } else {
     http.Error( writer, err.Error(), http.StatusInternalServerError )
   }
+}
+
+func (this *AuthServer) sendError( writer http.ResponseWriter, status int, message string, statusCode int ) {
+	writer.Header().Set( "Content-Type", "application/json" )
+	writer.Header().Set( "Content-Encoding", "utf-8" )
+	writer.Write( []byte( fmt.Sprintf( "{\"Stauts\":%d,\"Message\":\"%s\"}", status, message ) ) )
+	writer.WriteHeader( statusCode )
 }

@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud Web Server
-//     ///             ///  ///         Version     : 0.1.1
-//     //             ///   ///  ///    Date        : 2021/12/20
+//     ///             ///  ///         Version     : 0.2.0
+//     //             ///   ///  ///    Date        : 2022/02/08
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : 
@@ -25,6 +25,7 @@ echo $GOPATH
 ( should be something like: /Users/pfeil/GitHub/SqliteCloud/sdk/GO )
 cd src/sqliteweb/
 go run *.go
+go run *.go --config etc/sqliteweb/sqliteweb.ini 
 
 cd src
 go get github.com/gorilla/websocket
@@ -54,8 +55,8 @@ import "gopkg.in/ini.v1"
 
 var app_name     = "sqliteweb"
 var long_name    = "SQLite Cloud Web Server"
-var version      = "version 0.0.1"
-var copyright    = "(c) 2021 by SQLite Cloud Inc."
+var version      = "version 0.1.0"
+var copyright    = "(c) 2022 by SQLite Cloud Inc."
 
 var cfg *ini.File
 
@@ -128,7 +129,6 @@ func main() {
       SQLiteWeb.Auth.login      = cfg.Section( "auth" ).  Key( "login" ).String()
       SQLiteWeb.Auth.password   = cfg.Section( "auth" ).  Key( "password" ).String()
       SQLiteWeb.Auth.cert       = cfg.Section( "auth" ).  Key( "cert" ).String()
-
 
       initStubs()
       initWWW()

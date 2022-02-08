@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud Web Server
-//     ///             ///  ///         Version     : 0.1.1
-//     //             ///   ///  ///    Date        : 2021/12/20
+//     ///             ///  ///         Version     : 0.2.0
+//     //             ///   ///  ///    Date        : 2022/02/08
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : 
@@ -67,8 +67,7 @@ func initializeSQLiteWeb() {
 
       Auth:       AuthServer{
         JWTSecret:  []byte( "" ),
-        JWTTTL:     0,  
-        Tokens:   map[string]TokenInfo{},
+        JWTTTL:     0,
       },
 
       WWWPath:    "",
