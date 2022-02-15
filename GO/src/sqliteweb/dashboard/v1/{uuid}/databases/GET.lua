@@ -1,0 +1,63 @@
+-- {
+--   "ResponseID": 0,
+--   "Message": "Databases List",
+--   "Databases": [
+--       {
+--           "Name": "Db1",
+--           "Size": 18000000000,
+--           "Connections": 5,
+--           "Encryption": null,
+--           "Backup": "Daily",
+--           "Stats": [
+--               521,
+--               12
+--           ],
+--           "Bytes": [
+--               8700000,
+--               712
+--           ],
+--           "Fragmentation": {
+--               "Used": 2400000,
+--               "Total": 712000
+--           }
+--       },
+--       {
+--           "Name": "Db1",
+--           "Size": 18000000000,
+--           "Connections": 5,
+--           "Encryption": null,
+--           "Backup": "Daily",
+--           "Stats": [
+--               521,
+--               12
+--           ],
+--           "Bytes": [
+--               8700000,
+--               712
+--           ],
+--           "Fragmentation": {
+--               "Used": 2400000,
+--               "Total": 712000
+--           }
+--       },
+--       {
+--           "Name": "Db1",
+--           "Size": 18000000000,
+--           "Connections": 5,
+--           "Encryption": null,
+--           "Backup": "Daily",
+--           "Stats": [
+--               521,
+--               12
+--           ],
+--           "Bytes": [
+--               8700000,
+--               712
+--           ],
+--           "Fragmentation": {
+--               "Used": 2400000,
+--               "Total": 712000
+--           }
+--       }
+--   ]
+-- }

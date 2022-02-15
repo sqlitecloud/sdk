@@ -3,13 +3,13 @@
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud Web Server
 //     ///             ///  ///         Version     : 0.2.0
-//     //             ///   ///  ///    Date        : 2022/02/08
+//     //             ///   ///  ///    Date        : 2022/02/15
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
-//   ///     //////////   ///  ///      Description : 
-//   ////                ///  ///                     
-//     ////     //////////   ///                      
-//        ////            ////                        
+//   ///     //////////   ///  ///      Description :
+//   ////                ///  ///
+//     ////     //////////   ///
+//        ////            ////
 //          ////     /////
 //             ///                      Copyright   : 2021 by SQLite Cloud Inc.
 //
@@ -25,7 +25,7 @@ echo $GOPATH
 ( should be something like: /Users/pfeil/GitHub/SqliteCloud/sdk/GO )
 cd src/sqliteweb/
 go run *.go
-go run *.go --config etc/sqliteweb/sqliteweb.ini 
+go run *.go --config etc/sqliteweb/sqliteweb.ini
 
 cd src
 go get github.com/gorilla/websocket
@@ -35,7 +35,7 @@ go get gopkg.in/ini.v1
 go get github.com/kardianos/service
 
 // Compile with:
-GOOS=linux go build -o sqliteweb  *.go 
+GOOS=linux go build -o sqliteweb  *.go
 
 */
 
@@ -46,7 +46,7 @@ import "fmt"
 //import "errors"
 import "strings"
 //import "strconv"
-//import "sqlitecloud"
+import "sqlitecloud"
 import "github.com/docopt/docopt-go"
 import "github.com/kardianos/service"
 import "gopkg.in/ini.v1"
@@ -59,6 +59,9 @@ var version      = "version 0.1.0"
 var copyright    = "(c) 2022 by SQLite Cloud Inc."
 
 var cfg *ini.File
+
+var db  *sqlitecloud.SQCloud = nil // Used in dashboard server
+var adb *sqlitecloud.SQCloud = nil // Used in dashboard server
 
 func main() {
   // Read command line arguments
@@ -83,7 +86,7 @@ func main() {
 
       // Overload the .ini file with the command line arguments
       for key, a := range p {
-        if a != nil { 
+        if a != nil {
           value := fmt.Sprintf( "%v", a )
           fmt.Printf( "%s = %v\r\n", key, a )
 
@@ -119,8 +122,6 @@ func main() {
 
       SQLiteWeb.APIPath         = cfg.Section( "api" ).   Key( "path" ).String()
 
-      SQLiteWeb.LUAPath         = cfg.Section( "lua" ).   Key( "package.path" ).String()
-
       SQLiteWeb.Auth.Realm      = cfg.Section( "auth" ).  Key( "jwt_realm" ).String()
       SQLiteWeb.Auth.JWTTTL     = cfg.Section( "auth" ).  Key( "jwt_ttl" ).RangeInt64( 300, 0, 0xFFFF )
       SQLiteWeb.Auth.JWTSecret  = []byte( cfg.Section( "auth" ).Key( "jwt_key" ).String() )
@@ -130,6 +131,7 @@ func main() {
       SQLiteWeb.Auth.password   = cfg.Section( "auth" ).  Key( "password" ).String()
       SQLiteWeb.Auth.cert       = cfg.Section( "auth" ).  Key( "cert" ).String()
 
+      initDashboard()
       initStubs()
       initWWW()
 
@@ -141,5 +143,5 @@ func main() {
       }
 
     }
-  } 
+  }
 }

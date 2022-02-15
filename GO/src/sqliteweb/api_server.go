@@ -28,7 +28,7 @@ import "io/ioutil"
 //import "errors"
 import "strings"
 //import "strconv"
-import "sqlitecloud"
+// import "sqlitecloud"
 
 //import "github.com/kardianos/service"
 import "net/http"
@@ -39,22 +39,24 @@ import "github.com/gorilla/mux"
 
 import "github.com/Shopify/go-lua"
 
-var db *sqlitecloud.SQCloud
+
 var out = bufio.NewWriter( os.Stdout )
 
 func init() {
   initializeSQLiteWeb()
-  db, _ = sqlitecloud.Connect( "sqlitecloud://dev1.sqlitecloud.io/X" );
+  if db == nil {
+    // db, _ = sqlitecloud.Connect( "sqlitecloud://dev1.sqlitecloud.io/X" );
+  }
 }
 
 func initStubs() {
   if PathExists( SQLiteWeb.APIPath ) {
     SQLiteWeb.router.HandleFunc( "/api/{endpoint:.*}", SQLiteWeb.stubHandler)
-  } 
+  }
 }
 
 
-func QueryNode(L *lua.State) int {
+func QueryNode_old(L *lua.State) int {
   null := uint64( 0 )
   if sql, ok := L.ToString( 1 ); !ok { /* get argument */
     return 0
@@ -64,7 +66,7 @@ func QueryNode(L *lua.State) int {
       if err == nil {
 
         L.NewTable()
-        
+
         errorNumber, errorMessage := res.GetError_()
         L.PushString( "ErrorNumber" )
         L.PushInteger( errorNumber )
@@ -85,17 +87,17 @@ func QueryNode(L *lua.State) int {
         L.NewTable() // row
         for r, R := null, res.GetNumberOfRows(); r < R; r++ {
           L.PushInteger( int( r ) + 1 )
-          
+
           L.NewTable() // columns
           for c, C := null, res.GetNumberOfColumns(); c < C; c++ {
             L.PushInteger( int( c ) + 1 )
             switch res.GetValueType_( r, c ) {
             case '_':  L.PushNil()
-            case ':':  L.PushInteger( int(res.GetInt32Value_( r, c ) ) ) 
-            case ',':  L.PushNumber( res.GetFloat64Value_( r, c ) ) 
+            case ':':  L.PushInteger( int(res.GetInt32Value_( r, c ) ) )
+            case ',':  L.PushNumber( res.GetFloat64Value_( r, c ) )
             default:   L.PushString( res.GetStringValue_( r, c ) )
             }
-            L.SetTable( -3 )          
+            L.SetTable( -3 )
           }
           L.SetTable( -3 )
         }
@@ -105,7 +107,7 @@ func QueryNode(L *lua.State) int {
       }
     }
     return 1
-  } 
+  }
 }
 
 
@@ -155,8 +157,8 @@ func (this *Server) stubHandler(writer http.ResponseWriter, request *http.Reques
     } )
 
     l.Register( "Write", func(L *lua.State) int {
-      if data, ok := L.ToString( 1 ); ok { 
-        //fmt.Printf( "WRITE: %s\r\n", data ) 
+      if data, ok := L.ToString( 1 ); ok {
+        //fmt.Printf( "WRITE: %s\r\n", data )
         writer.Write( []byte( data ) )
       }
       return 0
@@ -167,12 +169,12 @@ func (this *Server) stubHandler(writer http.ResponseWriter, request *http.Reques
     l.NewTable()
     l.PushInteger( 0 )
     l.PushString( fmt.Sprintf( "%slua", path ) )
-    l.SetTable( -3 ) 
+    l.SetTable( -3 )
 
-    for i, arg := range args { 
+    for i, arg := range args {
       l.PushInteger( i + 1 )
       l.PushString( arg )
-      l.SetTable( -3 ) 
+      l.SetTable( -3 )
     }
     l.SetGlobal( "args" )
 
@@ -185,7 +187,7 @@ func (this *Server) stubHandler(writer http.ResponseWriter, request *http.Reques
     fmt.Printf( "will execute lua script: '%s'\r\n", path )
     fmt.Printf( "%v\r\n", args )
 
-    lua.DoString( l, fmt.Sprintf( `package.path = "%s"`, this.LUAPath ) )
+    //lua.DoString( l, fmt.Sprintf( `package.path = "%s"`, this.LUAPath ) )
 
     err = lua.DoFile( l, fmt.Sprintf( "%slua", path ) )
     if err != nil {
@@ -198,11 +200,6 @@ func (this *Server) stubHandler(writer http.ResponseWriter, request *http.Reques
   default:
     panic( "not found" )
   }
-
-
-  
-
-
 
 
 

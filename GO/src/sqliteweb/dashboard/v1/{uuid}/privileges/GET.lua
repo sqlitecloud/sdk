@@ -1,0 +1,10 @@
+-- {
+--   "ResponseID": 0,
+--   "Message": "Privileges security List",
+--   "Privileges": [
+--       "read",
+--       "update",
+--       "insert",
+--       "delete"
+--   ]
+-- }

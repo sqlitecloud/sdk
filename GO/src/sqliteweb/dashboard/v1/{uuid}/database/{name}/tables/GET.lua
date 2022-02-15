@@ -1,0 +1,38 @@
+-- {
+--   "ResponseID": 0,
+--   "Message": "Tables List",
+--   "Tables": [
+--       {
+--           "Id": 0,
+--           "Name": "table1",
+--           "Cols": 3,
+--           "RowId": 1,
+--           "Strict": 0,
+--           "Type": "table"
+--       },
+--       {
+--           "Id": 1,
+--           "Name": "table2",
+--           "Cols": 2,
+--           "RowId": 0,
+--           "Strict": 1,
+--           "Type": "view"
+--       },
+--       {
+--           "Id": 2,
+--           "Name": "table3",
+--           "Cols": 20,
+--           "RowId": 1,
+--           "Strict": 1,
+--           "Type": "virtual"
+--       },
+--       {
+--           "Id": 3,
+--           "Name": "table4",
+--           "Cols": 5,
+--           "RowId": 0,
+--           "Strict": 0,
+--           "Type": "shadow"
+--       }
+--   ]
+-- }

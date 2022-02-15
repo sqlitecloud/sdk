@@ -3,13 +3,13 @@
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud Web Server
 //     ///             ///  ///         Version     : 0.2.0
-//     //             ///   ///  ///    Date        : 2022/02/08
+//     //             ///   ///  ///    Date        : 2022/02/15
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
-//   ///     //////////   ///  ///      Description : 
-//   ////                ///  ///                     
-//     ////     //////////   ///                      
-//        ////            ////                        
+//   ///     //////////   ///  ///      Description :
+//   ////                ///  ///
+//     ////     //////////   ///
+//        ////            ////
 //          ////     /////
 //             ///                      Copyright   : 2021 by SQLite Cloud Inc.
 //
@@ -35,7 +35,7 @@ import "github.com/gorilla/mux"
 
 type Server struct{
   Address       string
-  Port          int   
+  Port          int
 
   Hostname      string
   CertPath      string
@@ -46,7 +46,6 @@ type Server struct{
   WWWPath       string
   WWW404URL     string
   APIPath       string
-  LUAPath       string
 
   server  *http.Server
   router  *mux.Router
@@ -73,7 +72,6 @@ func initializeSQLiteWeb() {
       WWWPath:    "",
       WWW404URL:  "/",
       APIPath:    "",
-      LUAPath:    "",
       server:     nil,
       router:     mux.NewRouter(),
       ticker:     nil,
@@ -94,7 +92,7 @@ func ( this *Server ) Start( s service.Service ) error {
   this.server = &http.Server{
     Addr:         fmt.Sprintf( "%s:%d", this.Address, this.Port ),
     Handler:      this.router,
-    
+
     WriteTimeout: 15 * time.Second,
     ReadTimeout:  15 * time.Second,
   }
