@@ -85,7 +85,6 @@ type statistics struct {
 	failed        bool
 	nchecks       int
 	nfailedchecks int
-	nretries      int
 }
 
 type worker struct {
@@ -204,13 +203,18 @@ func newReaderUntilEnd(t *task) (*bytes.Reader, error) { // bufio.Scanner
 	// consume this code from the caller scanner
 	var b bytes.Buffer
 	stacklevel := 0
+	//fmt.Printf("newReaderUntilEnd task:%s(:%d) \n", t.name, t.line)
+
 	for t.scanner.Scan() {
 		t.line += 1
 
 		trimmedbytes := bytes.TrimLeft(t.scanner.Bytes(), " \t")
+		// fmt.Printf("newReaderUntilEnd trimmed:%s\n", string(trimmedbytes))
 		if commandRequiresEnd(trimmedbytes) {
+			// fmt.Printf("newReaderUntilEnd trimmed:%s commandRequiresEnd\n", string(trimmedbytes))
 			stacklevel += 1
 		} else if commandIsEnd(trimmedbytes) {
+			// fmt.Printf("newReaderUntilEnd trimmed:%s commandIsEnd stack:%d\n", string(trimmedbytes), stacklevel)
 			if stacklevel == 0 {
 				break
 			} else {
@@ -224,6 +228,7 @@ func newReaderUntilEnd(t *task) (*bytes.Reader, error) { // bufio.Scanner
 		}
 		b.Write([]byte("\n"))
 	}
+	// fmt.Printf("newReaderUntilEnd bytes:%s\n", string(b.Bytes()))
 
 	// create a new reader with the code for the new task
 	return bytes.NewReader(b.Bytes()), nil
@@ -259,9 +264,20 @@ func commandSleep(w *worker, args []string, opts []bool, t *task) error {
 		return err
 	}
 
-	intms, err := strconv.Atoi(args[0])
+	// intms, err := strconv.Atoi(args[0])
+	// if err != nil {
+	// 	err = fmt.Errorf("the first argument is invalid: %v\n", err)
+	// 	return err
+	// }
+
+	interfaceval, err := gval.Evaluate(args[0], t.env)
 	if err != nil {
-		err = fmt.Errorf("the first argument is invalid: %v\n", err)
+		return fmt.Errorf("expected int arg, got %s (%v)", args[0], err)
+	}
+
+	// transform the interface{} result of Evaluate to int
+	intms, err := interfaceToInt(interfaceval)
+	if err != nil {
 		return err
 	}
 
@@ -740,6 +756,7 @@ func assignExpr(w *worker, t *task, key string, expression string) {
 	}
 
 	t.env[key] = value
+	//w.t.Logf("set t.env[%s] = %v", key, value)
 	envMutex.Lock()
 	env[key] = value
 	envMutex.Unlock()
@@ -1433,15 +1450,6 @@ func (w *worker) processTask(task *task) error {
 				// TODO: change the name of the function from Select to Execute
 				w.res, w.reserr = w.conn.Select(sql)
 				
-				// if err is busy then retry, no more than retrytimes
-				retrytimes := 10
-				for i := 1; w.reserr != nil && w.conn.ErrorCode == 5 && i < retrytimes; i++ { 
-					// TODO: in case of explicit transaction, we should retry the full transaction instead of single commands
-					Debugf("w%d busy error, retry(%d): %s", w.id, i, sql)
-					w.stats.nretries++
-					w.res, w.reserr = w.conn.Select(sql)
-				}
-
 				if debug {
 					Debugf("w%d executed: %s", w.id, sql)
 					if w.res != nil {
@@ -1534,16 +1542,14 @@ func printStats(t *testing.T) {
 	nchecks := 0
 	nfailedchecks := 0
 	nfailedworkers := 0
-	nretries := 0
 	for _, w := range workers {
 		nchecks += w.stats.nchecks
 		nfailedchecks += w.stats.nfailedchecks
 		if w.stats.failed {
 			nfailedworkers += 1
 		}
-		nretries += w.stats.nretries
 	}
-	fmt.Printf("    --- STATS: %s workers:%d/%d, checks:%d/%d, retries:%d\n", t.Name(), len(workers)-nfailedworkers, len(workers), nchecks-nfailedchecks, nchecks, nretries)
+	fmt.Printf("    --- STATS: %s workers:%d/%d, checks:%d/%d\n", t.Name(), len(workers)-nfailedworkers, len(workers), nchecks-nfailedchecks, nchecks)
 }
 
 func trySkip(t *testing.T) {
