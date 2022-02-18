@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud Web Server
-//     ///             ///  ///         Version     : 0.1.1
-//     //             ///   ///  ///    Date        : 2021/12/20
+//     ///             ///  ///         Version     : 0.2.0
+//     //             ///   ///  ///    Date        : 2022/02/18
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description :
@@ -17,16 +17,8 @@
 
 package main
 
-import "sqlitecloud"
-
 func init() {
   initializeSQLiteWeb()
-  if db == nil {
-    db, _ = sqlitecloud.Connect( "sqlitecloud://admin:admin@dev1.sqlitecloud.io/Test" );
-  }
-  if adb == nil {
-    adb, _ = sqlitecloud.Connect( "sqlitecloud://admin:kAhqTYvgXX43@auth1.sqlitecloud.io/users.sqlite" );
-  }
 }
 
 func initDashboard() {

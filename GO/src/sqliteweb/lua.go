@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud Web Server
-//     ///             ///  ///         Version     : 0.1.1
-//     //             ///   ///  ///    Date        : 2021/12/20
+//     ///             ///  ///         Version     : 0.1.2
+//     //             ///   ///  ///    Date        : 2022/02/0
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description :
@@ -148,7 +148,7 @@ func LUATable2MI( L *lua.State ) map[string]interface{} {
 
 // json Functions
 
-func jsonEncode( L *lua.State ) int {
+func lua_jsonEncode( L *lua.State ) int {
   if L.TypeOf( 1 ) == lua.TypeTable {
     jsonString, _ := json.Marshal( LUATable2MI( L ) )
     L.PushString( string(jsonString) )
@@ -158,7 +158,7 @@ func jsonEncode( L *lua.State ) int {
   return 1
 }
 
-func jsonDecode( L *lua.State ) int {
+func lua_jsonDecode( L *lua.State ) int {
   if L.TypeOf( 1 ) == lua.TypeString {
     var x map[string]interface{}
 
@@ -171,9 +171,21 @@ func jsonDecode( L *lua.State ) int {
   return 1
 }
 
+// .ini File functions
+func lua_getINIString( L *lua.State ) int {
+  switch {
+  case L.TypeOf( 1 ) != lua.TypeString  : fallthrough // section
+  case L.TypeOf( 2 ) != lua.TypeString  : fallthrough // key
+  case L.TypeOf( 3 ) != lua.TypeString  : L.PushNil() // defaultValue
+  default                               : L.PushString( GetINIString( lua.CheckString( L, 1 ),  lua.CheckString( L, 2 ),  lua.CheckString( L, 3 ) ) )
+
+  }
+  return 1
+}
+
 // SQLiteCloud helper
 
-func SQCloudEnquoteString (L *lua.State) int {
+func lua_enquoteSQL (L *lua.State) int {
   switch  L.TypeOf( 1 ) {
   case lua.TypeNil    : L.PushString( "null" )
   case lua.TypeBoolean: L.PushString( fmt.Sprintf( "%t", L.ToBoolean( 1 ) ) )
@@ -184,20 +196,20 @@ func SQCloudEnquoteString (L *lua.State) int {
   return 1
 }
 
-func QueryNode( L *lua.State ) int {
+func lua_executeSQL( L *lua.State ) int {
   if L.TypeOf( 1 ) == lua.TypeString && L.TypeOf( 2 ) == lua.TypeString {
     uuid  := lua.CheckString( L, 1 )
     query := lua.CheckString( L, 2 )
 
-    var res *sqlitecloud.Result
-    var err error
+    // var res *sqlitecloud.Result
+    // var err error
 
-    switch uuid {
-    case "auth" :
-    res, err = adb.Select( query )
-    default     :
-    res, err = db.Select( query )
-    }
+    res, err := cm.ExecuteSQL( uuid, query )
+
+    // switch uuid {
+    // case "auth" : res, err = adb.Select( query )
+    // default     : res, err =  db.Select( query )
+    // }
 
     if res != nil {
       defer res.Free()
@@ -237,7 +249,7 @@ func QueryNode( L *lua.State ) int {
             case '_':  L.PushNil()
             case ':':  L.PushInteger( int(res.GetInt32Value_( r, c ) ) )
             case ',':  L.PushNumber( res.GetFloat64Value_( r, c ) )
-            default:   L.PushString( res.GetStringValue_( r, c ) )
+            default :  L.PushString( res.GetStringValue_( r, c ) )
             }
             L.SetTable( -3 )
           }
@@ -315,7 +327,7 @@ func (this *Server) executeLua( writer http.ResponseWriter, request *http.Reques
   v        := mux.Vars( request ) // len(): 1, endpoint: v1/auth
   endpoint := strings.ReplaceAll( v[ "endpoint" ] + "/", "//", "/" ) // "v1/fbf94289-64b0-4fc6-9c20-84083f82ee63/database/Foo/connections/"
 
-  path     := cfg.Section( "dashboard" ).Key( "path" ).String()     // "/Users/pfeil/GitHub/SqliteCloud/sdk/GO/src/sqliteweb/dashboard"
+  path     := cfg.Section( "dashboard" ).Key( "path" ).String()      // "/Users/pfeil/GitHub/SqliteCloud/sdk/GO/src/sqliteweb/dashboard"
   args     := []string{ "" }
   globals  := make( map[string]string )
 
@@ -373,12 +385,15 @@ func (this *Server) executeLua( writer http.ResponseWriter, request *http.Reques
     lua.OpenLibraries( l )
 
     // register internal sql specific functons
-    l.Register( "sqlcQuery", QueryNode )
-    l.Register( "sqlcEnquote", SQCloudEnquoteString )
+    l.Register( "executeSQL", lua_executeSQL )
+    l.Register( "enquoteSQL", lua_enquoteSQL )
 
     // register internal json related functions
-    l.Register( "jsonEncode", jsonEncode )
-    l.Register( "jsonDecode", jsonDecode )
+    l.Register( "jsonEncode", lua_jsonEncode )
+    l.Register( "jsonDecode", lua_jsonDecode )
+
+    // register internal .ini file functions
+    l.Register( "getINIString", lua_getINIString )
 
     // register internal mail related functions
     l.Register( "mail", mail )
@@ -410,8 +425,7 @@ func (this *Server) executeLua( writer http.ResponseWriter, request *http.Reques
     // initialize the lua path
     l.NewTable()
     l.PushInteger( 0 )
-    //l.PushString( fmt.Sprintf( "%s.lua", path ) )
-    l.PushString( path )
+    l.PushString( path ) //l.PushString( fmt.Sprintf( "%s.lua", path ) )
     l.SetTable( -3 )
 
     // create and populate the "query" array
@@ -470,7 +484,7 @@ func (this *Server) executeLua( writer http.ResponseWriter, request *http.Reques
       lua.DoString( l, fmt.Sprintf( `package.path = "%s"`, cfg.Section( "lua" ).Key( "package.path" ).String() ) )
     }
 
-    // load internal lua functions into contect
+    // load internal lua functions into context
     lua.DoString( l, internalLuaFunctions )
 
     // execute the lua file

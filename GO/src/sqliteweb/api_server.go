@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud Web Server
-//     ///             ///  ///         Version     : 0.1.1
-//     //             ///   ///  ///    Date        : 2021/12/20
+//     ///             ///  ///         Version     : 0.2.0
+//     //             ///   ///  ///    Date        : 2022/02/18
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description :
@@ -44,9 +44,6 @@ var out = bufio.NewWriter( os.Stdout )
 
 func init() {
   initializeSQLiteWeb()
-  if db == nil {
-    // db, _ = sqlitecloud.Connect( "sqlitecloud://dev1.sqlitecloud.io/X" );
-  }
 }
 
 func initStubs() {
@@ -55,60 +52,6 @@ func initStubs() {
   }
 }
 
-
-func QueryNode_old(L *lua.State) int {
-  null := uint64( 0 )
-  if sql, ok := L.ToString( 1 ); !ok { /* get argument */
-    return 0
-  } else {
-    if res, err := db.Select( sql ); res != nil {
-      defer res.Free()
-      if err == nil {
-
-        L.NewTable()
-
-        errorNumber, errorMessage := res.GetError_()
-        L.PushString( "ErrorNumber" )
-        L.PushInteger( errorNumber )
-        L.SetTable( -3 )
-        L.PushString( "ErrorMessage" )
-        L.PushString( errorMessage )
-        L.SetTable( -3 )
-
-        L.PushString( "NumberOfRows" )
-        L.PushInteger( int( res.GetNumberOfRows() ) )
-        L.SetTable( -3 )
-
-        L.PushString( "NumberOfColumns" )
-        L.PushInteger( int( res.GetNumberOfColumns() ) )
-        L.SetTable( -3 )
-
-        L.PushString( "Rows" )
-        L.NewTable() // row
-        for r, R := null, res.GetNumberOfRows(); r < R; r++ {
-          L.PushInteger( int( r ) + 1 )
-
-          L.NewTable() // columns
-          for c, C := null, res.GetNumberOfColumns(); c < C; c++ {
-            L.PushInteger( int( c ) + 1 )
-            switch res.GetValueType_( r, c ) {
-            case '_':  L.PushNil()
-            case ':':  L.PushInteger( int(res.GetInt32Value_( r, c ) ) )
-            case ',':  L.PushNumber( res.GetFloat64Value_( r, c ) )
-            default:   L.PushString( res.GetStringValue_( r, c ) )
-            }
-            L.SetTable( -3 )
-          }
-          L.SetTable( -3 )
-        }
-        L.SetTable( -3 )
-
-        // res.DumpToWriter( out, sqlitecloud.OUTFORMAT_LIST, false, "|", "NULL", "\r\n", 0, false )
-      }
-    }
-    return 1
-  }
-}
 
 
 func (this *Server) stubHandler(writer http.ResponseWriter, request *http.Request) {
@@ -164,7 +107,7 @@ func (this *Server) stubHandler(writer http.ResponseWriter, request *http.Reques
       return 0
     } )
 
-    l.Register( "queryNode", QueryNode )
+    ////// l.Register( "queryNode", QueryNode )
 
     l.NewTable()
     l.PushInteger( 0 )

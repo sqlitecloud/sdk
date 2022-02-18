@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud Web Server
-//     ///             ///  ///         Version     : 0.2.0
-//     //             ///   ///  ///    Date        : 2022/02/15
+//     ///             ///  ///         Version     : 0.2.1
+//     //             ///   ///  ///    Date        : 2022/02/18
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description :
@@ -46,7 +46,6 @@ import "fmt"
 //import "errors"
 import "strings"
 //import "strconv"
-import "sqlitecloud"
 import "github.com/docopt/docopt-go"
 import "github.com/kardianos/service"
 import "gopkg.in/ini.v1"
@@ -59,9 +58,6 @@ var version      = "version 0.1.0"
 var copyright    = "(c) 2022 by SQLite Cloud Inc."
 
 var cfg *ini.File
-
-var db  *sqlitecloud.SQCloud = nil // Used in dashboard server
-var adb *sqlitecloud.SQCloud = nil // Used in dashboard server
 
 func main() {
   // Read command line arguments
@@ -134,6 +130,8 @@ func main() {
       initDashboard()
       initStubs()
       initWWW()
+
+      // inittt()
 
       if s, err := service.New( SQLiteWeb, svcConfig ); err == nil {
         err = s.Run()

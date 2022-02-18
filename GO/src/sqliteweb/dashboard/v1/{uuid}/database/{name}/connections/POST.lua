@@ -1,10 +1,12 @@
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
+print( getINIString( "dashboard", "path", ";-(" ) ) -- /Users/pfeil/GitHub/SqliteCloud/sdk/GO/src/sqliteweb/dashboard))
+
 -- print( userid ) -- userid from token
 
 -- print( uuid )
-result = sqlcQuery( uuid, "LIST CONNECTIONS" )
+result = executeSQL( uuid, "LIST CONNECTIONS" )
 nResult = filter( result.Rows, { [ "address"          ] = "Address", 
                                  [ "connection_date"  ] = "ConnectionDate", 
                                  [ "database"         ] = "Database",

@@ -2,8 +2,8 @@
 //                    ////              SQLite Cloud
 //        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud Web Server
-//     ///             ///  ///         Version     : 0.2.1
-//     //             ///   ///  ///    Date        : 2022/02/15
+//     ///             ///  ///         Version     : 0.2.2
+//     //             ///   ///  ///    Date        : 2022/02/18
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description :
@@ -66,6 +66,7 @@ func init() {
 }
 
 /*
+ * return  0 = success: root User from .ini file
  * return >0 = success: UserID
  * return -1 = invalid credentials
  * return -2 = wrong credentials
@@ -74,59 +75,34 @@ func init() {
  * return -5 = Internal error: could not send auth query
  * return -6 = Internal error: invalid response from db
 */
-func (this *AuthServer) lookupUserID( Login string, Password string ) int64 {
-  var res *sqlitecloud.Result = nil
-  var err error
 
+
+
+
+func (this *AuthServer) lookupUserID( Login string, Password string ) int64 {
   Login    = strings.TrimSpace( Login )
   Password = strings.TrimSpace( Password )
 
   if Login    == "" { return -1 }
   if Password == "" { return -1 }
 
+  if CheckCredentials( "dashboard", Login, Password ) { return 0 }
+
   Login    = sqlitecloud.SQCloudEnquoteString( Login )
   Password = sqlitecloud.SQCloudEnquoteString( Password )
 
-  query   := fmt.Sprintf( "SELECT id FROM User WHERE email = '%s' AND password = '%s' AND enabled = 1 LIMIT 1;", Login, Password )
+  query   := fmt.Sprintf( "SELECT id FROM User WHERE email = '%s' AND ( password = '%s' OR password = '%s' ) AND enabled = 1 LIMIT 1;", Login, Password, MD5( Password ) )
 
-  if this.db != nil {
-    if res, err = this.db.Select( query ); err != nil || res == nil {
-      this.db.Close()
-      this.db = nil
-      res     = nil
+  if res, err := cm.ExecuteSQL( "auth", query ); res != nil {
+    defer res.Free()
+    switch {
+    case err != nil                     : return -5
+    case res.GetNumberOfRows() < 1      : return -2
+    case res.GetNumberOfColumns() != 1  : return -6
+    default                             : return res.GetInt64Value_( 0, 0 )
     }
   }
-
-  if this.db == nil {
-    if this.db = sqlitecloud.New( this.cert, 10 ) ; this.db == nil {
-      return -3
-    }
-
-    if err := this.db.Connect( this.host, this.port, this.login, this.password, "users.sqlite", 10, "NO", 0 ); err != nil {
-      this.db.Close()
-      this.db = nil
-      return -4
-    }
-  }
-
-  if res == nil {
-    if res, err = this.db.Select( query ); err != nil {
-      if res != nil { res.Free() }
-      res = nil
-    }
-  }
-
-  if res == nil {
-    this.db.Close()
-    this.db = nil
-    return -5
-  }
-
-  defer res.Free()
-  if res.GetNumberOfRows() != 1 || res.GetNumberOfColumns() != 1 {
-    return -6
-  }
-  return res.GetInt64Value_( 0, 0 )
+  return -7
 }
 
 func (this *AuthServer) getAuthorization( Header http.Header ) ( string, error ) {
