@@ -24,7 +24,7 @@ If both are provided, only the user parameter is taken into account.
 
 ### Request object
 
-```json
+```code
 none
 ```
 
@@ -32,7 +32,7 @@ none
 
 #### root Response:
 
-```json
+```code
 {
   status            = 0,                         ; status code: 0 = no error, error otherwise
   message           = "OK",                      ; "OK" or error message
@@ -43,7 +43,7 @@ none
 
 #### Database object:
 
-```json
+```code
 {
   address = "127.0.0.1",                         ; IPv[4/6]
   name    = "name",                              ; Name

@@ -14,7 +14,7 @@ curl "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/d
 
 ### Request object
 
-```json
+```code
 none
 ```
 
@@ -22,7 +22,7 @@ none
 
 #### root Response:
 
-```json
+```code
 {
   status            = 0,                         ; status code: 0 = no error, error otherwise
   message           = "OK",                      ; "OK" or error message
@@ -33,7 +33,7 @@ none
 
 #### Database object:
 
-```json
+```code
 {
   name              = "Db1",
   size              = 18000000000,

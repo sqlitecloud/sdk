@@ -23,7 +23,7 @@ If a query parameter is not provides, "*" is assumed
 
 ### Request object
 
-```code
+```
 none
 ```
 
@@ -42,7 +42,7 @@ none
 
 #### Database object:
 
-```json
+```code
 {
   user              = "admin",                    ; Username
   enabled           = 1,                          ; 1 = enabled, 0 = disabled
