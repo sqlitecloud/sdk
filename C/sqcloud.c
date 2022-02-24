@@ -1327,15 +1327,15 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
     }
     
     if (config->sqlite_mode) {
-        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET KEY CLIENT_SQLITE TO 1;");
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY SQLITE TO 1;");
     }
     
     if (config->compression) {
-        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET KEY CLIENT_COMPRESSION TO 1;");
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY COMPRESSION TO 1;");
     }
     
     if (config->zero_text) {
-        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET KEY CLIENT_ZEROTEXT TO 1;");
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY ZEROTEXT TO 1;");
     }
     
     if (len > 0) {
