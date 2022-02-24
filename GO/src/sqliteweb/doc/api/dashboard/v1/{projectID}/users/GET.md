@@ -23,7 +23,7 @@ If a query parameter is not provides, "*" is assumed
 
 ### Request object
 
-```json
+```code
 none
 ```
 
@@ -31,7 +31,7 @@ none
 
 #### root Response:
 
-```json
+```code
 {
   status            = 0,                         ; status code: 0 = no error, error otherwise
   message           = "OK",                      ; "OK" or error message
