@@ -1,4 +1,4 @@
--- Delete Node
+-- Create a new setting with key and value
 -- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/node/{nodeID}/setting/{key}
 
 SetHeader( "Content-Type", "application/json" )

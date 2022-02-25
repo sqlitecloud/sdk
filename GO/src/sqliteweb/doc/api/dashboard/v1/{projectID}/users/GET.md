@@ -16,8 +16,8 @@ curl "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee63/u
 
 The user CAN give one or both of the following two query parameteres:
 
-database = {databaseName}
-table    = {tableName}
+* database = {databaseName}
+* table    = {tableName}
 
 If a query parameter is not provides, "*" is assumed
 
@@ -36,19 +36,19 @@ none
   status            = 0,                         ; status code: 0 = no error, error otherwise
   message           = "OK",                      ; "OK" or error message
 
-  users             = fusers,                    ; Array with user info
+  users             = fusers,                    ; Array with user objects
 }
 ```
 
-#### Database object:
+#### User object:
 
-```code
+```json
 {
-  user              = "admin",                    ; Username
-  enabled           = 1,                          ; 1 = enabled, 0 = disabled
-  roles             = "ADMIN",                    ; Comma seperated list of roles
-  database          = "*",                        ; Database
-  table             = "*"                         ; Table
+  user              = "admin",                   ; Username
+  enabled           = 1,                         ; 1 = enabled, 0 = disabled
+  roles             = "ADMIN",                   ; Comma seperated list of roles
+  database          = "*",                       ; Database
+  table             = "*"                        ; Table
 }
 ```
 

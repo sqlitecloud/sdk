@@ -1,5 +1,5 @@
 -- LIST DATABASES
--- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/databases/Dummy
+-- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/project 
 
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
@@ -10,7 +10,7 @@ if projectID               == "auth"      then return error( 404, "Forbidden Pro
 if string.len( projectID ) ~= 36          then return error( 400, "Invalid ProjectID" )     end 
 if string.len( name )      == 0           then return error( 500, "Internal Server Error" ) end
 
-query  = string.format( "SWITCH DATABASE ''; DROP DATABASE '%s' IF EXISTS;", enquoteSQL( name ) )
+query  = string.format( "DROP ROLE '%s'", enquoteSQL( name ) )
 result = nil
 
 if userid == 0 then
