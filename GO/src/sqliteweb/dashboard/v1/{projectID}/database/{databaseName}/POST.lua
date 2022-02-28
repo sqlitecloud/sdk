@@ -1,5 +1,5 @@
--- REVOKE PRIVILEGE % ROLE % [DATABASE %] [TABLE %]
--- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/privilege/{privilegeName}/{roleName}
+-- CREATE DATABASE % [KEY %] [ENCODING %] [IF NOT EXISTS]
+-- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/database/{databaseName}
 
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
@@ -8,20 +8,19 @@ userid = tonumber( userid )                                                     
 
 if projectID                  == "auth" then return error( 404, "Forbidden ProjectID" )   end -- fbf94289-64b0-4fc6-9c20-84083f82ee64
 if string.len( projectID )    ~= 36     then return error( 400, "Invalid ProjectID" )     end 
-if string.len( privilegeName ) < 1      then return error( 400, "Invalid PrivilegeName" ) end 
-if string.len( roleName )      < 1      then return error( 400, "Invalid RoleName" )      end 
+if string.len( databaseName ) < 1       then return error( 400, "Invalid DatabaseName" )  end
 if string.len( body )         == 0      then return error( 400, "Missing body" )          end
 
 body = jsonDecode( body )
 
 if body     == nil                      then return error( 400, "Invalid body" )          end
-if not body.database                    then body.database = ""                           end
-if not body.table                       then body.table    = ""                           end
+if not body.key                         then body.key      = ""                           end
+if not body.encoding                    then body.encoding = ""                           end
 
-                                             query = string.format( "REVOKE PRIVILEGE '%s' ROLE '%s'", enquoteSQL( privilegeName ), enquoteSQL( roleName ) )
-if string.len( body.database )  > 0     then query = string.format( "%s DATABASE '%s'",             query, enquoteSQL( body.database ) ) end
-if string.len( body.table )     > 0     then query = string.format( "%s TABLE '%s'",                query, enquoteSQL( body.table    ) ) end
-                                             query = string.format( "%s ;",                         query )
+                                             query = string.format( "CREATE DATABASE '%s'", enquoteSQL( databaseName ) )
+if string.len( body.key )      > 0      then query = string.format( "%s KEY '%s'",          query, enquoteSQL( body.key      ) ) end
+if string.len( body.encoding ) > 0      then query = string.format( "%s ENCODING '%s'",     query, enquoteSQL( body.encoding ) ) end
+                                             query = string.format( "%s IF NOT EXISTS;",    query )
 
 result = nil
 
@@ -43,9 +42,10 @@ else
 end
 
 if not result                             then return error( 404, "ProjectID not found" ) end
-if result.ErrorNumber       ~= 0          then return error( 404, "Database not found" )  end
+if result.ErrorNumber       ~= 0          then return error( 502, result.ErrorMessage )   end
 if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end
 if result.NumberOfRows      ~= 0          then return error( 502, "Bad Gateway" )         end
-if result.Value             ~= "OK"       then return error( 502, "Bad Gateway" )         end
+
+if result.Value             ~= "OK"       then return error( 404, result.Value )          end
 
 error( 200, "OK" )

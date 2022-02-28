@@ -9,9 +9,9 @@ userid = tonumber( userid )                                                     
 
 if projectID               == "auth"      then return error( 404, "Forbidden ProjectID" )   end -- fbf94289-64b0-4fc6-9c20-84083f82ee64
 if string.len( projectID ) ~= 36          then return error( 400, "Invalid ProjectID" )     end 
-if string.len( name )      == 0           then return error( 500, "Internal Server Error" ) end
+if string.len( databaseName )      == 0   then return error( 500, "Internal Server Error" ) end
 
-query       = string.format( "LIST DATABASE CONNECTIONS '%s';", enquoteSQL( name ) )
+query       = string.format( "LIST DATABASE CONNECTIONS '%s';", enquoteSQL( databaseName ) )
 connections = nil
 
 if userid == 0 then
