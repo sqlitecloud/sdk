@@ -66,13 +66,23 @@ end
 
 function error( code, message )
   result = {
-    Status  = code,
-    Message = message
+    status  = code,
+    message = message
   }
   SetStatus( code )
   SetHeader( "Content-Type", "application/json" )
   SetHeader( "Content-Encoding", "utf-8" )
   Write( jsonEncode( result ) )
+end
+
+function bool( data )
+  data = string.lower( data )
+  if     data == "1"        then return true
+	elseif data == "true"     then return true
+	elseif data == "enable"   then return true
+	elseif data == "enabled"  then return true
+	else                           return false
+  end
 end
 `
 
@@ -177,10 +187,105 @@ func lua_getINIString( L *lua.State ) int {
   case L.TypeOf( 1 ) != lua.TypeString  : fallthrough // section
   case L.TypeOf( 2 ) != lua.TypeString  : fallthrough // key
   case L.TypeOf( 3 ) != lua.TypeString  : L.PushNil() // defaultValue
-  default                               : L.PushString( GetINIString( lua.CheckString( L, 1 ),  lua.CheckString( L, 2 ),  lua.CheckString( L, 3 ) ) )
+  default                               : L.PushString( GetINIString( lua.CheckString( L, 1 ), lua.CheckString( L, 2 ), lua.CheckString( L, 3 ) ) )
 
   }
   return 1
+}
+func lua_getINIBoolean( L *lua.State ) int {
+	X := L.TypeOf( 3 )
+	print( X )
+  switch {
+  case L.TypeOf( 1 ) != lua.TypeString  : fallthrough // section
+  case L.TypeOf( 2 ) != lua.TypeString  : fallthrough // key
+  case L.TypeOf( 3 ) != lua.TypeBoolean : L.PushNil() // default
+  default                               : 
+		switch strings.ToLower( GetINIString( lua.CheckString( L, 1 ), lua.CheckString( L, 2 ), fmt.Sprintf( "%t", L.ToBoolean( 3 ) ) ) ) {
+		case "1"				: fallthrough
+		case "on"				: fallthrough
+		case "true"			: fallthrough
+		case "enable"		: fallthrough
+		case "enabled"	: L.PushBoolean( true )
+		default					: L.PushBoolean( false )
+	} }
+  return 1
+}
+
+func lua_getINIArray( L *lua.State ) int {
+	switch {
+	case L.TypeOf( 1 ) != lua.TypeString  : fallthrough // section
+	case L.TypeOf( 2 ) != lua.TypeString  : fallthrough // key
+	case L.TypeOf( 3 ) != lua.TypeString  : L.PushNil() // defaultValue
+	default:
+		serverList := []string{}
+		for _, server := range strings.Split( L.PushString( GetINIString( lua.CheckString( L, 1 ), lua.CheckString( L, 2 ), lua.CheckString( L, 3 ) ) ), "," ) {
+      server = strings.TrimSpace( server )
+      if server != "" { serverList = append( serverList, server ) }
+    }
+		if len( serverList ) > 0 {
+			L.NewTable()
+			for i, server := range serverList {
+				L.PushInteger( i + 1 )
+				L.PushString( server )
+				L.SetTable( -3 )
+			}
+		} else {
+			L.PushNil()
+		}
+	}
+	return 1
+}
+
+func lua_listINIProjects( L *lua.State ) int {
+	L.NewTable()
+	i := 1
+	for _, s := range cfg.SectionStrings() {
+		switch {
+		case len( s ) != 36: continue // TODO: Check if section name matches regexp of uuid
+		default:
+			L.PushInteger( i )
+			L.PushString( s )
+			L.SetTable( -3 )
+			i++
+	} }
+	return 1
+}
+
+func lua_parseConnectionString( L *lua.State ) int {
+	switch {
+	case L.TypeOf( 1 ) != lua.TypeString  : L.PushNil() // defaultValue
+	default:
+		if Host, Port, Username, Password, Database, Timeout, Compress, Pem, err := sqlitecloud.ParseConnectionString( lua.CheckString( L, 1 ) ); err == nil {
+			L.NewTable()
+			L.PushString( "Host" )
+			L.PushString( Host )
+			L.SetTable( -3 )
+			L.PushString( "Port" )
+			L.PushInteger( Port )
+			L.SetTable( -3 )
+			L.PushString( "Username" )
+			L.PushString( Username )
+			L.SetTable( -3 )
+			L.PushString( "Password" )
+			L.PushString( Password )
+			L.SetTable( -3 )
+			L.PushString( "Database" )
+			L.PushString( Database )
+			L.SetTable( -3 )
+			L.PushString( "Timeout" )
+			L.PushInteger( Timeout )
+			L.SetTable( -3 )
+			L.PushString( "Compress" )
+			L.PushString( Compress )
+			L.SetTable( -3 )
+			L.PushString( "Pem" )
+			L.PushString( Pem )
+			L.SetTable( -3 )
+		} else {
+			L.PushNil()
+		}
+	}
+	return 1
 }
 
 // SQLiteCloud helper
@@ -225,6 +330,15 @@ func lua_executeSQL( L *lua.State ) int {
         L.PushString( errorMessage )
         L.SetTable( -3 )
 
+				L.PushString( "Value" )
+				if errorNumber == 0 && res.GetNumberOfRows() == 0 && res.GetNumberOfColumns() == 0 {
+					L.PushString( res.GetString_() )
+				} else {
+					L.PushNil()
+				}
+				L.SetTable( -3 )
+
+
         L.PushString( "NumberOfRows" )
         L.PushInteger( int( res.GetNumberOfRows() ) )
         L.SetTable( -3 )
@@ -257,7 +371,7 @@ func lua_executeSQL( L *lua.State ) int {
         }
         L.SetTable( -3 )
 
-        res.DumpToWriter( out, sqlitecloud.OUTFORMAT_LIST, false, "|", "NULL", "\r\n", 0, false )
+res.DumpToWriter( out, sqlitecloud.OUTFORMAT_LIST, false, "|", "NULL", "\r\n", 0, false )
         return 1
   } } }
   return 0
@@ -385,6 +499,7 @@ func (this *Server) executeLua( writer http.ResponseWriter, request *http.Reques
     lua.OpenLibraries( l )
 
     // register internal sql specific functons
+		l.Register( "parseConnectionString", lua_parseConnectionString )
     l.Register( "executeSQL", lua_executeSQL )
     l.Register( "enquoteSQL", lua_enquoteSQL )
 
@@ -394,6 +509,9 @@ func (this *Server) executeLua( writer http.ResponseWriter, request *http.Reques
 
     // register internal .ini file functions
     l.Register( "getINIString", lua_getINIString )
+		l.Register( "listINIProjects", lua_listINIProjects )
+		l.Register( "getINIArray", lua_getINIArray )
+		l.Register( "getINIBoolean", lua_getINIBoolean )
 
     // register internal mail related functions
     l.Register( "mail", mail )

@@ -80,6 +80,12 @@ func main() {
       os.Exit(1)
     } else {
 
+			cfg.Section( "dashboard" ).Key( "modified" ).SetValue( "hallo" )
+			if file, err := os.Stat( configfile ); err == nil {
+				cfg.Section( "dashboard" ).Key( "modified" ).SetValue( file.ModTime().Format( "2006-01-02 15:04:05" ) )
+			}
+
+			
       // Overload the .ini file with the command line arguments
       for key, a := range p {
         if a != nil {
