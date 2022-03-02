@@ -346,8 +346,8 @@ func (this *SQCloud) Close() error {
 func (this *SQCloud) Compress( CompressMode string ) error {
   switch compression := strings.ToUpper( CompressMode ); {
   case this.sock == nil:     return errors.New( "Not connected" )
-  case compression == "NO":  return this.Execute( "SET KEY CLIENT_COMPRESSION TO 0" )
-  case compression == "LZ4": return this.Execute( "SET KEY CLIENT_COMPRESSION TO 1" )
+  case compression == "NO":  return this.Execute( "SET CLIENT KEY COMPRESSION TO 0" )
+  case compression == "LZ4": return this.Execute( "SET CLIENT KEY COMPRESSION TO 1" )
   default:                   return errors.New( fmt.Sprintf( "Invalid method (%s)", CompressMode ) )
   }
 }
