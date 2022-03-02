@@ -1456,7 +1456,7 @@ func (w *worker) processTask(task *task) error {
 						w.res.Dump()
 					}
 					if w.reserr != nil {
-						println(w.reserr.Error())
+						Debugf("w%d error: %s", w.id, w.reserr.Error())
 					}
 				}
 			}
