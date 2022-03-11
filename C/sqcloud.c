@@ -126,6 +126,8 @@ struct SQCloudResult {
         };
         struct {
             char        **buffers;          // array of buffers used by rowset sent in chunk
+            uint32_t    *blens;             // array of buffer len
+            uint32_t    *nheads;            // array of header len
             uint32_t    bcount;             // number of buffers in the array
             uint32_t    bnum;               // number of pre-allocated buffers
             uint32_t    brows;              // number of pre-allocated rows
@@ -494,6 +496,35 @@ static bool internal_has_commandlen (int c) {
     return ((c == CMD_INT) || (c == CMD_FLOAT) || (c == CMD_NULL)) ? false : true;
 }
 
+static uint32_t internal_buffer_maxlen (SQCloudResult *result, char *value) {
+    if (!value) return 2;
+    
+    // chunk case
+    if (result->ischunk) {
+        // lookup value index
+        int32_t index = -1;
+        char *buffer = NULL;
+        uint32_t blen = 0;
+        
+        for (int32_t i=0; i < result->bcount; ++i) {
+            buffer = result->buffers[i];
+            blen = result->blens[i];
+            if ((value >= buffer) && (value <= buffer + blen)) {
+                index = i;
+                break;
+            }
+        }
+        
+        // sanity check
+        if (index == -1) return 0;
+        
+        return (uint32_t)(blen - (uint32_t)(value - buffer) + result->nheads[index]);
+    }
+    
+    // default case
+    return (uint32_t)(result->blen - (uint32_t)(value - result->rawbuffer) + result->nheader);
+}
+
 static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cstart, uint32_t *extcode) {
     uint32_t value = 0;
     uint32_t extvalue = 0;
@@ -533,7 +564,7 @@ static char *internal_parse_value (char *buffer, uint32_t *len, uint32_t *cellsi
     
     // blen originally was hard coded to 24 because the max 64bit value is 20 characters long
     uint32_t cstart = 0;
-    uint32_t blen = *len;
+    uint32_t blen = *len;   
     blen = internal_parse_number(&buffer[1], blen, &cstart, NULL);
     
     // handle decimal/float cases
@@ -587,7 +618,6 @@ static SQCloudResult *internal_reconnect (SQCloudConnection *connection, const c
 }
 
 static SQCloudResult *internal_parse_array (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart) {
-    
     SQCloudResult *rowset = (SQCloudResult *)mem_zeroalloc(sizeof(SQCloudResult));
     if (!rowset) {
         internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
@@ -614,7 +644,7 @@ static SQCloudResult *internal_parse_array (SQCloudConnection *connection, char 
     // loop from i to n to parse each data
     buffer += bstart + start1;
     for (uint32_t i=0; i<n; ++i) {
-        uint32_t len = blen, cellsize;
+        uint32_t len = blen - (bstart + start1), cellsize;
         char *value = internal_parse_value(buffer, &len, &cellsize);
         rowset->data[i] = (value) ? buffer : NULL;
         buffer += cellsize;
@@ -727,7 +757,6 @@ static bool internal_parse_rowset_values (SQCloudResult *rowset, char **pbuffer,
 }
 
 static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart, uint32_t nrows, uint32_t ncols) {
-    
     SQCloudResult *rowset = (SQCloudResult *)mem_zeroalloc(sizeof(SQCloudResult));
     if (!rowset) {
         internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
@@ -749,12 +778,13 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
     if (!rowset->data || !rowset->name || !rowset->clen) goto abort_rowset;
     
     buffer += bstart;
+    blen -= bstart;
     
     // parse rowset header
     bool is_sqlite = (connection->_config) && (connection->_config->sqlite_mode);
     if (!internal_parse_rowset_header(rowset, &buffer, &blen, ncols, is_sqlite)) goto abort_rowset;
     
-    // parse values
+    // parse values (buffer and blen was updated in internal_parse_rowset_header)
     if (!internal_parse_rowset_values(rowset, &buffer, &blen, 0, nrows * ncols, ncols)) goto abort_rowset;
     
     return rowset;
@@ -803,10 +833,17 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
         rowset->buffers = (char **)mem_zeroalloc((sizeof(char *) * DEFAULT_CHUCK_NBUFFERS));
         if (!rowset->buffers) goto abort_rowset;
         
+        rowset->blens = (uint32_t *)mem_zeroalloc((sizeof(uint32_t) * DEFAULT_CHUCK_NBUFFERS));
+        if (!rowset->blens) goto abort_rowset;
+        
+        rowset->nheads = (uint32_t *)mem_zeroalloc((sizeof(uint32_t) * DEFAULT_CHUCK_NBUFFERS));
+        if (!rowset->nheads) goto abort_rowset;
+        
         rowset->bnum = DEFAULT_CHUCK_NBUFFERS;
         rowset->buffers[0] = buffer;
+        rowset->blens[0] = blen;
+        rowset->nheads[0] = bstart;
         rowset->bcount = 1;
-        rowset->nheader = bstart;
         
         rowset->brows = nrows + DEFAULT_CHUNK_MINROWS;
         rowset->nrows = nrows;
@@ -838,7 +875,16 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
         uint32_t n = rowset->bnum * 2;
         char **temp = (char **)mem_realloc(rowset->buffers, (sizeof(char *) * n));
         if (!temp) goto abort_rowset;
+        
+        uint32_t *temp2 = (uint32_t*)mem_realloc(rowset->blens, (sizeof(uint32_t) * n));
+        if (!temp2) goto abort_rowset;
+        
+        uint32_t *temp3 = (uint32_t*)mem_realloc(rowset->nheads, (sizeof(uint32_t) * n));
+        if (!temp3) goto abort_rowset;
+        
         rowset->buffers = temp;
+        rowset->blens = temp2;
+        rowset->nheads = temp3;
         rowset->bnum = n;
     }
     
@@ -853,9 +899,14 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
     
     // adjust internal fields
     if (!first_chunk) {
-        rowset->buffers[rowset->bcount++] = buffer;
+        rowset->buffers[rowset->bcount] = buffer;
+        rowset->blens[rowset->bcount] = blen;
+        rowset->nheads[rowset->bcount] = bstart;
         rowset->nrows += nrows;
         buffer += bstart;
+        
+        // increment buffers counter
+        ++rowset->bcount;
     }
     
     // parse values
@@ -909,8 +960,8 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         uint32_t cstart2 = 0;
         uint32_t cstart3 = 0;
         uint32_t tlen = internal_parse_number(&buffer[1], blen-1, &cstart1, NULL);
-        uint32_t clen = internal_parse_number(&buffer[cstart1 + 1], blen-1, &cstart2, NULL);
-        uint32_t ulen = internal_parse_number(&buffer[cstart1 + cstart2 + 1], blen-1, &cstart3, NULL);
+        uint32_t clen = internal_parse_number(&buffer[cstart1 + 1], blen-(cstart1 + 1), &cstart2, NULL);
+        uint32_t ulen = internal_parse_number(&buffer[cstart1 + cstart2 + 1], blen-(cstart1 + cstart2 + 1), &cstart3, NULL);
         
         // start of compressed buffer
         zdata = &buffer[tlen - clen + cstart1 + 1];
@@ -962,6 +1013,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         case CMD_JSON: {
             // +LEN string
             uint32_t cstart = 0;
+            // parse explicit len
             uint32_t len = internal_parse_number(&buffer[1], blen-1, &cstart, NULL);
             SQCloudResType type = (buffer[0] == CMD_JSON) ? RESULT_JSON : RESULT_STRING;
             if (buffer[0] == CMD_ZEROSTRING) --len;
@@ -1001,9 +1053,9 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             uint32_t cstart1 = 0, cstart2 = 0, cstart3 = 0, cstart4 = 0;
             
             internal_parse_number(&buffer[1], blen-1, &cstart1, NULL); // parse len (already parsed in blen parameter)
-            uint32_t idx = (buffer[0] == CMD_ROWSET) ? 0 : internal_parse_number(&buffer[cstart1 + 1], blen-1, &cstart2, NULL);
-            uint32_t nrows = internal_parse_number(&buffer[cstart1 + cstart2 + 1], blen-1, &cstart3, NULL);
-            uint32_t ncols = internal_parse_number(&buffer[cstart1 + cstart2 + + cstart3 + 1], blen-1, &cstart4, NULL);
+            uint32_t idx = (buffer[0] == CMD_ROWSET) ? 0 : internal_parse_number(&buffer[cstart1 + 1], blen-(cstart1+1), &cstart2, NULL);
+            uint32_t nrows = internal_parse_number(&buffer[cstart1 + cstart2 + 1], blen-(cstart1 + cstart2 + 1), &cstart3, NULL);
+            uint32_t ncols = internal_parse_number(&buffer[cstart1 + cstart2 + + cstart3 + 1], blen-(cstart1 + cstart2 + + cstart3 + 1), &cstart4, NULL);
             
             uint32_t bstart = cstart1 + cstart2 + cstart3 + cstart4 + 1;
             SQCloudResult *res = NULL;
@@ -2083,6 +2135,8 @@ void SQCloudResultFree (SQCloudResult *result) {
                 if (result->buffers[i]) mem_free(result->buffers[i]);
             }
             mem_free(result->buffers);
+            mem_free(result->blens);
+            mem_free(result->nheads);
         }
     }
     
@@ -2150,7 +2204,7 @@ char *SQCloudRowsetValue (SQCloudResult *result, uint32_t row, uint32_t col, uin
     return internal_parse_value(value, len, NULL);
 }
 
-uint32_t SQCloudRowSetValueLen (SQCloudResult *result, uint32_t row, uint32_t col) {
+uint32_t SQCloudRowsetValueLen (SQCloudResult *result, uint32_t row, uint32_t col) {
     uint32_t len = 0;
     SQCloudRowsetValue(result, row, col, &len);
     return len;
