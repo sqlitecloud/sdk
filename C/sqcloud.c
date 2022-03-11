@@ -555,6 +555,8 @@ static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cs
 }
 
 static char *internal_parse_value (char *buffer, uint32_t *len, uint32_t *cellsize) {
+    if (*len <= 0) return NULL;
+    
     // handle special NULL value case
     if (!buffer || buffer[0] == CMD_NULL) {
         *len = 0;
@@ -1574,7 +1576,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
 void internal_rowset_dump (SQCloudResult *result, uint32_t maxline, bool quiet) {
     uint32_t nrows = result->nrows;
     uint32_t ncols = result->ncols;
-    uint32_t blen = result->blen;
+//    uint32_t blen = result->blen;
     
     // if user specify a maxline then do not print more than maxline characters for every column
     if (maxline > 0) {
@@ -1592,7 +1594,7 @@ void internal_rowset_dump (SQCloudResult *result, uint32_t maxline, bool quiet) 
     
     // print column names
     for (uint32_t i=0; i<ncols; ++i) {
-        uint32_t len = blen;
+        uint32_t len = internal_buffer_maxlen(result, result->name[i]);
         uint32_t delta = 0;
         char *value = internal_parse_value(result->name[i], &len, NULL);
         
@@ -1600,7 +1602,6 @@ void internal_rowset_dump (SQCloudResult *result, uint32_t maxline, bool quiet) 
         uint32_t utf8len = utf8_len(value, len);
         if (utf8len != len) delta = len - utf8len;
         printf(" %-*.*s |", result->clen[i] + delta, (maxline && len > maxline) ? maxline : len, value);
-        blen -= len;
     }
     printf("\n");
     
@@ -1626,10 +1627,9 @@ void internal_rowset_dump (SQCloudResult *result, uint32_t maxline, bool quiet) 
     
     // print result
     for (uint32_t i=0; i<nrows * ncols; ++i) {
-        uint32_t len = blen;
+        uint32_t len = internal_buffer_maxlen(result, result->data[i]);
         uint32_t delta = 0;
         char *value = internal_parse_value(result->data[i], &len, NULL);
-        blen -= len;
 
         // UTF-8 strings need special adjustments
         if (!value) {value = "NULL"; len = 4;}
@@ -2202,7 +2202,7 @@ char *SQCloudRowsetValue (SQCloudResult *result, uint32_t row, uint32_t col, uin
     // result->data[row*result->ncols+col]. The caller should not be aware of the
     // internal implementation of this buffer, so it must be set here.
     char *value = result->data[row*result->ncols+col];
-    *len = (value) ? result->blen - (uint32_t)(value - result->rawbuffer) + result->nheader : 2;
+    *len = internal_buffer_maxlen(result, value);
     return internal_parse_value(value, len, NULL);
 }
 
@@ -2214,8 +2214,9 @@ uint32_t SQCloudRowsetValueLen (SQCloudResult *result, uint32_t row, uint32_t co
 
 int32_t SQCloudRowsetInt32Value (SQCloudResult *result, uint32_t row, uint32_t col) {
     if (!SQCloudRowsetSanityCheck(result, row, col)) return 0;
-    uint32_t len = 0;
-    char *value = internal_parse_value(result->data[row*result->ncols+col], &len, NULL);
+    char *data = result->data[row*result->ncols+col];
+    uint32_t len = internal_buffer_maxlen(result, data);
+    char *value = internal_parse_value(data, &len, NULL);
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
@@ -2224,8 +2225,9 @@ int32_t SQCloudRowsetInt32Value (SQCloudResult *result, uint32_t row, uint32_t c
 
 int64_t SQCloudRowsetInt64Value (SQCloudResult *result, uint32_t row, uint32_t col) {
     if (!SQCloudRowsetSanityCheck(result, row, col)) return 0;
-    uint32_t len = 0;
-    char *value = internal_parse_value(result->data[row*result->ncols+col], &len, NULL);
+    char *data = result->data[row*result->ncols+col];
+    uint32_t len = internal_buffer_maxlen(result, data);
+    char *value = internal_parse_value(data, &len, NULL);
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
@@ -2234,8 +2236,9 @@ int64_t SQCloudRowsetInt64Value (SQCloudResult *result, uint32_t row, uint32_t c
 
 float SQCloudRowsetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col) {
     if (!SQCloudRowsetSanityCheck(result, row, col)) return 0.0;
-    uint32_t len = 0;
-    char *value = internal_parse_value(result->data[row*result->ncols+col], &len, NULL);
+    char *data = result->data[row*result->ncols+col];
+    uint32_t len = internal_buffer_maxlen(result, data);
+    char *value = internal_parse_value(data, &len, NULL);
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
@@ -2244,8 +2247,9 @@ float SQCloudRowsetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col
 
 double SQCloudRowsetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t col) {
     if (!SQCloudRowsetSanityCheck(result, row, col)) return 0.0;
-    uint32_t len = 0;
-    char *value = internal_parse_value(result->data[row*result->ncols+col], &len, NULL);
+    char *data = result->data[row*result->ncols+col];
+    uint32_t len = internal_buffer_maxlen(result, data);
+    char *value = internal_parse_value(data, &len, NULL);
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
@@ -2281,14 +2285,15 @@ char *SQCloudArrayValue (SQCloudResult *result, uint32_t index, uint32_t *len) {
     // result->data[index]. The caller should not be aware of the
     // internal implementation of this buffer, so it must be set here.
     char *value = result->data[index];
-    *len = (value) ? result->blen - (uint32_t)(value - result->rawbuffer) + result->nheader : 2;
+    *len = internal_buffer_maxlen(result, value);
     return internal_parse_value(value, len, NULL);
 }
 
 int32_t SQCloudArrayInt32Value (SQCloudResult *result, uint32_t index) {
     if (!SQCloudArraySanityCheck(result, index)) return 0;
-    uint32_t len = 0;
-    char *value = internal_parse_value(result->data[index], &len, NULL);
+    char *data = result->data[index];
+    uint32_t len = internal_buffer_maxlen(result, data);
+    char *value = internal_parse_value(data, &len, NULL);
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
@@ -2297,8 +2302,9 @@ int32_t SQCloudArrayInt32Value (SQCloudResult *result, uint32_t index) {
 
 int64_t SQCloudArrayInt64Value (SQCloudResult *result, uint32_t index) {
     if (!SQCloudArraySanityCheck(result, index)) return 0;
-    uint32_t len = 0;
-    char *value = internal_parse_value(result->data[index], &len, NULL);
+    char *data = result->data[index];
+    uint32_t len = internal_buffer_maxlen(result, data);
+    char *value = internal_parse_value(data, &len, NULL);
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
@@ -2307,8 +2313,9 @@ int64_t SQCloudArrayInt64Value (SQCloudResult *result, uint32_t index) {
 
 float SQCloudArrayFloatValue (SQCloudResult *result, uint32_t index) {
     if (!SQCloudArraySanityCheck(result, index)) return 0.0;
-    uint32_t len = 0;
-    char *value = internal_parse_value(result->data[index], &len, NULL);
+    char *data = result->data[index];
+    uint32_t len = internal_buffer_maxlen(result, data);
+    char *value = internal_parse_value(data, &len, NULL);
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
@@ -2317,8 +2324,9 @@ float SQCloudArrayFloatValue (SQCloudResult *result, uint32_t index) {
 
 double SQCloudArrayDoubleValue (SQCloudResult *result, uint32_t index) {
     if (!SQCloudArraySanityCheck(result, index)) return 0.0;
-    uint32_t len = 0;
-    char *value = internal_parse_value(result->data[index], &len, NULL);
+    char *data = result->data[index];
+    uint32_t len = internal_buffer_maxlen(result, data);
+    char *value = internal_parse_value(data, &len, NULL);
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
