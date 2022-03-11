@@ -2174,7 +2174,9 @@ uint32_t SQCloudRowsetRowsMaxColumnLength (SQCloudResult *result, uint32_t col) 
 char *SQCloudRowsetColumnName (SQCloudResult *result, uint32_t col, uint32_t *len) {
     if (!result || result->tag != RESULT_ROWSET) return NULL;
     if (col >= result->ncols) return NULL;
-    *len = result->blen - (uint32_t)(result->name[col] - result->rawbuffer);
+    
+    char *buffer = (result->ischunk) ? result->buffers[0] : result->rawbuffer;
+    *len = result->blen - (uint32_t)(result->name[col] - buffer);
     return internal_parse_value(result->name[col], len, NULL);
 }
 
