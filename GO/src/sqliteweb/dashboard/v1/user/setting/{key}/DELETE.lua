@@ -1,38 +1,24 @@
 -- Delete sessing key for logged in user
 -- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/user/setting/key
 
+require "sqlitecloud"
+
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
-userid = tonumber( userid )                                                                     -- Is string and comes from JWT. Contents is a number.
+local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                          end
+local key,       err, msg = checkParameter( key, 3 )                     if err ~= 0 then return error( err, string.format( msg, "key" ) )  end
 
-if projectID               == "auth"      then return error( 404, "Forbidden ProjectID" )   end -- fbf94289-64b0-4fc6-9c20-84083f82ee64
-if string.len( projectID ) ~= 36          then return error( 400, "Invalid ProjectID" )     end 
-if string.len( name )      == 0           then return error( 500, "Internal Server Error" ) end
-
-query  = string.format( "DROP ROLE '%s'", enquoteSQL( name ) )
-result = nil
-
-if userid == 0 then
-  if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
-
-  result = executeSQL( projectID, query )
+if userID == 0 then         
+  if not getINIBoolean( projectID, "enabled", false )                                then return error( 401, "Project Disabled" )           end
+                                                                                          return error( 501, "Not Implemented" )
 else
-  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND User.id= %d AND uuid = '%s';", userid, enquoteSQL( projectID ) )
-  check_access = executeSQL( "auth", check_access )
+  local projectID, err, msg = verifyUserID( userID )                     if err ~= 0 then return error( err, msg )                          end
 
-  if not check_access                     then return error( 504, "Gateway Timeout" )     end
-  if check_access.ErrorNumber       ~= 0  then return error( 502, "Bad Gateway" )         end
-  if check_access.NumberOfColumns   ~= 1  then return error( 502, "Bad Gateway" )         end 
-  if check_access.NumberOfRows      ~= 1  then return error( 502, "Bad Gateway" )         end
-  if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
-
-  result = executeSQL( projectID, query )
+  result = executeSQL( "auth", string.format( "DELETE FROM USER_SETTINGS WHERE user_id = %d AND key = '%s';", userID, enquoteSQL( key ) ) )
+  if not result                                                                      then return error( 504, "Gateway Timeout" )            end
+  if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )          end
+  if result.Value ~= "OK"                                                            then return error( 502, "Bad Gateway" )                end
 end
 
--- if not result                          then return error( 404, "ProjectID not found" ) end
--- if result.ErrorNumber            ~= 0  then return error( 502, "Bad Gateway" )         end
--- if result.NumberOfColumns        ~= 1  then return error( 502, "Bad Gateway" )         end
--- if result.NumberOfRows           <  1  then return error( 200, "OK" )                  end
-
-do return error( 200, "OK" ) end
+error( 200, "OK" )

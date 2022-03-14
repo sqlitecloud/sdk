@@ -11,9 +11,6 @@ Project = {
   description      = ""                                       -- Project description
 }
 
-
-
-
 Response = {
   status           = 0,                                       -- status code: 0 = no error, error otherwise
   message          = "OK",                                    -- "OK" or error message

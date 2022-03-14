@@ -1,38 +1,37 @@
--- LIST DATABASES
--- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/project 
+-- Delete Project (and all the nodes and node settings for this node)
+-- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64
+
+require "sqlitecloud"
 
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
-userid = tonumber( userid )                                                                     -- Is string and comes from JWT. Contents is a number.
+local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                     end
+local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                     end
 
-if projectID               == "auth"      then return error( 404, "Forbidden ProjectID" )   end -- fbf94289-64b0-4fc6-9c20-84083f82ee64
-if string.len( projectID ) ~= 36          then return error( 400, "Invalid ProjectID" )     end 
-if string.len( name )      == 0           then return error( 500, "Internal Server Error" ) end
-
-query  = string.format( "DROP ROLE '%s'", enquoteSQL( name ) )
-result = nil
-
-if userid == 0 then
-  if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
-
-  result = executeSQL( projectID, query )
+if userID == 0 then         
+  if not getINIBoolean( projectID, "enabled", false )                                then return error( 401, "Project Disabled" )      end
+                                                                                          return error( 501, "Not Implemented" )
 else
-  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND User.id= %d AND uuid = '%s';", userid, enquoteSQL( projectID ) )
-  check_access = executeSQL( "auth", check_access )
+  local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                     end
+  
+  local query  = string.format( "SELECT NODE.id AS nodeID FROM NODE JOIN PROJECT ON PROJECT.uuid = NODE.project_uuid JOIN USER ON USER.id = PROJECT.user_id WHERE USER.enabled = 1 AND USER.id = %d AND PROJECT.uuid = '%s';", userID, enquoteSQL( projectID ) )
+  local result = executeSQL( "auth", query ) 
 
-  if not check_access                     then return error( 504, "Gateway Timeout" )     end
-  if check_access.ErrorNumber       ~= 0  then return error( 502, "Bad Gateway" )         end
-  if check_access.NumberOfColumns   ~= 1  then return error( 502, "Bad Gateway" )         end 
-  if check_access.NumberOfRows      ~= 1  then return error( 502, "Bad Gateway" )         end
-  if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
+  if not result                                                                       then return -1, 503, "Service Unavailable"       end
+  if result.ErrorNumber       ~= 0                                                    then return -1, 502, "Bad Gateway"               end
+  if result.NumberOfColumns   ~= 1                                                    then return -1, 502, "Bad Gateway"               end 
 
-  result = executeSQL( projectID, query )
+  query = "BEGIN TRANSACTION;"
+  for i = 1, result.NumberOfRows do
+    nodeID = result.Rows[ i ].nodeID
+    query  = string.format( "%s DELETE FROM NODE_SETTINGS WHERE node_id = %d; DELETE FROM NODE WHERE id = %d;", query, nodeID, nodeID )
+  end  
+  query = string.format( "%s END TRANSACTION;", query )
+  
+  result = executeSQL( "auth", query )
+  if not result                                                                      then return error( 504, "Gateway Timeout" )       end
+  if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )     end
 end
 
--- if not result                          then return error( 404, "ProjectID not found" ) end
--- if result.ErrorNumber            ~= 0  then return error( 502, "Bad Gateway" )         end
--- if result.NumberOfColumns        ~= 1  then return error( 502, "Bad Gateway" )         end
--- if result.NumberOfRows           <  1  then return error( 200, "OK" )                  end
-
-do return error( 200, "OK" ) end
+error( 200, "OK" )

@@ -295,7 +295,10 @@ func lua_enquoteSQL (L *lua.State) int {
   case lua.TypeNil    : L.PushString( "null" )
   case lua.TypeBoolean: L.PushString( fmt.Sprintf( "%t", L.ToBoolean( 1 ) ) )
   case lua.TypeNumber : L.PushString( fmt.Sprintf( "%f", lua.CheckNumber( L, 1 ) ) )
-  case lua.TypeString : L.PushString( sqlitecloud.SQCloudEnquoteString( lua.CheckString( L, 1 ) ) )
+  case lua.TypeString : 
+		data := sqlitecloud.SQCloudEnquoteString( lua.CheckString( L, 1 ) )
+		if strings.HasPrefix( data, "\"" ) && strings.HasSuffix( data, "\"" ) { data = data[ 1 : len( data ) - 1 ] }
+		L.PushString( data )
   default             : L.PushNil()
   }
   return 1
@@ -599,7 +602,7 @@ func (this *Server) executeLua( writer http.ResponseWriter, request *http.Reques
 
     // set the lua libary path
     if PathExists( cfg.Section( "lua" ).Key( "package.path" ).String() ) {
-      lua.DoString( l, fmt.Sprintf( `package.path = "%s"`, cfg.Section( "lua" ).Key( "package.path" ).String() ) )
+      lua.DoString( l, fmt.Sprintf( `package.path = "%s/?.lua"`, cfg.Section( "lua" ).Key( "package.path" ).String() ) )
     }
 
     // load internal lua functions into context
