@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
 
 -- this value can be less then "n" if some concurrent INSERT commands fail for concurrency issues
 SELECT COUNT(*) FROM t1;
---dump
+-- --dump
 
 UNUSE DATABASE;
 --match type is ok

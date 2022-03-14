@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
 --wait all
 
 SELECT COUNT(*) FROM t1;
---dump
+-- --dump
 
 UNUSE DATABASE;
 --match type is ok

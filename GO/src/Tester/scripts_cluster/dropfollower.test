@@ -1,0 +1,69 @@
+--// This test is designed to be executed with the main worker connected to the leader 
+--// and the other workers to a follower, otherwise it would fail with the following error:
+--// tester_test.go:1510: w0, task:dropfollower.test(l:40), expected: OK, got error Unable to drop database (null) because there are 20 clients connected.
+
+--set dbname=tester_dropfollower.sqlite
+--set n=20
+
+--// create a database 
+CREATE DATABASE {{.dbname}} IF NOT EXISTS; USE DATABASE {{.dbname}};
+--match type is ok
+CREATE TABLE IF NOT EXISTS t1(a INTEGER PRIMARY KEY, b); DELETE FROM t1;
+--match type is ok
+
+INSERT INTO t1 (b) VALUES (randomblob(100000));
+-- --dump
+
+--// create n workers connected to a follower node, each worker use the database 
+--loop i=1; i<=n; i=i+1;
+    --task i name read-on-follower sqlitecloud://admin:admin@localhost:8870
+        USE DATABASE {{.dbname}}
+    --end
+--end
+
+wait all
+
+--// start a query on each worker, it should work fine on some workers and should return error on others
+--loop i=1; i<=n; i=i+1;
+    --task i
+        WITH RECURSIVE cnt(x) AS ( SELECT 1 UNION ALL SELECT x+1 FROM cnt LIMIT 10000000 ) SELECT x FROM cnt WHERE x=10000000; 
+        SELECT sum(length(b)) FROM t1;
+    --end
+--end
+
+--// While queries are executed on the follower, call UNUSE the DB on the main worker 
+--// and DROP the database on the leader. It will succeed on the leader because no clients
+--// currently use the db, but also the follower must be able to DROP the DB even if there
+--// are connected clients, the node must not crash and clients using that db must be disconnected.
+--// But first wait a while so workers can start the slow query.
+--sleep 1000
+UNUSE DATABASE 
+DROP DATABASE {{.dbname}}
+--match type is OK
+-- --dump 
+
+--wait all
+
+--sleep 100
+
+--// Each worker must be disconnected. Check it by executing a query
+--loop i=1; i<=n; i=i+1;
+    --task i
+        SELECT length(b)+a FROM t1 LIMIT 1;
+        --match type is ERROR
+        --exit
+    --end
+--end
+
+--// The database must be dropped on the follower. Check it using a new connection
+--set j=n+2
+--task j name read-on-follower sqlitecloud://admin:admin@localhost:8870
+    USE DATABASE {{.dbname}}
+    --match type is ERROR
+--end 
+
+--wait all
+
+--// execute a command on the follower node
+LIST CONNECTIONS NODE 2
+--match type is ROWSET
