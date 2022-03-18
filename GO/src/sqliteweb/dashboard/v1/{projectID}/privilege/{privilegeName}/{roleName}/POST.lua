@@ -41,7 +41,7 @@ else
 
   result = executeSQL( projectID, query )
 end
-
+print( query )
 if not result                             then return error( 404, "ProjectID not found" ) end
 if result.ErrorNumber       ~= 0          then return error( 404, "Database not found" )  end
 if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end

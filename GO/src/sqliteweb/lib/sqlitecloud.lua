@@ -9,12 +9,17 @@ function getBodyValue( value, minLength )
   if not body                                then return nil, 400, "Missing body"                                         end
   if string.len( body ) == 0                 then return nil, 400, "Empty body"                                           end
 
-  body = jsonDecode( body )
-  if not body                                then return nil, 400, "Invalid body"                                         end
+  local jbody = jsonDecode( body )
+  if not jbody                                then return nil, 400, "Invalid body"                                         end
 
-  if not body[ value ]                       then return nil, 400, string.format( "Missing '%s' in body", value )         end
-  if string.len( body[ value ] ) < minLength then return nil, 400, string.format( "Invalid data in '%s' in body", value ) end
-                                                  return body.value, 0, nil 
+  if not jbody[ value ]                       then return nil, 400, string.format( "Missing '%s' in body", value )         end
+  if string.len( jbody[ value ] ) < minLength then return nil, 400, string.format( "Invalid data in '%s' in body", value ) end
+
+
+  print( "Body value " )
+  print( value )
+  print( jbody[ value ] )
+                                              return jbody[ value ], 0, nil 
 end
 
 function checkUserID( userid )               -- Is string and comes from JWT. Contents is a number.

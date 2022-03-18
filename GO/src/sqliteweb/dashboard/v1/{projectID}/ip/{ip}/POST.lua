@@ -22,8 +22,8 @@ if string.len( body.role ) < 1 and string.len( body.user ) < 1 then return error
                                                query = string.format( "ADD ALLOWED IP '%s'", enquoteSQL( ip ) )
 if string.len( body.role )   > 0          then query = string.format( "%s ROLE '%s'"       , query, enquoteSQL( body.role ) ) end
 if string.len( body.user )   > 0          then query = string.format( "%s USER '%s'"       , query, enquoteSQL( body.user ) ) end
-                                               query = string.format( "%s ;"               , query )
-                                               
+                                               query = string.format( "%s;"                , query )
+
 result = nil
 
 if userid == 0 then
@@ -31,7 +31,7 @@ if userid == 0 then
 
   result = executeSQL( projectID, query )
 else
-  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND USER.id= %d AND uuid = '%s';", userid, enquoteSQL( projectID ) )
+  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND USER.id=%d AND uuid='%s';", userid, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
 
   if not check_access                     then return error( 504, "Gateway Timeout" )     end

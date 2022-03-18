@@ -37,7 +37,7 @@ else
     Project.name        = body.name
     Project.description = body.description
 
-    query = string.format( "INSERT INTO PROJECT VALUES( '%s', %d, '%s', '%s', '%s', '%s' );", enquoteSQL( Project.id ), userID, enquoteSQL( body.name ), enquoteSQL( body.description ), enquoteSQL( body.username ), enquoteSQL( body.password ) )
+    query = string.format( "INSERT INTO PROJECT VALUES( '%s', %d, '%s', '%s', '%s', '%s' );", enquoteSQL( Project.id ), userID, enquoteSQL( name ), enquoteSQL( description ), enquoteSQL( username ), enquoteSQL( password ) )
 
     result = executeSQL( "auth", query )
     if not result              then goto continue end
