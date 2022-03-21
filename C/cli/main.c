@@ -5,6 +5,10 @@
 //  Created by Marco Bambini on 08/02/21.
 //
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#define CLI_WINDOWS             1
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,12 +17,68 @@
 #include "sqcloud.h"
 #include "linenoise.h"
 
+#if CLI_WINDOWS
+#include <Windows.h>
+#else
 // Linux only macro necessary to include non standard functions (like strcasestr)
 #define _GNU_SOURCE
+#include <sys/fcntl.h>
+#endif
 
 #define CLI_HISTORY_FILENAME    ".sqlitecloud_history.txt"
 #define CLI_VERSION             "1.0"
 #define CLI_BUILD_DATE          __DATE__
+
+#ifndef MAXPATH
+#define MAXPATH                 4096
+#endif
+
+// MARK: -
+
+bool file_exists (const char *path) {
+    #if CLI_WINDOWS
+    if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) return true;
+    #else
+    if (access(path, F_OK) == 0) return true;
+    #endif
+    
+    return false;
+}
+
+int file_create (const char *path) {
+    // RW for owner, R for group, R for others
+    #if CLI_WINDOWS
+    mode_t mode = _S_IWRITE;
+    #else
+    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    #endif
+    
+    return open(path, O_WRONLY | O_CREAT | O_TRUNC, mode);
+}
+
+bool file_delete (const char *path) {
+    #if CLI_WINDOWS
+    return DeleteFileA(path);
+    #else
+    return (unlink(path) == 0);
+    #endif
+}
+
+bool path_combine (char path[MAXPATH], const char dirpath[MAXPATH], const char name[512]) {
+    #if CLI_WINDOWS
+    return (PathCombineA(path, dirpath, name) != NULL);
+    #else
+    size_t len = strlen(dirpath) - 1;
+    int n;
+    if ((len) && (dirpath[len] != '/')) {
+        n = snprintf(path, MAXPATH, "%s%s%s", dirpath, "/", name);
+    } else {
+        n = snprintf(path, MAXPATH, "%s%s", dirpath, name);
+    }
+    
+    return (n > 0) ? true : false;
+    #endif
+}
 
 // MARK: -
 
@@ -67,8 +127,11 @@ bool do_print (SQCloudConnection *conn, SQCloudResult *res) {
             printf("NULL");
             break;
             
-        case RESULT_JSON:
         case RESULT_STRING:
+            (SQCloudResultLen(res)) ? printf("%.*s", SQCloudResultLen(res), SQCloudResultBuffer(res)) : printf("");
+            break;
+            
+        case RESULT_JSON:
         case RESULT_INTEGER:
         case RESULT_FLOAT:
             printf("%.*s", SQCloudResultLen(res), SQCloudResultBuffer(res));
@@ -125,6 +188,86 @@ bool do_process_file (SQCloudConnection *conn, const char *filename) {
     
     fclose(file);
     return should_continue;
+}
+
+// MARK: -
+
+int do_internal_download_cb (void *xdata, const void *buffer, uint32_t blen, int64_t ntot, int64_t nprogress) {
+    if (blen) {
+        // retrieve file descriptor
+        int fd = ((SQCloudData *)xdata)->fd;
+
+        // write data
+        if (write(fd, buffer, (size_t)blen) != blen) {
+            printf("\nError while writing data to file.\n");
+            return -1;
+        }
+    }
+    
+    // display a simple text progress
+    bool is_final = ((blen == 0) && (ntot == nprogress));
+    if (is_final) printf("\n");
+    else printf("%.2f%% ", ((double)nprogress / (double)ntot) * 100.0);
+    
+    // means no error and continue the loop
+    return 0;
+}
+
+bool do_internal_download (SQCloudConnection *conn, char *command) {
+    // .download dbname path
+    
+    // skip command name part
+    command += strlen(".download ");
+    
+    // extract parameters
+    char dbname[512];
+    char dbpath[MAXPATH];
+    if (sscanf(command, "%s %s", (char *)&dbname, (char *)&dbpath) != 2) {
+        return false;
+    }
+    
+    // check if path exists
+    if (!file_exists(dbpath)) {
+        printf("Path %s does not exist.\n", dbpath);
+        return false;
+    }
+    
+    // generate full path to output database
+    char path[MAXPATH];
+    path_combine(path, dbpath, dbname);
+    
+    // create file
+    int fd = file_create(path);
+    if (fd < 0) {
+        printf("Unable to create output file %s\n", path);
+        return false;
+    }
+    
+    printf("    ");
+    SQCloudData data = {.ptr = NULL, .fd = fd};
+    bool result = SQCloudDownloadDatabase(conn, dbname, (void *)&data, do_internal_download_cb);
+    
+    close(fd);
+    if (!result) file_delete(path);
+    
+    return result;
+}
+
+bool do_internal_upload (SQCloudConnection *conn, char *command) {
+    // .upload path
+    return true;
+}
+
+bool do_internal_command (SQCloudConnection *conn, char *command) {
+    // extract command name
+    char cname[512];
+    sscanf(command, "%s ", (char *)&cname);
+    
+    if (strcmp(cname, ".download") == 0) return do_internal_download(conn, command);
+    if (strcmp(cname, ".upload") == 0) return do_internal_upload(conn, command);
+    
+    printf("Unable to recognize internal command: %s\n", command);
+    return false;
 }
 
 // MARK: -
@@ -239,7 +382,7 @@ int main(int argc, char * argv[]) {
             linenoiseHistorySave(CLI_HISTORY_FILENAME);
         }
         if (strncmp(command, "EXIT", 4) == 0) break;
-        do_command(conn, command);
+        (command[0] == '.') ? do_internal_command(conn, command) : do_command(conn, command);
         if (strncmp(command, "QUIT", 4) == 0) break;
     }
     if (command) free(command);

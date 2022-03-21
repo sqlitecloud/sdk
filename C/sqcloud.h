@@ -49,6 +49,12 @@ typedef struct SQCloudConfigStruct {
     #endif
 } SQCloudConfig;
 
+// convenient struct to be used in SQCloudDownloadDatabase
+typedef struct {
+    void            *ptr;
+    int             fd;
+} SQCloudData;
+
 typedef enum {
     RESULT_OK,
     RESULT_ERROR,
@@ -162,6 +168,10 @@ int64_t SQCloudArrayInt64Value (SQCloudResult *result, uint32_t index);
 float SQCloudArrayFloatValue (SQCloudResult *result, uint32_t index);
 double SQCloudArrayDoubleValue (SQCloudResult *result, uint32_t index);
 void SQCloudArrayDump (SQCloudResult *result);
+
+// Upload/Download
+bool SQCloudDownloadDatabase (SQCloudConnection *connection, const char *dbname, void *xdata,
+                              int (*xCallback)(void *xdata, const void *buffer, uint32_t blen, int64_t ntot, int64_t nprogress));
 
 // Base64
 char *SQCloudBinaryToB64 (char *dest, void const *src, size_t *size);
