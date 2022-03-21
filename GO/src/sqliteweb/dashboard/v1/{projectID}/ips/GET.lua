@@ -9,13 +9,13 @@ userid = tonumber( userid )                                                     
 if projectID               == "auth"      then return error( 404, "Forbidden ProjectID" ) end -- fbf94289-64b0-4fc6-9c20-84083f82ee64
 if string.len( projectID ) ~= 36          then return error( 400, "Invalid ProjectID" )   end 
 
-if not query.role then role = "*" else role = query.role user = ""         end
-if not query.user then user = "*" else role = ""         user = query.user end
+if not query.role then role = "" else role = query.role user = ""         end
+if not query.user then user = "" else role = ""         user = query.user end
 
 if role ~= "" then role = string.format( "ROLE '%s'", enquoteSQL( role ) ) end
 if user ~= "" then user = string.format( "USER '%s'", enquoteSQL( user ) ) end
 
-query = string.format( "LIST ALLOWED IP %s %s ;", role, user )
+query = string.format( "LIST ALLOWED IP %s %s;", role, user )
 ips = nil
 
 if userid == 0 then
@@ -23,7 +23,7 @@ if userid == 0 then
 
   ips = executeSQL( projectID, query )
 else
-  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND User.id= %d AND uuid = '%s';", userid, enquoteSQL( projectID ) )
+  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id=user_id WHERE USER.enabled=1 AND User.id=%d AND uuid='%s';", userid, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
 
   if not check_access                     then return error( 504, "Gateway Timeout" )     end

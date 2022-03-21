@@ -170,14 +170,19 @@ func (this *AuthServer) JWTAuth( nextHandler http.HandlerFunc ) http.HandlerFunc
 }
 
 func (this *AuthServer) GetUserID( request *http.Request ) ( int64, error ) {
-  token, _  := SQLiteWeb.Auth.getAuthorization( request.Header )
-  claims, _ := SQLiteWeb.Auth.decodeClaims( token )
-
-  switch userID, err := strconv.ParseInt( claims.Id, 10, 64 ); {
-  case err != nil : return -1, err
-  case userID < 1 : return userID, fmt.Errorf( "Invalid UserID" )
-  default         : return userID, nil
-  }
+  if token, err  := SQLiteWeb.Auth.getAuthorization( request.Header ); err == nil && token != "" {
+		if claims, err := SQLiteWeb.Auth.decodeClaims( token ); err == nil && claims != nil {
+			switch userID, err := strconv.ParseInt( claims.Id, 10, 64 ); {
+			case err != nil : return -1, err
+			case userID < 1 : return userID, fmt.Errorf( "Invalid UserID" )
+			default         : return userID, nil
+			}
+		} else {
+			return -1, err
+		}
+	} else {
+		return -1, err
+	}
 }
 
 ////

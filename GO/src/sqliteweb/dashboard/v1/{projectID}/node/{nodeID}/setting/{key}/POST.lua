@@ -1,6 +1,8 @@
 -- Create a new setting with key and value
 -- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/node/{nodeID}/setting/{key}
 
+-- TODO: Modernize + use INSERT OR UPDATE
+
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
