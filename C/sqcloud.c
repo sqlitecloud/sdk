@@ -496,6 +496,10 @@ static bool internal_has_commandlen (int c) {
     return ((c == CMD_INT) || (c == CMD_FLOAT) || (c == CMD_NULL)) ? false : true;
 }
 
+static bool internal_canbe_zerolength (int c) {
+    return ((c == CMD_BLOB) || (c == CMD_STRING));
+}
+
 static uint32_t internal_buffer_maxlen (SQCloudResult *result, char *value) {
     if (!value) return 2;
     
@@ -1217,7 +1221,11 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool 
         if (internal_has_commandlen(original[0])) {
             // parse buffer looking for command length
             if (clen == 0) clen = internal_parse_number (&original[1], tread-1, &cstart, NULL);
-            if (clen == 0) continue;
+            
+            // check special zero-length value
+            if (clen == 0) {
+                if (!internal_canbe_zerolength(original[0])) continue;
+            }
             
             // check if read is complete
             // clen is the lenght parsed in the buffer
@@ -2342,6 +2350,61 @@ void SQCloudArrayDump (SQCloudResult *result) {
         if (!value) {value = "NULL"; len = 4;}
         printf("[%d] %.*s\n", i, len, value);
     }
+}
+
+// MARK: -
+
+bool SQCloudDownloadDatabase (SQCloudConnection *connection, const char *dbname, void *xdata,
+                              int (*xCallback)(void *xdata, const void *buffer, uint32_t blen, int64_t ntot, int64_t nprogress)) {
+    // xCallback is mandatory
+    if (!xCallback) return false;
+    
+    // prepare command to execute
+    char buffer[512];
+    snprintf(buffer, sizeof(buffer), "DOWNLOAD DATABASE %s", dbname);
+    
+    // execute command on server side
+    SQCloudResult *res = SQCloudExec(connection, buffer);
+    
+    // reply must be an Integer value (otherwise it is an error)
+    if (SQCloudResultType(res) != RESULT_ARRAY) return false;
+    
+    // res is an ARRAY (database size, number of pages)
+    int64_t db_size = SQCloudArrayInt64Value(res, 0);
+    SQCloudResultFree(res);
+    
+    // loop to download
+    int64_t progress_size = 0;
+    snprintf(buffer, sizeof(buffer), "DOWNLOAD STEP");
+    
+    while (progress_size <= db_size) {
+        res = SQCloudExec(connection, buffer);
+        
+        // reply must be a BLOB value (otherwise it is an error)
+        if (SQCloudResultType(res) != RESULT_BLOB) return false;
+        
+        // res is BLOB, decode it
+        const void *data = (const void *)SQCloudResultBuffer(res);
+        uint32_t datalen = SQCloudResultLen(res);
+        
+        // execute callback (with progress_size updated)
+        progress_size += datalen;
+        int rc = xCallback(xdata, data, datalen, db_size, progress_size);
+        SQCloudResultFree(res);
+        
+        // check exit condition
+        if (datalen == 0) break;
+        
+        // check if download should be cancelled
+        if (rc != 0) {
+            snprintf(buffer, sizeof(buffer), "DOWNLOAD ABORT");
+            SQCloudExec(connection, buffer);
+            return false;
+        }
+    }
+    
+    
+    return true;
 }
 
 // MARK: -
