@@ -162,6 +162,7 @@ struct SQCloudConnection {
     int             xerrcode;               // extended error code
     SQCloudResult   *_chunk;
     SQCloudConfig   *_config;
+    bool            isblob;
     
     // pub/sub
     char            *uuid;
@@ -591,11 +592,31 @@ static SQCloudResult *internal_run_command (SQCloudConnection *connection, const
     if (!buffer || blen < CMD_MINLEN) return NULL;
     
     TIME_GET(tstart);
-    if (!internal_socket_write(connection, buffer, blen, mainfd)) return false;
+    if (!internal_socket_write(connection, buffer, blen, mainfd)) return NULL;
     SQCloudResult *result = internal_socket_read(connection, mainfd);
     TIME_GET(tend);
     if (result) result->time = TIME_VAL(tstart, tend);
     return result;
+}
+
+static bool internal_send_blob(SQCloudConnection *connection, void *buffer, uint32_t blen) {
+    internal_clear_error(connection);
+    
+    // set connection to be BLOB
+    connection->isblob = true;
+    
+    // check zero-size BLOB
+    TIME_GET(tstart);
+    bool rc = internal_socket_write(connection, (blen) ? buffer : NULL, blen, true);
+    connection->isblob = false;
+    if (!rc) return false;
+    SQCloudResult *result = internal_socket_read(connection, true);
+    TIME_GET(tend);
+    if (result) result->time = TIME_VAL(tstart, tend);
+    
+    rc = (SQCloudResultType(result) == RESULT_OK);
+    SQCloudResultFree(result);
+    return rc;
 }
 
 static SQCloudResult *internal_setup_pubsub (SQCloudConnection *connection, const char *buffer, size_t blen) {
@@ -1307,7 +1328,7 @@ static bool internal_socket_write (SQCloudConnection *connection, const char *bu
     // write header
     char header[32];
     char *p = header;
-    int hlen = snprintf(header, sizeof(header), "+%zu ", len);
+    int hlen = snprintf(header, sizeof(header), "%c%zu ", (connection->isblob) ? '$' : '+', len);
     int len1 = hlen;
     while (len1) {
         #ifndef SQLITECLOUD_DISABLE_TSL
@@ -1982,6 +2003,10 @@ SQCloudResult *SQCloudRead (SQCloudConnection *connection) {
     return internal_socket_read(connection, true);
 }
 
+bool SQCloudSendBLOB (SQCloudConnection *connection, void *buffer, uint32_t blen) {
+    return internal_send_blob(connection, buffer, blen);
+}
+
 void SQCloudDisconnect (SQCloudConnection *connection) {
     if (!connection) return;
     
@@ -2403,6 +2428,46 @@ bool SQCloudDownloadDatabase (SQCloudConnection *connection, const char *dbname,
         }
     }
     
+    
+    return true;
+}
+
+bool SQCloudUploadDatabase (SQCloudConnection *connection, const char *dbname, void *xdata, int64_t dbsize,
+                            int (*xCallback)(void *xdata, void *buffer, uint32_t *blen, int64_t ntot, int64_t nprogress)) {
+    // xCallback is mandatory
+    if (!xCallback) return false;
+    
+    // prepare command to execute
+    char command[512];
+    snprintf(command, sizeof(command), "UPLOAD DATABASE %s", dbname);
+    
+    // execute command on server side
+    SQCloudResult *res = SQCloudExec(connection, command);
+    bool isOK = (SQCloudResultType(res) == RESULT_OK);
+    SQCloudResultFree(res);
+    if (!isOK) return false;
+    
+    void *buffer = mem_alloc(SQCLOUD_DEFAULT_UPLOAD_SIZE);
+    if (!buffer) return internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate a buffer of size %d.", SQCLOUD_DEFAULT_UPLOAD_SIZE);
+    
+    uint32_t blen = 0;
+    int64_t nprogress = 0;
+    do {
+        // execute callback to read buffer
+        blen = SQCLOUD_DEFAULT_UPLOAD_SIZE;
+        int rc = xCallback(xdata, buffer, &blen, dbsize, nprogress);
+        if (rc != 0) {
+            SQCloudResult *res = SQCloudExec(connection, "UPLOAD ABORT");
+            SQCloudResultFree(res);
+            return false;
+        }
+        
+        // send BLOB
+        if (SQCloudSendBLOB(connection, buffer, blen) == false) return false;
+        
+        // update progress
+        nprogress += blen;
+    } while (blen > 0);
     
     return true;
 }
