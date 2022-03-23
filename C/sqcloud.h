@@ -19,6 +19,7 @@ extern "C" {
 #define SQCLOUD_SDK_VERSION_NUM     0x000600
 #define SQCLOUD_DEFAULT_PORT        8860
 #define SQCLOUD_DEFAULT_TIMEOUT     12
+#define SQCLOUD_DEFAULT_UPLOAD_SIZE 512*1024
 
 #define SQCLOUD_IPany               0
 #define SQCLOUD_IPv4                2
@@ -172,6 +173,8 @@ void SQCloudArrayDump (SQCloudResult *result);
 // Upload/Download
 bool SQCloudDownloadDatabase (SQCloudConnection *connection, const char *dbname, void *xdata,
                               int (*xCallback)(void *xdata, const void *buffer, uint32_t blen, int64_t ntot, int64_t nprogress));
+bool SQCloudUploadDatabase (SQCloudConnection *connection, const char *dbname, void *xdata, int64_t dbsize,
+                            int (*xCallback)(void *xdata, void *buffer, uint32_t *blen, int64_t ntot, int64_t nprogress));
 
 // Base64
 char *SQCloudBinaryToB64 (char *dest, void const *src, size_t *size);

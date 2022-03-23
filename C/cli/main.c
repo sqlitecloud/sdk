@@ -56,12 +56,33 @@ int file_create (const char *path) {
     return open(path, O_WRONLY | O_CREAT | O_TRUNC, mode);
 }
 
+int file_open_read (const char *path) {
+    #if CLI_WINDOWS
+    mode_t mode = _S_IREAD;
+    #else
+    mode_t mode = S_IRUSR | S_IRGRP;
+    #endif
+    return open(path, O_RDONLY, mode);
+}
+
 bool file_delete (const char *path) {
     #if CLI_WINDOWS
     return DeleteFileA(path);
     #else
     return (unlink(path) == 0);
     #endif
+}
+
+int64_t file_size (int fd) {
+    int64_t fsize = 0;
+    #if CLI_WINDOWS
+    fsize = (int64_t)_lseek(fd, 0, SEEK_END);
+    _lseek(fd, 0, SEEK_SET);
+    #else
+    fsize = (int64_t)lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
+    #endif
+    return fsize;
 }
 
 bool path_combine (char path[MAXPATH], const char dirpath[MAXPATH], const char name[512]) {
@@ -206,7 +227,7 @@ int do_internal_download_cb (void *xdata, const void *buffer, uint32_t blen, int
     
     // display a simple text progress
     bool is_final = ((blen == 0) && (ntot == nprogress));
-    if (is_final) printf("\n");
+    if (is_final) printf("DOWNLOAD COMPLETE\n");
     else printf("%.2f%% ", ((double)nprogress / (double)ntot) * 100.0);
     
     // means no error and continue the loop
@@ -228,7 +249,7 @@ bool do_internal_download (SQCloudConnection *conn, char *command) {
     
     // check if path exists
     if (!file_exists(dbpath)) {
-        printf("Path %s does not exist.\n", dbpath);
+        printf("Output path %s does not exist.\n", dbpath);
         return false;
     }
     
@@ -246,6 +267,10 @@ bool do_internal_download (SQCloudConnection *conn, char *command) {
     printf("    ");
     SQCloudData data = {.ptr = NULL, .fd = fd};
     bool result = SQCloudDownloadDatabase(conn, dbname, (void *)&data, do_internal_download_cb);
+    if (!result) {
+        printf("\n");
+        do_print(conn, NULL);
+    }
     
     close(fd);
     if (!result) file_delete(path);
@@ -253,9 +278,60 @@ bool do_internal_download (SQCloudConnection *conn, char *command) {
     return result;
 }
 
+int do_internal_read_cb (void *xdata, void *buffer, uint32_t *blen, int64_t ntot, int64_t nprogress) {
+    int fd = ((SQCloudData *)xdata)->fd;
+    
+    ssize_t nread = read(fd, buffer, (size_t)*blen);
+    if (nread == -1) return -1;
+    
+    if (nread == 0) printf("UPLOAD COMPLETE\n");
+    else printf("%.2f%% ", ((double)(nprogress+nread) / (double)ntot) * 100.0);
+    
+    *blen = (uint32_t)nread;
+    return 0;
+}
+
 bool do_internal_upload (SQCloudConnection *conn, char *command) {
-    // .upload path
-    return true;
+    // .upload dbname path
+    
+    // skip command name part
+    command += strlen(".upload ");
+    
+    // extract parameters
+    char dbname[512];
+    char dbpath[MAXPATH];
+    if (sscanf(command, "%s %s", (char *)&dbname, (char *)&dbpath) != 2) {
+        return false;
+    }
+    
+    // check if path exists
+    if (!file_exists(dbpath)) {
+        printf("Database %s does not exist.\n", dbpath);
+        return false;
+    }
+    
+    // open file in read-only mode (database must not be in use)
+    int fd = file_open_read(dbpath);
+    if (fd < 0) {
+        printf("Unable to open database file %s\n", dbpath);
+        return false;
+    }
+    
+    // get file size (to have a nice progress stat)
+    int64_t dbsize = file_size(fd);
+    if (dbsize < 0) dbsize = 0;
+    
+    printf("    ");
+    SQCloudData data = {.ptr = NULL, .fd = fd};
+    bool result = SQCloudUploadDatabase(conn, dbname, (void *)&data, dbsize, do_internal_read_cb);
+    close(fd);
+    
+    if (!result) {
+        printf("\n");
+        do_print(conn, NULL);
+    }
+    
+    return result;
 }
 
 bool do_internal_command (SQCloudConnection *conn, char *command) {
