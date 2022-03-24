@@ -29,9 +29,9 @@ import (
 func init() {
 	initializeSQLiteWeb()
 
-	SQLiteWeb.router.HandleFunc( "/api/v1/{path:.*}", func( writer http.ResponseWriter, request *http.Request ) {
-		SQLiteWeb.Auth.cors( writer, request )
-	} ).Methods( "OPTIONS" )
+	SQLiteWeb.router.HandleFunc("/dashboard/v1/{path:.*}", func(writer http.ResponseWriter, request *http.Request) {
+		SQLiteWeb.Auth.cors(writer, request)
+	}).Methods("OPTIONS")
 }
 
 

@@ -150,8 +150,8 @@ web_restart:
 	ssh root@web1.sqlitecloud.io '/etc/init.d/sqliteweb restart'
 
 web_test:
-	@curl --silent --insecure https://web1.sqlitecloud.io:8443/api/v1/ping | grep -q "ResponseID" && echo "Ping...success." || echo "Ping...ERROR."
-	@curl --silent --insecure -X POST https://web1.sqlitecloud.io:8443/api/v1/auth -H 'Content-Type: application/json; charset=utf-8' -d '{"RequestID":1405,"Login":"admin","Password":"foo"}' | grep -q "ResponseID" && echo "Auth...success." || echo "Auth...ERROR."
+	@curl --silent --insecure https://web1.sqlitecloud.io:8443/dashboard/v1/ping | grep -q "ResponseID" && echo "Ping...success." || echo "Ping...ERROR."
+	@curl --silent --insecure -X POST https://web1.sqlitecloud.io:8443/dashboard/v1/auth -H 'Content-Type: application/json; charset=utf-8' -d '{"RequestID":1405,"Login":"admin","Password":"foo"}' | grep -q "ResponseID" && echo "Auth...success." || echo "Auth...ERROR."
 
 github:
 	open https://github.com/sqlitecloud/sdk 
