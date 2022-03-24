@@ -33,7 +33,7 @@ After this, you are ready to work with the SQLiteWeb server!
 ```console
 make bin/sqliteweb_linux
 ```
-Will compile a fresh Linux binary. You can also build binaries for other platform's and OS'es (on your machine) with:
+Will compile a fresh Linux binary. Add GOARCH=amd64 if your machine is not x86-64. You can also build binaries for other platform's and OS'es (on your machine) with:
 
 ```console
 make bin/sqliteweb_osx
