@@ -151,7 +151,12 @@ web_restart:
 
 web_test:
 	@curl --silent --insecure https://web1.sqlitecloud.io:8443/dashboard/v1/ping | grep -q "ResponseID" && echo "Ping...success." || echo "Ping...ERROR."
-	@curl --silent --insecure -X POST https://web1.sqlitecloud.io:8443/dashboard/v1/auth -H 'Content-Type: application/json; charset=utf-8' -d '{"RequestID":1405,"Login":"admin","Password":"foo"}' | grep -q "ResponseID" && echo "Auth...success." || echo "Auth...ERROR."
+	@curl --silent --insecure -X POST https://web1.sqlitecloud.io:8443/dashboard/v1/auth -H 'Content-Type: application/json; charset=utf-8' -d '{"Login":"admin@sqlitecloud.io","Password":"password"}' | grep -q "message" && echo "Auth...success." || echo "Auth...ERROR."
+
+sync:
+	rsync -a src/sqliteweb/dashboard/v1/*  root@web1.sqlitecloud.io:/opt/sqliteweb/dashboard/v1/.
+	rsync -a src/sqliteweb/lib/* root@web1.sqlitecloud.io:/opt/sqliteweb/lib/.
+
 
 github:
 	open https://github.com/sqlitecloud/sdk 
