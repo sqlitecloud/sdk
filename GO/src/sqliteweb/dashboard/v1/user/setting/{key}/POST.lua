@@ -1,5 +1,19 @@
--- Create new setting for key for logged in user
--- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/user/setting/{key}
+--
+--                    ////              SQLite Cloud
+--        ////////////  ///
+--      ///             ///  ///        Product     : SQLite Cloud Web Server
+--     ///             ///  ///         Version     : 1.0.0
+--     //             ///   ///  ///    Date        : 2022/03/26
+--    ///             ///   ///  ///    Author      : Andreas Pfeil
+--   ///             ///   ///  ///
+--   ///     //////////   ///  ///      Description : Create new setting for key 
+--   ////                ///  ///                     for logged in user
+--     ////     //////////   ///        Requires    : Authentication
+--        ////            ////          Output      : status + message
+--          ////     /////              
+--             ///                      Copyright   : 2022 by SQLite Cloud Inc.
+--
+-- -----------------------------------------------------------------------TAB=2
 
 require "sqlitecloud"
 

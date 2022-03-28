@@ -1,32 +1,39 @@
--- LIST DATABASES
+--
+--                    ////              SQLite Cloud
+--        ////////////  ///
+--      ///             ///  ///        Product     : SQLite Cloud Web Server
+--     ///             ///  ///         Version     : 1.0.0
+--     //             ///   ///  ///    Date        : 2022/03/26
+--    ///             ///   ///  ///    Author      : Andreas Pfeil
+--   ///             ///   ///  ///
+--   ///     //////////   ///  ///      Description : LIST DATABASES
+--   ////                ///  ///                     
+--     ////     //////////   ///        Requires    : Authentication
+--        ////            ////          Output      : Database Infos
+--          ////     /////              
+--             ///                      Copyright   : 2022 by SQLite Cloud Inc.
+--
+-- -----------------------------------------------------------------------TAB=2
+
 -- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/databases
+
+require "sqlitecloud"
 
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
-function getNumberOfConnections( projectID, databaseName )
-  query = string.format( "LIST DATABASE CONNECTIONS '%s'; ", enquoteSQL( databaseName) )
-  --print( query )
-  if not query                            then  return 0 end
-  if query.ErrorNumber ~= 0               then  return 0 end
-  if query.NumberOfColumns ~= 2           then  return 0 end
-                                                return query.NumberOfRows
-end
-
-userid = tonumber( userid )                                                                 -- Is string and comes from JWT. Contents is a number.
-
-if projectID               == "auth"      then return error( 404, "Forbidden ProjectID" ) end -- fbf94289-64b0-4fc6-9c20-84083f82ee64
-if string.len( projectID ) ~= 36          then return error( 400, "Invalid ProjectID" )   end 
+local userID,    err, msg = checkUserID( userid )       if err ~= 0 then return error( err, msg ) end
+local projectID, err, msg = checkProjectID( projectID ) if err ~= 0 then return error( err, msg ) end
 
 query     = "LIST DATABASES;"
 databases = nil
 
-if userid == 0 then
+if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
 
   databases = executeSQL( projectID, query )
 else
-  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND User.id= %d AND uuid = '%s';", userid, enquoteSQL( projectID ) )
+  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND User.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
 
   if not check_access                     then return error( 504, "Gateway Timeout" )     end

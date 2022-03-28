@@ -1,29 +1,44 @@
--- LIST ALLOWED IP [ROLE %] [USER %]
+--
+--                    ////              SQLite Cloud
+--        ////////////  ///
+--      ///             ///  ///        Product     : SQLite Cloud Web Server
+--     ///             ///  ///         Version     : 1.0.0
+--     //             ///   ///  ///    Date        : 2022/03/26
+--    ///             ///   ///  ///    Author      : Andreas Pfeil
+--   ///             ///   ///  ///
+--   ///     //////////   ///  ///      Description : LIST ALLOWED IP [ROLE %] [USER %]
+--   ////                ///  ///                     
+--     ////     //////////   ///        Requires    : Authentication
+--        ////            ////          Output      : Structure with IP-info
+--          ////     /////              
+--             ///                      Copyright   : 2022 by SQLite Cloud Inc.
+--
+-- -----------------------------------------------------------------------TAB=2
+
 -- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/ips
+
+require "sqlitecloud"
 
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
-userid = tonumber( userid )                                                                 -- Is string and comes from JWT. Contents is a number.
+local userID,    err, msg = checkUserID( userid )       if err ~= 0 then return error( err, msg )  end
+local projectID, err, msg = checkProjectID( projectID ) if err ~= 0 then return error( err, msg )  end
 
-if projectID               == "auth"      then return error( 404, "Forbidden ProjectID" ) end -- fbf94289-64b0-4fc6-9c20-84083f82ee64
-if string.len( projectID ) ~= 36          then return error( 400, "Invalid ProjectID" )   end 
-
-if not query.role then role = "" else role = query.role user = ""         end
-if not query.user then user = "" else role = ""         user = query.user end
-
-if role ~= "" then role = string.format( "ROLE '%s'", enquoteSQL( role ) ) end
-if user ~= "" then user = string.format( "USER '%s'", enquoteSQL( user ) ) end
+if not query.role then role = "" else role = query.role user = ""               end
+if not query.user then user = "" else role = ""         user = query.user       end
+if role ~= ""     then role = string.format( "ROLE '%s'", enquoteSQL( role ) )  end
+if user ~= ""     then user = string.format( "USER '%s'", enquoteSQL( user ) )  end
 
 query = string.format( "LIST ALLOWED IP %s %s;", role, user )
-ips = nil
+ips   = nil
 
-if userid == 0 then
+if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
 
   ips = executeSQL( projectID, query )
 else
-  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id=user_id WHERE USER.enabled=1 AND User.id=%d AND uuid='%s';", userid, enquoteSQL( projectID ) )
+  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id=user_id WHERE USER.enabled=1 AND User.id=%d AND uuid='%s';", userID, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
 
   if not check_access                     then return error( 504, "Gateway Timeout" )     end

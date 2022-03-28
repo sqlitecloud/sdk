@@ -1,35 +1,46 @@
--- CREATE DATABASE % [KEY %] [ENCODING %] [IF NOT EXISTS]
+--
+--                    ////              SQLite Cloud
+--        ////////////  ///
+--      ///             ///  ///        Product     : SQLite Cloud Web Server
+--     ///             ///  ///         Version     : 1.0.0
+--     //             ///   ///  ///    Date        : 2022/03/26
+--    ///             ///   ///  ///    Author      : Andreas Pfeil
+--   ///             ///   ///  ///
+--   ///     //////////   ///  ///      Description : CREATE DATABASE % [KEY %] 
+--   ////                ///  ///                     [ENCODING %] [IF NOT EXISTS]
+--     ////     //////////   ///        Requires    : Authentication
+--        ////            ////          Output      : status + message
+--          ////     /////              
+--             ///                      Copyright   : 2022 by SQLite Cloud Inc.
+--
+-- -----------------------------------------------------------------------TAB=2
+
 -- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/database/{databaseName}
+
+require "sqlitecloud"
 
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
-userid = tonumber( userid )                                                                   -- Is string and comes from JWT. Contents is a number.
+local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                                    end
+local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                                    end
+local dbName,    err, msg = checkParameter( databaseName, 1 )            if err ~= 0 then return error( err, string.format( msg, "databaseName" ) )   end
+local key,       err, msg = getBodyValue( "key", 0 )                     if err ~= 0 then return error( err, msg )                                    end
+local encoding,  err, msg = getBodyValue( "encoding", 0 )                if err ~= 0 then return error( err, msg )                                    end
 
-if projectID                  == "auth" then return error( 404, "Forbidden ProjectID" )   end -- fbf94289-64b0-4fc6-9c20-84083f82ee64
-if string.len( projectID )    ~= 36     then return error( 400, "Invalid ProjectID" )     end 
-if string.len( databaseName ) < 1       then return error( 400, "Invalid DatabaseName" )  end
-if string.len( body )         == 0      then return error( 400, "Missing body" )          end
-
-body = jsonDecode( body )
-
-if body     == nil                      then return error( 400, "Invalid body" )          end
-if not body.key                         then body.key      = ""                           end
-if not body.encoding                    then body.encoding = ""                           end
-
-                                             query = string.format( "CREATE DATABASE '%s'", enquoteSQL( databaseName ) )
-if string.len( body.key )      > 0      then query = string.format( "%s KEY '%s'",          query, enquoteSQL( body.key      ) ) end
-if string.len( body.encoding ) > 0      then query = string.format( "%s ENCODING '%s'",     query, enquoteSQL( body.encoding ) ) end
-                                             query = string.format( "%s IF NOT EXISTS;",    query )
+                                        query = string.format( "CREATE DATABASE '%s'", enquoteSQL( dbName ) )
+if string.len( key )      > 0      then query = string.format( "%s KEY '%s'",          query, enquoteSQL( key      ) ) end
+if string.len( encoding ) > 0      then query = string.format( "%s ENCODING '%s'",     query, enquoteSQL( encoding ) ) end
+                                        query = string.format( "%s IF NOT EXISTS;",    query )
 
 result = nil
 
-if userid == 0 then
+if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
 
   result = executeSQL( projectID, query )
 else
-  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND USER.id= %d AND uuid = '%s';", userid, enquoteSQL( projectID ) )
+  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND USER.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
 
   if not check_access                     then return error( 504, "Gateway Timeout" )     end

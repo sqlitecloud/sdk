@@ -114,3 +114,35 @@ end
 -- local uuid,       errorCode, errorMessage  = verifyProject( userID, projectID )                     if errorCode ~= 0 then return error( errorCode, errorMessage ) end
 -- local nodeID,     errorCode, errorMessage  = verifyNodeID( userID, uuid, 1 )                        if errorCode ~= 0 then return error( errorCode, errorMessage ) end
 -- local settingID,  errorCode, errorMessage  = getNodeSettingsID( userID, uuid, 1, "testkeyvalz"  )  if errorCode ~= 0 then return error( errorCode, errorMessage ) end
+
+
+
+function getNumberOfConnections( projectID, databaseName )
+  query = string.format( "LIST DATABASE CONNECTIONS '%s'; ", enquoteSQL( databaseName) )
+
+  if not query                            then  return 0 end
+  if query.ErrorNumber ~= 0               then  return 0 end
+  if query.NumberOfColumns ~= 2           then  return 0 end
+                                                return query.NumberOfRows
+end
+
+function error( code, message )
+  result = {
+    status  = code,
+    message = message
+  }
+  SetStatus( code )
+  SetHeader( "Content-Type", "application/json" )
+  SetHeader( "Content-Encoding", "utf-8" )
+  Write( jsonEncode( result ) )
+end
+
+function bool( data )
+  data = string.lower( data )
+  if     data == "1"        then return true
+	elseif data == "true"     then return true
+	elseif data == "enable"   then return true
+	elseif data == "enabled"  then return true
+	else                           return false
+  end
+end

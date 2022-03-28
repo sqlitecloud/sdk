@@ -1,8 +1,26 @@
--- Get a JSON with all providers, regions and size parameters
+--
+--                    ////              SQLite Cloud
+--        ////////////  ///
+--      ///             ///  ///        Product     : SQLite Cloud Web Server
+--     ///             ///  ///         Version     : 1.0.0
+--     //             ///   ///  ///    Date        : 2022/03/26
+--    ///             ///   ///  ///    Author      : Andreas Pfeil
+--   ///             ///   ///  ///
+--   ///     //////////   ///  ///      Description : Get a JSON with all providers, 
+--   ////                ///  ///                     regions and size parameters
+--     ////     //////////   ///        Requires    : Authentication
+--        ////            ////          Output      : Structure with project info
+--          ////     /////              
+--             ///                      Copyright   : 2022 by SQLite Cloud Inc.
+--
+-- -----------------------------------------------------------------------TAB=2
 
-userid = 0
+require "sqlitecloud"
 
-if tonumber( userid ) < 0 then return error( 416, "Invalid User" ) end
+SetHeader( "Content-Type", "application/json" )
+SetHeader( "Content-Encoding", "utf-8" )
+
+local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                     end
 
 Project = {
   id               = "00000000-0000-0000-0000-000000000000",  -- UUID of the project
@@ -18,14 +36,9 @@ Response = {
   projects         = nil                                      -- Array with project objects
 }
 
-if tonumber( userid ) == 0 then 
-  -- get list of projects in ini file
-
-print( "los")
-
+if userID == 0 then                                           -- get list of projects in ini file
   projects = listINIProjects()
 
-  
   if #projects > 0 then
     Response.projects = {}
     

@@ -1,13 +1,29 @@
--- List all nodes
+--
+--                    ////              SQLite Cloud
+--        ////////////  ///
+--      ///             ///  ///        Product     : SQLite Cloud Web Server
+--     ///             ///  ///         Version     : 1.0.0
+--     //             ///   ///  ///    Date        : 2022/03/26
+--    ///             ///   ///  ///    Author      : Andreas Pfeil
+--   ///             ///   ///  ///
+--   ///     //////////   ///  ///      Description : List all nodes
+--   ////                ///  ///                     
+--     ////     //////////   ///        Requires    : Authentication
+--        ////            ////          Output      : Structure with user settings
+--          ////     /////              
+--             ///                      Copyright   : 2022 by SQLite Cloud Inc.
+--
+-- -----------------------------------------------------------------------TAB=2
+
 -- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee63/nodes
+
+require "sqlitecloud"
 
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
-userid = tonumber( userid )                                                                 -- Is string and comes from JWT. Contents is a number.
-
-if projectID               == "auth"      then return error( 404, "Forbidden ProjectID" ) end -- fbf94289-64b0-4fc6-9c20-84083f82ee64
-if string.len( projectID ) ~= 36          then return error( 400, "Invalid ProjectID" )   end 
+local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                     end
+local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                     end
 
 Node = {
   id        = 0,                                -- NodeID - It is not good to have a simple int number!!!!!!
@@ -28,11 +44,11 @@ Response = {
   nodes            = {},                        -- Array with node objects
 }
 
-query = string.format( "SELECT NODE.id, NODE.name, type, provider, image, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id = %d AND uuid='%s';", userid, enquoteSQL( projectID ) )
+query = string.format( "SELECT NODE.id, NODE.name, type, provider, image, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id = %d AND uuid='%s';", userID, enquoteSQL( projectID ) )
 databases = nil
 
-if userid == 0 then
-  if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
+if userID == 0 then         
+  if not getINIBoolean( projectID, "enabled", false )                                then return error( 401, "Project Disabled" )      end
 
   nodes = getINIArray( projectID, "nodes", "" )
   for i = 1, #nodes do
@@ -43,11 +59,11 @@ if userid == 0 then
       Node = {}
       Node.id       = #Response.nodes -- TODO: This is not good
       Node.name     = string.format( "SQLiteCloud CORE Server node [%d]", #Response.nodes )
-      Node.type     = getINIString( projectID, "type",      "Worker" )
+      Node.type     = getINIString( projectID, "type",      "Worker"     )
       Node.provider = getINIString( projectID, "provider",  "On Premise" )
-      Node.image    = getINIString( projectID, "image",     "Unknown" )
+      Node.image    = getINIString( projectID, "image",     "Unknown"    )
       Node.region   = getINIString( projectID, "type",      "On Premise" )
-      Node.size     = getINIString( projectID, "type",      "Unknown" )
+      Node.size     = getINIString( projectID, "type",      "Unknown"    )
   
       Node.address  = url.Host
       Node.port     = url.Port

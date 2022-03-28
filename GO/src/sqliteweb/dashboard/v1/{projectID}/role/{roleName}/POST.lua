@@ -1,37 +1,48 @@
--- CREATE ROLE % [PRIVILEGE %] [DATABASE %] [TABLE %] 
+--
+--                    ////              SQLite Cloud
+--        ////////////  ///
+--      ///             ///  ///        Product     : SQLite Cloud Web Server
+--     ///             ///  ///         Version     : 1.0.0
+--     //             ///   ///  ///    Date        : 2022/03/26
+--    ///             ///   ///  ///    Author      : Andreas Pfeil
+--   ///             ///   ///  ///
+--   ///     //////////   ///  ///      Description : CREATE ROLE % [PRIVILEGE %] 
+--   ////                ///  ///                     [DATABASE %] [TABLE %] 
+--     ////     //////////   ///        Requires    : Authentication
+--        ////            ////          Output      : status + message
+--          ////     /////              
+--             ///                      Copyright   : 2022 by SQLite Cloud Inc.
+--
+-- -----------------------------------------------------------------------TAB=2
+
 -- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/role/{roleName}
+
+require "sqlitecloud"
 
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
-userid = tonumber( userid )                                                                   -- Is string and comes from JWT. Contents is a number.
+local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                               end
+local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                               end
+local roleName,  err, msg = checkParameter( roleName, 3 )                if err ~= 0 then return error( err, string.format( msg, "roleName" ) )  end
+local privilege, err, msg = getBodyValue( "privilege", 1 )               if err ~= 0 then return error( err, msg )                               end
+local database,  err, msg = getBodyValue( "database", 1 )                if err ~= 0 then return error( err, msg )                               end
+local table,     err, msg = getBodyValue( "table", 1 )                   if err ~= 0 then return error( err, msg )                               end
 
-if projectID                  == "auth" then return error( 404, "Forbidden ProjectID" )   end -- fbf94289-64b0-4fc6-9c20-84083f82ee64
-if string.len( projectID )    ~= 36     then return error( 400, "Invalid ProjectID" )     end 
-if string.len( roleName )      < 1      then return error( 400, "Invalid RoleName" )      end 
-if string.len( body )         == 0      then return error( 400, "Missing body" )          end
-
-body = jsonDecode( body )
-
-if not body                             then return error( 400, "Invalid body" )          end
-if not body.privilege                   then body.privilege = ""                          end
-if not body.database                    then body.database  = ""                          end
-if not body.table                       then body.table     = ""                          end
-
-                                             query = string.format( "CREATE ROLE '%s'", enquoteSQL( roleName ) )
-if string.len( body.privilege )  > 0    then query = string.format( "%s PRIVILEGE '%s'",            query, enquoteSQL( body.privilege ) ) end
-if string.len( body.database )   > 0    then query = string.format( "%s DATABASE '%s'",             query, enquoteSQL( body.database  ) ) end
-if string.len( body.table )      > 0    then query = string.format( "%s TABLE '%s'",                query, enquoteSQL( body.table     ) ) end
-                                             query = string.format( "%s ;",                         query )
+                                        query = string.format( "CREATE ROLE '%s'", enquoteSQL( roleName ) )
+if string.len( privilege )  > 0    then query = string.format( "%s PRIVILEGE '%s'",            query, enquoteSQL( privilege ) ) end
+if string.len( database )   > 0    then query = string.format( "%s DATABASE '%s'",             query, enquoteSQL( database  ) ) end
+if string.len( table )      > 0    then query = string.format( "%s TABLE '%s'",                query, enquoteSQL( table     ) ) end
+                                        query = string.format( "%s ;",                         query )
 
 result = nil
 
-if userid == 0 then
+if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
 
   result = executeSQL( projectID, query )
 else
-  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND USER.id= %d AND uuid = '%s';", userid, enquoteSQL( projectID ) )
+  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND USER.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
 
   if not check_access                     then return error( 504, "Gateway Timeout" )     end

@@ -1,6 +1,26 @@
--- Get all data and settings for logged in user
+--
+--                    ////              SQLite Cloud
+--        ////////////  ///
+--      ///             ///  ///        Product     : SQLite Cloud Web Server
+--     ///             ///  ///         Version     : 1.0.0
+--     //             ///   ///  ///    Date        : 2022/03/26
+--    ///             ///   ///  ///    Author      : Andreas Pfeil
+--   ///             ///   ///  ///
+--   ///     //////////   ///  ///      Description : Get all data and settings 
+--   ////                ///  ///                     for logged in user
+--     ////     //////////   ///        Requires    : Authentication
+--        ////            ////          Output      : Structure with user settings
+--          ////     /////              
+--             ///                      Copyright   : 2022 by SQLite Cloud Inc.
+--
+-- -----------------------------------------------------------------------TAB=2
 
-if tonumber( userid ) < 0 then return error( 416, "Invalid User" ) end
+require "sqlitecloud"
+
+SetHeader( "Content-Type", "application/json" )
+SetHeader( "Content-Encoding", "utf-8" )
+
+local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                     end
 
 Setting = {
   key   = "",
@@ -23,20 +43,21 @@ Response = {
   settings         = nil,
 }
 
-if tonumber( userid ) == 0 then 
-  Response.enabled          = bool( getINIString( "dashboard", "enabled", "false" ) )
+if userID == 0 then    
+  Response.enabled          = getINIBoolean( "dashboard", "enabled", false )
   Response.name             = getINIString( "dashboard", "name", "unknown" )
   Response.company          = getINIString( "dashboard", "company", "unknown" )
   Response.email            = getINIString( "dashboard", "email", "unknown" )
   Response.creationDate     = getINIString( "dashboard", "modified", "1970-01-01 00:00:00" )
   Response.lastRecoveryTime = getINIString( "dashboard", "modified", "1970-01-01 00:00:00" )
+  
 else
-  data = executeSQL( "auth", string.format( "SELECT 0 AS status, 'OK' AS message, id, enabled, name, company, email, '*******' AS password, creation_date AS creationDate, last_recovery_request AS lastRecoveryTime from USER WHERE id = %d ;", userid ) )
-    if data.ErrorNumber == 0 and data.NumberOfRows == 1 then
-      Response = data.Rows[ 1 ]
+  data = executeSQL( "auth", string.format( "SELECT 0 AS status, 'OK' AS message, id, enabled, name, company, email, '*******' AS password, creation_date AS creationDate, last_recovery_request AS lastRecoveryTime from USER WHERE id = %d ;", userID ) )
+  if data.ErrorNumber == 0 and data.NumberOfRows == 1 then
+    Response = data.Rows[ 1 ]
     Response.enabled = bool( Response.enabled )
 
-    data = executeSQL( "auth", string.format( "SELECT key, value FROM USER_SETTINGS WHERE user_id = %d ;", userid ) )
+    data = executeSQL( "auth", string.format( "SELECT key, value FROM USER_SETTINGS WHERE user_id = %d ;", userID ) )
     if data.ErrorNumber == 0 and data.NumberOfRows > 0 then
       Response.settings = data.Rows
     end

@@ -1,32 +1,46 @@
--- REVOKE ROLE % USER % [DATABASE %] [TABLE %] 
+--
+--                    ////              SQLite Cloud
+--        ////////////  ///
+--      ///             ///  ///        Product     : SQLite Cloud Web Server
+--     ///             ///  ///         Version     : 1.0.0
+--     //             ///   ///  ///    Date        : 2022/03/26
+--    ///             ///   ///  ///    Author      : Andreas Pfeil
+--   ///             ///   ///  ///
+--   ///     //////////   ///  ///      Description : REVOKE ROLE % USER % 
+--   ////                ///  ///                     [DATABASE %] [TABLE %] 
+--     ////     //////////   ///                      
+--        ////            ////          Requires    : Authentication
+--          ////     /////              Output      : status + message
+--             ///                      Copyright   : 2022 by SQLite Cloud Inc.
+--
+-- -----------------------------------------------------------------------TAB=2
+
 -- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/user/{userName}/{roleName}
 
-userid = tonumber( userid )                                                                     -- Is string and comes from JWT. Contents is a number.
+require "sqlitecloud"
 
-if projectID                  == "auth"   then return error( 404, "Forbidden ProjectID" )   end -- fbf94289-64b0-4fc6-9c20-84083f82ee64
-if string.len( projectID )    ~= 36       then return error( 400, "Invalid ProjectID" )     end 
-if string.len( userName  )    <  1        then return error( 400, "Missing user name" )     end
-if string.len( roleName  )    <  1        then return error( 400, "Missing role name" )     end
-if string.len( body )         == 0        then return error( 400, "Missing body" )          end
+SetHeader( "Content-Type", "application/json" )
+SetHeader( "Content-Encoding", "utf-8" )
 
-body = jsonDecode( body ) 
+local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                              end
+local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                              end
+local userName,  err, msg = checkParameter( userName, 3 )                if err ~= 0 then return error( err, string.format( msg, "userName" ) ) end
+local roleName,  err, msg = checkParameter( roleName, 3 )                if err ~= 0 then return error( err, string.format( msg, "roleName" ) ) end
+local database,  err, msg = getBodyValue( "database", 0 )                if err ~= 0 then return error( err, msg )                              end
+local table,     err, msg = getBodyValue( "table", 0 )                   if err ~= 0 then return error( err, msg )                              end
 
-if not body                               then return error( 400, "Invalid body" )          end
-if not body.database                      then body.database = ""                           end
-if not body.table                         then body.table    = ""                           end
-
-                                               query = string.format( "REVOKE ROLE '%s' USER '%s'" , enquoteSQL( roleName ), enquoteSQL( userName ) )
-if string.len( body.database )  > 0       then query = string.format( "%s DATABASE '%s'"          , query, enquoteSQL( body.database  ) ) end
-if string.len( body.table )     > 0       then query = string.format( "%s TABLE '%s'"             , query, enquoteSQL( body.table     ) ) end
-                                               query = string.format( "%s;"                       , query )
+                                          query = string.format( "REVOKE ROLE '%s' USER '%s'" , enquoteSQL( roleName ), enquoteSQL( userName ) )
+if string.len( database )  > 0       then query = string.format( "%s DATABASE '%s'"          , query, enquoteSQL( database  ) ) end
+if string.len( table )     > 0       then query = string.format( "%s TABLE '%s'"             , query, enquoteSQL( table     ) ) end
+                                          query = string.format( "%s;"                       , query )
 result = nil
-print( query )
-if userid == 0 then
+
+if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
 
   result = executeSQL( projectID, query )
 else
-  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND USER.id= %d AND uuid = '%s';", userid, enquoteSQL( projectID ) )
+  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND USER.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
 
   if not check_access                     then return error( 504, "Gateway Timeout" )     end

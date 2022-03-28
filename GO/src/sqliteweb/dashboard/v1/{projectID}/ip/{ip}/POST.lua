@@ -1,37 +1,47 @@
--- ADD ALLOWED IP % [ROLE %] [USER %]  
+--
+--                    ////              SQLite Cloud
+--        ////////////  ///
+--      ///             ///  ///        Product     : SQLite Cloud Web Server
+--     ///             ///  ///         Version     : 1.0.0
+--     //             ///   ///  ///    Date        : 2022/03/26
+--    ///             ///   ///  ///    Author      : Andreas Pfeil
+--   ///             ///   ///  ///
+--   ///     //////////   ///  ///      Description : ADD ALLOWED IP % [ROLE %] 
+--   ////                ///  ///                     [USER %]  
+--     ////     //////////   ///                      
+--        ////            ////          Requires    : Authentication
+--          ////     /////              Output      : status + message
+--             ///                      Copyright   : 2022 by SQLite Cloud Inc.
+--
+-- -----------------------------------------------------------------------TAB=2
+
 -- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/ip/{ip}
+
+require "sqlitecloud"
 
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
-userid = tonumber( userid )                                                                     -- Is string and comes from JWT. Contents is a number.
+local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                              end
+local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                              end
+local ip,        err, msg = checkParameter( ip, 3 )                      if err ~= 0 then return error( err, string.format( msg, "ip" ) )       end
+local role,      err, msg = getBodyValue( "role", 0 )                    if err ~= 0 then return error( err, msg )                              end
+local user,      err, msg = getBodyValue( "user", 0 )                    if err ~= 0 then return error( err, msg )                              end
 
-if projectID                  == "auth"   then return error( 404, "Forbidden ProjectID" )   end -- fbf94289-64b0-4fc6-9c20-84083f82ee64
-if string.len( projectID )    ~= 36       then return error( 400, "Invalid ProjectID" )     end 
-if string.len( ip )           < 1         then return error( 400, "Invalid IP" )            end 
-if string.len( body )         == 0        then return error( 400, "Missing body" )          end
+if string.len( role ) < 1 and string.len( user ) < 1                                 then return error( 400, "Missing role or user" )           end
 
-body = jsonDecode( body ) 
+                                          query = string.format( "ADD ALLOWED IP '%s'", enquoteSQL( ip ) )
+if string.len( role )   > 0          then query = string.format( "%s ROLE '%s'"       , query, enquoteSQL( role ) ) end
+if string.len( user )   > 0          then query = string.format( "%s USER '%s'"       , query, enquoteSQL( user ) ) end
+                                          query = string.format( "%s;"                , query )
+result    = nil
 
-if not body                               then return error( 400, "Invalid body" )          end
-if not body.role                          then body.role = ""                               end
-if not body.user                          then body.user = ""                               end
-
-if string.len( body.role ) < 1 and string.len( body.user ) < 1 then return error( 400, "Missing role or user" ) end
-
-                                               query = string.format( "ADD ALLOWED IP '%s'", enquoteSQL( ip ) )
-if string.len( body.role )   > 0          then query = string.format( "%s ROLE '%s'"       , query, enquoteSQL( body.role ) ) end
-if string.len( body.user )   > 0          then query = string.format( "%s USER '%s'"       , query, enquoteSQL( body.user ) ) end
-                                               query = string.format( "%s;"                , query )
-
-result = nil
-
-if userid == 0 then
+if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
 
   result = executeSQL( projectID, query )
 else
-  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND USER.id=%d AND uuid='%s';", userid, enquoteSQL( projectID ) )
+  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND USER.id=%d AND uuid='%s';", userID, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
 
   if not check_access                     then return error( 504, "Gateway Timeout" )     end

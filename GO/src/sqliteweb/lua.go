@@ -63,27 +63,6 @@ function filter( tree, map )
   end
   return newTree
 end
-
-function error( code, message )
-  result = {
-    status  = code,
-    message = message
-  }
-  SetStatus( code )
-  SetHeader( "Content-Type", "application/json" )
-  SetHeader( "Content-Encoding", "utf-8" )
-  Write( jsonEncode( result ) )
-end
-
-function bool( data )
-  data = string.lower( data )
-  if     data == "1"        then return true
-	elseif data == "true"     then return true
-	elseif data == "enable"   then return true
-	elseif data == "enabled"  then return true
-	else                           return false
-  end
-end
 `
 
 // Helper Functions
