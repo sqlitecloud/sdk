@@ -5,6 +5,36 @@ function checkParameter( parameter, minLength )
                                                   return parameter, 0, nil
 end
 
+function checkNumber( value, minValue, maxValue ) 
+  if not value                               then return nil, 400, "Missing '%s'"                                         end
+  if string.len( value ) < 1                 then return nil, 400, "Empty '%s'"                                           end
+
+  tmp = tonumber( value )                         
+  if string.format( "%d", tmp ) ~= value     then return nil, 400, "'%s' is not a number"                                 end
+  if tmp < minValue                          then return nil, 400, string.format( "'%%s' is less than %d", minValue )     end
+  if tmp > maxValue                          then return nil, 400, string.format( "'%%s' is greater than %d", maxValue )  end
+                                                  return tmp, 0, nil
+end
+
+function checkDateTime( value ) 
+  if not value                               then return nil, 400, "Missing '%s'"                                         end
+  if string.len( value ) < 1                 then return nil, 400, "Empty '%s'"                                           end
+  if string.len( value ) ~= 19               then return nil, 400, "Error in format of '%s'"                              end -- 2022-03-01 00:00:00
+  if value:sub( 5, 5 ) ~= "-"                then return nil, 400, "Error in format of '%s'"                              end
+  if value:sub( 8, 8 ) ~= "-"                then return nil, 400, "Error in format of '%s'"                              end
+  if value:sub( 11, 11 ) ~= " "              then return nil, 400, "Error in format of '%s'"                              end
+  if value:sub( 14, 14 ) ~= ":"              then return nil, 400, "Error in format of '%s'"                              end
+  if value:sub( 17, 17 ) ~= ":"              then return nil, 400, "Error in format of '%s'"                              end
+
+  for i = 1, #value do
+    c = value:sub( i, i )
+    if c == "0" or c == "1" or c == "2" or c == "3" or c == "4" or c == "5" or c == "6" or c == "7" or c == "8" or c == "9" or c == "-" or c == " " or c == ":" then goto next end
+    do return nil, 400, "Error in format of '%s'" end
+    ::next::
+  end
+                                                  return value, 0, nil
+end
+
 function getBodyValue( value, minLength )     
   if not body                                then return nil, 400, "Missing body"                                         end
   if string.len( body ) == 0                 then return nil, 400, "Empty body"                                           end
@@ -145,4 +175,11 @@ function bool( data )
 	elseif data == "enabled"  then return true
 	else                           return false
   end
+end
+
+function contains( str, needle )
+  for i = 1, #str do
+    if str:sub( i, i ) == needle then return true end
+  end
+  return false
 end

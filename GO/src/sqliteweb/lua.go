@@ -427,12 +427,16 @@ func (this *Server) executeLua( writer http.ResponseWriter, request *http.Reques
   args     := []string{ "" }
   globals  := make( map[string]string )
 
+	now            := time.Now()
+
   globals[ "userid" ] = fmt.Sprintf( "%d", id )
   globals[ "method" ] = strings.TrimSpace( strings.ToUpper( request.Method ) )
   globals[ "host" ]   = request.Host
   globals[ "client" ] = request.RemoteAddr
   globals[ "uri" ]    = request.RequestURI
   globals[ "body" ]   = ""
+	globals[ "now" ]    = now.Format( "2006-01-02 15:04:05" )
+	globals[ "now_1h" ] = now.Add( -1 * time.Hour ).Format( "2006-01-02 15:04:05" )
 
   if body, err := ioutil.ReadAll( request.Body ); err == nil { globals[ "body" ] = string( body ) }
 
