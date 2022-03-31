@@ -1848,7 +1848,9 @@ SQCloudResult *_reserved2 (SQCloudConnection *connection, const char *username, 
     if (username) {
         len += snprintf(&buffer[len], sizeof(buffer) - len, "AUTH USER %s HASH %s;", username, passwordhash);
     }
-    len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY UUID TO %s;", UUID);
+    if (UUID) {
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY UUID TO %s;", UUID);
+    }
     return internal_run_command(connection, buffer, strlen(buffer), true);
 }
 
