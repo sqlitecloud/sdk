@@ -17,17 +17,19 @@
 
 package sqlitecloud
 
-import "fmt"
-import "os"
+import (
+	"bufio"
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+	"time"
 
-import "bufio"
-import "bytes"
-import "strings"
-import "errors"
-import "time"
-import "io"
-import "encoding/json"
-import "golang.org/x/term"
+	"golang.org/x/term"
+)
 
 var rowsetChunkEndPatterns  = []([]byte){ []byte( "5 0 0 0" ), []byte( "6 0 0 0 " ), []byte( "8 0 0 0 0 " ) }
 
@@ -738,10 +740,10 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
           var N         uint64 = 0
           var bytesRead uint64 = 0
 
-          if _, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err }
+          if _, _, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err }
           offset += bytesRead
 
-          if N,   bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err } // 0..N-values
+          if N, _, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err } // 0..N-values
           offset += bytesRead
 
           result.rows           = make( []ResultRow, int( N ) )
@@ -771,11 +773,14 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
 
           // RowSet
         case '/', '*':
-
+          // RowSet:          *LEN 0:VERSION ROWS COLS DATA
+          // RowSet Chunk:    /LEN IDX:VERSION ROWS COLS DATA
+          
           var offset        uint64 = 1 // skip the first type byte
           var bytesRead     uint64 = 0
           var LEN           uint64 = 0
-          var IDX           uint64 = 1
+          var IDX           uint64 = 0
+          var VERSION       uint64 = 0
           var NROWS         uint64 = 0
           var NCOLS         uint64 = 0
 
@@ -785,25 +790,24 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
               if chunk.RAW[ offset ] == pattern[ 0 ] && bytes.Equal( chunk.RAW[ offset : offset + uint64( len( pattern ) ) ], pattern ) { return &result, nil }
           } }
           
-          if   LEN, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err }
+          if LEN, _, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err }
           offset += bytesRead
 
-          if Type == '/' {
-            if IDX, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err }
-            offset += bytesRead
-          }
-
-          if NROWS, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err } // 0..rows-1
+          if IDX, VERSION, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err }
           offset += bytesRead
 
-          if NCOLS, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err } // 0..columns-1
+          if NROWS, _, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err } // 0..rows-1
+          offset += bytesRead
+
+          if NCOLS, _, bytesRead, err = chunk.readUInt64At( offset ); err != nil { return nil, err } // 0..columns-1
           offset += bytesRead
 
           LEN = LEN + offset // check for overreading...
 
           if Type == '/' && NROWS == 0 && NCOLS == 0 { return &result, nil }
 
-          if IDX == 1 {
+          // single chunk or first chunk of multiple chunks
+          if IDX == 0 || IDX == 1 {
             result.rows           = []ResultRow{}
             result.ColumnNames    = make( []string,     int( NCOLS ) )
             result.ColumnWidth    = make( []uint64,     int( NCOLS ) )
@@ -820,6 +824,11 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
                 offset += bytesRead
               }
             }
+          }
+
+          if VERSION != 1 {
+            // not yet supported
+            return nil, fmt.Errorf( "Unsupported rowset version %d", VERSION )
           }
 
           // read all the rows from this chunk
