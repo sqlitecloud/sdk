@@ -42,6 +42,8 @@ typedef struct SQCloudConfigStruct {
     bool            compression;            // compression flag
     bool            sqlite_mode;            // special sqlite compatibility mode
     bool            zero_text;              // flag to tell the server to zero-terminate strings
+    bool            password_hashed;        // private flag
+    bool            nonlinearizable;        // flag to request for immediate responses from the server node without waiting for linerizability guarantees
     #ifndef SQLITECLOUD_DISABLE_TSL
     const char      *tls_root_certificate;
     const char      *tls_certificate;
@@ -119,6 +121,7 @@ SQCloudConnection *SQCloudConnectWithString (const char *s);
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command);
 SQCloudResult *SQCloudRead (SQCloudConnection *connection);
 char *SQCloudUUID (SQCloudConnection *connection);
+bool SQCloudSendBLOB (SQCloudConnection *connection, void *buffer, uint32_t blen);
 void SQCloudDisconnect (SQCloudConnection *connection);
 void SQCloudSetPubSubCallback (SQCloudConnection *connection, SQCloudPubSubCB callback, void *data);
 SQCloudResult *SQCloudSetPubSubOnly (SQCloudConnection *connection);
@@ -172,8 +175,7 @@ void SQCloudArrayDump (SQCloudResult *result);
 // MARK: - Upload/Download -
 bool SQCloudDownloadDatabase (SQCloudConnection *connection, const char *dbname, void *xdata,
                               int (*xCallback)(void *xdata, const void *buffer, uint32_t blen, int64_t ntot, int64_t nprogress));
-bool SQCloudUploadDatabase (SQCloudConnection *connection, const char *dbname, void *xdata, int64_t dbsize,
-                            int (*xCallback)(void *xdata, void *buffer, uint32_t *blen, int64_t ntot, int64_t nprogress));
+bool SQCloudUploadDatabase (SQCloudConnection *connection, const char *dbname, const char *key, void *xdata, int64_t dbsize, int (*xCallback)(void *xdata, void *buffer, uint32_t *blen, int64_t ntot, int64_t nprogress));
 
 // MARK: - Base64 -
 char *SQCloudBinaryToB64 (char *dest, void const *src, size_t *size);

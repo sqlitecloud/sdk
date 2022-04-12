@@ -38,6 +38,7 @@
 #include <netinet/tcp.h>
 #include <sys/ioctl.h>
 #include <pthread.h>
+#include <inttypes.h>
 #endif
 
 #ifndef SQLITECLOUD_DISABLE_TSL
@@ -1408,7 +1409,8 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
     int len = 0;
     
     if (config->username && config->password && strlen(config->username) && strlen(config->password)) {
-        len += snprintf(&buffer[len], sizeof(buffer) - len, "AUTH USER %s PASSWORD %s;", config->username, config->password);
+        char *command = config->password_hashed ? "HASH" : "PASSWORD";
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "AUTH USER %s %s %s;", config->username,  command, config->password);
     }
     
     if (config->database && strlen(config->database)) {
@@ -1427,6 +1429,10 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
         len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY ZEROTEXT TO 1;");
     }
     
+    if (config->nonlinearizable) {
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY NONLINEARIZABLE TO 1;");
+    }
+    
     if (len > 0) {
         SQCloudResult *res = internal_run_command(connection, buffer, strlen(buffer), true);
         if (res != &SQCloudResultOK) return false;
@@ -1441,6 +1447,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     
     // ipv6 code from https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_72/rzab6/xip6client.htm
     memset(&hints, 0, sizeof(hints));
+
     hints.ai_family = (config) ? config->family : AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     
@@ -1489,7 +1496,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
         ioctl(sock_current, FIONBIO, &ioctl_blocking);
         
         // initiate non-blocking connect ignoring return code
-        connect(sock_current, addr->ai_addr, addr->ai_addrlen);
+        rc = connect(sock_current, addr->ai_addr, addr->ai_addrlen);
         
         // add sock_current to internal list of trying to connect sockets
         sock_list[sock_index] = sock_current;
@@ -1688,6 +1695,53 @@ void internal_rowset_dump (SQCloudResult *result, uint32_t maxline, bool quiet) 
     fflush( stdout );
 }
 
+bool internal_upload_database (SQCloudConnection *connection, const char *dbname, const char *key, bool isfiletransfer, uint64_t snapshotid, bool isinternaldb, void *xdata, int64_t dbsize, int (*xCallback)(void *xdata, void *buffer, uint32_t *blen, int64_t ntot, int64_t nprogress)) {
+    // xCallback is mandatory
+    if (!xCallback) return false;
+    
+    const char *keyarg = key ? "KEY " : "";
+    const char *keyvalue = key ? key : "";
+    
+    // prepare command to execute
+    char command[512]; 
+    if (isfiletransfer) {
+        char *internalarg = isinternaldb ? "INTERNAL" : "";
+        snprintf(command, sizeof(command), "TRANSFER DATABASE %s %s%s SNAPSHOT %" PRIu64 " %s", dbname, keyarg, keyvalue, snapshotid, internalarg);
+    } else {
+        snprintf(command, sizeof(command), "UPLOAD DATABASE %s %s%s", dbname, keyarg, keyvalue);
+    }
+    
+    // execute command on server side
+    SQCloudResult *res = SQCloudExec(connection, command);
+    bool isOK = (SQCloudResultType(res) == RESULT_OK);
+    SQCloudResultFree(res);
+    if (!isOK) return false;
+    
+    void *buffer = mem_alloc(SQCLOUD_DEFAULT_UPLOAD_SIZE);
+    if (!buffer) return internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate a buffer of size %d.", SQCLOUD_DEFAULT_UPLOAD_SIZE);
+    
+    uint32_t blen = 0;
+    int64_t nprogress = 0;
+    do {
+        // execute callback to read buffer
+        blen = SQCLOUD_DEFAULT_UPLOAD_SIZE;
+        int rc = xCallback(xdata, buffer, &blen, dbsize, nprogress);
+        if (rc != 0) {
+            SQCloudResult *res = SQCloudExec(connection, "UPLOAD ABORT");
+            SQCloudResultFree(res);
+            return false;
+        }
+        
+        // send BLOB
+        if (SQCloudSendBLOB(connection, buffer, blen) == false) return false;
+        
+        // update progress
+        nprogress += blen;
+    } while (blen > 0);
+    
+    return true;
+}
+
 // MARK: - URL -
 
 static int char2hex (int c) {
@@ -1848,15 +1902,9 @@ bool _reserved1 (SQCloudConnection *connection, const char *command, bool (*forw
     return true;
 }
 
-SQCloudResult *_reserved2 (SQCloudConnection *connection, const char *username, const char *passwordhash, const char *UUID) {
+SQCloudResult *_reserved2 (SQCloudConnection *connection, const char *UUID) {
     char buffer[1024];
-    int len = 0;
-    if (username) {
-        len += snprintf(&buffer[len], sizeof(buffer) - len, "AUTH USER %s HASH %s;", username, passwordhash);
-    }
-    if (UUID) {
-        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY UUID TO %s;", UUID);
-    }
+    snprintf(buffer, sizeof(buffer), "SET CLIENT KEY UUID TO %s;", UUID);
     return internal_run_command(connection, buffer, strlen(buffer), true);
 }
 
@@ -1882,6 +1930,10 @@ bool _reserved6 (SQCloudConnection *connection, const char *buffer) {
 
 SQCloudResult *_reserved7 (SQCloudConnection *connection) {
     return internal_socket_read(connection, true);
+}
+
+bool _reserved8 (SQCloudConnection *connection, const char *dbname, const char *key, uint64_t snapshotid, bool isinternaldb, void *xdata, int64_t dbsize, int (*xCallback)(void *xdata, void *buffer, uint32_t *blen, int64_t ntot, int64_t nprogress)) {
+    return internal_upload_database(connection, dbname, key, true, snapshotid, isinternaldb, xdata, dbsize, xCallback);
 }
 
 // MARK: - PUBLIC -
@@ -2440,44 +2492,8 @@ bool SQCloudDownloadDatabase (SQCloudConnection *connection, const char *dbname,
     return true;
 }
 
-bool SQCloudUploadDatabase (SQCloudConnection *connection, const char *dbname, void *xdata, int64_t dbsize,
-                            int (*xCallback)(void *xdata, void *buffer, uint32_t *blen, int64_t ntot, int64_t nprogress)) {
-    // xCallback is mandatory
-    if (!xCallback) return false;
-    
-    // prepare command to execute
-    char command[512];
-    snprintf(command, sizeof(command), "UPLOAD DATABASE %s", dbname);
-    
-    // execute command on server side
-    SQCloudResult *res = SQCloudExec(connection, command);
-    bool isOK = (SQCloudResultType(res) == RESULT_OK);
-    SQCloudResultFree(res);
-    if (!isOK) return false;
-    
-    void *buffer = mem_alloc(SQCLOUD_DEFAULT_UPLOAD_SIZE);
-    if (!buffer) return internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate a buffer of size %d.", SQCLOUD_DEFAULT_UPLOAD_SIZE);
-    
-    uint32_t blen = 0;
-    int64_t nprogress = 0;
-    do {
-        // execute callback to read buffer
-        blen = SQCLOUD_DEFAULT_UPLOAD_SIZE;
-        int rc = xCallback(xdata, buffer, &blen, dbsize, nprogress);
-        if (rc != 0) {
-            SQCloudResult *res = SQCloudExec(connection, "UPLOAD ABORT");
-            SQCloudResultFree(res);
-            return false;
-        }
-        
-        // send BLOB
-        if (SQCloudSendBLOB(connection, buffer, blen) == false) return false;
-        
-        // update progress
-        nprogress += blen;
-    } while (blen > 0);
-    
-    return true;
+bool SQCloudUploadDatabase (SQCloudConnection *connection, const char *dbname, const char *key, void *xdata, int64_t dbsize, int (*xCallback)(void *xdata, void *buffer, uint32_t *blen, int64_t ntot, int64_t nprogress)) {
+    return internal_upload_database(connection, dbname, key, false, 0, false, xdata, dbsize, xCallback);
 }
 
 // MARK: -
