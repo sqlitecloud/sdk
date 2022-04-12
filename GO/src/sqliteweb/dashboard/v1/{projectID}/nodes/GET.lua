@@ -34,7 +34,9 @@ Node = {
   region    = "",                               -- Regin data for this node
   size      = "",                               -- Size info for this node
   address   = "",                               -- IPv[4,6] address or host name of this node
-  port      = ""                                -- Port this node is listening on
+  port      = "",                                -- Port this node is listening on
+  latitude  = 44.931,
+  longitude = 10.533,
 }
 
 Response = {
@@ -43,9 +45,6 @@ Response = {
 
   nodes            = {},                        -- Array with node objects
 }
-
-query = string.format( "SELECT NODE.id, NODE.name, type, provider, image, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id = %d AND uuid='%s';", userID, enquoteSQL( projectID ) )
-databases = nil
 
 if userID == 0 then         
   if not getINIBoolean( projectID, "enabled", false )                                then return error( 401, "Project Disabled" )      end
@@ -73,11 +72,17 @@ if userID == 0 then
   end
 
 else
+  
+  local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
+  local query     = string.format( "SELECT NODE.id, NODE.name, type, provider, image AS details, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port, latitude, longitude FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id = %d AND uuid='%s';", userID, enquoteSQL( projectID ) )
+  --print( query )
+  local databases = nil
 
+  
   nodes = executeSQL( "auth", query )
   if not nodes                            then return error( 404, "ProjectID not found" ) end
   if nodes.ErrorNumber              ~= 0  then return error( 502, "Bad Gateway" )         end
-  if nodes.NumberOfColumns          ~= 9  then return error( 502, "Bad Gateway" )         end
+  if nodes.NumberOfColumns          ~= 11 then return error( 502, "Bad Gateway" )         end
   if nodes.NumberOfRows             <  1  then return error( 200, "OK" )                  end
 
   Response.nodes = nodes.Rows

@@ -39,14 +39,17 @@ Response = {
 }
 
 if userID == 0 then
-  if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
+  if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" )  end
 
   nodes = getINIArray( projectID, "nodes", "" )
-  if not nodes                            then return error( 501, "Internal Server error" ) end
+  if not nodes                            then return error( 501, "Internal Server error" )         end
   if #nodes == 0                          then return error( 404, "ProjectID OR NodeID not found" ) end
   if nodeID >= #nodes                     then return error( 404, "ProjectID OR NodeID not found" ) end
 
 else
+
+  local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
+  local nodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                     end
 
   query = string.format( "SELECT key, value FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid JOIN NODE_SETTINGS ON NODE.id = node_id WHERE USER.enabled = 1 AND USER.id = %d AND NODE.id = %d AND uuid='%s';", userID, nodeID, enquoteSQL( projectID ) )
   settings = executeSQL( "auth", query )

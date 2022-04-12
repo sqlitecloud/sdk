@@ -9,7 +9,7 @@ function checkNumber( value, minValue, maxValue )
   if not value                               then return nil, 400, "Missing '%s'"                                         end
   if string.len( value ) < 1                 then return nil, 400, "Empty '%s'"                                           end
 
-  tmp = tonumber( value )                         
+  local tmp = tonumber( value )                         
   if string.format( "%d", tmp ) ~= value     then return nil, 400, "'%s' is not a number"                                 end
   if tmp < minValue                          then return nil, 400, string.format( "'%%s' is less than %d", minValue )     end
   if tmp > maxValue                          then return nil, 400, string.format( "'%%s' is greater than %d", maxValue )  end
@@ -36,25 +36,31 @@ function checkDateTime( value )
 end
 
 function getBodyValue( value, minLength )     
+  --print( "Body value " )
+  --print( value )
+  --print( minLength )
+  --print( ".." )
+
   if not body                                then return nil, 400, "Missing body"                                         end
   if string.len( body ) == 0                 then return nil, 400, "Empty body"                                           end
 
   local jbody = jsonDecode( body )
-  if not jbody                                then return nil, 400, "Invalid body"                                         end
+  if not jbody                               then return nil, 400, "Invalid body"                                         end
 
-  if not jbody[ value ]                       then return nil, 400, string.format( "Missing '%s' in body", value )         end
-  if string.len( jbody[ value ] ) < minLength then return nil, 400, string.format( "Invalid data in '%s' in body", value ) end
+  if minLength > 0 then
+    if not jbody[ value ]                    then return nil, 400, string.format( "Missing '%s' in body", value )         end
+    if string.len( jbody[ value ] ) < minLength then return nil, 400, string.format( "Invalid data in '%s' in body", value ) end
+  else
+    if not jbody[ value ]                    then return "", 0, nil                                                       end
+  end
 
-
-  print( "Body value " )
-  print( value )
-  print( jbody[ value ] )
+  -- print( jbody[ value ] )
                                               return jbody[ value ], 0, nil 
 end
 
 function checkUserID( userid )               -- Is string and comes from JWT. Contents is a number.
   if not userid                              then return -1, 400, "Invalid UserID"              end
-  userID = tonumber( userid )                                               
+  local userID = tonumber( userid )                                               
   if string.format( "%d", userID ) ~= userid then return -1, 400, "UserID is Not a Number"      end
   if userID < 0                              then return -1, 400, "Invalid UserID"              end
                                              return userID, 0, nil 
@@ -69,7 +75,7 @@ end
 
 function checkNodeID( nodeid )                -- Is string but MUST contains a number
   if not nodeid                              then return -1, 400, "Invalid NodeID"              end
-  nodeID = tonumber( nodeid )                                               
+  local nodeID = tonumber( nodeid )                                               
   if string.format( "%d", nodeID ) ~= nodeid then return -1, 400, "NodeID is Not a Number"      end
   if nodeID < 0                              then return -1, 400, "Invalid NodeID"              end
                                              return nodeID, 0, nil 
@@ -78,7 +84,7 @@ end
 ------
 
 function verifyUserID( userID )
-  result = executeSQL( "auth", string.format( "SELECT enabled FROM USER WHERE id = %d;", userID ) )
+  local result = executeSQL( "auth", string.format( "SELECT enabled FROM USER WHERE id = %d;", userID ) )
 
   if not result                     then return -1, 503, "Service Unavailable"  end
   if result.ErrorNumber       ~= 0  then return -1, 502, "Bad Gateway"          end
@@ -90,8 +96,8 @@ end
 
 
 function verifyLogin( username, password )
-  query  = string.format( "SELECT id, enabled FROM USER WHERE email='%s' AND password='%s';", enquoteSQL( username ), enquoteSQL( password ) )
-  result = executeSQL( "auth", query )
+  local query  = string.format( "SELECT id, enabled FROM USER WHERE email='%s' AND password='%s';", enquoteSQL( username ), enquoteSQL( password ) )
+  local result = executeSQL( "auth", query )
 
   if not result                     then return -1, 503, "Service Unavailable"  end
   if result.ErrorNumber       ~= 0  then return -1, 502, "Bad Gateway"          end
@@ -102,9 +108,9 @@ function verifyLogin( username, password )
 end
 
 function verifyProjectID( userID, projectUUID ) 
-  query  = string.format( "SELECT uuid FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id WHERE USER.enabled=1 AND USER.id=%d AND PROJECT.uuid = '%s';", userID, enquoteSQL( projectUUID ) )
-  print( query )
-  result = executeSQL( "auth", query )
+  local query  = string.format( "SELECT uuid FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id WHERE USER.enabled=1 AND USER.id=%d AND PROJECT.uuid = '%s';", userID, enquoteSQL( projectUUID ) )
+  --print( query )
+  local result = executeSQL( "auth", query )
 
   if not result                     then return nil, 503, "Service Unavailable" end
   if result.ErrorNumber       ~= 0  then return nil, 502, "Bad Gateway"         end
@@ -115,9 +121,9 @@ function verifyProjectID( userID, projectUUID )
 end
 
 function verifyNodeID( userID, projectUUID, nodeID ) 
-  query  = string.format( "SELECT NODE.id  FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id=%d AND PROJECT.uuid = '%s' AND NODE.id = %d;", userID, enquoteSQL( projectUUID ), nodeID )
-  print( query )
-  result = executeSQL( "auth", query )
+  local query  = string.format( "SELECT NODE.id FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id=%d AND PROJECT.uuid = '%s' AND NODE.id = %d;", userID, enquoteSQL( projectUUID ), nodeID )
+  --print( query )
+  local result = executeSQL( "auth", query )
 
   if not result                     then return nil, 503, "Service Unavailable" end
   if result.ErrorNumber       ~= 0  then return nil, 502, "Bad Gateway"         end
@@ -128,9 +134,9 @@ function verifyNodeID( userID, projectUUID, nodeID )
 end
 
 function getNodeSettingsID( userID, projectUUID, nodeID, key ) 
-  query  = string.format( "SELECT NODE_SETTINGS.id FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid JOIN NODE_SETTINGS ON NODE.id = NODE_SETTINGS.node_id WHERE USER.enabled = 1 AND USER.id=%d AND PROJECT.uuid = '%s' AND NODE.id = %d AND NODE_SETTINGS.key='%s';", userID, enquoteSQL( projectUUID ), nodeID, enquoteSQL( key ) )
-  print( query )
-  result = executeSQL( "auth", query )
+  local query  = string.format( "SELECT NODE_SETTINGS.id FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid JOIN NODE_SETTINGS ON NODE.id = NODE_SETTINGS.node_id WHERE USER.enabled = 1 AND USER.id=%d AND PROJECT.uuid = '%s' AND NODE.id = %d AND NODE_SETTINGS.key='%s';", userID, enquoteSQL( projectUUID ), nodeID, enquoteSQL( key ) )
+  --print( query )
+  local result = executeSQL( "auth", query )
 
   if not result                     then return nil, 503, "Service Unavailable" end
   if result.ErrorNumber       ~= 0  then return nil, 502, "Bad Gateway"         end
@@ -148,7 +154,7 @@ end
 
 
 function getNumberOfConnections( projectID, databaseName )
-  query = string.format( "LIST DATABASE CONNECTIONS '%s'; ", enquoteSQL( databaseName) )
+  local query = string.format( "LIST DATABASE CONNECTIONS '%s'; ", enquoteSQL( databaseName) )
 
   if not query                            then  return 0 end
   if query.ErrorNumber ~= 0               then  return 0 end
@@ -157,7 +163,7 @@ function getNumberOfConnections( projectID, databaseName )
 end
 
 function error( code, message )
-  result = {
+  local result = {
     status  = code,
     message = message
   }
@@ -168,7 +174,7 @@ function error( code, message )
 end
 
 function bool( data )
-  data = string.lower( data )
+  local  data = string.lower( data )
   if     data == "1"        then return true
 	elseif data == "true"     then return true
 	elseif data == "enable"   then return true

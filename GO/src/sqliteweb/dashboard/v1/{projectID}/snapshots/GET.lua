@@ -25,44 +25,24 @@ local projectID, err, msg = checkProjectID( projectID )                  if err 
 
 local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                          end
 
-sql     = "LIST BACKUPS;"
-backups = executeSQL( projectID, sql )
+backups = executeSQL( projectID, "LIST BACKUPS;" )
 
 if not backups                                                                   then return error( 504, "Gateway Timeout" )            end
 if backups.ErrorNumber     ~= 0                                                  then return error( 502, result.ErrorMessage )          end
 if backups.NumberOfColumns ~= 1                                                  then return error( 502, "Bad Gateway" )                end
 
-snaps = {}
+dbs = {}
 for i = 1, backups.NumberOfRows do
-  sql = string.format( "LIST BACKUPS DATABASE '%s';", enquoteSQL( backups.Rows[ i ].name ) )
-
-  snapshots = executeSQL( projectID, sql )
-  
-  ss = { x = 1 }
-  for s = 1, snapshots.NumberOfRows do
-    ss[ #ss + 1 ] = { 
-      created = snapshots.Rows[ s ].created, 
-      id = string.format( "%s:%d", snapshots.Rows[ s ].generation, snapshots.Rows[ s ].index ),
-      offset = snapshots.Rows[ s ].offset, 
-      replica = snapshots.Rows[ s ].replica, 
-      size = snapshots.Rows[ s ].size, 
-      type = snapshots.Rows[ s ].type, 
-    }
-  end
-
-
-  snaps[ #snaps + 1 ] = { database = backups.Rows[ i ].name, 
-  snapshots = ss,
-  --snapshots = snapshots.Rows 
-  }
-
+  dbs[ #dbs + 1 ] = backups.Rows[ i ].name
 end
+
+if #dbs == 0 then dbs = nil end
 
 Response = {
   status            = 200,           -- status code: 200 = no error, error otherwise
   message           = "OK",          -- "OK" or error message
 
-  snapshots         = snaps           -- Array with key value pairs
+  databases         = dbs            -- Array with key value pairs
 }
 
 SetStatus( 200 )
