@@ -323,7 +323,7 @@ bool do_internal_upload (SQCloudConnection *conn, char *command) {
     
     printf("    ");
     SQCloudData data = {.ptr = NULL, .fd = fd};
-    bool result = SQCloudUploadDatabase(conn, dbname, (void *)&data, dbsize, do_internal_read_cb);
+    bool result = SQCloudUploadDatabase(conn, dbname, NULL, (void *)&data, dbsize, do_internal_read_cb);
     close(fd);
     
     if (!result) {
