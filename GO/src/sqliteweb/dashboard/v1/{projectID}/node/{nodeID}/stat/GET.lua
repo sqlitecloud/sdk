@@ -27,7 +27,7 @@ local nodeID,    err, msg = checkNodeID( nodeID )                        if err 
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                     end
 
 Response = {
-  status            = 0,                         -- status code: 0 = no error, error otherwise
+  status            = 200,                       -- status code: 0 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
 
   node              = {

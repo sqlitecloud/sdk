@@ -70,7 +70,7 @@ if log.NumberOfRows > 0 then
 end
 
 Response = {
-  status            = 0,                         -- status code: 0 = no error, error otherwise
+  status            = 200,                       -- status code: 0 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
 
   logs              = flog                       -- Array with key value pairs

@@ -20,6 +20,8 @@ require "sqlitecloud"
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
+
+print( userid )
 local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                          end
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                          end
 
