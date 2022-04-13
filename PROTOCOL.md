@@ -70,29 +70,31 @@ The format is `:VALUE `. Where `VALUE` is a string representation of the integer
 The format is `,VALUE `. Where `VALUE` is a string representation of the float/double value. In C, `VALUE` can be parsed using the `strtod` API. In this first implementation `VALUE` is guarantee to be a Double number.
 
 ### SCSP **Rowset**
-The format is `*LEN NROWS NCOLS DATA`. The whole command is built by eight parts:
+The format is `*LEN 0:VERS NROWS NCOLS DATA`. The whole command is built by eight parts:
 
 1. The single `*` character
 2. LEN is a string representation of Rowset length (theoretically the maximum supported value is UINT64_MAX but it is usually much lower. LEN does not include the length of the first `*LEN ` part.
-3. A single space is used to separate LEN from NROWS
-4. NROWS  is a string representation of the number of rows contained in the Rowset (can be zero)
-5. A single space is used to separate NROWS from NCOLS 
-6. NCOLS  is a string representation of the number of columns contained in the Rowset (cannot be zero)
-7. A single space is used to separate NCOLS from DATA
-8. DATA is a continuos stream of SCSP encoded values:
+3. A single space is used to separate LEN from 0:VERS
+4. a single `0:` string followed by a VERS number (a string representation of the number) which specifies the version of the Rowset (`1` means that only column names is included in the header, `2` means that column names, declared types, database names, table names and origin names are included in the header)
+5. A single space is used to separate 0:VERS from NROWS
+6. NROWS  is a string representation of the number of rows contained in the Rowset (can be zero)
+7. A single space is used to separate NROWS from NCOLS 
+8. NCOLS  is a string representation of the number of columns contained in the Rowset (cannot be zero)
+9. A single space is used to separate NCOLS from DATA
+10. DATA is a continuos stream of SCSP encoded values:
    1. The first NCOLS are SCSP Strings representing column names
    2. The next NROWS * NCOLS fields are SCSP encoded values
 
 ### SCSP **Rowset** Chunk
 A Rowset can be sent as a series of multiple chunks (based on user-specific settings) when its size exceeds a pre-defined value. This can be useful to reduce the memory usage (especially on the server-side) with the disadvantage of increasing the time required to process the whole Rowset on the client-side (due to the increased network latency).
 
-The format is `/LEN IDX NROWS NCOLS DATA`. The command is equal to the SCSP Rowset specification, except for the following differences:
+The format is `/LEN IDX:VERS NROWS NCOLS DATA`. The command is equal to the SCSP Rowset specification, except for the following differences:
 
 1. The first character is `/`
-2. IDX represents the index of the chunk. The first chunk has IDX equals to 1 (0 is reserved for the latest chunk)
+2. IDX represents the index of the chunk. The first chunk has IDX equals to 1 (0 is reserved for the latest chunk). This value is followed by a fixed `:` character and then by a string representation of the Rowset version (see point 4 of the SCPR Rowset for more information about the version value).
 3. NROWS represents the number of rows contained in the chunk. The total number of rows in the final Rowset will be the sum of each NROWS contained in each chunk
 4. NCOLS will be the same for all chunks, which means that it does not need to be computed (as a sum) in the final Rowset, and it means that a logical line is never break
-5. To mark the end of the Rowset, the special string `/LEN 0 0 0 ` is sent (LEN is always 6 in this case)
+5. To mark the end of the Rowset, the special string `/LEN 0 0 0  ` is sent (LEN is always 6 in this case)
 6. After receiving a chuck the client must send an ACK message `+2 OK` to the server (to notify that it is ready to receive the next chunk). Any other ACK message is considered an ABORT and the Rowset processing is immediately aborted.
 
 ### SCSP RAW JSON
@@ -141,4 +143,4 @@ The format is `=LEN N VALUE1 VALUE2 ... VALUEN`. The whole command is built by N
 4. N values separated by a space ` ` character
 
 ---
-```Last revision: September 2nd, 2021```
+```Last revision: April 13th, 2022```
