@@ -1,5 +1,15 @@
+CURL 			:= curl --silent --insecure -X
+TEST_URL	:= https://web1.sqlitecloud.io:8443/dashboard/v1
+
+
 # Pre-requirements
-install-prerequirements:	liner term docopt-go dburl lz4 godoc gosec gorilla ini go-svc kardianos golang-jwt
+install-prerequirements:	liner term docopt-go dburl lz4 godoc gosec gorilla ini kardianos golang-jwt golua
+
+golua:
+ifeq ($(wildcard src/github.com/Shopify/go-lua),)
+	-go get -v github.com/Shopify/go-lua
+endif
+
 
 # liner
 liner:
@@ -150,8 +160,9 @@ web_restart:
 	ssh ***REMOVED*** '/etc/init.d/sqliteweb restart'
 
 web_test:
-	@curl --silent --insecure https://web1.sqlitecloud.io:8443/dashboard/v1/ping | grep -q "ResponseID" && echo "Ping...success." || echo "Ping...ERROR."
-	@curl --silent --insecure -X POST https://web1.sqlitecloud.io:8443/dashboard/v1/auth -H 'Content-Type: application/json; charset=utf-8' -d '{"Login":"admin@sqlitecloud.io","Password":"password"}' | grep -q "message" && echo "Auth...success." || echo "Auth...ERROR."
+	$(eval JWT := $(shell $(CURL) "POST" $(TEST_URL)/auth -H 'Content-Type: application/json; charset=utf-8' -d '{ "Login": "my.address@domain.com ", "Password": "password" }' | grep -o 'message":"[^"]*' | cut -c 11-))
+	@echo Auth...success: \(JWT = $(JWT)\)
+	@$(CURL) "GET" $(TEST_URL)/ping -H 'Authorization: Bearer $(JWT)' | grep -q "PONG" && echo "Ping...success." || echo "Ping...ERROR."
 
 sync:
 	rsync -a src/sqliteweb/dashboard/v1/*  ***REMOVED***:/opt/sqliteweb/dashboard/v1/.
