@@ -292,17 +292,28 @@ int do_internal_read_cb (void *xdata, void *buffer, uint32_t *blen, int64_t ntot
 }
 
 bool do_internal_upload (SQCloudConnection *conn, char *command) {
-    // .upload dbname path
+    // .upload dbname path [key]
     
     // skip command name part
     command += strlen(".upload ");
     
     // extract parameters
+    char *key = NULL;
+    char dbkey[512];
     char dbname[512];
     char dbpath[MAXPATH];
-    if (sscanf(command, "%s %s", (char *)&dbname, (char *)&dbpath) != 2) {
+    
+    // parse command
+    int count = sscanf(command, "%s %s %s", (char *)&dbname, (char *)&dbpath, (char *)&dbkey);
+    
+    // dbname and path parameters are mandatory
+    if (count < 2) {
+        printf("Database name and path are mandatory in the .upload command\n");
         return false;
     }
+    
+    // third parameter is optional
+    if (count == 3) key = dbkey;
     
     // check if path exists
     if (!file_exists(dbpath)) {
@@ -323,7 +334,7 @@ bool do_internal_upload (SQCloudConnection *conn, char *command) {
     
     printf("    ");
     SQCloudData data = {.ptr = NULL, .fd = fd};
-    bool result = SQCloudUploadDatabase(conn, dbname, NULL, (void *)&data, dbsize, do_internal_read_cb);
+    bool result = SQCloudUploadDatabase(conn, dbname, key, (void *)&data, dbsize, do_internal_read_cb);
     close(fd);
     
     if (!result) {
