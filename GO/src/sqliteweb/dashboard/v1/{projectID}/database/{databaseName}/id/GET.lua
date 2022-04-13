@@ -52,7 +52,7 @@ if id.NumberOfColumns               ~= 0  then return error( 502, "Bad Gateway" 
 if id.NumberOfRows                  ~= 0  then return error( 200, "OK" )                  end
 
 Response = {
-  status            = 0,                         -- status code: 0 = no error, error otherwise
+  status            = 200,                       -- status code: 0 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
 
   id                = id.Value,                  -- The database ID

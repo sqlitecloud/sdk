@@ -77,7 +77,7 @@ Database = {
 }
 
 Response = {
-  status            = 0,                         -- status code: 0 = no error, error otherwise
+  status            = 200,                       -- status code: 0 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
 
   databases         = db,                        -- Array with Database objects

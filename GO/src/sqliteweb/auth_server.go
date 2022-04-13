@@ -41,8 +41,8 @@ type AuthRequest struct {
 }
 
 type Response struct {
-  Status     int
-  Message    string
+  Status     int				`json:"status"`
+  Message    string			`json:"message"`
 }
 
 type AuthServer struct {
@@ -75,10 +75,6 @@ func init() {
  * return -5 = Internal error: could not send auth query
  * return -6 = Internal error: invalid response from db
 */
-
-
-
-
 func (this *AuthServer) lookupUserID( Login string, Password string ) int64 {
   Login    = strings.TrimSpace( Login )
   Password = strings.TrimSpace( Password )
@@ -229,9 +225,10 @@ func (this *AuthServer) challengeAuth( writer http.ResponseWriter ) {
 */
 func (this *AuthServer) authorize( writer http.ResponseWriter, request *http.Request, userID int64 ) {
   response := Response {
-    Status:     5,
+    Status:     500,
     Message:    "Internal Server Error",
   }
+fmt.Printf( "UserID = %d\r\n", userID )
 
   now      := time.Now().Unix()
   ip, _, _ := net.SplitHostPort( request.RemoteAddr )
@@ -239,17 +236,17 @@ func (this *AuthServer) authorize( writer http.ResponseWriter, request *http.Req
 
   switch {
   case uip == nil:
-    response.Status  = 2
+    response.Status  = 400
     response.Message = "Invalid ClientIP"
     writer.WriteHeader( http.StatusBadRequest )
 
   case userID == -1:
-    response.Status  = 3
+    response.Status  = 400
     response.Message = "Wrong Credentials"
     writer.WriteHeader( http.StatusBadRequest )
 
   case userID == -2:
-    response.Status  = 4
+    response.Status  = 400
     response.Message = "Wrong Credentials"
     writer.WriteHeader( http.StatusUnauthorized )
 
@@ -286,13 +283,14 @@ func (this *AuthServer) authorize( writer http.ResponseWriter, request *http.Req
   if jResponse, err := json.Marshal( response ); err == nil {
     writer.Write( jResponse )
   } else {
-    http.Error( writer, err.Error(), http.StatusInternalServerError )
+		this.sendError( writer, http.StatusInternalServerError, "Internal Error", http.StatusInternalServerError )
+    //http.Error( writer, err.Error(), http.StatusInternalServerError )
   }
 }
 
 func (this *AuthServer) sendError( writer http.ResponseWriter, status int, message string, statusCode int ) {
   writer.Header().Set( "Content-Type", "application/json" )
   writer.Header().Set( "Content-Encoding", "utf-8" )
-  writer.Write( []byte( fmt.Sprintf( "{\"Status\":%d,\"Message\":\"%s\"}", status, message ) ) )
+  writer.Write( []byte( fmt.Sprintf( "{\"status\":%d,\"message\":\"%s\"}", status, message ) ) )
   writer.WriteHeader( statusCode )
 }

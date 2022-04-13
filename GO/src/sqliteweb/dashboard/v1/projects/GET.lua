@@ -30,7 +30,7 @@ Project = {
 }
 
 Response = {
-  status           = 0,                                       -- status code: 0 = no error, error otherwise
+  status           = 200,                                     -- status code: 200 = no error, error otherwise
   message          = "OK",                                    -- "OK" or error message
 
   projects         = nil                                      -- Array with project objects
@@ -56,10 +56,14 @@ if userID == 0 then                                           -- get list of pro
   end
 
 else
+
   data = executeSQL( "auth", string.format( "SELECT uuid AS id, PROJECT.name, description FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id WHERE USER.enabled = 1 AND user.id = %d;", userid ) )
-  if data.ErrorNumber == 0 and data.NumberOfRows == 1 then
-    Response.projects = data.Rows[ 1 ]
-  end
+
+  if not data                              then return error( 404, "User not found" )                end
+  if data.ErrorNumber                ~= 0  then return error( 502, "Bad Gateway" )                   end
+  if data.NumberOfColumns            ~= 3  then return error( 502, "Bad Gateway" )                   end
+
+  if data.NumberOfRows                > 0  then Response.projects = data.Rows                        end
 end
 
 SetStatus( 200 )

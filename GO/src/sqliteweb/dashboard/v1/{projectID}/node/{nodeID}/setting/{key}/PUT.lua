@@ -39,7 +39,7 @@ else
   local settingID, err, msg = getNodeSettingsID( userID, projectID, nodeID, key ) 
 
   query  = err ~= 0 
-  and      string.format( "INSERT OR REPLACE INTO NODE_SETTINGS ( node_id, key, value ) VALUES( %d, '%s', '%s' )", nodeID, enquoteSQL( key ), enquoteSQL( body.value ) ) 
+  and      string.format( "INSERT OR REPLACE INTO NODE_SETTINGS ( node_id, key, value ) VALUES( %d, '%s', '%s' )", nodeID, enquoteSQL( key ), enquoteSQL( value ) ) 
   or       string.format( "UPDATE OR REPLACE NODE_SETTINGS SET value = '%s' WHERE id = %d;", enquoteSQL( body.value ), settingID )
 
   result = executeSQL( "auth", query )

@@ -1,121 +1,80 @@
--- Filter log
-
-userid = 1
-
-
-function getNode
+--
+--                    ////              SQLite Cloud
+--        ////////////  ///
+--      ///             ///  ///        Product     : SQLite Cloud Web Server
+--     ///             ///  ///         Version     : 1.0.0
+--     //             ///   ///  ///    Date        : 2022/03/30
+--    ///             ///   ///  ///    Author      : Andreas Pfeil
+--   ///             ///   ///  ///
+--   ///     //////////   ///  ///      Description : Filter log
+--   ////                ///  ///                     
+--     ////     //////////   ///                      
+--        ////            ////          Requires    : Authentication
+--          ////     /////              Output      : 
+--             ///                      Copyright   : 2022 by SQLite Cloud Inc.
+--
+-- -----------------------------------------------------------------------TAB=2
 
 -- LIST LOG FROM % TO % [LEVEL %] [TYPE %] [ORDER DESC]    
 -- LIST % ROWS FROM LOG [LEVEL %] [TYPE %] [ORDER DESC]
 
+require "sqlitecloud"
 
-if tonumber( userid ) < 0 then return error( 416, "Invalid User" ) end
-if projectID == "auth" then return error( 500, "Internal server error" ) end
--- TODO: if nodeID == bad 
+SetHeader( "Content-Type", "application/json" )
+SetHeader( "Content-Encoding", "utf-8" )
 
+local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                          end
+local nodeID,    err, msg = checkNodeID( nodeID )                        if err ~= 0 then return error( err, msg )                          end
+local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                          end
 
-level = query.level
-type  = query.type
-order = query.order
-if not level  then level  = "0"                       end
-if not type   then type   = "4"                       end
-if not order  then order  = "ORDER DESC"              end
+if not query.level  then query.level = "4"    end
+if not query.type   then query.type  = "4"    end
+if not query.order  then query.order = "DESC" end
 
-rows  = query.rows
-if rows then
+local level,     err, msg = checkNumber( query.level, 0, 5 )             if err ~= 0 then return error( err, string.format( msg, "level" ) ) end
+local type,      err, msg = checkNumber( query.type, 1, 8 )              if err ~= 0 then return error( err, string.format( msg, "type" ) )  end
+
+if query.order ~= "DESC" and query.order ~= "ASC"                                    then return error( 400, "Order must be ASC or DESC" )   end
+local order = string.format( "ORDER %s", query.order )
+
+if query.rows then
+  local rows,    err, msg = checkNumber( query.rows, 1, 10000 )          if err ~= 0 then return error( err, string.format( msg, "level" ) ) end
+
   sql = string.format( "LIST %d ROWS FROM LOG LEVEL %d TYPE %d %s", rows, level, type, order )
 else
-  from  = query.from
-  to    = query.to
-  -- dates = executeSQL( "auth", "SELECT DATETIME() AS now, DATETIME( 'now', '-1 day' ) AS yesterday;" )
-  -- if not from   then from   = dates.Rows[ 1 ].yesterday end
-  -- if not to     then to     = dates.Rows[ 1 ].now       end
-  if not to     then to     = "DATETIME()"                  end
-  if not from   then from   = "DATETIME( 'now', '-1 day' )" end
+  if not query.to     then query.to     = now    end
+  if not query.from   then query.from   = now_1h end
 
-  sql = string.format( "LIST LOG FROM %s TO %s LEVEL %d TYPE %d ORDER %s;", from, to, tonumber( level ), tonumber( type ), order ) 
+  local from,    err, msg = checkDateTime( query.from )                  if err ~= 0 then return error( err, string.format( msg, "from" ) ) end
+  local to,      err, msg = checkDateTime( query.to )                    if err ~= 0 then return error( err, string.format( msg, "to" ) )   end
+
+  sql = string.format( "LIST LOG FROM '%s' TO '%s' LEVEL %d TYPE %d %s;", from, to, level, type, order ) 
 end
 
-print( sql )
+local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                          end
 
+log = executeSQL( projectID, sql )
+if not log                                                                           then return error( 504, "Gateway Timeout" )            end
+if log.ErrorNumber ~= 0                                                              then return error( 502, result.ErrorMessage )          end
 
-
-
-log = executeSQL( "auth", sql )
-flog = filter( log.Rows, { [ "datetime"    ] = "date", 
-                           [ "log_type"    ] = "type", 
-                           [ "log_level"   ] = "level",
-                           [ "description" ] = "description",
-                           [ "username"    ] = "username",
-                           [ "database"    ] = "database",
-                           [ "ip_address"  ] = "address",
-                         } )
+flog = nil
+if log.NumberOfRows > 0 then
+  flog = filter( log.Rows, { [ "datetime"    ] = "date", 
+                             [ "log_type"    ] = "type", 
+                             [ "log_level"   ] = "level",
+                             [ "description" ] = "description",
+                             [ "username"    ] = "username",
+                             [ "database"    ] = "database",
+                             [ "ip_address"  ] = "address",
+                           } )
+end
 
 Response = {
-  status            = 0,                         -- status code: 0 = no error, error otherwise
+  status            = 200,                       -- status code: 0 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
 
   logs              = flog                       -- Array with key value pairs
 }
-
-
-
-goto done
-
-
-
-
-
-database = query.database
-
-
-
-print( type )
-print( userid )
-print( projectID )
-print( nodeID )
-
-
-
-if tonumber( userid ) < 0 then return error( 416, "Invalid User" ) end
-if projectID == "auth" then return error( 500, "Internal server error" ) end
--- TODO: if nodeID == bad 
-
-
-
-Response = {
-  status            = 0,                         -- status code: 0 = no error, error otherwise
-  message           = "OK",                      -- "OK" or error message
-
-  logs              = nil,                        -- Array with key value pairs
-}
-
-if tonumber( userid ) == 0 then 
-
-  if getINIBoolean( projectID, "enabled", false ) then
-    goto done
-  end
-
-  do return error( 500, "NodeID not found" ) end -- TODO: Other error code
-
-else
-
-  query = string.format( "SELECT key, value FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid JOIN NODE_SETTINGS ON NODE.id = node_id WHERE USER.enabled = 1 AND USER.id = %d AND NODE.id = %d AND uuid='%s';", userid, nodeID, enquoteSQL( projectID ) )
-  
-  print( query )
-  settings = executeSQL( "auth", query )
-
-  if settings.ErrorNumber == 0 then
-    if settings.NumberOfRows > 0 then
-      Response.settings = settings.Rows
-    end
-  else
-    return error( 500, "NodeID not found" )
-  end
-
-end
-
-::done::
 
 SetStatus( 200 )
 Write( jsonEncode( Response ) )

@@ -17,13 +17,16 @@
 
 package sqlitecloud
 
-import "io"
-import "fmt"
-import "net"
-import "time"
-import "errors"
-import "strconv"
-import "github.com/pierrec/lz4"
+import (
+	"errors"
+	"fmt"
+	"io"
+	"net"
+	"strconv"
+	"time"
+
+	"github.com/pierrec/lz4"
+)
 
 type Chunk struct {
   DataBufferOffset  uint64
@@ -41,8 +44,8 @@ func( this* Chunk ) GetData()      []byte {
 } }
 
 func( this* Chunk ) Uncompress() error {
-  // %TLEN CLEN ULEN *0 NROWS NCOLS <Compressed DATA>
-  // %TLEN CLEN ULEN /0 NROWS NCOLS <Compressed DATA>
+  // %TLEN CLEN ULEN *LEN 0:VERSION NROWS NCOLS <Compressed DATA>
+  // %TLEN CLEN ULEN /LEN IDX:VERSION NROWS NCOLS <Compressed DATA>
 
   if this.RAW == nil      { return errors.New( "Nil pointer exception" ) }
   if !this.IsCompressed() { return nil                                   }
@@ -62,13 +65,13 @@ func( this* Chunk ) Uncompress() error {
   var iUNCOMPRESSED int    = 0
   var uLEN          uint64 = 0
 
-  LEN, lLEN, err = this.readUInt64At( hStartIndex )             // "%TLEN "
+  LEN, _, lLEN, err = this.readUInt64At( hStartIndex )             // "%TLEN "
   hStartIndex += lLEN                                           // hStartIndex -> "CLEN ULEN *0 NROWS NCOLS <Compressed DATA...>"
 
-  COMPRESSED, cLEN, err = this.readUInt64At( hStartIndex )      // "CLEN "
+  COMPRESSED, _, cLEN, err = this.readUInt64At( hStartIndex )      // "CLEN "
   hStartIndex += cLEN                                           // hStartIndex -> "ULEN *0 NROWS NCOLS <Compressed DATA...>"
 
-  UNCOMPRESSED, uLEN, err = this.readUInt64At( hStartIndex )    // "ULEN "
+  UNCOMPRESSED, _, uLEN, err = this.readUInt64At( hStartIndex )    // "ULEN "
   hStartIndex += uLEN                                           // hStartIndex -> "*0 NROWS NCOLS <Compressed DATA...>"
 
   zStartIndex = LEN - COMPRESSED + lLEN + 1                     // zStartIndex -> "<Compressed DATA...>"
@@ -90,27 +93,31 @@ func( this* Chunk ) Uncompress() error {
   return nil
 }
 
-func (this *Chunk ) readUInt64At( offset uint64 ) ( uint64, uint64, error ) {
-  if this.RAW == nil { return 0, 0, errors.New( "Nil chunk" ) }
+func (this *Chunk ) readUInt64At( offset uint64 ) ( uint64, uint64, uint64, error ) {
+  // Can contain an ext code in the form "val:extval"
+  if this.RAW == nil { return 0, 0, 0, errors.New( "Nil chunk" ) }
 
   var zero        uint64 = uint64( '0' ) 
   var val         uint64 = 0
+  var extval      uint64 = 0
   var bytesRead   uint64 = 0
   var maxLEN      int = len( this.RAW ) - int( offset ) // 0...end of chunk                                       
-  
+  var isExt       bool = false
+
   if maxLEN < 0   { maxLEN = 0  }
-  if maxLEN > 20  { maxLEN = 20 }                       // MaxInt64 = 18446744073709551615 (len=20)
+  if maxLEN > 41  { maxLEN = 41 }                       // MaxInt64 = 18446744073709551615 (len=20) 18446744073709551615:18446744073709551615 (len=41)
 
   for {
-    if bytesRead == uint64( maxLEN ) { return val, bytesRead, nil }
+    if bytesRead == uint64( maxLEN ) { return val, extval, bytesRead, nil }
     switch c := this.RAW[ bytesRead + offset ]; c {
-    case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':  val = val * 10 + ( uint64( c ) - zero )
-    case ' ':                                               return val, bytesRead + 1, nil
-    default:                                                return 0, 0, errors.New( "Invalid rune" )
+    case ':':                                               isExt = true
+    case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':  if isExt { extval = extval * 10 + ( uint64( c ) - zero ) } else { val = val * 10 + ( uint64( c ) - zero ) }
+    case ' ':                                               return val, extval, bytesRead + 1, nil
+    default:                                                return 0, 0, 0, errors.New( "Invalid rune" )
     }
     bytesRead++
   }
-  return 0, 0, errors.New( "Overflow" )
+  return 0, 0, 0, errors.New( "Overflow" )
 }
 
 func (this *Chunk ) readValueAt( offset uint64 ) ( Value, uint64, error ) {
@@ -163,7 +170,7 @@ func (this *Value ) readBufferAt( chunk *Chunk, offset uint64 ) ( uint64, error 
       fallthrough
 
     default:                  // Everything else is a LEN Value (+!-$#^@)
-      switch LEN, len, err := chunk.readUInt64At( offset ); {
+      switch LEN, _, len, err := chunk.readUInt64At( offset ); {
       case err != nil:        return 0, err
       case len == 0:          return 0, errors.New( "LEN not found" )
       default:                this.Buffer = chunk.RAW[ offset + len : offset + len + LEN - TRIM ]
