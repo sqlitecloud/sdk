@@ -228,9 +228,8 @@ func (this *AuthServer) authorize( writer http.ResponseWriter, request *http.Req
     Status:     500,
     Message:    "Internal Server Error",
   }
-fmt.Printf( "UserID = %d\r\n", userID )
 
-  now      := time.Now().Unix()
+	now      := time.Now().Unix()
   ip, _, _ := net.SplitHostPort( request.RemoteAddr )
   uip      := net.ParseIP( ip )
 
@@ -272,7 +271,7 @@ fmt.Printf( "UserID = %d\r\n", userID )
       writer.WriteHeader( http.StatusInternalServerError )
 
     } else {
-      response.Status  = 0
+      response.Status  = 200
       response.Message = TokenString
     }
   }

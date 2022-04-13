@@ -124,7 +124,7 @@ func main() {
 
       SQLiteWeb.APIPath         = cfg.Section( "api" ).   Key( "path" ).String()
 
-      SQLiteWeb.Auth.Realm      = cfg.Section( "auth" ).  Key( "jwt_realm" ).String()
+      SQLiteWeb.Auth.Realm      = cfg.Section( "auth" ).  Key( "realm" ).String()
       SQLiteWeb.Auth.JWTTTL     = cfg.Section( "auth" ).  Key( "jwt_ttl" ).RangeInt64( 300, 0, 0xFFFF )
       SQLiteWeb.Auth.JWTSecret  = []byte( cfg.Section( "auth" ).Key( "jwt_key" ).String() )
       SQLiteWeb.Auth.host       = cfg.Section( "auth" ).  Key( "host" ).String()
@@ -134,6 +134,7 @@ func main() {
       SQLiteWeb.Auth.cert       = cfg.Section( "auth" ).  Key( "cert" ).String()
 
       initDashboard()
+			initAdmin()
       initStubs()
       initWWW()
 

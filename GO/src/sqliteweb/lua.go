@@ -34,7 +34,7 @@ import (
   "bytes"
 
   "github.com/Shopify/go-lua"
-  "github.com/gorilla/mux"
+  //"github.com/gorilla/mux"
 )
 
 //import "bytes"
@@ -355,7 +355,38 @@ func lua_executeSQL( L *lua.State ) int {
 
 res.DumpToWriter( out, sqlitecloud.OUTFORMAT_LIST, false, "|", "NULL", "\r\n", 0, false )
         return 1
-  } } }
+  	} }
+
+		if err != nil {
+			L.NewTable()
+      L.PushString( "ErrorNumber" )
+      L.PushInteger( -1 )
+      L.SetTable( -3 )
+
+      L.PushString( "ErrorMessage" )
+      L.PushString( err.Error() )
+      L.SetTable( -3 )
+
+			L.PushString( "Value" )
+      L.PushInteger( 0 )
+      L.SetTable( -3 )
+
+			L.PushString( "NumberOfRows" )
+			L.PushInteger( 0 )
+			L.SetTable( -3 )
+
+			L.PushString( "NumberOfColumns" )
+      L.PushInteger( 0 )
+      L.SetTable( -3 )
+
+			L.PushString( "Rows" )
+			L.NewTable() // row
+			L.SetTable( -3 )
+
+
+			return 1
+	} }
+
   return 0
 }
 
@@ -415,21 +446,15 @@ fail:
 }
 
 
-func (this *Server) executeLua( writer http.ResponseWriter, request *http.Request ) {
-  this.Auth.cors( writer, request )
+func (this *Server) executeLua( basePath string, endpoint string, userID int64, writer http.ResponseWriter, request *http.Request ) {
+  path     := basePath
 
-  id, _    := SQLiteWeb.Auth.GetUserID( request )
-
-  v        := mux.Vars( request ) // len(): 1, endpoint: v1/auth
-  endpoint := strings.ReplaceAll( v[ "endpoint" ] + "/", "//", "/" ) // "v1/fbf94289-64b0-4fc6-9c20-84083f82ee63/database/Foo/connections/"
-
-  path     := cfg.Section( "dashboard" ).Key( "path" ).String()      // "/Users/pfeil/GitHub/SqliteCloud/sdk/GO/src/sqliteweb/dashboard"
   args     := []string{ "" }
   globals  := make( map[string]string )
 
 	now            := time.Now()
 
-  globals[ "userid" ] = fmt.Sprintf( "%d", id )
+  globals[ "userid" ] = fmt.Sprintf( "%d", userID )
   globals[ "method" ] = strings.TrimSpace( strings.ToUpper( request.Method ) )
   globals[ "host" ]   = request.Host
   globals[ "client" ] = request.RemoteAddr

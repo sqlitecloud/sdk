@@ -1,0 +1,43 @@
+--
+--                    ////              SQLite Cloud
+--        ////////////  ///
+--      ///             ///  ///        Product     : SQLite Cloud Web Server
+--     ///             ///  ///         Version     : 1.0.0
+--     //             ///   ///  ///    Date        : 2022/04/11
+--    ///             ///   ///  ///    Author      : Andreas Pfeil
+--   ///             ///   ///  ///
+--   ///     //////////   ///  ///      Description : 
+--   ////                ///  ///                     
+--     ////     //////////   ///                      
+--        ////            ////          Requires    : Authentication
+--          ////     /////              Output      : 
+--             ///                      Copyright   : 2022 by SQLite Cloud Inc.
+--
+-- -----------------------------------------------------------------------TAB=2
+
+
+-- https://localhost:8443/admin/v1/user/{email}/settings
+
+require "sqlitecloud"
+
+SetHeader( "Content-Type", "application/json" )
+SetHeader( "Content-Encoding", "utf-8" )
+
+local email,       err, msg = checkParameter( email, 3 )                     if err ~= 0 then return error( err, string.format( msg, "email" ) )  end
+
+query    = string.format( "SELECT key, value FROM USER JOIN USER_SETTINGS ON USER.id = USER_SETTINGS.user_id WHERE USER.email = '%s';", enquoteSQL( email ) )
+settings = executeSQL( "auth", query )
+
+if not settings                                                                          then return error( 504, "Gateway Timeout" )              end
+if settings.ErrorNumber       ~= 0                                                       then return error( 502, "Bad Gateway" )                  end
+if settings.NumberOfColumns   ~= 2                                                       then return error( 502, "Bad Gateway" )                  end 
+if settings.NumberOfRows > 0                                                             then settings = settings.Rows else settings = nil        end
+
+Response = {
+  status    = 200,
+  message   = "OK",
+  settings  = settings,
+}
+
+SetStatus( 200 )
+Write( jsonEncode( Response ) )

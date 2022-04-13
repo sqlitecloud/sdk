@@ -259,6 +259,10 @@ func ( this *ConnectionManager ) getFirstUnlockedConnectionAndLockIt( node strin
     connection.locked = true
   }
 
+	if connection != nil {
+		fmt.Printf( "Using connection: '%s'\r\n", connection.node )
+	}
+	
   this.poolMutex.Unlock()
   return connection
 }
@@ -325,7 +329,7 @@ func ( this *ConnectionManager ) ExecuteSQL( node string, query string ) ( *sqli
     default                           :
 
       connection.uses++
-      if res, err = connection.connection.Select( query ); err != nil || res == nil {
+      if res, err = connection.connection.Select( query ); res == nil && err == nil {
         continue
       } else {
         this.ReleaseConnection( node, connection )
