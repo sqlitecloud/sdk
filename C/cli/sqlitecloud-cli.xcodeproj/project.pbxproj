@@ -267,7 +267,7 @@
 		A972156D25D1322500A207F8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = 3ZH6236ET5;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -283,7 +283,7 @@
 		A972156E25D1322500A207F8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = 3ZH6236ET5;
 				ENABLE_HARDENED_RUNTIME = YES;
