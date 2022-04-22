@@ -25,7 +25,7 @@ SetHeader( "Content-Encoding", "utf-8" )
 local userID,    err, msg = checkUserID( userid )       if err ~= 0 then return error( err, msg ) end
 local projectID, err, msg = checkProjectID( projectID ) if err ~= 0 then return error( err, msg ) end
 
-query     = "LIST DATABASES;"
+query     = "LIST DATABASES DETAILED;"
 databases = nil
 
 if userID == 0 then
@@ -47,20 +47,20 @@ end
 
 if not databases                          then return error( 404, "ProjectID not found" ) end
 if databases.ErrorNumber            ~= 0  then return error( 502, "Bad Gateway" )         end
-if databases.NumberOfColumns        ~= 1  then return error( 502, "Bad Gateway" )         end
+if databases.NumberOfColumns        < 10  then return error( 502, "Bad Gateway" )         end
 if databases.NumberOfRows           <  1  then return error( 200, "OK" )                  end
 
 db = {}
 for i = 1, databases.NumberOfRows do 
   database                = {}
   database.name           = databases.Rows[ i ].name
-  database.size           = 0
-  database.connections    = getNumberOfConnections( projectID, database.name )
-  database.encryption     = ""
-  database.backup         = "Daily"
-  database.stats          = { 521, 12 }
-  database.bytes          = { 8700000, 712 }
-  database.fragmentation  = { Used = 2400000, total = 712000}
+  database.size           = databases.Rows[ i ].size
+  database.connections    = databases.Rows[ i ].connections
+  database.encryption     = databases.Rows[ i ].encryption
+  database.backup         = databases.Rows[ i ].backup
+  database.stats          = { databases.Rows[ i ].nread, databases.Rows[ i ].nwrite }
+  database.bytes          = { databases.Rows[ i ].inbytes, databases.Rows[ i ].outbytes }
+  database.fragmentation  = databases.Rows[ i ].fragmentation
   db[ #db + 1 ]           = database
 end
 if #db == 0 then db = nil end
