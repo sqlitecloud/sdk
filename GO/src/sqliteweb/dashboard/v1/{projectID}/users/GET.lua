@@ -25,10 +25,10 @@ SetHeader( "Content-Encoding", "utf-8" )
 local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                          end
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                          end
 
-if not query.database                                                                then database = "*" else database = query.database     end
-if not query.table                                                                   then table    = "*" else table    = query.table        end
+query = "LIST USERS WITH ROLES"
+if query.database       then query = query .. string.format( " DATABASE '%s'", query.database )     end
+if query.table          then query = query .. string.format( " TABLE '%s'", query.table )           end
 
-query = string.format( "LIST USERS WITH ROLES DATABASE '%s' TABLE '%s';", enquoteSQL( database ), enquoteSQL( table ) )
 users = nil
 
 if userID == 0 then
