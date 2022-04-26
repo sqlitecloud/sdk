@@ -20,7 +20,7 @@ type  = 4                                       -- optional, integer between 1..
 order = DESC                                    -- optional, ASC or DESC (default = DESC)
 ```
 
-If it is not a row based query (row parameter is missing), the call to this endpoint is handled as a date based query.
+If it is not a row based query (rows parameter is missing), the call to this endpoint is handled as a date based query.
 
 ### Query parameters for date based queries (LIST LOG FROM % TO % [LEVEL %] [TYPE %] [ORDER DESC])
 
@@ -44,7 +44,7 @@ none
 
 ```code
 {
-  status            = 0,                         -- status code: 0 = no error, error otherwise
+  status            = 200,                       -- status code: 200 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
 
   logs              = nil,                       -- Array with log file
