@@ -406,7 +406,11 @@ func (this *SQCloud ) GetError() ( int, int, error ) { return this.GetErrorCode(
 func ( this *SQCloud ) Select( SQL string ) ( *Result, error ) {
   this.resetError()
 
-  if _, err := this.sendString( SQL ); err != nil { return nil, err }
+  if _, err := this.sendString( SQL ); err != nil {  
+    this.ErrorCode = 100003
+    this.ErrorMessage = fmt.Sprintf( "Internal Error: sendString (%s)", err.Error() )
+    return nil, errors.New( this.ErrorMessage ) 
+  }
 
   switch result, err := this.readResult(); {
   case result == nil: return nil, errors.New( "nil" )

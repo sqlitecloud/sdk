@@ -331,6 +331,14 @@ func ( this *ConnectionManager ) ExecuteSQL( node string, query string ) ( *sqli
       connection.uses++
       if res, err = connection.connection.Select( query ); res == nil && err == nil {
         continue
+      } else if connection.connection.ErrorCode >= 100000 {
+        // internal error (the SDK cannot write to or read from the connection) 
+        // so remove the current failed connection and retry with a new one
+        // for example: 
+        // - 100001 Internal Error: SQCloud.readNextRawChunk (%s)
+        // - 100003 Internal Error: sendString (%s)
+        this.closeAndRemoveLockedConnection( node, connection )
+        continue
       } else {
         this.ReleaseConnection( node, connection )
         return res, err
