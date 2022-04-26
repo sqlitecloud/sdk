@@ -206,8 +206,9 @@ func (this *AuthServer) reAuth( writer http.ResponseWriter, request *http.Reques
 
 func (this *AuthServer) challengeAuth( writer http.ResponseWriter ) {
   // writer.Header().Set( "WWW-Authenticate", fmt.Sprintf( "Bearer realm=\"%s\"", this.Realm ) )
-  writer.Header().Set( "WWW-Authenticate", fmt.Sprintf( "realm=\"%s\"", this.Realm ) )
+  writer.Header().Set( "WWW-Authenticate", fmt.Sprintf( "realm=\"%s\", error=\"invalid_token\"", this.Realm ) )
   writer.WriteHeader( http.StatusUnauthorized )
+  writer.Write( []byte( fmt.Sprintf( "{\"status\":%d,\"message\":\"%s\"}", http.StatusUnauthorized, "Invalid Token" ) ) )
 }
 
 /*
