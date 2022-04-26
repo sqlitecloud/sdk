@@ -10,7 +10,7 @@ curl "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee63/u
 
 ```
 
-### **GET** - /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee63/users
+### **GET** - /dashboard/v1/{projectID}/users
 
 ### Query parameters
 
@@ -18,8 +18,6 @@ The user CAN give one or both of the following two query parameteres:
 
 * database = {databaseName}
 * table    = {tableName}
-
-If a query parameter is not provides, "*" is assumed
 
 ### Request object
 
@@ -33,10 +31,10 @@ none
 
 ```code
 {
-  status            = 0,                         ; status code: 0 = no error, error otherwise
+  status            = 200,                       ; status code: 200 = no error, error otherwise
   message           = "OK",                      ; "OK" or error message
 
-  users             = fusers,                    ; Array with user objects
+  users             = [{}],                      ; Array with user objects
 }
 ```
 
@@ -47,8 +45,8 @@ none
   user              = "admin",                   ; Username
   enabled           = 1,                         ; 1 = enabled, 0 = disabled
   roles             = "ADMIN",                   ; Comma seperated list of roles
-  database          = "*",                       ; Database
-  table             = "*"                        ; Table
+  database          = "",                        ; Database
+  table             = ""                         ; Table
 }
 ```
 
@@ -77,66 +75,15 @@ Connection: close
 
 {
   "message": "OK",
-  "status": 0,
+  "status": 200,
   "users": [
     {
-      "database": "*",
+      "database": "",
       "enabled": 1,
       "roles": "ADMIN",
-      "table": "*",
+      "table": "",
       "user": "admin"
     }
-  ]
-}
-```
-
-### Previous Response:
-
-```
-{
-  "ResponseID": 0,
-  "Message": "Users security List",
-  "Users": [
-      {
-          "Name": "admin",
-          "Roles": [
-              {
-                  "Name": "admin",
-                  "Database": "*",
-                  "Table": "*"
-              }
-          ]
-      },
-      {
-          "Name": "Marco",
-          "Roles": [
-              {
-                  "Name": "read",
-                  "Database": "db1",
-                  "Table": "*"
-              },
-              {
-                  "Name": "readwrite",
-                  "Database": "db2",
-                  "Table": "table1"
-              },
-              {
-                  "Name": "read",
-                  "Database": "db3",
-                  "Table": "*"
-              }
-          ]
-      },
-      {
-          "Name": "Andrea",
-          "Roles": [
-              {
-                  "Name": "clustermonitor",
-                  "Database": "*",
-                  "Table": "*"
-              }
-          ]
-      }
   ]
 }
 ```

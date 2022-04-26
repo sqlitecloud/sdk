@@ -3,7 +3,7 @@
 --        ////////////  ///
 --      ///             ///  ///        Product     : SQLite Cloud Web Server
 --     ///             ///  ///         Version     : 1.0.0
---     //             ///   ///  ///    Date        : 2022/03/26
+--     //             ///   ///  ///    Date        : 2022/04/26
 --    ///             ///   ///  ///    Author      : Andreas Pfeil
 --   ///             ///   ///  ///
 --   ///     //////////   ///  ///      Description : Change value for setting 
@@ -14,8 +14,6 @@
 --             ///                      Copyright   : 2022 by SQLite Cloud Inc.
 --
 -- -----------------------------------------------------------------------TAB=2
-
--- TODO: Check if UPDATE WAS SUCCESSFULL, remove INSERT OR REPLACE
 
 require "sqlitecloud"
 
@@ -33,11 +31,14 @@ if userID == 0 then
 else
   local projectID, err, msg = verifyUserID( userID )                     if err ~= 0 then return error( err, msg )                          end
 
-  -- result = executeSQL( "auth", string.format( "INSERT OR REPLACE INTO USER_SETTINGS ( user_id, key, value ) VALUES ( %d, '%s', '%s' );", userID, enquoteSQL( key ), enquoteSQL( value ) ) )
-  result = executeSQL( "auth", string.format( "UPDATE USER_SETTINGS SET value = '%s' WHERE user_id = %d AND key = '%s';", enquoteSQL( value ), userID, enquoteSQL( key ) ) )
+  query  = string.format( "UPDATE USER_SETTINGS SET value = '%s' WHERE user_id = %d AND key = '%s'; SELECT changes() AS success;", enquoteSQL( value ), userID, enquoteSQL( key ) )
+  result = executeSQL( "auth", query )
   if not result                                                                      then return error( 504, "Gateway Timeout" )            end
-  if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )          end
-  if result.Value ~= "OK"                                                            then return error( 502, "Bad Gateway" )                end
+  if result.ErrorMessage ~= ""                                                       then return error( 502, result.ErrorMessage )          end
+  if result.ErrorNumber  ~= 0                                                        then return error( 502, "Bad Gateway" )                end
+  if result.NumberOfRows ~= 1                                                        then return error( 502, "Bad Gateway" )                end
+  if result.NumberOfColumns ~= 1                                                     then return error( 502, "Bad Gateway" )                end
+  if result.Rows[ 1 ].success ~= 1                                                   then return error( 500, "Key not found" )              end
 end
 
 error( 200, "OK" )

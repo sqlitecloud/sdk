@@ -24,8 +24,8 @@ none
 
 ```code
 {
-  Status           = 0,                         ; status code: 0 = no error, error otherwise
-  Message          = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTIxNTEsImp0aSI6IjAiLCJpYXQiOjE2NDc1MjIxNTEsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyMTUxLCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.hMPSCUP0hLYAA2UTddQgMqCAzOYepE6nXAU-iBspWZs"
+  status           = 200,                         ; status code: 200 = no error, error otherwise
+  message          = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTIxNTEsImp0aSI6IjAiLCJpYXQiOjE2NDc1MjIxNTEsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyMTUxLCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.hMPSCUP0hLYAA2UTddQgMqCAzOYepE6nXAU-iBspWZs"
 }
 ```
 
@@ -55,7 +55,7 @@ Content-Length: 290
 Connection: close
 
 {
-  "Status": 0,
-  "Message": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTI1NzAsImp0aSI6IjAiLCJpYXQiOjE2NDc1MjI1NzAsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyNTcwLCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.KfhHiA0X6jXyDbrD499G8GUmHjBFjZzHsTF6hK4C4Q4"
+  "status": 200,
+  "message": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTI1NzAsImp0aSI6IjAiLCJpYXQiOjE2NDc1MjI1NzAsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyNTcwLCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.KfhHiA0X6jXyDbrD499G8GUmHjBFjZzHsTF6hK4C4Q4"
 }
 ```

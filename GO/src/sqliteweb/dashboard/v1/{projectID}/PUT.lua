@@ -36,13 +36,15 @@ if userID == 0 then
 else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                                end
 
-  query = string.format( "UPDATE PROJECT SET name = '%s', description = '%s', username = '%s', password = '%s' WHERE uuid = '%s' AND user_id = %d;", enquoteSQL( body.name ), enquoteSQL( body.description ), enquoteSQL( body.username ), enquoteSQL( body.password ), projectID, userID )
+  query = string.format( "UPDATE PROJECT SET name = '%s', description = '%s', username = '%s', password = '%s' WHERE uuid = '%s' AND user_id = %d; SELECT changes() AS success;", enquoteSQL( name ), enquoteSQL( description ), enquoteSQL( username ), enquoteSQL( password ), projectID, userID )
   result = executeSQL( "auth", query )
-  
-  if not result                                                                      then return error( 504, "Gateway Timeout" )                  end
-  if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )                end
-  if result.Value ~= "OK"                                                            then return error( 502, "Bad Gateway" )                      end
 
+  if not result                                                                      then return error( 504, "Gateway Timeout" )                  end
+  if result.ErrorMessage      ~= ""                                                  then return error( 502, result.ErrorMessage )                end
+  if result.ErrorNumber       ~= 0                                                   then return error( 502, "Bad Gateway" )                      end
+  if result.NumberOfRows      ~= 1                                                   then return error( 502, "Bad Gateway" )                      end
+  if result.NumberOfColumns   ~= 1                                                   then return error( 502, "Bad Gateway" )                      end
+  if result.Rows[ 1 ].success ~= 1                                                   then return error( 500, "ProjectID not found" )              end
 end
 
 error( 200, "OK" )

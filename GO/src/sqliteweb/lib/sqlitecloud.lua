@@ -147,7 +147,7 @@ function getNodeSettingsID( userID, projectUUID, nodeID, key )
 end
 
 -- local userID,     errorCode, errorMessage  = verifyLogin( "my.address@domain.com", "password" )     if errorCode ~= 0 then return error( errorCode, errorMessage ) end
--- local uuid,       errorCode, errorMessage  = verifyProject( userID, projectID )                     if errorCode ~= 0 then return error( errorCode, errorMessage ) end
+-- local uuid,       errorCode, errorMessage  = verifyProjectID( userID, projectID )                     if errorCode ~= 0 then return error( errorCode, errorMessage ) end
 -- local nodeID,     errorCode, errorMessage  = verifyNodeID( userID, uuid, 1 )                        if errorCode ~= 0 then return error( errorCode, errorMessage ) end
 -- local settingID,  errorCode, errorMessage  = getNodeSettingsID( userID, uuid, 1, "testkeyvalz"  )  if errorCode ~= 0 then return error( errorCode, errorMessage ) end
 
@@ -174,7 +174,13 @@ function error( code, message )
 end
 
 function bool( data )
+  if type( data ) == "boolean"  then return data      end
+  if type( data ) == "number"   then return data ~= 0 end
+  if type( data ) == "function" then return false     end
+  if type( data ) == "nil"      then return false     end
+
   local  data = string.lower( data )
+         
   if     data == "1"        then return true
 	elseif data == "true"     then return true
 	elseif data == "enable"   then return true

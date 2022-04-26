@@ -53,12 +53,15 @@ else
     Project.name        = name
     Project.description = description
 
-    query = string.format( "INSERT INTO PROJECT VALUES( '%s', %d, '%s', '%s', '%s', '%s' );", enquoteSQL( Project.id ), userID, enquoteSQL( name ), enquoteSQL( description ), enquoteSQL( username ), enquoteSQL( password ) )
+    query = string.format( "INSERT INTO PROJECT VALUES( '%s', %d, '%s', '%s', '%s', '%s' ); SELECT changes() AS success;", enquoteSQL( Project.id ), userID, enquoteSQL( name ), enquoteSQL( description ), enquoteSQL( username ), enquoteSQL( password ) )
 
     result = executeSQL( "auth", query )
-    if not result              then goto continue end
-    if result.ErrorNumber ~= 0 then goto continue end
-    if result.Value ~= "OK"    then goto continue end
+    if not result                     then goto continue end
+    if result.ErrorMessage      ~= "" then goto continue end
+    if result.ErrorNumber       ~= 0  then goto continue end
+    if result.NumberOfRows      ~= 1  then goto continue end
+    if result.NumberOfColumns   ~= 1  then goto continue end
+    if result.Rows[ 1 ].success ~= 1  then goto continue end
     
     Response.projects    = { Project }
     

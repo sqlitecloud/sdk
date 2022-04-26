@@ -14,7 +14,7 @@ curl -X "PUT" "https://web1.sqlitecloud.io:8443/dashboard/v1/user/setting/testke
 
 ```
 
-### **PUT** - /dashboard/v1/user/setting/testkey
+### **PUT** - /dashboard/v1/user/setting/{key}
 
 ### Request object
 

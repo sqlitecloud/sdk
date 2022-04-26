@@ -46,8 +46,9 @@ else
   query = string.format( "%s END TRANSACTION;", query )
   
   result = executeSQL( "auth", query )
-  if not result                                                                      then return error( 504, "Gateway Timeout" )       end
-  if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )     end
+  if not result                                                                      then return error( 504, "Gateway Timeout" )            end
+  if result.ErrorMessage ~= ""                                                       then return error( 502, result.ErrorMessage )          end
+  if result.ErrorNumber  ~= 0                                                        then return error( 502, "Bad Gateway" )                end
 end
 
 error( 200, "OK" )
