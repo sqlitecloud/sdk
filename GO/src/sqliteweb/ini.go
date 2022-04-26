@@ -30,6 +30,16 @@ func GetINIString( section string, key string, defaultValue string ) string {
   return defaultValue
 }
 
+func GetINIInt( section string, key string, defaultValue int ) int {
+	for _, s := range cfg.SectionStrings() {
+    switch {
+    case s != section                         : continue
+    case cfg.Section( section ).HasKey( key ) : return cfg.Section( section ).Key( key ).MustInt( defaultValue )
+    default                                   : return defaultValue
+  } }
+  return defaultValue
+}
+
 func MD5( data string ) string {
   return fmt.Sprintf( "%x", md5.Sum( []byte( data ) ) )
 }

@@ -78,4 +78,3 @@ Response = {
 
 SetStatus( 200 )
 Write( jsonEncode( Response ) )
-

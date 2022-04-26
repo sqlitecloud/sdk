@@ -302,7 +302,8 @@ func ( this *ConnectionManager ) ReleaseConnection( node string, connection *Con
 
   if connection != nil {
     this.lockConnection( connection )
-    if connection.uses > 10 {
+		maxRequests := uint( GetINIInt( "core", "maxrequests", 0 ) )
+    if maxRequests != 0 && connection.uses > maxRequests {
       err = this.closeAndRemoveLockedConnection( node, connection )
     } else {
       this.unLockConnection( connection )
