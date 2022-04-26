@@ -33,7 +33,12 @@ if userID == 0 then
                                                                                           return error( 501, "Not Implemented" )
 else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                     end
-  local nodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )  if err ~= 0 then return error( err, msg )                     end
+  local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )  if err ~= 0 then return error( err, msg )                     end
+
+  -- command = string.format( "REMOVE NODE %d", machineNodeID )
+  -- result = executeSQL( projectID, command )                                          then return error( 502, "Bad Gateway, Cannot remove node" )  end
+  -- if not result                                                                      then return error( 502, result.ErrorMessage )     end
+  -- if result.ErrorNumber ~= 0  
 
   result = executeSQL( "auth", string.format( "BEGIN TRANSACTION; DELETE FROM NODE_SETTINGS WHERE node_id = %d; DELETE FROM NODE WHERE id = %d; END TRANSACTION;", nodeID, nodeID ) )
   if not result                                                                      then return error( 504, "Gateway Timeout" )       end

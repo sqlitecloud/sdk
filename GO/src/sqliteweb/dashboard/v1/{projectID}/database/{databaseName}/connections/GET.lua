@@ -22,6 +22,8 @@ require "sqlitecloud"
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
+
+
 local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                                    end
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                                    end
 local databaseName,  err, msg = checkParameter( databaseName, 1 )        if err ~= 0 then return error( err, string.format( msg, "databaseName" ) )  end
@@ -52,6 +54,9 @@ if connections.NumberOfColumns      ~= 2  then return error( 502, "Bad Gateway" 
 if connections.NumberOfRows         <  1  then return error( 200, "OK" )                  end
 
 all = executeSQL( projectID, "LIST CONNECTIONS;" )
+
+
+print("connections ", connections.NumberOfRows, " - ", connections)
 
 c = {}
 for i = 1, connections.NumberOfRows do 

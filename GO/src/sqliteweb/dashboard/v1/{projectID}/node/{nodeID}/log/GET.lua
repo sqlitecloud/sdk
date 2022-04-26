@@ -27,6 +27,9 @@ local userID,    err, msg = checkUserID( userid )                        if err 
 local nodeID,    err, msg = checkNodeID( nodeID )                        if err ~= 0 then return error( err, msg )                          end
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                          end
 
+local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
+local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                     end
+
 if not query.level  then query.level = "4"    end
 if not query.type   then query.type  = "4"    end
 if not query.order  then query.order = "DESC" end
@@ -40,7 +43,7 @@ local order = string.format( "ORDER %s", query.order )
 if query.rows then
   local rows,    err, msg = checkNumber( query.rows, 1, 10000 )          if err ~= 0 then return error( err, string.format( msg, "level" ) ) end
 
-  sql = string.format( "LIST %d ROWS FROM LOG LEVEL %d TYPE %d %s", rows, level, type, order )
+  sql = string.format( "LIST %d ROWS FROM LOG LEVEL %d TYPE %d %s NODE %d", rows, level, type, order, machineNodeID )
 else
   if not query.to     then query.to     = now    end
   if not query.from   then query.from   = now_1h end
@@ -48,10 +51,8 @@ else
   local from,    err, msg = checkDateTime( query.from )                  if err ~= 0 then return error( err, string.format( msg, "from" ) ) end
   local to,      err, msg = checkDateTime( query.to )                    if err ~= 0 then return error( err, string.format( msg, "to" ) )   end
 
-  sql = string.format( "LIST LOG FROM '%s' TO '%s' LEVEL %d TYPE %d %s;", from, to, level, type, order ) 
+  sql = string.format( "LIST LOG FROM '%s' TO '%s' LEVEL %d TYPE %d %s NODE %d;", from, to, level, type, order, machineNodeID ) 
 end
-
-local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                          end
 
 log = executeSQL( projectID, sql )
 if not log                                                                           then return error( 504, "Gateway Timeout" )            end

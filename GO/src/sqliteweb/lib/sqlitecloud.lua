@@ -121,16 +121,16 @@ function verifyProjectID( userID, projectUUID )
 end
 
 function verifyNodeID( userID, projectUUID, nodeID ) 
-  local query  = string.format( "SELECT NODE.id FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id=%d AND PROJECT.uuid = '%s' AND NODE.id = %d;", userID, enquoteSQL( projectUUID ), nodeID )
+  local query  = string.format( "SELECT NODE.id, NODE.node_id FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id=%d AND PROJECT.uuid = '%s' AND NODE.id = %d;", userID, enquoteSQL( projectUUID ), nodeID )
   --print( query )
   local result = executeSQL( "auth", query )
-
+  
   if not result                     then return nil, 503, "Service Unavailable" end
   if result.ErrorNumber       ~= 0  then return nil, 502, "Bad Gateway"         end
-  if result.NumberOfColumns   ~= 1  then return nil, 502, "Bad Gateway"         end 
+  if result.NumberOfColumns   ~= 2  then return nil, 502, "Bad Gateway"         end 
   if result.NumberOfRows      < 1   then return nil, 404, "NodeID Not Found"    end
   if result.NumberOfRows      > 1   then return nil, 502, "Bad Gateway"         end 
-                                         return result.Rows[ 1 ].id, 0, nil
+                                         return result.Rows[ 1 ].node_id, 0, nil
 end
 
 function getNodeSettingsID( userID, projectUUID, nodeID, key ) 

@@ -51,7 +51,7 @@ if userID == 0 then
 
 else      
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                          end
-  local nodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )  if err ~= 0 then return error( err, msg )                          end                                                                                         
+  local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )  if err ~= 0 then return error( err, msg )                          end                                                                                         
 
   result = executeSQL( "auth", query )
   if not result                                                                      then return error( 504, "Gateway Timeout" )            end
