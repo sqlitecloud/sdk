@@ -60,10 +60,10 @@ end
 
 function checkUserID( userid )               -- Is string and comes from JWT. Contents is a number.
   if not userid                              then return -1, 400, "Invalid UserID"              end
-  local userID = tonumber( userid )                                               
-  if string.format( "%d", userID ) ~= userid then return -1, 400, "UserID is Not a Number"      end
-  if userID < 0                              then return -1, 400, "Invalid UserID"              end
-                                             return userID, 0, nil 
+  local uid = tonumber( userid )                                               
+  if string.format( "%d", uid ) ~= userid    then return -1, 400, "UserID is Not a Number"      end
+  if uid < 0                                 then return -1, 400, "Invalid UserID"              end
+                                             return uid, 0, nil 
 end
 
 function checkProjectID( uuid )               -- fbf94289-64b0-4fc6-9c20-84083f82ee64
