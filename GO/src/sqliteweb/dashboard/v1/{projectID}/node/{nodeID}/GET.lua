@@ -101,17 +101,17 @@ if userID == 0 then
 else
   
   local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
-  local nodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                     end
+  local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                     end
 
-  query = string.format( "SELECT NODE.id, NODE.name, type, provider, image AS details, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port, latitude, longitude FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id = %d AND NODE.id = %d AND uuid='%s';", userID, nodeID, enquoteSQL( projectID ) )
+  query = string.format( "SELECT NODE.id, NODE.node_id, NODE.name, type, provider, image AS details, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port, latitude, longitude FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id = %d AND NODE.id = %d AND uuid='%s';", userID, nodeID, enquoteSQL( projectID ) )
   nodes = executeSQL( "auth", query )
 
   if not nodes                            then return error( 404, "ProjectID OR NodeID not found" ) end
   if nodes.ErrorNumber              ~= 0  then return error( 502, "Bad Gateway" )                   end
-  if nodes.NumberOfColumns          ~= 11 then return error( 502, "Bad Gateway" )                   end
+  if nodes.NumberOfColumns          ~= 12 then return error( 502, "Bad Gateway" )                   end
   if nodes.NumberOfRows             ~= 1  then return error( 404, "ProjectID OR NodeID not found" ) end
 
-  Response.node             = nodes.Rows[ 1 ]  -- id, name, type, provider, image->details, region, size, address, port
+  Response.node             = nodes.Rows[ 1 ]  -- id, node_id, name, type, provider, image->details, region, size, address, port
 
   Response.node.stats       = {}
 
@@ -128,21 +128,22 @@ else
 
   for i = 1, status.NumberOfRows do
     if status.Rows[ i ].status == "Leader" then Response.node.raft[ 2 ] = status.Rows[ i ].match end
-    if i == nodeID then
+    if i == machineNodeID then
       Response.node.status    = status.Rows[ i ].progress
       Response.node.raft[ 1 ] = status.Rows[ i ].match
       Response.node.type      = status.Rows[ i ].status
     end
   end
 
-  query = string.format( "GET LOAD DETAILED NODE %d;", nodeID ) -- server_load, num_clients, cpu_time, mem_current, mem_max
+  query = string.format( "GET LOAD DETAILED NODE %d;", machineNodeID ) -- server_load, num_clients, cpu_time, mem_current, mem_max
   load = executeSQL( projectID, query )
+  print("query:", query)
   Response.node.load = {
     load.Rows[ 2 ].ARRAY, -- num_clients
     load.Rows[ 1 ].ARRAY  -- server_load
   }
 
-  query = string.format( "LIST STATS NODE %d;", nodeID )
+  query = string.format( "LIST STATS NODE %d;", machineNodeID )
   stats = executeSQL( projectID, query )
   
   for i = 1, stats.NumberOfRows do

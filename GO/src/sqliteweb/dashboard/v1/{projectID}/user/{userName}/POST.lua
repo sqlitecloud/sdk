@@ -35,16 +35,16 @@ local projectID, err, msg = verifyProjectID( userID, projectID )         if err 
 
                                         query = string.format( "CREATE USER '%s' PASSWORD '%s'", enquoteSQL( userName ), enquoteSQL( password ) )
 if string.len( rolename )  > 0     then query = string.format( "%s ROLE '%s'",            query, enquoteSQL( rolename ) )                             end
-if string.len( database )  > 0     then query = string.format( "%s DATABASE '%s'",        query, enquoteSQL( database    ) )                          end
-if string.len( table )     > 0     then query = string.format( "%s TABLE '%s'",           query, enquoteSQL( database    ) )                          end
+if string.len( database )  > 0     then query = string.format( "%s DATABASE '%s'",        query, enquoteSQL( database ) )                             end
+if string.len( table )     > 0     then query = string.format( "%s TABLE '%s'",           query, enquoteSQL( database ) )                             end
                                         query = string.format( "%s ;",                    query )
 
 result = executeSQL( projectID, query )
 
-if not result                             then return error( 404, "ProjectID not found" ) end
-if result.ErrorNumber       ~= 0          then return error( 404, "Database not found" )  end
-if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end
-if result.NumberOfRows      ~= 0          then return error( 502, "Bad Gateway" )         end
-if result.Value             ~= "OK"       then return error( 502, "Bad Gateway" )         end
+if not result                                                                        then return error( 404, "ProjectID not found" )                  end
+if result.ErrorNumber       ~= 0                                                     then return error( 404, "Database not found" )                   end
+if result.NumberOfColumns   ~= 0                                                     then return error( 502, "Bad Gateway" )                          end
+if result.NumberOfRows      ~= 0                                                     then return error( 502, "Bad Gateway" )                          end
+if result.Value             ~= "OK"                                                  then return error( 502, "Bad Gateway" )                          end
 
 error( 200, "OK" )

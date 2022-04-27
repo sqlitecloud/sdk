@@ -37,9 +37,9 @@ Response = {
 }
 
 local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
-local nodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                     end
+local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                     end
 
-query = string.format( "LIST STATS NODE %d;", nodeID )
+query = string.format( "LIST STATS NODE %d;", machineNodeID )
 stats = executeSQL( projectID, query )
 
 for i = 1, stats.NumberOfRows do

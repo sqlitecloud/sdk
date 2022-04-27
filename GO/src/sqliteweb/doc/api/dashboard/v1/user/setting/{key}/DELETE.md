@@ -10,7 +10,7 @@ curl -X "DELETE" "https://web1.sqlitecloud.io:8443/dashboard/v1/user/setting/tes
      -H 'Content-Type: application/json; charset=utf-8'
 ```
 
-### **DELETE** - /dashboard/v1/user/setting/testkey
+### **DELETE** - /dashboard/v1/user/setting/{key}
 
 ### Request object
 

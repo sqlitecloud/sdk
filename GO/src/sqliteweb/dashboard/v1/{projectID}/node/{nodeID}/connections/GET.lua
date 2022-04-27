@@ -25,9 +25,9 @@ local nodeID,    err, msg = checkNodeID( nodeID )                        if err 
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                          end
 
 local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                          end
-local nodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                          end
+local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                          end
 
-sql         = string.format( "LIST CONNECTIONS NODE %d;", nodeID )
+sql         = string.format( "LIST CONNECTIONS NODE %d;", machineNodeID )
 connections = executeSQL( projectID, sql )
 
 if not connections                                                                   then return error( 504, "Gateway Timeout" )            end

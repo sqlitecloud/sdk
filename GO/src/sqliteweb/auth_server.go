@@ -31,13 +31,8 @@ import (
 )
 
 type Credentials struct {
-  Login     string
-  Password  string
-}
-
-type AuthRequest struct {
-  RequestID int
-  Credentials
+  Login     string			`json:"login"`
+  Password  string			`json:"password"`
 }
 
 type Response struct {
@@ -186,11 +181,11 @@ func (this *AuthServer) GetUserID( request *http.Request ) ( int64, error ) {
 func (this *AuthServer) auth( writer http.ResponseWriter, request *http.Request ) {
   this.cors( writer, request )
 
-  var authRequest AuthRequest
+  var credentials Credentials
 
-  switch err := json.NewDecoder( request.Body ).Decode( &authRequest ); {
+  switch err := json.NewDecoder( request.Body ).Decode( &credentials ); {
   case err != nil : this.sendError( writer, 1, err.Error(), http.StatusBadRequest )
-  default         : this.authorize( writer, request, this.lookupUserID( authRequest.Login, authRequest.Password ) )
+  default         : this.authorize( writer, request, this.lookupUserID( credentials.Login, credentials.Password ) )
   }
 }
 
@@ -211,8 +206,9 @@ func (this *AuthServer) reAuth( writer http.ResponseWriter, request *http.Reques
 
 func (this *AuthServer) challengeAuth( writer http.ResponseWriter ) {
   // writer.Header().Set( "WWW-Authenticate", fmt.Sprintf( "Bearer realm=\"%s\"", this.Realm ) )
-  writer.Header().Set( "WWW-Authenticate", fmt.Sprintf( "realm=\"%s\"", this.Realm ) )
+  writer.Header().Set( "WWW-Authenticate", fmt.Sprintf( "realm=\"%s\", error=\"invalid_token\"", this.Realm ) )
   writer.WriteHeader( http.StatusUnauthorized )
+  writer.Write( []byte( fmt.Sprintf( "{\"status\":%d,\"message\":\"%s\"}", http.StatusUnauthorized, "Invalid Token" ) ) )
 }
 
 /*

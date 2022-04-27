@@ -10,7 +10,7 @@ curl "https://localhost:8443/dashboard/v1/projects" \
 
 ```
 
-### **GET** - /dashboard/v1/user
+### **GET** - /dashboard/v1/projects
 
 ### Request object
 
@@ -24,7 +24,7 @@ none
 
 ```code
 {
-  status           = 0,                                       -- status code: 0 = no error, error otherwise
+  status           = 200,                                     -- status code: 200 = no error, error otherwise
   message          = "OK",                                    -- "OK" or error message
 
   projects         = nil                                      -- Array with project objects
@@ -73,6 +73,6 @@ Connection: close
       "name": "Test"
     }
   ],
-  "status": 0
+  "status": 200
 }
 ```

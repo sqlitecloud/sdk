@@ -27,41 +27,26 @@ local projectID, err, msg = checkProjectID( projectID )                  if err 
 local userName,  err, msg = checkParameter( userName, 3 )                if err ~= 0 then return error( err, string.format( msg, "userName" ) ) end
 local enabled,   err, msg = getBodyValue( "enabled", 0 )                 if err ~= 0 then return error( err, msg )                              end
 
-if enabled == "TRUE"                                                                 then enabled = true                                        end
-if enabled == "true"                                                                 then enabled = true                                        end
-if enabled == "1"                                                                    then enabled = true                                        end
-if enabled == 1                                                                      then enabled = true                                        end
-if not enabled                                                                       then enabled = false                                       end
+if not enabled then enabled = true end
 
-if enabled then  
-  query = string.format( "ENABLED USER '%s';", enquoteSQL( userName ) )
+if bool( enabled ) then  
+  query = string.format( "ENABLE USER '%s';", enquoteSQL( userName ) )
 else
-  query = string.format( "DISABLED USER '%s';", enquoteSQL( userName ) )
+  query = string.format( "DISABLE USER '%s';", enquoteSQL( userName ) )
 end
-
 result  = nil
 
 if userID == 0 then
-  if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
-
-  result = executeSQL( projectID, query )
+  if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" )                                              end
 else
-  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND USER.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
-  check_access = executeSQL( "auth", check_access )
-
-  if not check_access                     then return error( 504, "Gateway Timeout" )     end
-  if check_access.ErrorNumber       ~= 0  then return error( 502, "Bad Gateway" )         end
-  if check_access.NumberOfColumns   ~= 1  then return error( 502, "Bad Gateway" )         end 
-  if check_access.NumberOfRows      ~= 1  then return error( 502, "Bad Gateway" )         end
-  if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
-
-  result = executeSQL( projectID, query )
+  local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                              end
 end
 
-if not result                             then return error( 404, "ProjectID not found" ) end
-if result.ErrorNumber       ~= 0          then return error( 404, result.ErrorMessage )   end
-if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end
-if result.NumberOfRows      ~= 0          then return error( 502, "Bad Gateway" )         end
-if result.Value             ~= "OK"       then return error( 502, result.Value )          end
+result = executeSQL( projectID, query )
+if not result                                                                        then return error( 404, "ProjectID not found" )            end
+if result.ErrorNumber       ~= 0                                                     then return error( 404, result.ErrorMessage )              end
+if result.NumberOfColumns   ~= 0                                                     then return error( 502, "Bad Gateway" )                    end
+if result.NumberOfRows      ~= 0                                                     then return error( 502, "Bad Gateway" )                    end
+if result.Value             ~= "OK"                                                  then return error( 502, result.Value )                     end
 
 error( 200, "OK" )

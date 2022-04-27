@@ -33,7 +33,7 @@ if userID == 0 then
                                                                                           return error( 501, "Not Implemented" )      
 else      
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                          end
-  local nodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )  if err ~= 0 then return error( err, msg )                          end
+  local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )  if err ~= 0 then return error( err, msg )                          end
       
   local settingID, err, msg = getNodeSettingsID( userID, projectID, nodeID, key )       
         

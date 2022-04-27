@@ -1,27 +1,22 @@
 # API Documentation
 
-Create a new setting with key and value
+DROP USER %
 
 ## Requests
 
 ```sh
-curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/node/1/setting/keyName" \
+curl -X "DELETE" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/user/newUser" \
      -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTI5OTUsImp0aSI6IjEiLCJpYXQiOjE2NDc1MjI5OTUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyOTk1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.SaOn2-XJbf6_irYDvhTGEkDHNHJobiNeEO7CPQVHUi8' \
      -H 'Content-Type: application/json; charset=utf-8' \
-     -d $'{
-  "value": "SomeValue2"
-}'
+     -d $''
 
 ```
 
-### **POST** - /dashboard/v1/{projectID}/node/{nodeID}/setting/{key}
+### **DELETE** - /dashboard/v1/{projectID}/user/{userName}
 
 ### Request object
 
 ```code
-{
-  value           = "SomeValue",
-}
 ```
 
 ### Response object(s)
@@ -38,17 +33,13 @@ curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6
 ### Example Request:
 
 ```
-POST /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/node/1/setting/keyName?x=Hallo%20wie%20gehts&y=1&z=true&x=Second%20line HTTP/1.1
+DELETE /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/user/newUser HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTI5OTUsImp0aSI6IjEiLCJpYXQiOjE2NDc1MjI5OTUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyOTk1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.SaOn2-XJbf6_irYDvhTGEkDHNHJobiNeEO7CPQVHUi8
 Content-Type: application/json; charset=utf-8
 Host: web1.sqlitecloud.io:8443
 Connection: close
 User-Agent: Paw/3.3.6 (Macintosh; OS X/10.14.6) GCDHTTPRequest
-Content-Length: 22
-
-{
-  "value": "SomeValue2"
-}
+Content-Length: 0
 ```
 
 ### Example Response (user is in the auth database):

@@ -60,10 +60,10 @@ end
 
 function checkUserID( userid )               -- Is string and comes from JWT. Contents is a number.
   if not userid                              then return -1, 400, "Invalid UserID"              end
-  local userID = tonumber( userid )                                               
-  if string.format( "%d", userID ) ~= userid then return -1, 400, "UserID is Not a Number"      end
-  if userID < 0                              then return -1, 400, "Invalid UserID"              end
-                                             return userID, 0, nil 
+  local uid = tonumber( userid )                                               
+  if string.format( "%d", uid ) ~= userid    then return -1, 400, "UserID is Not a Number"      end
+  if uid < 0                                 then return -1, 400, "Invalid UserID"              end
+                                             return uid, 0, nil 
 end
 
 function checkProjectID( uuid )               -- fbf94289-64b0-4fc6-9c20-84083f82ee64
@@ -121,16 +121,16 @@ function verifyProjectID( userID, projectUUID )
 end
 
 function verifyNodeID( userID, projectUUID, nodeID ) 
-  local query  = string.format( "SELECT NODE.id FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id=%d AND PROJECT.uuid = '%s' AND NODE.id = %d;", userID, enquoteSQL( projectUUID ), nodeID )
+  local query  = string.format( "SELECT NODE.id, NODE.node_id FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id=%d AND PROJECT.uuid = '%s' AND NODE.id = %d;", userID, enquoteSQL( projectUUID ), nodeID )
   --print( query )
   local result = executeSQL( "auth", query )
-
+  
   if not result                     then return nil, 503, "Service Unavailable" end
   if result.ErrorNumber       ~= 0  then return nil, 502, "Bad Gateway"         end
-  if result.NumberOfColumns   ~= 1  then return nil, 502, "Bad Gateway"         end 
+  if result.NumberOfColumns   ~= 2  then return nil, 502, "Bad Gateway"         end 
   if result.NumberOfRows      < 1   then return nil, 404, "NodeID Not Found"    end
   if result.NumberOfRows      > 1   then return nil, 502, "Bad Gateway"         end 
-                                         return result.Rows[ 1 ].id, 0, nil
+                                         return result.Rows[ 1 ].node_id, 0, nil
 end
 
 function getNodeSettingsID( userID, projectUUID, nodeID, key ) 
@@ -147,7 +147,7 @@ function getNodeSettingsID( userID, projectUUID, nodeID, key )
 end
 
 -- local userID,     errorCode, errorMessage  = verifyLogin( "my.address@domain.com", "password" )     if errorCode ~= 0 then return error( errorCode, errorMessage ) end
--- local uuid,       errorCode, errorMessage  = verifyProject( userID, projectID )                     if errorCode ~= 0 then return error( errorCode, errorMessage ) end
+-- local uuid,       errorCode, errorMessage  = verifyProjectID( userID, projectID )                     if errorCode ~= 0 then return error( errorCode, errorMessage ) end
 -- local nodeID,     errorCode, errorMessage  = verifyNodeID( userID, uuid, 1 )                        if errorCode ~= 0 then return error( errorCode, errorMessage ) end
 -- local settingID,  errorCode, errorMessage  = getNodeSettingsID( userID, uuid, 1, "testkeyvalz"  )  if errorCode ~= 0 then return error( errorCode, errorMessage ) end
 
@@ -174,7 +174,13 @@ function error( code, message )
 end
 
 function bool( data )
+  if type( data ) == "boolean"  then return data      end
+  if type( data ) == "number"   then return data ~= 0 end
+  if type( data ) == "function" then return false     end
+  if type( data ) == "nil"      then return false     end
+
   local  data = string.lower( data )
+         
   if     data == "1"        then return true
 	elseif data == "true"     then return true
 	elseif data == "enable"   then return true

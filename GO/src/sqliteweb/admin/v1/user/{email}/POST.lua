@@ -31,21 +31,10 @@ local enabled,  err, msg = getBodyValue( "enabled", 1 )                 if err ~
 
 enabled = bool( enabled )
 
-query  = string.format( "SELECT id FROM USER WHERE email = '%s';", enquoteSQL( email ) )
-userID = executeSQL( "auth", query )
-if not userID                                                                        then return error( 504, "Gateway Timeout" )              end
-if userID.ErrorNumber     ~= 0                                                       then return error( 502, "Bad Gateway" )                  end
-if userID.NumberOfColumns ~= 1                                                       then return error( 502, "Bad Gateway" )                  end
-if userID.NumberOfRows    ~= 1                                                       then return error( 404, "User not found" )               end
-
-userID = userID.Rows[ 1 ].id
-
-
-query  = string.format( "UPDATE OR FAIL USER_SETTINGS SET value = '%s' WHERE user_id = %d AND key = '%s';", enquoteSQL( value ), userID, enquoteSQL( key ) )
+query  = string.format( "INSERT OR FAIL INTO USER (name,company,email,password,creation_date,enabled) VALUES( '%s','%s','%s','%s','%s',%s);", enquoteSQL( name ), enquoteSQL( company ), enquoteSQL( email ), enquoteSQL( password ), now, enabled )
 result = executeSQL( "auth", query )
-
-if not result                                                                        then return error( 504, "Gateway Timeout" )              end
-if result.ErrorNumber     ~= 0                                                       then return error( 502, "Bad Gateway" )                  end
-if result.Value           ~= "OK"                                                    then return error( 502, result.Value )                   end
+if not result                                                                       then return error( 504, "Gateway Timeout" )              end
+if result.ErrorNumber     ~= 0                                                      then return error( 403, "Could not create user" )        end
+if result.Value           ~= "OK"                                                   then return error( 500, "Internal Server Error" )        end
 
 error( 200, "OK" )

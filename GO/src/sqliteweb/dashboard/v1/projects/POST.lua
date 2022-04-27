@@ -40,7 +40,7 @@ Project = {
 }
 
 Response = {
-  status           = 0,                                       -- status code: 0 = no error, error otherwise
+  status           = 200,                                     -- status code: 200 = no error, error otherwise
   message          = "OK",                                    -- "OK" or error message
 
   projects         = nil                                      -- Array with project objects
@@ -50,17 +50,20 @@ if userID == 0 then return error( 501, "Not Implemented" )
 else
   for i = 1, 20 do
     Project.id          = uuid() -- create a random uuid (and check if it is not already taken)
-    Project.name        = body.name
-    Project.description = body.description
+    Project.name        = name
+    Project.description = description
 
-    query = string.format( "INSERT INTO PROJECT VALUES( '%s', %d, '%s', '%s', '%s', '%s' );", enquoteSQL( Project.id ), userID, enquoteSQL( name ), enquoteSQL( description ), enquoteSQL( username ), enquoteSQL( password ) )
+    query = string.format( "INSERT INTO PROJECT VALUES( '%s', %d, '%s', '%s', '%s', '%s' ); SELECT changes() AS success;", enquoteSQL( Project.id ), userID, enquoteSQL( name ), enquoteSQL( description ), enquoteSQL( username ), enquoteSQL( password ) )
 
     result = executeSQL( "auth", query )
-    if not result              then goto continue end
-    if result.ErrorNumber ~= 0 then goto continue end
-    if result.Value ~= "OK"    then goto continue end
+    if not result                     then goto continue end
+    if result.ErrorMessage      ~= "" then goto continue end
+    if result.ErrorNumber       ~= 0  then goto continue end
+    if result.NumberOfRows      ~= 1  then goto continue end
+    if result.NumberOfColumns   ~= 1  then goto continue end
+    if result.Rows[ 1 ].success ~= 1  then goto continue end
     
-    Response.project    = { Project }
+    Response.projects    = { Project }
     
     SetStatus( 200 )
     Write( jsonEncode( Response ) )

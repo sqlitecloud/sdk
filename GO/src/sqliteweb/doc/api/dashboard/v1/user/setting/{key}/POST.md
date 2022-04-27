@@ -13,7 +13,7 @@ curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/user/setting/testk
 }'
 ```
 
-### **POST** - /dashboard/v1/user/setting/testkey
+### **POST** - /dashboard/v1/user/setting/{key}
 
 ### Request object
 

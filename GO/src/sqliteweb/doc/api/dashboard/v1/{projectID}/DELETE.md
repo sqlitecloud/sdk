@@ -1,6 +1,6 @@
 # API Documentation
 
-Delete a project 
+Delete a project and all it's dependencies
 
 ## Requests
 
