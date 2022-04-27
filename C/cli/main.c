@@ -226,9 +226,10 @@ int do_internal_download_cb (void *xdata, const void *buffer, uint32_t blen, int
     }
     
     // display a simple text progress
-    bool is_final = ((blen == 0) && (ntot == nprogress));
-    if (is_final) printf("DOWNLOAD COMPLETE\n");
-    else printf("%.2f%% ", ((double)nprogress / (double)ntot) * 100.0);
+    printf("%.2f%% ", ((double)nprogress / (double)ntot) * 100.0);
+    
+    // check if it is final step
+    if (ntot == nprogress) printf("\n\n");
     
     // means no error and continue the loop
     return 0;
@@ -284,7 +285,7 @@ int do_internal_read_cb (void *xdata, void *buffer, uint32_t *blen, int64_t ntot
     ssize_t nread = read(fd, buffer, (size_t)*blen);
     if (nread == -1) return -1;
     
-    if (nread == 0) printf("UPLOAD COMPLETE\n");
+    if (nread == 0) printf("UPLOAD COMPLETE\n\n");
     else printf("%.2f%% ", ((double)(nprogress+nread) / (double)ntot) * 100.0);
     
     *blen = (uint32_t)nread;
