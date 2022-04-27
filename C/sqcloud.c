@@ -2462,7 +2462,7 @@ bool SQCloudDownloadDatabase (SQCloudConnection *connection, const char *dbname,
     int64_t progress_size = 0;
     snprintf(buffer, sizeof(buffer), "DOWNLOAD STEP");
     
-    while (progress_size <= db_size) {
+    while (progress_size < db_size) {
         res = SQCloudExec(connection, buffer);
         
         // reply must be a BLOB value (otherwise it is an error)
