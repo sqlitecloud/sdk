@@ -92,6 +92,12 @@ else
   query = "LIST NODES"
   listNodes = executeSQL( projectID, query )
   if (listNodes.NumberOfColumns == 8) then  
+    -- find the match value of the leader
+      match_leader = 0
+      for j = 1, listNodes.NumberOfRows do
+        if listNodes.Rows[ j ].status == "Leader" then match_leader = listNodes.Rows[ j ].match end
+      end
+
     for i = 1, nodes.NumberOfRows do
       cluster_node_id = nodes.Rows[ i ].node_id
 
@@ -100,6 +106,8 @@ else
       for j = 1, listNodes.NumberOfRows do
         if listNodes.Rows[ j ].id == cluster_node_id then row = j break end
       end
+
+      nodes.Rows[ i ].match_leader = match_leader
 
       if row > 0 then
         nodes.Rows[ i ].status = listNodes.Rows[ row ].status 
