@@ -184,7 +184,7 @@ func (this *AuthServer) auth( writer http.ResponseWriter, request *http.Request 
   var credentials Credentials
 
   switch err := json.NewDecoder( request.Body ).Decode( &credentials ); {
-  case err != nil : this.sendError( writer, 1, err.Error(), http.StatusBadRequest )
+  case err != nil : this.sendError( writer, err.Error(), http.StatusBadRequest )
   default         : this.authorize( writer, request, this.lookupUserID( credentials.Login, credentials.Password ) )
   }
 }
@@ -196,8 +196,8 @@ func (this *AuthServer) reAuth( writer http.ResponseWriter, request *http.Reques
   claims, _ := SQLiteWeb.Auth.decodeClaims( token )
 
   switch userID, err := strconv.ParseInt( claims.Id, 10, 64 ); {
-  case err != nil : this.sendError( writer, 3, err.Error(), http.StatusBadRequest )
-  case userID < 0 : this.sendError( writer, 4, "Invalid UserID", http.StatusBadRequest )
+  case err != nil : this.sendError( writer, err.Error(), http.StatusBadRequest )
+  case userID < 0 : this.sendError( writer, "Invalid UserID", http.StatusBadRequest )
   default         : this.authorize( writer, request, userID )
   }
 }
@@ -278,14 +278,14 @@ func (this *AuthServer) authorize( writer http.ResponseWriter, request *http.Req
   if jResponse, err := json.Marshal( response ); err == nil {
     writer.Write( jResponse )
   } else {
-		this.sendError( writer, http.StatusInternalServerError, "Internal Error", http.StatusInternalServerError )
+		this.sendError( writer, "Internal Error", http.StatusInternalServerError )
     //http.Error( writer, err.Error(), http.StatusInternalServerError )
   }
 }
 
-func (this *AuthServer) sendError( writer http.ResponseWriter, status int, message string, statusCode int ) {
+func (this *AuthServer) sendError( writer http.ResponseWriter, message string, statusCode int ) {
   writer.Header().Set( "Content-Type", "application/json" )
   writer.Header().Set( "Content-Encoding", "utf-8" )
-  writer.Write( []byte( fmt.Sprintf( "{\"status\":%d,\"message\":\"%s\"}", status, message ) ) )
-  writer.WriteHeader( statusCode )
+	writer.WriteHeader( statusCode )
+  writer.Write( []byte( fmt.Sprintf( "{\"status\":%d,\"message\":\"%s\"}", statusCode, message ) ) )
 }
