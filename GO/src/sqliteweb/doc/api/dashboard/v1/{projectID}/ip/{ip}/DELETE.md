@@ -11,7 +11,6 @@ curl -X "DELETE" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4f
      -d $'{
   "role": "PUB"
 }'
-
 ```
 
 ### **DELETE** - /dashboard/v1/{projectID}/ip/{ip}
@@ -20,7 +19,7 @@ curl -X "DELETE" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4f
 
 ```code
 {
-  role           = "RoleName",  ; - OR -
+  role           = "RoleName",  ; - AND/OR -
   user           = "UserName",
 }
 ```

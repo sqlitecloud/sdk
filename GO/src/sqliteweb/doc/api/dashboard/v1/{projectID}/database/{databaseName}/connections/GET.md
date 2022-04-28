@@ -7,10 +7,9 @@ LIST DATABASE CONNECTIONS [ID] %
 ```sh
 curl "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/database/Dummy/connections" \
      -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMjcuMC4wLjEiLCJleHAiOjE2NDU1NzY5NDUsImp0aSI6IjAiLCJpYXQiOjE2NDU1NDY5NDUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ1NTQ2OTQ1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.Ru7lvh1tx72CWfsoL2-ZM2b1sB6bB59V6oSlN-gEs2E'
-
 ```
 
-### **GET** - /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/database/Dummy/connections
+### **GET** - /dashboard/v1/{projectID}/database/{databaseName}/connections
 
 ### Request object
 
@@ -24,14 +23,14 @@ none
 
 ```code
 {
-  status            = 0,                         ; status code: 0 = no error, error otherwise
+  status            = 200,                       ; status code: 200 = no error, error otherwise
   message           = "OK",                      ; "OK" or error message
 
-  connections       = c,                         ; Array with Connection objects
+  connections       = [ connection info objects] ; Array with Connection objects
 }
 ```
 
-#### Connection object:
+#### Connection info object:
 
 ```code
 {
@@ -80,41 +79,6 @@ Connection: close
     }
   ],
   "message": "OK",
-  "status": 0
-}
-```
-
-### Previous Response:
-
-```
-{
-  "ResponseID": 0,
-  "Message": "Connections List",
-  "Connections": [
-      {
-          "Id": 2,
-          "Address": "192.168.1.23",
-          "Username": "admin",
-          "Database": "db1",
-          "ConnectionDate": "January 1, 1970 00:00:00 UTC",
-          "LastActivity": "January 1, 1970 00:00:00 UTC"
-      },
-      {
-          "Id": 4,
-          "Address": "192.168.1.23",
-          "Username": "admin",
-          "Database": "db1",
-          "ConnectionDate": "January 1, 1970 00:00:00 UTC",
-          "LastActivity": "January 1, 1970 00:00:00 UTC"
-      },
-      {
-          "Id": 7,
-          "Address": "192.168.1.23",
-          "Username": "admin",
-          "Database": "db1",
-          "ConnectionDate": "January 1, 1970 00:00:00 UTC",
-          "LastActivity": "January 1, 1970 00:00:00 UTC"
-      }
-  ]
+  "status": 200
 }
 ```

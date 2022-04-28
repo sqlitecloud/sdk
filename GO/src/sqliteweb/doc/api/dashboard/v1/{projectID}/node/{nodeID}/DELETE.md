@@ -2,6 +2,8 @@
 
 Delete node
 
+TODO / MISSING. Kill the virtual machine...
+
 ## Requests
 
 ```sh
@@ -15,6 +17,7 @@ curl -X "DELETE" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4f
 ### Request object
 
 ```code
+none
 ```
 
 ### Response object(s)
@@ -23,8 +26,8 @@ curl -X "DELETE" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4f
 
 ```code
 {
-  message         = "OK",
-  status          = 200
+  status            = 200,                       ; status code: 200 = no error, error otherwise
+  message           = "OK",                      ; "OK" or error message
 }
 ```
 

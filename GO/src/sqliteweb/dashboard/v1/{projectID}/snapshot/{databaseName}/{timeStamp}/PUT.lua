@@ -35,5 +35,5 @@ result = executeSQL( projectID, query )
 
 if not result                                                                           then return error( 504, "Gateway Timeout" )                     end
 if result.ErrorMessage ~= ""                                                            then return error( 502, result.ErrorMessage )                   end
-
+if result.ErrorNumber  ~= 0                                                             then return error( 502, "Bad Gateway" )                         end
 error( 200, "OK" )

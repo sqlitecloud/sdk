@@ -10,7 +10,7 @@ curl "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/n
 
 ```
 
-### **GET** - /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/nodes
+### **GET** - /dashboard/v1/{projectID}/nodes
 
 ### Request object
 
@@ -24,7 +24,7 @@ none
 
 ```code
 {
-  status           = 0,                         ; status code: 0 = no error, error otherwise
+  status           = 200,                       ; status code: 200 = no error, error otherwise
   message          = "OK",                      ; "OK" or error message
 
   nodes            = {}                         ; Array with node objects
@@ -35,23 +35,23 @@ none
 
 ```code
 {
-  id            = 0,                     -- NodeID - 
-  name          = "",                    -- Name of this node
-  type          = "",                    -- Type fo this node, for example: Leader, Worker
-  provider      = "",                    -- Provider of this node
-  image         = "",                    -- Image data for this node
-  region        = "",                    -- Regin data for this node
-  size          = "",                    -- Size info for this node
-  address       = "",                    -- IPv[4,6] address or host name of this node
-  port          = "",                    -- Port this node is listening on
-  latitude      = 44.931,
-  longitude     = 10.533,
-  node_id       = 0,                     -- id of the node inside de cluster
-  status        = "",                    -- raft status of the node in the cluster (LIST NODES)
-  progress      = "",                    -- progress is in one of the three statethree state: probe, replicate, snapshot. (LIST NODES)
-  match         = 0,                     -- is the index of the highest known matched raft entry (LIST NODES)
-  match_leader  = 0,                     -- is the index of the highest known matched raft entry of the Leader (LIST NODES)
-  last_activity = "",                    -- date and time of the last contact with a follower. Leader has NULL. (LIST NODES)
+  id            = 0,                            -- NodeID - 
+  name          = "",                           -- Name of this node
+  type          = "",                           -- Type fo this node, for example: Leader, Worker
+  provider      = "",                           -- Provider of this node
+  image         = "",                           -- Image data for this node
+  region        = "",                           -- Regin data for this node
+  size          = "",                           -- Size info for this node
+  address       = "",                           -- IPv[4,6] address or host name of this node
+  port          = "",                           -- Port this node is listening on
+  latitude      = 44.931,       
+  longitude     = 10.533,       
+  node_id       = 0,                            -- id of the node inside de cluster
+  status        = "",                           -- raft status of the node in the cluster (LIST NODES)
+  progress      = "",                           -- progress is in one of the three statethree state: probe, replicate, snapshot. (LIST NODES)
+  match         = 0,                            -- is the index of the highest known matched raft entry (LIST NODES)
+  match_leader  = 0,                            -- is the index of the highest known matched raft entry of the Leader (LIST NODES)
+  last_activity = "",                           -- date and time of the last contact with a follower. Leader has NULL. (LIST NODES)
 }
 ```
 
@@ -81,60 +81,26 @@ Connection: close
   "message":"OK",
   "nodes":[
     {
-      "address":"64.227.11.116",
-      "details":"i386/1/1MB/100MB",
-      "id":7,
-      "last_activity":"2022-04-27 14:21:20",
-      "latitude":40.793,"longitude":-74.02,
-      "match":344,
-      "match_leader":344,
-      "name":"Dev1",
-      "node_id":1,
-      "port":9960,
-      "progress":"Replicate",
-      "provider":"DigitalOcean",
-      "region":"nyc1/US",
-      "size":"small",
-      "status":"Follower",
-      "type":"worker"
+      "address": "64.227.11.116",
+      "details": "i386/1/1MB/100MB",
+      "id": 1,
+      "last_activity": "2022-04-28 07:58:36",
+      "latitude": 40.793,
+      "longitude": -74.0247,
+      "match": 350,
+      "match_leader": 350,
+      "name": "Dev1 Server",
+      "node_id": 1,
+      "port": 9960,
+      "progress": "Replicate",
+      "provider": "DigitalOcean",
+      "region": "Rome/Italy",
+      "size": "small",
+      "status": "Follower",
+      "type": "worker"
     },
-    {
-      "address":"143.198.231.152",
-      "details":"i386/1/1MB/100MB",
-      "id":8,"latitude":40.8054,
-      "longitude":-74.0241,
-      "match":344,
-      "match_leader":344,
-      "name":"Dev2",
-      "node_id":2,
-      "port":9960,
-      "progress":"Replicate",
-      "provider":"DigitalOcean",
-      "region":"nyc1/US",
-      "size":"small",
-      "status":"Leader",
-      "type":"worker"
-    },
-    {
-      "address":"206.189.0.61",
-      "details":"i386/1/1MB/100MB",
-      "id":9,
-      "last_activity":"2022-04-27 14:21:20",
-      "latitude":52.355,
-      "longitude":4.9135,
-      "match":344,
-      "match_leader":344,
-      "name":"Dev3",
-      "node_id":3,
-      "port":9960,
-      "progress":"Replicate",
-      "provider":"DigitalOcean",
-      "region":"ams2/NL",
-      "size":"small",
-      "status":"Follower",
-      "type":"worker"
-    }
-  ],
+    ...
+  } ],
   "status":200
 }
 

@@ -22,19 +22,12 @@ require "sqlitecloud"
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
-
-
-local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                                    end
-local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                                    end
+local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                                   end
+local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                                   end
 local databaseName,  err, msg = checkParameter( databaseName, 1 )        if err ~= 0 then return error( err, string.format( msg, "databaseName" ) )  end
-
-query       = string.format( "LIST DATABASE CONNECTIONS '%s';", enquoteSQL( databaseName ) )
-connections = nil
 
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
-
-  connections = executeSQL( projectID, query )
 else
   check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND User.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
@@ -44,19 +37,19 @@ else
   if check_access.NumberOfColumns   ~= 1  then return error( 502, "Bad Gateway" )         end 
   if check_access.NumberOfRows      ~= 1  then return error( 502, "Bad Gateway" )         end
   if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
-
-  connections = executeSQL( projectID, query )
 end
 
+connections = executeSQL( projectID, string.format( "LIST DATABASE CONNECTIONS '%s';", enquoteSQL( databaseName ) ) )
 if not connections                        then return error( 404, "ProjectID not found" ) end
 if connections.ErrorNumber          ~= 0  then return error( 502, "Bad Gateway" )         end
 if connections.NumberOfColumns      ~= 2  then return error( 502, "Bad Gateway" )         end
 if connections.NumberOfRows         <  1  then return error( 200, "OK" )                  end
 
+
 all = executeSQL( projectID, "LIST CONNECTIONS;" )
-
-
-print("connections ", connections.NumberOfRows, " - ", connections)
+if not all                                then return error( 404, "ProjectID not found" ) end
+if all.ErrorNumber                  ~= 0  then return error( 502, "Bad Gateway" )         end
+if all.NumberOfColumns              ~= 6  then return error( 502, "Bad Gateway" )         end
 
 c = {}
 for i = 1, connections.NumberOfRows do 
@@ -84,7 +77,6 @@ Connection = {
   connectionDate  = "1970-01-01 00:00:00",      -- Date of connection in SQL format
   lastActivity    = "1970-01-01 00:00:00"       -- Date of last Activity in SQL format
 }
-
 
 Response = {
   status            = 200,                       -- status code: 0 = no error, error otherwise

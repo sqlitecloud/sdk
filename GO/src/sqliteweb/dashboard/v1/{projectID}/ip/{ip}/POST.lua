@@ -15,7 +15,7 @@
 --
 -- -----------------------------------------------------------------------TAB=2
 
--- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/ip/{ip}
+-- https://localhost:8443/dashboard/v1/{projectID}/ip/{ip}
 
 require "sqlitecloud"
 
@@ -30,16 +30,14 @@ local user,      err, msg = getBodyValue( "user", 0 )                    if err 
 
 if string.len( role ) < 1 and string.len( user ) < 1                                 then return error( 400, "Missing role or user" )           end
 
-                                          query = string.format( "ADD ALLOWED IP '%s'", enquoteSQL( ip ) )
+                                          query = string.format( "ADD ALLOWED IP '%s'", enquoteSQL( ip )          )
 if string.len( role )   > 0          then query = string.format( "%s ROLE '%s'"       , query, enquoteSQL( role ) ) end
 if string.len( user )   > 0          then query = string.format( "%s USER '%s'"       , query, enquoteSQL( user ) ) end
-                                          query = string.format( "%s;"                , query )
+                                          query = string.format( "%s;"                , query                     )
 result    = nil
 
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
-
-  result = executeSQL( projectID, query )
 else
   check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND USER.id=%d AND uuid='%s';", userID, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
@@ -49,10 +47,9 @@ else
   if check_access.NumberOfColumns   ~= 1  then return error( 502, "Bad Gateway" )         end 
   if check_access.NumberOfRows      ~= 1  then return error( 502, "Bad Gateway" )         end
   if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
-
-  result = executeSQL( projectID, query )
 end
 
+result = executeSQL( projectID, query )
 if not result                             then return error( 404, "ProjectID not found" ) end
 if result.ErrorNumber       ~= 0          then return error( 404, result.ErrorMessage )   end
 if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end

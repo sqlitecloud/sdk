@@ -27,15 +27,23 @@ local userID,    err, msg = checkUserID( userid )                        if err 
 local nodeID,    err, msg = checkNodeID( nodeID )                        if err ~= 0 then return error( err, msg )                          end
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                          end
 
-local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
-local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                     end
+local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                          end
+local machineNodeID, err, msg = verifyNodeID( userID, projectID, nodeID )if err ~= 0 then return error( err, msg )                          end
 
-if not query.level  then query.level = "4"    end
-if not query.type   then query.type  = "4"    end
+if not query.level  then query.level = ""     end
+if not query.type   then query.type  = ""     end
 if not query.order  then query.order = "DESC" end
 
-local level,     err, msg = checkNumber( query.level, 0, 5 )             if err ~= 0 then return error( err, string.format( msg, "level" ) ) end
-local type,      err, msg = checkNumber( query.type, 1, 8 )              if err ~= 0 then return error( err, string.format( msg, "type" ) )  end
+local slevel = ""
+local stype  = ""
+if string.len( query.level ) > 0 then
+  local level,     err, msg = checkNumber( query.level, 0, 5 )           if err ~= 0 then return error( err, string.format( msg, "level" ) ) end
+  slevel = string.format( "LEVEL %d", level )
+end
+if string.len( query.type ) > 0 then
+  local type,      err, msg = checkNumber( query.type, 1, 8 )            if err ~= 0 then return error( err, string.format( msg, "type" ) )  end
+  stype = string.format( "TYPE %d", type )
+end
 
 if query.order ~= "DESC" and query.order ~= "ASC"                                    then return error( 400, "Order must be ASC or DESC" )   end
 local order = string.format( "ORDER %s", query.order )
@@ -43,7 +51,7 @@ local order = string.format( "ORDER %s", query.order )
 if query.rows then
   local rows,    err, msg = checkNumber( query.rows, 1, 10000 )          if err ~= 0 then return error( err, string.format( msg, "level" ) ) end
 
-  sql = string.format( "LIST %d ROWS FROM LOG LEVEL %d TYPE %d %s NODE %d", rows, level, type, order, machineNodeID )
+  sql = string.format( "LIST %d ROWS FROM LOG %s %s %s NODE %d", rows, slevel, stype, order, machineNodeID )
 else
   if not query.to     then query.to     = now    end
   if not query.from   then query.from   = now_1h end
@@ -51,7 +59,7 @@ else
   local from,    err, msg = checkDateTime( query.from )                  if err ~= 0 then return error( err, string.format( msg, "from" ) ) end
   local to,      err, msg = checkDateTime( query.to )                    if err ~= 0 then return error( err, string.format( msg, "to" ) )   end
 
-  sql = string.format( "LIST LOG FROM '%s' TO '%s' LEVEL %d TYPE %d %s NODE %d;", from, to, level, type, order, machineNodeID ) 
+  sql = string.format( "LIST LOG FROM '%s' TO '%s' %s %s %s NODE %d;", from, to, slevel, stype, order, machineNodeID ) 
 end
 
 log = executeSQL( projectID, sql )

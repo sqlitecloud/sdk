@@ -10,7 +10,7 @@ curl "https://localhost:8443https://localhost:8443/dashboard/v1/fbf94289-64b0-4f
 
 ```
 
-### **GET** - https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/privileges
+### **GET** - https://localhost:8443/dashboard/v1/{projectID}/privileges
 
 ### Request object
 
@@ -24,10 +24,10 @@ none
 
 ```code
 {
-  status            = 0,                         ; status code: 0 = no error, error otherwise
+  status            = 200,                       ; status code: 200 = no error, error otherwise
   message           = "OK",                      ; "OK" or error message
 
-  priveleges        = p,                         ; Array of privileges 
+  priveleges        = [ strings,... ],         ; String-Array of privileges 
 }
 ```
 
@@ -94,20 +94,5 @@ Connection: close
     "ADMIN"
   ],
   "status": 0
-}
-```
-
-### Previous Response:
-
-```
-{
-  "ResponseID": 0,
-  "Message": "Privileges security List",
-  "Privileges": [
-      "read",
-      "update",
-      "insert",
-      "delete"
-  ]
 }
 ```

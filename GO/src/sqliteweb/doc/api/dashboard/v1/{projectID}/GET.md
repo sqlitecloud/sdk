@@ -1,6 +1,6 @@
 # API Documentation
 
-List all userid projects
+Displays name and description for a project
 
 ## Requests
 

@@ -35,7 +35,6 @@ Response = {
     name            = "",                        -- Name of this node
     type            = "",                        -- Type fo this node, for example: Leader, Worker
     provider        = "",                        -- Provider of this node
-    -- image           = "",                        -- Image data for this node
     details         = "?/?/?",                   -- "SFO1/1GB/25GB disk
     region          = "",                        -- Regin data for this node
     size            = "",                        -- Size info for this node
@@ -49,10 +48,6 @@ Response = {
     status          = "unknown",                 -- Replicating
     
     raft            = { 0, 0 },                  -- array 8960, 8960
-    
-    --load            = { 0, 0 },                  -- some load info
-    --cpu             = { Used = 0, Total = 0 },   -- some cpu info
-    --ram             = { Used = 0, Total = 0 },   -- some ram info
   },
 }
 
@@ -88,10 +83,6 @@ if userID == 0 then
         
         Response.node.raft        = { 0, 0 }
 
-        -- Response.node.load        = { 0, 0 }
-        -- Response.node.cpu         = { Used = 0, Total = 0 }
-        -- Response.node.ram         = { Used = 0, Total = 0 }
-
         goto done
       end
     end
@@ -101,7 +92,7 @@ if userID == 0 then
 else
   
   local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
-  local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                     end
+  local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )              end
 
   query = string.format( "SELECT NODE.id, NODE.node_id, NODE.name, type, provider, image AS details, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port, latitude, longitude FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id = %d AND NODE.id = %d AND uuid='%s';", userID, nodeID, enquoteSQL( projectID ) )
   nodes = executeSQL( "auth", query )
@@ -117,12 +108,6 @@ else
 
   Response.node.status      = "Unknown"
   Response.node.raft        = { 0, 0 }
-
-  -- Response.node.load        = { 0, 0 }
-  -- Response.node.cpu         = {}
-  -- Response.node.ram         = {}
-
-  ------
 
   status = executeSQL( projectID, "LIST NODES;" )
 
@@ -166,26 +151,6 @@ else
   end
 
   if #Response.node.stats == 0 then Response.node.stats = nil end
-
-  --query = string.format( "LIST STATS NODE %d;", nodeID )
-  --stats = executeSQL( projectID, query )
-  --cpu = { Used = 0, Total = 0 }
-  --ram = { Used = 0, Total = 0 }
-  --for i = 1, stats.NumberOfRows do
-  --  if stats.Rows[ i ].key == "CPU_USAGE_SYS"   then cpu.Used  = stats.Rows[ i ].value            end
-  --  if stats.Rows[ i ].key == "CPU_USAGE_USER"  then cpu.Total = stats.Rows[ i ].value + cpu.Used end
-  --  if stats.Rows[ i ].key == "CURRENT_MEMORY"  then ram.Used  = stats.Rows[ i ].value            end
-  --  if stats.Rows[ i ].key == "MAX_MEMORY"      then ram.Total = stats.Rows[ i ].value            end
-  --  if stats.Rows[ i ].key == "BYTES_OUT"       then 
-  --  
-  --    Response.node.cpu[ #Response.node.cpu + 1 ] = cpu
-  --    Response.node.ram[ #Response.node.ram + 1 ] = ram
-  --    cpu = { Used = 0, Total = 0 }
-  --    ram = { Used = 0, Total = 0 }
---
-  --  end
-  --end
-
 end
 
 ::done::

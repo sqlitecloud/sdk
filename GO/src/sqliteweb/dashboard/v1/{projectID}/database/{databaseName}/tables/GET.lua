@@ -23,7 +23,7 @@ SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
 Response = {
-  status            = 200,                       -- status code: 0 = no error, error otherwise
+  status            = 200,                       -- status code: 200 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
 
   tables            = nil,                       -- List of table info

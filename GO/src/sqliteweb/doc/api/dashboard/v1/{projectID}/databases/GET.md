@@ -7,10 +7,9 @@ LIST DATABASES
 ```sh
 curl "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/databases" \
      -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMjcuMC4wLjEiLCJleHAiOjE2NDU1NzY5NDUsImp0aSI6IjAiLCJpYXQiOjE2NDU1NDY5NDUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ1NTQ2OTQ1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.Ru7lvh1tx72CWfsoL2-ZM2b1sB6bB59V6oSlN-gEs2E'
-
 ```
 
-### **GET** - /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/databases
+### **GET** - /dashboard/v1/{projectID}/databases
 
 ### Request object
 
@@ -24,10 +23,10 @@ none
 
 ```code
 {
-  status            = 0,                         ; status code: 0 = no error, error otherwise
+  status            = 200,                       ; status code: 200 = no error, error otherwise
   message           = "OK",                      ; "OK" or error message
 
-  databases         = db,                        ; Array with Database objects
+  databases         = [ list of database objects]; Array with Database objects
 }
 ```
 
@@ -263,74 +262,6 @@ Connection: close
     }
   ],
   "message": "OK",
-  "status": 0
-}
-```
-
-### Previous Response:
-
-```
-{
-  "ResponseID": 0,
-  "Message": "Databases List",
-  "Databases": [
-      {
-          "Name": "Db1",
-          "Size": 18000000000,
-          "Connections": 5,
-          "Encryption": null,
-          "Backup": "Daily",
-          "Stats": [
-              521,
-              12
-          ],
-          "Bytes": [
-              8700000,
-              712
-          ],
-          "Fragmentation": {
-              "Used": 2400000,
-              "Total": 712000
-          }
-      },
-      {
-          "Name": "Db1",
-          "Size": 18000000000,
-          "Connections": 5,
-          "Encryption": null,
-          "Backup": "Daily",
-          "Stats": [
-              521,
-              12
-          ],
-          "Bytes": [
-              8700000,
-              712
-          ],
-          "Fragmentation": {
-              "Used": 2400000,
-              "Total": 712000
-          }
-      },
-      {
-          "Name": "Db1",
-          "Size": 18000000000,
-          "Connections": 5,
-          "Encryption": null,
-          "Backup": "Daily",
-          "Stats": [
-              521,
-              12
-          ],
-          "Bytes": [
-              8700000,
-              712
-          ],
-          "Fragmentation": {
-              "Used": 2400000,
-              "Total": 712000
-          }
-      }
-  ]
+  "status": 200
 }
 ```

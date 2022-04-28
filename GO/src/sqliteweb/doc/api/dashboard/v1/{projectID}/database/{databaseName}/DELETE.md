@@ -1,6 +1,6 @@
 # API Documentation
 
-DROP DATABASE % [IF EXISTS]
+DROP DATABASE % IF EXISTS
 
 ## Requests
 

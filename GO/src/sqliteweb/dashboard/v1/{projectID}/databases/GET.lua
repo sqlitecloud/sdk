@@ -25,13 +25,8 @@ SetHeader( "Content-Encoding", "utf-8" )
 local userID,    err, msg = checkUserID( userid )       if err ~= 0 then return error( err, msg ) end
 local projectID, err, msg = checkProjectID( projectID ) if err ~= 0 then return error( err, msg ) end
 
-query     = "LIST DATABASES DETAILED;"
-databases = nil
-
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
-
-  databases = executeSQL( projectID, query )
 else
   check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND User.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
@@ -41,10 +36,9 @@ else
   if check_access.NumberOfColumns   ~= 1  then return error( 502, "Bad Gateway" )         end 
   if check_access.NumberOfRows      ~= 1  then return error( 502, "Bad Gateway" )         end
   if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
-
-  databases = executeSQL( projectID, query )
 end
 
+databases = executeSQL( projectID, "LIST DATABASES DETAILED;" )
 if not databases                          then return error( 404, "ProjectID not found" ) end
 if databases.ErrorNumber            ~= 0  then return error( 502, "Bad Gateway" )         end
 if databases.NumberOfColumns        < 10  then return error( 502, "Bad Gateway" )         end
@@ -58,9 +52,9 @@ for i = 1, databases.NumberOfRows do
   database.connections    = databases.Rows[ i ].connections
   database.encryption     = databases.Rows[ i ].encryption
   database.backup         = databases.Rows[ i ].backup
-  database.stats          = { databases.Rows[ i ].nread, databases.Rows[ i ].nwrite }
-  database.bytes          = { databases.Rows[ i ].inbytes, databases.Rows[ i ].outbytes }
   database.fragmentation  = databases.Rows[ i ].fragmentation
+  database.stats          = { databases.Rows[ i ].nread,   databases.Rows[ i ].nwrite   }
+  database.bytes          = { databases.Rows[ i ].inbytes, databases.Rows[ i ].outbytes }
   db[ #db + 1 ]           = database
 end
 if #db == 0 then db = nil end

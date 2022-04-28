@@ -12,7 +12,6 @@ curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6
   "table": "*",
   "database": "*"
 }'
-
 ```
 
 ### **POST** - /dashboard/v1/{projectID}/privilege/{privilgeName}/{roleName}
@@ -54,7 +53,7 @@ Content-Length: 28
 }
 ```
 
-### Example Response (user is in the auth database):
+### Example Response:
 
 ```
 HTTP/1.1 200 OK

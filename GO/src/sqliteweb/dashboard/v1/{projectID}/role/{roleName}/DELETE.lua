@@ -26,13 +26,8 @@ local userID,    err, msg = checkUserID( userid )                        if err 
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                               end
 local roleName,  err, msg = checkParameter( roleName, 3 )                if err ~= 0 then return error( err, string.format( msg, "roleName" ) )  end
 
-query  = string.format( "DROP ROLE '%s'", enquoteSQL( roleName ) )
-result = nil
-
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
-
-  result = executeSQL( projectID, query )
 else
   check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND USER.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
@@ -42,10 +37,9 @@ else
   if check_access.NumberOfColumns   ~= 1  then return error( 502, "Bad Gateway" )         end 
   if check_access.NumberOfRows      ~= 1  then return error( 502, "Bad Gateway" )         end
   if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
-
-  result = executeSQL( projectID, query )
 end
 
+result = executeSQL( projectID, string.format( "DROP ROLE '%s'", enquoteSQL( roleName ) ) )
 if not result                             then return error( 404, "ProjectID not found" ) end
 if result.ErrorNumber       ~= 0          then return error( 404, "Database not found" )  end
 if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end

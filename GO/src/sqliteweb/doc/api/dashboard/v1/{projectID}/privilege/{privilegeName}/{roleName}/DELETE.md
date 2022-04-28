@@ -53,7 +53,7 @@ Content-Length: 28
 }
 ```
 
-### Example Response (user is in the auth database):
+### Example Response:
 
 ```
 HTTP/1.1 200 OK

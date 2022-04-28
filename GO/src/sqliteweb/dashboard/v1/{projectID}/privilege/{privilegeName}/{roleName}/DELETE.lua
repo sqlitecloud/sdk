@@ -29,7 +29,7 @@ local roleName,  err, msg = checkParameter( roleName, 1 )                if err 
 local database,  err, msg = getBodyValue( "database", 0 )                if err ~= 0 then return error( err, msg )                                    end
 local table,     err, msg = getBodyValue( "table", 0 )                   if err ~= 0 then return error( err, msg )                                    end
 
-                                        query = string.format( "REVOKE PRIVILEGE '%s' ROLE '%s'", enquoteSQL( privilegeName ), enquoteSQL( roleName ) )
+local                                   query = string.format( "REVOKE PRIVILEGE '%s' ROLE '%s'", enquoteSQL( privilegeName ), enquoteSQL( roleName ) )
 if string.len( database )  > 0     then query = string.format( "%s DATABASE '%s'",             query, enquoteSQL( database ) ) end
 if string.len( table )     > 0     then query = string.format( "%s TABLE '%s'",                query, enquoteSQL( table    ) ) end
                                         query = string.format( "%s ;",                         query )
@@ -37,8 +37,6 @@ result = nil
 
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
-
-  result = executeSQL( projectID, query )
 else
   check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND USER.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
@@ -48,10 +46,9 @@ else
   if check_access.NumberOfColumns   ~= 1  then return error( 502, "Bad Gateway" )         end 
   if check_access.NumberOfRows      ~= 1  then return error( 502, "Bad Gateway" )         end
   if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
-
-  result = executeSQL( projectID, query )
 end
 
+result = executeSQL( projectID, query )
 if not result                             then return error( 404, "ProjectID not found" ) end
 if result.ErrorNumber       ~= 0          then return error( 404, "Database not found" )  end
 if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end

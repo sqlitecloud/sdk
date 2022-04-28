@@ -12,7 +12,6 @@ curl -X "PUT" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6-
      -d $'{
   "key": ""
 }'
-
 ```
 
 ### **PUT** - /dashboard/v1/{projectID}/database/{databaseName}/encryption

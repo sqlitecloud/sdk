@@ -6,8 +6,8 @@
 --     //             ///   ///  ///    Date        : 2022/03/30
 --    ///             ///   ///  ///    Author      : Andreas Pfeil
 --   ///             ///   ///  ///
---   ///     //////////   ///  ///      Description : Filter log
---   ////                ///  ///                     
+--   ///     //////////   ///  ///      Description : Get a list of databases
+--   ////                ///  ///                     that have snapshots
 --     ////     //////////   ///                      
 --        ////            ////          Requires    : Authentication
 --          ////     /////              Output      : 
@@ -20,8 +20,6 @@ require "sqlitecloud"
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
-
-print( userid )
 local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                          end
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                          end
 
@@ -29,9 +27,9 @@ local projectID, err, msg = verifyProjectID( userID, projectID )         if err 
 
 backups = executeSQL( projectID, "LIST BACKUPS;" )
 
-if not backups                                                                   then return error( 504, "Gateway Timeout" )            end
-if backups.ErrorNumber     ~= 0                                                  then return error( 502, result.ErrorMessage )          end
-if backups.NumberOfColumns ~= 1                                                  then return error( 502, "Bad Gateway" )                end
+if not backups                                                                       then return error( 504, "Gateway Timeout" )            end
+if backups.ErrorNumber     ~= 0                                                      then return error( 502, result.ErrorMessage )          end
+if backups.NumberOfColumns ~= 1                                                      then return error( 502, "Bad Gateway" )                end
 
 dbs = {}
 for i = 1, backups.NumberOfRows do

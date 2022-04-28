@@ -1,6 +1,6 @@
 # API Documentation
 
-List all userid projects
+Get a JSON with all providers, regions and size parameters
 
 ## Requests
 
@@ -24,30 +24,88 @@ none
 
 ```code
 {
-  status            = 0,                         -- status code: 0 = no error, error otherwise
-  message           = "OK",                      -- "OK" or error message
+  status            = 200,                       ; status code: 200 = no error, error otherwise
+  message           = "OK",                      ; "OK" or error message
 
   node              = {
-    id              = 0,                         -- NodeID - It is not good to have a simple int number!!!!!!
-    name            = "",                        -- Name of this node
-    type            = "",                        -- Type fo this node, for example: Leader, Worker
-    provider        = "",                        -- Provider of this node
-    image           = "",                        -- Image data for this node
-    region          = "",                        -- Regin data for this node
-    size            = "",                        -- Size info for this node
-    address         = "",                        -- IPv[4,6] address or host name of this node
-    port            = 0,                         -- Port this node is listening on
- 
-    status          = "unknown",                 -- Replicating
-    details         = "?/?/?",                   -- "SFO1/1GB/25GB disk
-    raft            = { 0, 0 },                  -- array 8960, 8960
-    load            = { 0, 0 },                  -- some load info
-    cpu             = { Used = 0, Total = 0 },   -- some cpu info
-    ram             = { Used = 0, Total = 0 },   -- some ram info
-    coordinates     = { Lat  = 0, Lng   = 0 },   -- coordinates of the machine
+    address         = "127.0.0.1",               ; IPv[4,6] address or host name of this node
+    port            = 9960,                      ; Port this node is listening on
+    details         = "?/?/?",                   ; "SFO1/1GB/25GB disk or "i386/1/1MB/100MB",
+    latidude        = float,
+    longitude       = float,
+    load            = [ float, float ],          ; some load info (for Details ask Andrea)
+    id              = 1,                         ; NodeID - It is not good to have a simple int number!!!!!!
+    name            = "Dev1 Server",             ; Name of this node
+    node_id         = 1,
+    provider        = "DigitalOcean",            ; Provider of this node
+    raft            = [ int, int ],              ; array 8960, 8960 (for Details ask Andrea)
+    region          = "Rome/Italy",              ; Regin data for this node
+    size            = "small",                   ; Size info for this node
+    stats           = [{}],                      ; Array with Time Sample Objects
+    type            = "worker",                  ; Type fo this node, for example: Leader, Worker
+    status          = "Unknown",                 ; Replicating
   },
 }
 ```
+#### Time Sample object:
+
+```code
+{
+  sampletime = "2022-04-28 07:35:12",           ; Date and Time of last activity
+  bytes      = {},                              ; Byte Info Object
+  clients    = {},                              ; Client Info Object
+  commands   = 3,                               ; Number of commands executed
+  cpu        = {},                              ; CPU Info Object
+  io         = {},                              ; IO Info Object
+  memory     = {}                               ; Memory Info Object  
+}
+```
+
+#### Byte Info object:
+
+```code
+{
+  read       = "123",                           ; Number of bytes read
+  writes     = "3186"                           ; Number of bytes written
+}
+```
+
+#### Clients Info object:
+
+```code
+{
+  current    = "4",                             ; Number of currently connected clients
+  max        = "4"                              ; Maximum number of connected clients
+}
+```
+
+#### CPU Info object:
+
+```code
+{
+  sys        = "148.619576",                    ; CPU usage for System (for Details ask Andrea)
+  user       = "71.133406"                      ; CPU usage for user (for Details ask Andrea)
+}
+```
+
+#### IO Info object:
+
+```code
+{
+  read       = "123",                           ; Number of bytes read
+  writes     = "3186"                           ; Number of bytes written
+}
+```
+
+#### Memory Info object:
+
+```code
+{
+  current    = "2652944",                       ; Number of currently used bytes (for Details ask Andrea)
+  max        = "2772472"                        ; Maximum number of bytes (for Details ask Andrea)
+}
+```
+
 
 ### Example Request:
 
@@ -66,46 +124,64 @@ HTTP/1.1 200 OK
 Access-Control-Allow-Headers: Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization
 Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE
 Access-Control-Allow-Origin: *
-Date: Tue, 22 Feb 2022 22:07:00 GMT
-Content-Length: 357
-Content-Type: text/plain; charset=utf-8
+Content-Encoding: utf-8
+Content-Type: application/json
+Date: Thu, 28 Apr 2022 08:13:15 GMT
 Connection: close
+Transfer-Encoding: chunked
 
 {
   "message": "OK",
   "node": {
     "address": "64.227.11.116",
-    "coordinates": {
-      "Lat": 0,
-      "Lng": 0
-    },
-    "cpu": {
-      "Total": 0,
-      "Used": 0
-    },
-    "details": "?/?/?",
+    "details": "i386/1/1MB/100MB",
     "id": 1,
-    "image": "i386/1/1MB/100MB",
+    "latitude": 40.793,
     "load": [
-      0,
-      0
+      1,
+      0.5
     ],
+    "longitude": -74.0247,
     "name": "Dev1 Server",
-    "port": 8860,
+    "node_id": 1,
+    "port": 9960,
     "provider": "DigitalOcean",
     "raft": [
       0,
       0
     ],
-    "ram": {
-      "Total": 0,
-      "Used": 0
-    },
     "region": "Rome/Italy",
     "size": "small",
-    "status": "unknown",
+    "stats": [
+      {
+        "bytes": {
+          "reads": "864",
+          "writes": "164262"
+        },
+        "clients": {
+          "current": "4",
+          "max": "4"
+        },
+        "commands": "27",
+        "cpu": {
+          "sys": "160.476049",
+          "user": "78.368085"
+        },
+        "io": {
+          "reads": "0",
+          "writes": "0"
+        },
+        "memory": {
+          "current": "4534280",
+          "max": "4682488"
+        },
+        "sampletime": "2022-04-28 07:13:42"
+      },
+      ...
+    } ],
+    "status": "Unknown",
     "type": "worker"
   },
-  "status": 0
+  "status": 200
 }
 ```

@@ -25,13 +25,8 @@ SetHeader( "Content-Encoding", "utf-8" )
 local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                          end
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                          end
 
-query      = "LIST PRIVILEGES ;"
-privileges = nil
-
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
-
-  privileges = executeSQL( projectID, query )
 else
   check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND User.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
@@ -41,10 +36,9 @@ else
   if check_access.NumberOfColumns   ~= 1  then return error( 502, "Bad Gateway" )         end 
   if check_access.NumberOfRows      ~= 1  then return error( 502, "Bad Gateway" )         end
   if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
-
-  privileges = executeSQL( projectID, query )
 end
 
+privileges = executeSQL( projectID, "LIST PRIVILEGES ;" )
 if not privileges                          then return error( 404, "ProjectID not found" ) end
 if privileges.ErrorNumber            ~= 0  then return error( 502, "Bad Gateway" )         end
 if privileges.NumberOfColumns        ~= 1  then return error( 502, "Bad Gateway" )         end

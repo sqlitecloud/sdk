@@ -7,10 +7,9 @@ LIST ROLES
 ```sh
 curl "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/roles" \
      -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMjcuMC4wLjEiLCJleHAiOjE2NDU1NzY5NDUsImp0aSI6IjAiLCJpYXQiOjE2NDU1NDY5NDUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ1NTQ2OTQ1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.Ru7lvh1tx72CWfsoL2-ZM2b1sB6bB59V6oSlN-gEs2E'
-
 ```
 
-### **GET** - /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/roles
+### **GET** - /dashboard/v1/{projectID}/roles
 
 ### Request object
 
@@ -24,7 +23,7 @@ none
 
 ```code
 {
-  status            = 0,                         ; status code: 0 = no error, error otherwise
+  status            = 200,                       ; status code: 200 = no error, error otherwise
   message           = "OK",                      ; "OK" or error message
 
   roles             = froles,                    ; Array with roles
@@ -87,78 +86,7 @@ Connection: close
       "table": "*"
     }
     ],
-  "status": 0
+  "status": 200
 }
 
-```
-
-### Previous Response:
-
-```
-{
-  "ResponseID": 0,
-  "Message": "Roles security List",
-  "Roles": [
-      {
-          "Name": "read",
-          "Privileges": [
-              {
-                  "Name": "read",
-                  "Database": "*",
-                  "Table": "*"
-              }
-          ]
-      },
-      {
-          "Name": "readwrite",
-          "Privileges": [
-              {
-                  "Name": "read",
-                  "Database": "*",
-                  "Table": "*"
-              },
-              {
-                  "Name": "insert",
-                  "Database": "*",
-                  "Table": "*"
-              },
-              {
-                  "Name": "update",
-                  "Database": "*",
-                  "Table": "*"
-              },
-              {
-                  "Name": "delete",
-                  "Database": "*",
-                  "Table": "*"
-              }
-          ]
-      },
-      {
-          "Name": "readwriteanydatabase",
-          "Privileges": [
-              {
-                  "Name": "read",
-                  "Database": "*",
-                  "Table": "*"
-              },
-              {
-                  "Name": "insert",
-                  "Database": "*",
-                  "Table": "*"
-              },
-              {
-                  "Name": "update",
-                  "Database": "*",
-                  "Table": "*"
-              },
-              {
-                  "Name": "delete",
-                  "Database": "*",
-                  "Table": "*"
-              }
-          ]
-      }
-  ]
-}
 ```

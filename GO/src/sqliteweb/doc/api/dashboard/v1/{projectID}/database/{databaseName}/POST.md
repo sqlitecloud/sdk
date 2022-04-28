@@ -13,7 +13,7 @@ curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6
 }'
 ```
 
-### **POST** - /dashboard/v1/{projectID}/database/databaseName}
+### **POST** - /dashboard/v1/{projectID}/database/{databaseName}
 
 ### Request object
 

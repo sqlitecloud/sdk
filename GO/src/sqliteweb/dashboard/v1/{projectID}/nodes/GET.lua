@@ -45,10 +45,10 @@ Node = {
 }
 
 Response = {
-  status           = 200,                       -- status code: 0 = no error, error otherwise
-  message          = "OK",                      -- "OK" or error message
+  status           = 200,                           -- status code: 200 = no error, error otherwise
+  message          = "OK",                          -- "OK" or error message
 
-  nodes            = {},                        -- Array with node objects
+  nodes            = {},                            -- Array with node objects
 }
 
 if userID == 0 then         
@@ -80,7 +80,7 @@ else
   
   local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
   local query     = string.format( "SELECT NODE.id, NODE.name, type, provider, image AS details, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port, latitude, longitude, node_id FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id = %d AND uuid='%s';", userID, enquoteSQL( projectID ) )
-  --print( query )
+
   local databases = nil
 
   nodes = executeSQL( "auth", query )
@@ -89,8 +89,7 @@ else
   if nodes.NumberOfColumns          ~= 12 then return error( 502, "Bad Gateway" )         end
   if nodes.NumberOfRows             <  1  then return error( 200, "OK" )                  end
 
-  query = "LIST NODES"
-  listNodes = executeSQL( projectID, query )
+  listNodes = executeSQL( projectID,  "LIST NODES" )
   if (listNodes.NumberOfColumns == 8) then  
     -- find the match value of the leader
       match_leader = 0
@@ -110,9 +109,9 @@ else
       nodes.Rows[ i ].match_leader = match_leader
 
       if row > 0 then
-        nodes.Rows[ i ].status = listNodes.Rows[ row ].status 
-        nodes.Rows[ i ].progress = listNodes.Rows[ row ].progress 
-        nodes.Rows[ i ].match = listNodes.Rows[ row ].match
+        nodes.Rows[ i ].status        = listNodes.Rows[ row ].status 
+        nodes.Rows[ i ].progress      = listNodes.Rows[ row ].progress 
+        nodes.Rows[ i ].match         = listNodes.Rows[ row ].match
         nodes.Rows[ i ].last_activity = listNodes.Rows[ row ].last_activity 
       end
     end  

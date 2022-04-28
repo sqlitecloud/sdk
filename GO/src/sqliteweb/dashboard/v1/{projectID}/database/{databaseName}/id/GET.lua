@@ -26,13 +26,8 @@ local userID,    err, msg = checkUserID( userid )                        if err 
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                                    end
 local databaseName,  err, msg = checkParameter( databaseName, 1 )        if err ~= 0 then return error( err, string.format( msg, "databaseName" ) )  end
 
-query       = string.format( "SWITCH DATABASE '%s'; GET DATABASE ID;", enquoteSQL( databaseName ) )
-id          = nil
-
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
-
-  id = executeSQL( projectID, query )
 else
   check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND User.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
@@ -42,10 +37,9 @@ else
   if check_access.NumberOfColumns   ~= 1  then return error( 502, "Bad Gateway" )         end 
   if check_access.NumberOfRows      ~= 1  then return error( 502, "Bad Gateway" )         end
   if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
-
-  id = executeSQL( projectID, query )
 end
 
+id = executeSQL( projectID, string.format( "SWITCH DATABASE '%s'; GET DATABASE ID;", enquoteSQL( databaseName ) ) )
 if not id                                 then return error( 404, "ProjectID not found" ) end
 if id.ErrorNumber                   ~= 0  then return error( 502, "Bad Gateway" )         end
 if id.NumberOfColumns               ~= 0  then return error( 502, "Bad Gateway" )         end
