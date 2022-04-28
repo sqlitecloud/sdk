@@ -35,7 +35,7 @@ Response = {
   status            = 200,                       -- status code: 0 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
 
-  settings          = nil,                        -- Array with key value pairs
+  settings          = {},                        -- Array with key value pairs
 }
 
 if userID == 0 then
@@ -62,6 +62,8 @@ else
   Response.settings = settings.Rows
 
 end
+
+if #Response.settings == 0 then Response.settings = nil end
 
 SetStatus( 200 )
 Write( jsonEncode( Response ) )

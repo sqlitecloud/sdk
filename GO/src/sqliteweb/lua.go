@@ -353,7 +353,7 @@ func lua_executeSQL( L *lua.State ) int {
         }
         L.SetTable( -3 )
 
-res.DumpToWriter( out, sqlitecloud.OUTFORMAT_LIST, false, "|", "NULL", "\r\n", 0, false )
+//res.DumpToWriter( out, sqlitecloud.OUTFORMAT_LIST, false, "|", "NULL", "\r\n", 0, false )
         return 1
   	} }
 

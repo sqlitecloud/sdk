@@ -63,50 +63,5 @@ end
 
 if #Response.node.stats == 0 then Response.node.stats = nil end
 
-  -- cpu       = { used    = 0, total  = 0 }
-  -- ram       = { used    = 0, total  = 0 }
-  -- client    = { current = 0, max    = 0 }
-  -- io        = { reads   = 0, writes = 0 }
-  -- bytes     = { reads   = 0, writes = 0 }
-  -- commands  = 0
--- 
--- 
-  -- for i = 1, stats.NumberOfRows do
-  --   if stats.Rows[ i ].key == "CPU_USAGE_SYS"   then cpu.used  = stats.Rows[ i ].value            end
-  --   if stats.Rows[ i ].key == "CPU_USAGE_USER"  then cpu.total = stats.Rows[ i ].value + cpu.used end
--- 
-  --   if stats.Rows[ i ].key == "CURRENT_MEMORY"  then ram.used  = stats.Rows[ i ].value            end
-  --   if stats.Rows[ i ].key == "MAX_MEMORY"      then ram.total = stats.Rows[ i ].value            end
--- 
-  --   if stats.Rows[ i ].key == "CURRENT_CLIENTS" then client.current = stats.Rows[ i ].value       end
-  --   if stats.Rows[ i ].key == "MAX_CLIENTS"     then client.max = stats.Rows[ i ].value           end
--- 
-  --   if stats.Rows[ i ].key == "NUM_COMMANDS"    then commands = stats.Rows[ i ].value             end
--- 
-  --   if stats.Rows[ i ].key == "NUM_READS"       then io.reads = stats.Rows[ i ].value             end
-  --   if stats.Rows[ i ].key == "NUM_WRITES"      then io.writes = stats.Rows[ i ].value            end
--- 
-  --   if stats.Rows[ i ].key == "BYTES_IN"        then bytes.reads = stats.Rows[ i ].value          end
--- 
-  --   if stats.Rows[ i ].key == "BYTES_OUT"       then 
-  --     bytes.writes = stats.Rows[ i ].value
--- 
-  --     Response.node.cpu[ #Response.node.cpu + 1 ]           = cpu
-  --     Response.node.ram[ #Response.node.ram + 1 ]           = ram
-  --     Response.node.clients[ #Response.node.clients + 1 ]   = client
-  --     Response.node.commands[ #Response.node.commands + 1 ] = commands
-  --     Response.node.ios[ #Response.node.ios + 1 ]           = io
-  --     Response.node.bytes[ #Response.node.bytes + 1 ]       = bytes
--- 
-  --     cpu       = { used    = 0, total  = 0 }
-  --     ram       = { used    = 0, total  = 0 }
-  --     client    = { current = 0, max    = 0 }
-  --     io        = { reads   = 0, writes = 0 }
-  --     bytes     = { reads   = 0, writes = 0 }
-  --     commands  = 0
--- 
-  --   end
-  -- end
-
 SetStatus( 200 )
 Write( jsonEncode( Response ) )

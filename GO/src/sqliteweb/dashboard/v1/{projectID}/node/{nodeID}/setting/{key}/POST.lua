@@ -31,22 +31,21 @@ local key,       err, msg = checkParameter( key, 3 )                     if err 
 local value,     err, msg = getBodyValue( "value", 0 )                   if err ~= 0 then return error( err, msg )                          end
 
 query  = string.format( "INSERT OR REPLACE INTO NODE_SETTINGS ( node_id, key, value ) SELECT NODE.id, '%s', '%s' FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON NODE.project_uuid = PROJECT.uuid WHERE USER.enabled = 1 AND USER_id = %d AND NODE.id = %d;", enquoteSQL( key ), enquoteSQL( value ), userID, nodeID )
-result = nil
 
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
 else
 
-  local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
-  local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                     end
+  local projectID, err, msg = verifyProjectID( userID, projectID )      if err ~= 0  then return error( err, msg )                          end
+  local machineNodeID, err, msg = verifyNodeID( userID, projectID, nodeID ) if err ~= 0 then return error( err, msg )                       end
 
   result = executeSQL( "auth", query )
 
-  if not result                             then return error( 404, "ProjectID not found" ) end
-  if result.ErrorNumber       ~= 0          then return error( 502, result.ErrorMessage )   end
-  if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end
-  if result.NumberOfRows      ~= 0          then return error( 502, "Bad Gateway" )         end
-  if result.Value             ~= "OK"       then return error( 502, result.Value )          end
-end
+  if not result                                                                     then return error( 404, "ProjectID not found" )         end
+  if result.ErrorNumber       ~= 0                                                  then return error( 502, result.ErrorMessage )           end
+  if result.NumberOfColumns   ~= 0                                                  then return error( 502, "Bad Gateway" )                 end
+  if result.NumberOfRows      ~= 0                                                  then return error( 502, "Bad Gateway" )                 end
+  if result.Value             ~= "OK"                                               then return error( 502, result.Value )                  end
+end                                       
 
 error( 200, "OK" )
