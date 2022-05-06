@@ -20,12 +20,13 @@
 package main
 
 import (
-  "errors"
-  "sqlitecloud"
-  "strings"
-  "sync"
-  "time"
-  "fmt"
+	"errors"
+	"fmt"
+	"log"
+	"sqlitecloud"
+	"strings"
+	"sync"
+	"time"
 )
 
 type Connection struct {
@@ -33,6 +34,23 @@ type Connection struct {
   locked      bool
   uses        uint
   connection  *sqlitecloud.SQCloud
+}
+
+func (c Connection) String() string {
+  return fmt.Sprintf("{%p %v '%s' %s:%d %d}", c.connection, c.locked, c.node, c.connection.Host, c.connection.Port, c.uses)
+}
+
+func printPool(m map[string][]*Connection) {
+  var maxLenKey int
+  for k, _ := range m {
+      if len(k) > maxLenKey {
+          maxLenKey = len(k)
+      }
+  }
+
+  for k, v := range m {
+      fmt.Printf("    " + k + ": " + strings.Repeat(" ", maxLenKey - len(k)) + "%v\n", v)
+  }
 }
 
 type ConnectionManager struct {
@@ -258,10 +276,6 @@ func ( this *ConnectionManager ) getFirstUnlockedConnectionAndLockIt( node strin
     connection        = connections[ 0 ]
     connection.locked = true
   }
-
-	if connection != nil {
-		fmt.Printf( "Using connection: '%s'\r\n", connection.node )
-	}
 	
   this.poolMutex.Unlock()
   return connection
@@ -288,15 +302,33 @@ func ( this *ConnectionManager ) moveConnectionToEnd( node string, connection *C
   return nil
 }
 
+func ( this *ConnectionManager ) GetPoolLen( node string ) ( length int ) {
+  length = 0
+  switch connections, found := this.pool[ node ]; {
+    case !found     : break
+    default         : length = len( connections )
+  }
+
+  return length
+}
+
 // Retry!!!!
 func ( this *ConnectionManager ) GetConnection( node string ) ( connection *Connection, err error ) {
   if connection = this.getFirstUnlockedConnectionAndLockIt( node ); connection != nil {
-    err = this.moveConnectionToEnd( node, connection )
+    err = this.moveConnectionToEnd( node, connection )  
+    log.Printf("[%s] got connection %v, pool len %d", node, connection, this.GetPoolLen(node))  
   } else {
     connection, err = this.createAndAppendNewLockedConnection( node )
+    log.Printf("[%s] new connection %v, pool len %d", node, connection, this.GetPoolLen(node))  
   }
+
+  // log.Printf("[%s] Using connection %v\n", node, connection)
+  // log.Print("pool:")
+  // printPool(this.pool)
+
   return connection, err
 }
+
 func ( this *ConnectionManager ) ReleaseConnection( node string, connection *Connection ) ( err error ) {
   err = nil
 
@@ -311,7 +343,6 @@ func ( this *ConnectionManager ) ReleaseConnection( node string, connection *Con
   }
   return err
 }
-
 
 func ( this *ConnectionManager ) ExecuteSQL( node string, query string ) ( *sqlitecloud.Result, error ) {
   var connection *Connection  = nil
@@ -330,6 +361,8 @@ func ( this *ConnectionManager ) ExecuteSQL( node string, query string ) ( *sqli
     default                           :
 
       connection.uses++
+
+      start := time.Now()
       if res, err = connection.connection.Select( query ); res == nil && err == nil {
         continue
       } else if connection.connection.ErrorCode >= 100000 {
@@ -342,6 +375,8 @@ func ( this *ConnectionManager ) ExecuteSQL( node string, query string ) ( *sqli
         continue
       } else {
         this.ReleaseConnection( node, connection )
+        t := time.Since( start )
+        log.Printf("[%s] query time:%s \"%s\"", node, t, query)
         return res, err
       }
     }

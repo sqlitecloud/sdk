@@ -19,18 +19,23 @@ package main
 
 //import "os"
 //import "io"
-import "fmt"
-import "time"
-import "context"
-import "errors"
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"os"
+	"time"
+
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
+	"github.com/kardianos/service"
+)
+
 //import "strings"
 //import "strconv"
 //import "sqlitecloud"
 
-import "github.com/kardianos/service"
-
-import "net/http"
-import "github.com/gorilla/mux"
 // import "github.com/gorilla/websocket"
 
 type Server struct{
@@ -83,11 +88,17 @@ func init() {
   initializeSQLiteWeb()
 }
 
+func Logging(handler http.Handler) http.Handler {
+  return handlers.CombinedLoggingHandler(os.Stdout, handler)
+}
+
 func ( this *Server ) Start( s service.Service ) error {
   if this.router == nil {
     this.router = mux.NewRouter()
   }
   if this.router == nil { return errors.New( "XXX" ) }
+
+  this.router.Use(Logging)
 
   this.server = &http.Server{
     Addr:         fmt.Sprintf( "%s:%d", this.Address, this.Port ),

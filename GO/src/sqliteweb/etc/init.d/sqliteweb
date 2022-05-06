@@ -23,7 +23,7 @@ case "$mode" in
 	'start')
 		# Start daemon
 		echo "Starting SQLiteWeb"
-		/opt/sqliteweb/sbin/sqliteweb_linux --config /opt/sqliteweb/etc/sqliteweb/sqliteweb.ini > /dev/null 2>&1 &
+		/opt/sqliteweb/sbin/sqliteweb_linux --config /opt/sqliteweb/etc/sqliteweb/sqliteweb.ini > /var/log/sqliteweb.log 2>&1 &
     ;;
 
  	'stop')
@@ -36,7 +36,7 @@ case "$mode" in
 		# Restart daemon
 		echo "Restarting SQLiteWeb"
 		killall sqliteweb_linux
-		/opt/sqliteweb/sbin/sqliteweb_linux --config /opt/sqliteweb/etc/sqliteweb/sqliteweb.ini > /dev/null 2>&1 &
+		/opt/sqliteweb/sbin/sqliteweb_linux --config /opt/sqliteweb/etc/sqliteweb/sqliteweb.ini > /var/log/sqliteweb.log 2>&1 &
 		;;
 		
 	*)
