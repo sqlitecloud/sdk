@@ -270,7 +270,7 @@ func ( this *ConnectionManager ) moveConnectionToEnd( node string, connection *C
   err = nil
   this.poolMutex.Lock()
 
-  if connection == nil {
+  if connection != nil {
     MOVE:
     switch connections, found := this.pool[ node ]; {
     case !found                   : err = errors.New( "Connection not found" )
