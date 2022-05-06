@@ -59,7 +59,7 @@ gorilla:
 ifeq ($(wildcard src/github.com/gorilla),)
 	go get github.com/gorilla/websocket
 	go get -u github.com/gorilla/mux
-    go get -u github.com/gorilla/handlers
+	go get -u github.com/gorilla/handlers
 endif
 
 # ini
