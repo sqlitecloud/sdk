@@ -157,8 +157,9 @@ The SQLiteWeb Server is configured with a config file, normally located under: `
   hostname    = web1.sqlitecloud.io
   cert_chain  = /opt/sqliteweb/etc/sqliteweb/certs/chain.pem
   cert_key    = /opt/sqliteweb/etc/sqliteweb/certs/privkey.pem
+  
   logfile     = /var/log/sqliteweb.log
-
+  clflogfile  = /var/log/sqliteweb-clf.log
 
 [auth]
   jwt_key     = "my_secret_iwt_key"

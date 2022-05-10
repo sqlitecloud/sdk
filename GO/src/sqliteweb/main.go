@@ -39,16 +39,21 @@ GOOS=linux go build -o sqliteweb  *.go
 
 */
 
-import "os"
-//import "io"
-import "fmt"
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/docopt/docopt-go"
+	"github.com/kardianos/service"
+	"gopkg.in/ini.v1"
+) //import "io"
+
 //import "time"
 //import "errors"
-import "strings"
+
 //import "strconv"
-import "github.com/docopt/docopt-go"
-import "github.com/kardianos/service"
-import "gopkg.in/ini.v1"
+
 //import "github.com/gorilla/mux"
 //import "github.com/gorilla/websocket"
 
@@ -119,6 +124,10 @@ func main() {
       SQLiteWeb.CertPath        = cfg.Section( "server" ).Key( "cert_chain" ).String()
       SQLiteWeb.KeyPath         = cfg.Section( "server" ).Key( "cert_key" ).String()
 
+      SQLiteWeb.logLevel        = cfg.Section( "server" ).Key( "loglevel" ).String()
+      SQLiteWeb.logFile         = cfg.Section( "server" ).Key( "logfile" ).String()
+      SQLiteWeb.clfLogFile      = cfg.Section( "server" ).Key( "clflogfile" ).String()
+
       SQLiteWeb.WWWPath         = cfg.Section( "www" ).   Key( "path" ).String()
       SQLiteWeb.WWW404URL       = cfg.Section( "www" ).   Key( "404" ).MustString( "/" )
 
@@ -133,6 +142,7 @@ func main() {
       SQLiteWeb.Auth.password   = cfg.Section( "auth" ).  Key( "password" ).String()
       SQLiteWeb.Auth.cert       = cfg.Section( "auth" ).  Key( "cert" ).String()
 
+      initLogger()
       initDashboard()
 			initAdmin()
       initStubs()

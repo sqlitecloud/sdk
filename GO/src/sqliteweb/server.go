@@ -23,11 +23,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
-	"os"
 	"time"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/kardianos/service"
 )
@@ -46,15 +46,22 @@ type Server struct{
   CertPath      string
   KeyPath       string
 
+  Logger        *Logger
+  CLFWriter     io.Writer
+
   Auth          AuthServer
 
   WWWPath       string
   WWW404URL     string
   APIPath       string
 
-  server  *http.Server
-  router  *mux.Router
-  ticker  *time.Ticker
+  server        *http.Server
+  router        *mux.Router
+  ticker        *time.Ticker
+
+  logLevel      string
+  logFile       string
+  clfLogFile    string
 }
 
 var SQLiteWeb *Server = nil
@@ -69,6 +76,9 @@ func initializeSQLiteWeb() {
       CertPath:   "",
       KeyPath:    "",
 
+      Logger:     StdErrLogger,
+      CLFWriter:  ioutil.Discard,
+
       Auth:       AuthServer{
         JWTSecret:  []byte( "" ),
         JWTTTL:     0,
@@ -80,6 +90,9 @@ func initializeSQLiteWeb() {
       server:     nil,
       router:     mux.NewRouter(),
       ticker:     nil,
+
+      logFile:    "",
+      clfLogFile: "",
     }
   }
 }
@@ -88,17 +101,13 @@ func init() {
   initializeSQLiteWeb()
 }
 
-func Logging(handler http.Handler) http.Handler {
-  return handlers.CombinedLoggingHandler(os.Stdout, handler)
-}
-
 func ( this *Server ) Start( s service.Service ) error {
   if this.router == nil {
     this.router = mux.NewRouter()
   }
   if this.router == nil { return errors.New( "XXX" ) }
 
-  this.router.Use(Logging)
+  this.router.Use(CommonLogFormatMiddleware)
 
   this.server = &http.Server{
     Addr:         fmt.Sprintf( "%s:%d", this.Address, this.Port ),

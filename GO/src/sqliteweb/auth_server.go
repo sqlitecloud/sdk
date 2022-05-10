@@ -20,7 +20,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"sqlitecloud"
@@ -149,8 +148,6 @@ func (this *AuthServer) verifyClaims( claims *jwt.StandardClaims, reader *http.R
 
 func (this *AuthServer) JWTAuth( nextHandler http.HandlerFunc ) http.HandlerFunc {
   return func( writer http.ResponseWriter, reader *http.Request ) {
-    start := time.Now()
-
     switch token, err := SQLiteWeb.Auth.getAuthorization( reader.Header ); {
     case err   != nil                                   : fallthrough
     case token == ""                                    : this.challengeAuth( writer )
@@ -160,8 +157,6 @@ func (this *AuthServer) JWTAuth( nextHandler http.HandlerFunc ) http.HandlerFunc
       case this.verifyClaims( claims, reader ) != nil   : this.challengeAuth( writer )
       default                                           : nextHandler.ServeHTTP( writer, reader )
     } } 
-    t := time.Since( start )
-    log.Printf("request time:%s", t)
   }
 }
 

@@ -18,20 +18,23 @@
 package main
 
 import (
-  // "encoding/json"
-  // "fmt"
-  // "text/template" // html/template
-  // "io/ioutil"
-  // "net"
-  "net/http"
-  // "net/smtp"
-  //"time"
-  //"sqlitecloud"
-  "strings"
-  //"bytes"
+	// "encoding/json"
+	// "fmt"
+	// "text/template" // html/template
+	// "io/ioutil"
+	// "net"
 
-  //"github.com/Shopify/go-lua"
-  "github.com/gorilla/mux"
+	"net/http"
+	"time"
+
+	// "net/smtp"
+	//"time"
+	//"sqlitecloud"
+	"strings"
+	//"bytes"
+
+	//"github.com/Shopify/go-lua"
+	"github.com/gorilla/mux"
 )
 
 func init() {
@@ -48,6 +51,8 @@ func initDashboard() {
 
 
 func (this *Server) executeLuaDashboardServer( writer http.ResponseWriter, request *http.Request ) {
+  start := time.Now()
+
   this.Auth.cors( writer, request )
 
 	id, _    := SQLiteWeb.Auth.GetUserID( request )
@@ -58,4 +63,7 @@ func (this *Server) executeLuaDashboardServer( writer http.ResponseWriter, reque
   path     := cfg.Section( "dashboard" ).Key( "path" ).String()      // "/Users/pfeil/GitHub/SqliteCloud/sdk/GO/src/sqliteweb/dashboard"
   
 	this.executeLua( path, endpoint, id, writer, request )
+
+  t := time.Since( start )
+  SQLiteWeb.Logger.Debugf("Endpoint \"%s %s\" addr:%s user:%d exec_time:%s", request.Method, request.URL, request.RemoteAddr, id, t)
 }

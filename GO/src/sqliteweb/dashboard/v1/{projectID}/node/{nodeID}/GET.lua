@@ -122,7 +122,8 @@ else
 
   query = string.format( "GET LOAD DETAILED NODE %d;", machineNodeID ) -- server_load, num_clients, cpu_time, mem_current, mem_max
   load = executeSQL( projectID, query )
-  print("query:", query)
+  // print("query:", query)
+  
   Response.node.load = {
     load.Rows[ 2 ].ARRAY, -- num_clients
     load.Rows[ 1 ].ARRAY  -- server_load

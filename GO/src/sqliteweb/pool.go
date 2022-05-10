@@ -22,7 +22,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"sqlitecloud"
 	"strings"
 	"sync"
@@ -316,14 +315,18 @@ func ( this *ConnectionManager ) GetPoolLen( node string ) ( length int ) {
 func ( this *ConnectionManager ) GetConnection( node string ) ( connection *Connection, err error ) {
   if connection = this.getFirstUnlockedConnectionAndLockIt( node ); connection != nil {
     err = this.moveConnectionToEnd( node, connection )  
-    log.Printf("[%s] got connection %v, pool len %d", node, connection, this.GetPoolLen(node))  
+    SQLiteWeb.Logger.Debugf("(%s) Reusing connection %v, pool len %d", node, connection, this.GetPoolLen(node))  
   } else {
     connection, err = this.createAndAppendNewLockedConnection( node )
-    log.Printf("[%s] new connection %v, pool len %d", node, connection, this.GetPoolLen(node))  
+    if ( err != nil) {
+      SQLiteWeb.Logger.Errorf("(%s) Creating new connection %v, err:%s", node, connection, err)  
+    } else {
+      SQLiteWeb.Logger.Debugf("(%s) Creating new connection %v, pool_len:%d", node, connection, this.GetPoolLen(node))  
+    }
   }
 
-  // log.Printf("[%s] Using connection %v\n", node, connection)
-  // log.Print("pool:")
+  // SQLiteWeb.Logger.Debugf("[%s] Using connection %v\n", node, connection)
+  // SQLiteWeb.Logger.Debugf("pool:")
   // printPool(this.pool)
 
   return connection, err
@@ -376,7 +379,7 @@ func ( this *ConnectionManager ) ExecuteSQL( node string, query string ) ( *sqli
       } else {
         this.ReleaseConnection( node, connection )
         t := time.Since( start )
-        log.Printf("[%s] query time:%s \"%s\"", node, t, query)
+        SQLiteWeb.Logger.Debugf("(%s) ExecuteSQL query:\"%s\" time:%s", node, query, t)
         return res, err
       }
     }
