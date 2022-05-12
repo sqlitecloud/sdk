@@ -41,7 +41,7 @@ else
   query = "BEGIN TRANSACTION;"
   for i = 1, result.NumberOfRows do
     nodeID = result.Rows[ i ].nodeID
-    query  = string.format( "%s DELETE FROM NODE_SETTINGS WHERE node_id = %d; DELETE FROM NODE WHERE id = %d;", query, nodeID, nodeID )
+    query  = string.format( "%s DELETE FROM NodeSettings WHERE node_id = %d; DELETE FROM Node WHERE id = %d;", query, nodeID, nodeID )
   end  
   query = string.format( "%s END TRANSACTION;", query )
   

@@ -135,7 +135,7 @@ func ( this *ConnectionManager ) getServerList( node string ) ( []string, error 
   // search for uuid in auth database
   default:
     if node != "auth" {
-      query := fmt.Sprintf( "SELECT 'sqlitecloud://' || username || ':' || password || '@' || IIF( addr6, addr6, addr4 ) || IIF( port, ':' || port, '' ) AS Node FROM PROJECT JOIN NODE ON uuid == project_uuid WHERE uuid = '%s';", sqlitecloud.SQCloudEnquoteString( node ) );
+      query := fmt.Sprintf( "SELECT 'sqlitecloud://' || admin_username || ':' || admin_password || '@' || IIF( addr6, addr6, addr4 ) || IIF( port, ':' || port, '' ) AS Node FROM Project JOIN Node ON uuid == project_uuid WHERE uuid = '%s';", sqlitecloud.SQCloudEnquoteString( node ) );
 
       if result, err := this.ExecuteSQL( "auth", query ); result == nil {
         return []string{}, errors.New( "ERROR: Query returned no result (-1)" )

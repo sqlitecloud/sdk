@@ -43,7 +43,7 @@ function getBodyValue( value, minLength )
 
   if not body                                then return nil, 400, "Missing body"                                         end
   if string.len( body ) == 0                 then return nil, 400, "Empty body"                                           end
-
+  
   local jbody = jsonDecode( body )
   if not jbody                               then return nil, 400, "Invalid body"                                         end
 
@@ -108,7 +108,7 @@ function verifyLogin( username, password )
 end
 
 function verifyProjectID( userID, projectUUID ) 
-  local query  = string.format( "SELECT uuid FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id WHERE USER.enabled=1 AND USER.id=%d AND PROJECT.uuid = '%s';", userID, enquoteSQL( projectUUID ) )
+  local query  = string.format( "SELECT uuid FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled=1 AND User.id=%d AND Project.uuid = '%s';", userID, enquoteSQL( projectUUID ) )
   --print( query )
   local result = executeSQL( "auth", query )
 
@@ -121,7 +121,7 @@ function verifyProjectID( userID, projectUUID )
 end
 
 function verifyNodeID( userID, projectUUID, nodeID ) 
-  local query  = string.format( "SELECT NODE.id, NODE.node_id FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid WHERE USER.enabled = 1 AND USER.id=%d AND PROJECT.uuid = '%s' AND NODE.id = %d;", userID, enquoteSQL( projectUUID ), nodeID )
+  local query  = string.format( "SELECT NODE.id, NODE.node_id FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid WHERE User.enabled = 1 AND User.id=%d AND Project.uuid = '%s' AND Node.id = %d;", userID, enquoteSQL( projectUUID ), nodeID )
   --print( query )
   local result = executeSQL( "auth", query )
   
@@ -134,7 +134,7 @@ function verifyNodeID( userID, projectUUID, nodeID )
 end
 
 function getNodeSettingsID( userID, projectUUID, nodeID, key ) 
-  local query  = string.format( "SELECT NODE_SETTINGS.id FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON PROJECT.uuid = NODE.project_uuid JOIN NODE_SETTINGS ON NODE.id = NODE_SETTINGS.node_id WHERE USER.enabled = 1 AND USER.id=%d AND PROJECT.uuid = '%s' AND NODE.id = %d AND NODE_SETTINGS.key='%s';", userID, enquoteSQL( projectUUID ), nodeID, enquoteSQL( key ) )
+  local query  = string.format( "SELECT NodeSettings.id FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid JOIN NodeSettings ON Node.id = NodeSettings.node_id WHERE User.enabled = 1 AND User.id=%d AND Project.uuid = '%s' AND Node.id = %d AND NodeSettings.key='%s';", userID, enquoteSQL( projectUUID ), nodeID, enquoteSQL( key ) )
   --print( query )
   local result = executeSQL( "auth", query )
 

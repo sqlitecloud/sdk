@@ -28,14 +28,7 @@ local projectID, err, msg = checkProjectID( projectID ) if err ~= 0 then return 
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
 else
-  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id = user_id WHERE USER.enabled = 1 AND User.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
-  check_access = executeSQL( "auth", check_access )
-
-  if not check_access                     then return error( 504, "Gateway Timeout" )     end
-  if check_access.ErrorNumber       ~= 0  then return error( 502, "Bad Gateway" )         end
-  if check_access.NumberOfColumns   ~= 1  then return error( 502, "Bad Gateway" )         end 
-  if check_access.NumberOfRows      ~= 1  then return error( 502, "Bad Gateway" )         end
-  if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
+  local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg ) end  
 end
 
 databases = executeSQL( projectID, "LIST DATABASES DETAILED;" )

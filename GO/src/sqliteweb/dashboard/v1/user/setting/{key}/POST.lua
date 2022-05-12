@@ -31,7 +31,7 @@ if userID == 0 then
 else
   local projectID, err, msg = verifyUserID( userID )                     if err ~= 0 then return error( err, msg )                          end
 
-  result = executeSQL( "auth", string.format( "INSERT OR FAIL INTO USER_SETTINGS ( user_id, key, value ) VALUES ( %d, '%s', '%s' );", userID, enquoteSQL( key ), enquoteSQL( value ) ) )
+  result = executeSQL( "auth", string.format( "INSERT OR FAIL INTO UserSettings ( user_id, key, value ) VALUES ( %d, '%s', '%s' );", userID, enquoteSQL( key ), enquoteSQL( value ) ) )
   if not result                                                                      then return error( 504, "Gateway Timeout" )            end
   if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )          end
   if result.Value ~= "OK"                                                            then return error( 403, "Key Exists" )                 end

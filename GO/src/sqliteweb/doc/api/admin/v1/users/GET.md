@@ -35,10 +35,11 @@ none
 
 ```code
 {
-  company = "SQLiteCloud Inc.",                 
-  email   = "sqlitecloud@synergiezentrum.com",
-  id      = 1,
-  name    = "Andreas Pfeil"
+  company     = "SQLiteCloud Inc.",                 
+  email       = "sqlitecloud@synergiezentrum.com",
+  id          = 1,
+  first_name  = "Andreas",
+  last_name   = "Pfeil"
 }
 ```
 
@@ -72,21 +73,17 @@ Connection: close
   "users": [
     {
       "company": "SQLiteCloud Inc.",
-      "email": "sqlitecloud@synergiezentrum.com",
+      "email": "andrea@sqlitecloud.io",
       "id": 1,
-      "name": "Andreas Pfeil"
+      "first_name": "Andrea",
+      "last_name": "Donetti"
     },
     {
       "company": "SQLiteCloud Inc.",
-      "email": "admin@sqlitecloud.io",
+      "email": "marco@sqlitecloud.io",
       "id": 3,
-      "name": "Marco Bambini"
-    },
-    {
-      "company": "Mauro Iemboli",
-      "email": "mauro.iemboli1@gmail.com",
-      "id": 4,
-      "name": "Mauro Iemboli"
+      "first_name": "Marco",
+      "last_name": "Bambini"
     },
     {
       "company": "Synergie",

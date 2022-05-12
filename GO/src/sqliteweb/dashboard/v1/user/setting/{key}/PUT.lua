@@ -31,7 +31,7 @@ if userID == 0 then
 else
   local projectID, err, msg = verifyUserID( userID )                     if err ~= 0 then return error( err, msg )                          end
 
-  query  = string.format( "UPDATE USER_SETTINGS SET value = '%s' WHERE user_id = %d AND key = '%s'; SELECT changes() AS success;", enquoteSQL( value ), userID, enquoteSQL( key ) )
+  query  = string.format( "UPDATE UserSettings SET value = '%s' WHERE user_id = %d AND key = '%s'; SELECT changes() AS success;", enquoteSQL( value ), userID, enquoteSQL( key ) )
   result = executeSQL( "auth", query )
   if not result                                                                      then return error( 504, "Gateway Timeout" )            end
   if result.ErrorMessage ~= ""                                                       then return error( 502, result.ErrorMessage )          end

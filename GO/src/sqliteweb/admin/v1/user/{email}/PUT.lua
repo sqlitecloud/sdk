@@ -25,8 +25,9 @@ SetHeader( "Content-Encoding", "utf-8" )
 local email,    err, msg = checkParameter( email, 3 )                   if err ~= 0 then return error( err, string.format( msg, "email" ) )  end
 
 local newEmail, err, msg = getBodyValue( "email", 0 )                   if err ~= 0 then return error( err, msg )                            end
-local name,     err, msg = getBodyValue( "name", 2 )                    if err ~= 0 then return error( err, msg )                            end
-local company,  err, msg = getBodyValue( "company", 0 )                 if err ~= 0 then return error( err, msg )                            end
+local firstName,err, msg = getBodyValue( "first_name", 2 )              if err ~= 0 then return error( err, msg )                            end
+local lastName, err, msg = getBodyValue( "last_name", 2 )               if err ~= 0 then return error( err, msg )                            end
+-- local company,  err, msg = getBodyValue( "company", 0 )                 if err ~= 0 then return error( err, msg )                            end
 local password, err, msg = getBodyValue( "password", 5 )                if err ~= 0 then return error( err, msg )                            end
 local enabled,  err, msg = getBodyValue( "enabled", 1 )                 if err ~= 0 then return error( err, msg )                            end
 
@@ -35,7 +36,7 @@ if string.len( newEmail ) == 0    then newEmail = email end
 
 if bool( enabled )                then enabled = 1 else enabled = 0 end
 
-query  = string.format( "UPDATE USER SET name = '%s', company = '%s', email = '%s', password = '%s', enabled = %d WHERE email = '%s'; SELECT changes() AS success;", enquoteSQL( name ), enquoteSQL( company ), enquoteSQL( newEmail ), enquoteSQL( password ), enabled, enquoteSQL( email ) )
+query  = string.format( "UPDATE User SET last_name = '%s', first_name = '%s', email = '%s', password = '%s', enabled = %d WHERE email = '%s'; SELECT changes() AS success;", enquoteSQL( lastName ), enquoteSQL( firstName ), enquoteSQL( newEmail ), enquoteSQL( password ), enabled, enquoteSQL( email ) )
 result = executeSQL( "auth", query )
 if not result                                                                       then return error( 504, "Gateway Timeout" )              end
 if result.ErrorMessage      ~= ""                                                   then return error( 502, result.ErrorMessage )            end

@@ -10,8 +10,8 @@ curl -X "PUT" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6-
      -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTI5OTUsImp0aSI6IjEiLCJpYXQiOjE2NDc1MjI5OTUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyOTk1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.SaOn2-XJbf6_irYDvhTGEkDHNHJobiNeEO7CPQVHUi8' \
      -H 'Content-Type: application/json; charset=utf-8' \
      -d $'{
-  "username": "NodeLoginName",
-  "password": "NodeLoginPassword",
+  "admin_username": "NodeLoginName",
+  "admin_password": "NodeLoginPassword",
   "name": "ProjectName",
   "description": "ProjectDescription"
 }'
@@ -23,10 +23,10 @@ curl -X "PUT" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6-
 
 ```code
 {
-  name          = "ProjectName",              ; Name of Project
-  description   = "ProjectDescription",       ; Description for Project
-  username      = "NodeLoginName",            ; Internal name for loggin into the nodes
-  password      = "NodeLoginPassword",        ; Internal password for loggin into the nodes
+  name            = "ProjectName",              ; Name of Project
+  description     = "ProjectDescription",       ; Description for Project
+  admin_username  = "NodeLoginName",            ; Internal name for loggin into the nodes
+  admin_password  = "NodeLoginPassword",        ; Internal password for loggin into the nodes
 }
 ```
 
@@ -55,8 +55,8 @@ Content-Length: 115
 {
   "name": "ProjectName",
   "description": "ProjectDescription",
-  "username": "NodeLoginName",
-  "password": "NodeLoginPassword"
+  "admin_username": "NodeLoginName",
+  "admin_password": "NodeLoginPassword"
 }
 ```
 

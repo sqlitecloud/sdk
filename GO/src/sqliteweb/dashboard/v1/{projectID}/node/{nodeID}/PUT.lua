@@ -35,7 +35,7 @@ local size,      err, msg = getBodyValue( "size", 1 )                    if err 
 local address,   err, msg = getBodyValue( "address", 1 )                 if err ~= 0 then return error( err, msg )                          end -- 64.227.11.116
 local port,      err, msg = getBodyValue( "port", 1 )                    if err ~= 0 then return error( err, msg )                          end -- 9960
 
-query = string.format( "UPDATE NODE SET name='%s', type='%s', provider='%s', image='%s', region='%s', size='%s',", enquoteSQL( name ), enquoteSQL( type ), enquoteSQL( provider ), enquoteSQL( image ), enquoteSQL( region ), enquoteSQL( size ) )
+query = string.format( "UPDATE Node SET name='%s', type='%s', provider='%s', image='%s', region='%s', size='%s',", enquoteSQL( name ), enquoteSQL( type ), enquoteSQL( provider ), enquoteSQL( image ), enquoteSQL( region ), enquoteSQL( size ) )
 
 if contains( address, ":" ) then
   query = string.format( "%s addr6='%s',", query, enquoteSQL( address ) )

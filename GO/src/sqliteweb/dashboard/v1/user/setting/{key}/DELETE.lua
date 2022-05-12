@@ -31,7 +31,7 @@ if userID == 0 then
 else
   local projectID, err, msg = verifyUserID( userID )                     if err ~= 0 then return error( err, msg )                          end
 
-  result = executeSQL( "auth", string.format( "DELETE FROM USER_SETTINGS WHERE user_id = %d AND key = '%s'; SELECT changes() AS success;", userID, enquoteSQL( key ) ) )
+  result = executeSQL( "auth", string.format( "DELETE FROM UserSettings WHERE user_id = %d AND key = '%s'; SELECT changes() AS success;", userID, enquoteSQL( key ) ) )
   if not result                                                                      then return error( 504, "Gateway Timeout" )            end
   if result.ErrorMessage ~= ""                                                       then return error( 502, result.ErrorMessage )          end
   if result.ErrorNumber  ~= 0                                                        then return error( 502, "Bad Gateway" )                end

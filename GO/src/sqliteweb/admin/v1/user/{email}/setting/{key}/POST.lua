@@ -27,7 +27,7 @@ local key,       err, msg = checkParameter( key, 1 )                      if err
  
 local value,     err, msg = getBodyValue( "value", 0 )                    if err ~= 0 then return error( err, msg )                           end
 
-query  = string.format( "INSERT OR REPLACE INTO USER_SETTINGS ( user_id, key, value ) SELECT id, '%s', '%s' FROM USER WHERE email = '%s';", enquoteSQL( key ), enquoteSQL( value ), enquoteSQL( email ) )
+query  = string.format( "INSERT OR REPLACE INTO UserSettings ( user_id, key, value ) SELECT id, '%s', '%s' FROM User WHERE email = '%s';", enquoteSQL( key ), enquoteSQL( value ), enquoteSQL( email ) )
 print( query )
 
 result = executeSQL( "auth", query )

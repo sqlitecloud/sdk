@@ -18,10 +18,10 @@
 -- https://localhost:8443/admin/v1/user/{email}
 
 -- SELECT NODE.id FROM NODE JOIN PROJECT ON PROJECT.uuid = NODE.project_uuid JOIN USER ON USER.id = PROJECT.user_id WHERE USER.email='my.address@domain.com'
--- DELETE FROM NODE_SETTINGS WHERE node_id = id
+-- DELETE FROM NodeSettings WHERE node_id = id
 
 -- SELECT id FROM USER WHERE email =
--- DELETE FROM USER_SETTINGS WHERE user_id = id
+-- DELETE FROM UserSettings WHERE user_id = id
 -- DELETE FROM PROJECT WHERE user_id = id
 -- DELETE FROM USER WHERE id = id 
 
@@ -55,14 +55,14 @@ if nodes.NumberOfRows > 0 then
   if nodes.NumberOfColumns ~= 1                                                      then return error( 502, "Bad Gateway" )                  end
 
   for i = 1, nodes.NumberOfRows do
-    transaction = string.format( "%s DELETE FROM NODE_SETTINGS WHERE node_id=%d;", transaction, nodes.Rows[ i ].id )
+    transaction = string.format( "%s DELETE FROM NodeSettings WHERE node_id=%d;", transaction, nodes.Rows[ i ].id )
   end
 end
 
-transaction = string.format( "%s DELETE FROM USER_SETTINGS WHERE user_id=%d;", transaction, userID )
-transaction = string.format( "%s DELETE FROM PROJECT WHERE user_id=%d;"      , transaction, userID )
-transaction = string.format( "%s DELETE FROM USER WHERE id=%d;"              , transaction, userID )
-transaction = string.format( "%s COMMIT TRANSACTION;"                        , transaction         )
+transaction = string.format( "%s DELETE FROM UserSettings WHERE user_id=%d;", transaction, userID )
+transaction = string.format( "%s DELETE FROM Project WHERE user_id=%d;"     , transaction, userID )
+transaction = string.format( "%s DELETE FROM User WHERE id=%d;"             , transaction, userID )
+transaction = string.format( "%s COMMIT TRANSACTION;"                       , transaction         )
 
 result = executeSQL( "auth", transaction )
 if not result                                                                        then return error( 504, "Gateway Timeout" )              end

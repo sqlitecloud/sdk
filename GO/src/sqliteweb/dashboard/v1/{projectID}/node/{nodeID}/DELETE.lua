@@ -40,7 +40,7 @@ else
   -- if not result                                                                      then return error( 502, result.ErrorMessage )     end
   -- if result.ErrorNumber ~= 0  
 
-  result = executeSQL( "auth", string.format( "BEGIN TRANSACTION; DELETE FROM NODE_SETTINGS WHERE node_id = %d; DELETE FROM NODE WHERE id = %d; END TRANSACTION;", nodeID, nodeID ) )
+  result = executeSQL( "auth", string.format( "BEGIN TRANSACTION; DELETE FROM NodeSettings WHERE node_id = %d; DELETE FROM Node WHERE id = %d; END TRANSACTION;", nodeID, nodeID ) )
   if not result                                                                      then return error( 504, "Gateway Timeout" )       end
   if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )     end
   if result.Value ~= "OK"                                                            then return error( 502, "Bad Gateway" )           end
