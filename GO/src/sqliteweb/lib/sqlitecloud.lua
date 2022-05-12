@@ -60,7 +60,8 @@ end
 
 function checkUserID( userid )               -- Is string and comes from JWT. Contents is a number.
   if not userid                              then return -1, 400, "Invalid UserID"              end
-  local uid = tonumber( userid )                                               
+  local uid = tonumber( userid )
+  if not uid                                 then return -1, 400, "Invalid UserID"              end                                                                              
   if string.format( "%d", uid ) ~= userid    then return -1, 400, "UserID is Not a Number"      end
   if uid < 0                                 then return -1, 400, "Invalid UserID"              end
                                              return uid, 0, nil 
@@ -75,7 +76,8 @@ end
 
 function checkNodeID( nodeid )                -- Is string but MUST contains a number
   if not nodeid                              then return -1, 400, "Invalid NodeID"              end
-  local nodeID = tonumber( nodeid )                                               
+  local nodeID = tonumber( nodeid ) 
+  if not nodeID                              then return -1, 400, "Invalid NodeID"              end                               
   if string.format( "%d", nodeID ) ~= nodeid then return -1, 400, "NodeID is Not a Number"      end
   if nodeID < 0                              then return -1, 400, "Invalid NodeID"              end
                                              return nodeID, 0, nil 
@@ -84,14 +86,14 @@ end
 ------
 
 function verifyUserID( userID )
-  local result = executeSQL( "auth", string.format( "SELECT enabled FROM USER WHERE id = %d;", userID ) )
+  local result = executeSQL( "auth", string.format( "SELECT User.enabled AND Company.enabled AS enabled, User.company_id FROM User JOIN Company ON User.company_id = Company.id WHERE User.id = %d;", userID ) )
 
-  if not result                     then return -1, 503, "Service Unavailable"  end
-  if result.ErrorNumber       ~= 0  then return -1, 502, "Bad Gateway"          end
-  if result.NumberOfColumns   ~= 1  then return -1, 502, "Bad Gateway"          end 
-  if result.NumberOfRows      ~= 1  then return -1, 404, "Not Found"            end
-  if result.Rows[ 1 ].enabled ~= 1  then return -1, 401, "Unauthorized"         end
-                                         return userID, 0, nil
+  if not result                     then return -1, -1, 503, "Service Unavailable"  end
+  if result.ErrorNumber       ~= 0  then return -1, -1, 502, "Bad Gateway"          end
+  if result.NumberOfColumns   ~= 2  then return -1, -1, 502, "Bad Gateway"          end 
+  if result.NumberOfRows      ~= 1  then return -1, -1, 404, "Not Found"            end
+  if result.Rows[ 1 ].enabled ~= 1  then return -1, -1, 401, "Unauthorized"         end
+                                         return userID, result.Rows[ 1 ].company_id, 0, nil
 end
 
 
@@ -108,7 +110,7 @@ function verifyLogin( username, password )
 end
 
 function verifyProjectID( userID, projectUUID ) 
-  local query  = string.format( "SELECT uuid FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled=1 AND User.id=%d AND Project.uuid = '%s';", userID, enquoteSQL( projectUUID ) )
+  local query  = string.format( "SELECT uuid FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled=1 AND Company.enabled = 1 AND User.id=%d AND Project.uuid = '%s';", userID, enquoteSQL( projectUUID ) )
   --print( query )
   local result = executeSQL( "auth", query )
 
