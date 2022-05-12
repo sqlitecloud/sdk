@@ -120,7 +120,7 @@ else
     end
   end
 
-  query = string.format( "GET LOAD DETAILED NODE %d;", machineNodeID ) -- server_load, num_clients, cpu_time, mem_current, mem_max
+  query = string.format( "GET INFO LOAD,NUM_CLIENTS,DISK_USAGE_PERC NODE %d;", machineNodeID ) -- server_load, num_clients, cpu_time, mem_current, mem_max
   load = executeSQL( projectID, query )
   -- print("query:", query)
 

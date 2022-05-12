@@ -29,7 +29,7 @@ if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false )                                then return error( 401, "Project Disabled" )           end
                                                                                           return error( 501, "Not Implemented" )
 else
-  local projectID, err, msg = verifyUserID( userID )                     if err ~= 0 then return error( err, msg )                          end
+  local uID, companyID, err, msg = verifyUserID( userID )                     if err ~= 0 then return error( err, msg )                          end
 
   query  = string.format( "UPDATE UserSettings SET value = '%s' WHERE user_id = %d AND key = '%s'; SELECT changes() AS success;", enquoteSQL( value ), userID, enquoteSQL( key ) )
   result = executeSQL( "auth", query )
