@@ -32,22 +32,12 @@ local enabled,    err, msg = getBodyValue( "enabled", 1 )               if err ~
 
 enabled = bool( enabled )
 
-query  = string.format( "SELECT id, enabled FROM Company WHERE name = '%s';", enquoteSQL( company ))
-result = executeSQL( "auth", query )
-if not result                                                                       then return error( 502, "Bad Gateway" )                  end
-if result.ErrorNumber       ~= 0                                                    then return error( 502, "Bad Gateway" )                  end
-if result.NumberOfColumns   ~= 2                                                    then return error( 502, "Bad Gateway" )                  end 
-if result.NumberOfRows > 0                                                          then                                            
-    if result.Rows[1].enabled ~= 1                                                  then return error( 403, "The company is disabled" )      end 
-    companyID = result.Rows[1].id 
-else 
-    query  = string.format( "INSERT INTO Company (name) VALUES( '%s'); SELECT last_insert_rowid() as id;", enquoteSQL( company ))
-    result = executeSQL( "auth", query )     
-    if not result                                                                   then return error( 504, "Gateway Timeout" )              end
-    if result.ErrorNumber     ~= 0                                                  then return error( 403, "Could not create company" )     end
-    if result.NumberOfRows    == 0                                                  then return error( 403, "Could not create company" )     end                
-    companyID = result.Rows[1].id
-end
+query  = string.format( "INSERT INTO Company (name) VALUES( '%s'); SELECT last_insert_rowid() as id;", enquoteSQL( company ))
+result = executeSQL( "auth", query )     
+if not result                                                                   then return error( 504, "Gateway Timeout" )              end
+if result.ErrorNumber     ~= 0                                                  then return error( 403, "Could not create company" )     end
+if result.NumberOfRows    == 0                                                  then return error( 403, "Could not create company" )     end                
+companyID = result.Rows[1].id
 
 query  = string.format( "INSERT OR FAIL INTO User (first_name,last_name,company_id,email,password,creation_date,enabled) VALUES( '%s','%s',%s,'%s','%s','%s',%s);", enquoteSQL( firstName ), enquoteSQL( lastName ), companyID, enquoteSQL( email ), enquoteSQL( password ), now, enabled )
 result = executeSQL( "auth", query )
