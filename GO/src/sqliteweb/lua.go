@@ -383,6 +383,7 @@ func lua_executeSQL( L *lua.State ) int {
 			L.NewTable() // row
 			L.SetTable( -3 )
 
+      SQLiteWeb.Logger.Errorf("Error in ExecuteSQL: %s", err)
 
 			return 1
 	} }
