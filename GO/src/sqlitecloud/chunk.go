@@ -301,7 +301,6 @@ func (this *SQCloud ) readNextRawChunk() ( *Chunk, error ) {
                                                     return &chunk, nil
             default:
               totalBytesRead += uint64( readCount )
-              time.Sleep( 100 * time.Millisecond ) // wait a moment for the buffers to fill up again...
             }
           }
         }
