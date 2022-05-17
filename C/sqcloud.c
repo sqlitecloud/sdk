@@ -2488,7 +2488,6 @@ bool SQCloudDownloadDatabase (SQCloudConnection *connection, const char *dbname,
         }
     }
     
-    
     return true;
 }
 
