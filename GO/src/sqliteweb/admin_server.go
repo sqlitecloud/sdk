@@ -21,6 +21,7 @@ import (
 	// "encoding/json"
 	"fmt"
 	"net"
+
 	// "text/template" // html/template
 	// "io/ioutil"
 	"net/http"
@@ -74,4 +75,5 @@ func (this *Server) executeLuaAdminServer( writer http.ResponseWriter, request *
 
   writer.Header().Set( "WWW-Authenticate", fmt.Sprintf( "Basic realm=\"%s\"", cfg.Section( "auth" ).Key( "realm" ).String() ) )
   writer.WriteHeader( http.StatusUnauthorized )
+  writer.Write( []byte( fmt.Sprintf( "{\"status\":%d,\"message\":\"%s\"}", http.StatusUnauthorized, "Invalid Credentials" ) ) )
 }

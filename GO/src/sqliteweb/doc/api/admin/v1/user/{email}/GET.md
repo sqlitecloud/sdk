@@ -35,11 +35,13 @@ none
 ```code
 {
   company         = "SQLiteCloud Inc.",
+  company_enabled = 1,
   created         = "2021-11-22 19:01:18",
   email           = "sqlitecloud@synergiezentrum.com",
   enabled         = 1,
   id              = 1,
-  name            = "Andreas Pfeil",
+  first_name      = "Andreas",
+  last_name       = "Pfeil",
   password        = "password",
   recoveryRequest = "2021-11-22 19:01:18"
 }
@@ -75,11 +77,13 @@ Connection: close
   "user": [
     {
       "company": "SQLiteCloud Inc.",
+      "company_enabled": 1,
       "created": "2021-11-22 19:01:18",
       "email": "sqlitecloud@synergiezentrum.com",
       "enabled": 1,
       "id": 1,
-      "name": "Andreas Pfeil",
+      "first_name": "Andreas",
+      "last_name": "Pfeil",
       "password": "password",
       "recoveryRequest": "2021-11-22 19:01:18"
     }

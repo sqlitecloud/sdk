@@ -29,8 +29,10 @@ local userID,       err, msg = checkUserID( userid )                     if err 
 
 local name,         err, msg = getBodyValue( "name", 1 )                 if err ~= 0 then return error( err, msg )                                end
 local description,  err, msg = getBodyValue( "description", 0 )          if err ~= 0 then return error( err, msg )                                end
-local username,     err, msg = getBodyValue( "username", 4 )             if err ~= 0 then return error( err, msg )                                end
-local password,     err, msg = getBodyValue( "password", 4 )             if err ~= 0 then return error( err, msg )                                end
+local adminUsername,     err, msg = getBodyValue( "admin_username", 4 )  if err ~= 0 then return error( err, msg )                                end
+local adminPassword,     err, msg = getBodyValue( "admin_password", 4 )  if err ~= 0 then return error( err, msg )                                end
+
+local uID, companyID, err, msg = verifyUserID( userID )                  if err ~= 0 then return error( err, msg )                                end
 
 Project = {
   id               = "00000000-0000-0000-0000-000000000000",  -- UUID of the project
@@ -53,7 +55,7 @@ else
     Project.name        = name
     Project.description = description
 
-    query = string.format( "INSERT INTO PROJECT VALUES( '%s', %d, '%s', '%s', '%s', '%s' ); SELECT changes() AS success;", enquoteSQL( Project.id ), userID, enquoteSQL( name ), enquoteSQL( description ), enquoteSQL( username ), enquoteSQL( password ) )
+    query = string.format( "INSERT INTO Project VALUES( '%s', %d, '%s', '%s', '%s', '%s' ); SELECT changes() AS success;", enquoteSQL( Project.id ), companyID, enquoteSQL( name ), enquoteSQL( description ), enquoteSQL( adminUsername ), enquoteSQL( adminPassword ) )
 
     result = executeSQL( "auth", query )
     if not result                     then goto continue end

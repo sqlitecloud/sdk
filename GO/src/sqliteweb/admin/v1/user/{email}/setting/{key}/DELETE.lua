@@ -34,7 +34,7 @@ if userID.NumberOfRows    ~= 1                                                  
 
 userID = userID.Rows[ 1 ].id        
 
-query  = string.format( "DELETE FROM USER_SETTINGS WHERE user_id = %d AND key = '%s';", userID, enquoteSQL( key ) )       
+query  = string.format( "DELETE FROM UserSettings WHERE user_id = %d AND key = '%s';", userID, enquoteSQL( key ) )       
 result = executeSQL( "auth", query )        
 
 if not result                                                                         then return error( 504, "Gateway Timeout" )               end

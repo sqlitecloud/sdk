@@ -38,7 +38,7 @@ if userID == 0 then
 
   ips = executeSQL( projectID, query )
 else
-  check_access = string.format( "SELECT COUNT( id ) AS granted FROM USER JOIN PROJECT ON USER.id=user_id WHERE USER.enabled=1 AND User.id=%d AND uuid='%s';", userID, enquoteSQL( projectID ) )
+  check_access = string.format( "SELECT COUNT( User.id ) AS granted FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled=1 AND Company.enabled AND User.id=%d AND uuid='%s';", userID, enquoteSQL( projectID ) )
   check_access = executeSQL( "auth", check_access )
 
   if not check_access                     then return error( 504, "Gateway Timeout" )     end

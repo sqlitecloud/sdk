@@ -27,8 +27,8 @@ local projectID,    err, msg = checkProjectID( projectID )               if err 
 
 local name,         err, msg = getBodyValue( "name", 1 )                 if err ~= 0 then return error( err, msg )                                end
 local description,  err, msg = getBodyValue( "description", 0 )          if err ~= 0 then return error( err, msg )                                end
-local username,     err, msg = getBodyValue( "username", 4 )             if err ~= 0 then return error( err, msg )                                end
-local password,     err, msg = getBodyValue( "password", 4 )             if err ~= 0 then return error( err, msg )                                end
+local adminUsername,     err, msg = getBodyValue( "admin_username", 4 )  if err ~= 0 then return error( err, msg )                                end
+local adminPassword,     err, msg = getBodyValue( "admin_password", 4 )  if err ~= 0 then return error( err, msg )                                end
 
 if userID == 0 then 
   if not getINIBoolean( projectID, "enabled", false )                                then return error( 401, "Project Disabled" )                 end
@@ -36,7 +36,7 @@ if userID == 0 then
 else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                                end
 
-  query = string.format( "UPDATE PROJECT SET name = '%s', description = '%s', username = '%s', password = '%s' WHERE uuid = '%s' AND user_id = %d; SELECT changes() AS success;", enquoteSQL( name ), enquoteSQL( description ), enquoteSQL( username ), enquoteSQL( password ), projectID, userID )
+  query = string.format( "UPDATE Project SET name = '%s', description = '%s', admin_username = '%s', admin_password = '%s' WHERE uuid = '%s' AND user_id = %d; SELECT changes() AS success;", enquoteSQL( name ), enquoteSQL( description ), enquoteSQL( adminUsername ), enquoteSQL( adminPassword ), projectID, userID )
   result = executeSQL( "auth", query )
 
   if not result                                                                      then return error( 504, "Gateway Timeout" )                  end

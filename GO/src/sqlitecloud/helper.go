@@ -1,26 +1,28 @@
 //
 //                    ////              SQLite Cloud
-//        ////////////  ///             
+//        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
 //     ///             ///  ///         Version     : 1.0.0
 //     //             ///   ///  ///    Date        : 2021/08/31
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
-//   ///             ///   ///  ///     
+//   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : GO Functions for parsing
 //   ////                ///  ///                     SQLite Cloud values and
 //     ////     //////////   ///                      enquoting strings.
-//        ////            ////          
-//          ////     /////              
+//        ////            ////
+//          ////     /////
 //             ///                      Copyright   : 2021 by SQLite Cloud Inc.
 //
 // -----------------------------------------------------------------------TAB=2
 
 package sqlitecloud
 
-import "fmt"
-import "strings"
-import "errors"
-import "strconv"
+import (
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 // Helper functions
 
@@ -29,6 +31,7 @@ import "strconv"
 // If the given string contains one or more spaces, the whole string is enquoted with '"'
 func SQCloudEnquoteString( Token string ) string {
   Token = strings.Replace( Token, "\"", "\"\"", -1 )
+  Token = strings.Replace( Token, "'", "''", -1 )
   if strings.Contains( Token, " " ) {
     return fmt.Sprintf( "\"%s\"", Token )
   }

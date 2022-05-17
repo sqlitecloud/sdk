@@ -37,7 +37,7 @@ if userID.NumberOfRows    ~= 1                                                  
 userID = userID.Rows[ 1 ].id
 
 
-query  = string.format( "UPDATE OR FAIL USER_SETTINGS SET value = '%s' WHERE user_id = %d AND key = '%s';", enquoteSQL( value ), userID, enquoteSQL( key ) )
+query  = string.format( "UPDATE OR FAIL UserSettings SET value = '%s' WHERE user_id = %d AND key = '%s';", enquoteSQL( value ), userID, enquoteSQL( key ) )
 result = executeSQL( "auth", query )
 
 if not result                                                                        then return error( 504, "Gateway Timeout" )              end

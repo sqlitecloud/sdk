@@ -12,7 +12,8 @@ curl -X "POST" "https://localhost:8443/admin/v1/user/sqlitecloud1@synergiezentru
   "password": "passw",
   "enabled": "true",
   "company": "Synergie",
-  "name": "Andreas Pfeil"
+  "first_name": "Andreas",
+  "last_name": "Pfeil"
 }'
 ```
 
@@ -22,7 +23,8 @@ curl -X "POST" "https://localhost:8443/admin/v1/user/sqlitecloud1@synergiezentru
 
 ```code
 {
-  name             = "customer name",             // mandatory, at least 2 chars
+  first_name       = "customer first name",       // mandatory, at least 2 chars
+  last_name        = "customer last name",        // mandatory, at least 2 chars
   company          = "Customer company name",     // can be empty
   password         = "new password",              // mandatory, at least 5 chars
   enabled          = 1                            // 0 = disabled, 1 = enabled
@@ -53,7 +55,8 @@ Content-Length: 81
 
 {
   "password": "passw",
-  "name": "Andreas Pfeil",
+  "first_name": "Andreas",
+  "last_name": "Pfeil",
   "enabled": "true",
   "company": "Synergie"
 }

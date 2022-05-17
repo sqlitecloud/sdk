@@ -30,7 +30,7 @@ local projectID, err, msg = checkProjectID( projectID )                  if err 
 local key,       err, msg = checkParameter( key, 3 )                     if err ~= 0 then return error( err, string.format( msg, "key" ) )  end
 local value,     err, msg = getBodyValue( "value", 0 )                   if err ~= 0 then return error( err, msg )                          end
 
-query  = string.format( "INSERT OR REPLACE INTO NODE_SETTINGS ( node_id, key, value ) SELECT NODE.id, '%s', '%s' FROM USER JOIN PROJECT ON USER.id = PROJECT.user_id JOIN NODE ON NODE.project_uuid = PROJECT.uuid WHERE USER.enabled = 1 AND USER_id = %d AND NODE.id = %d;", enquoteSQL( key ), enquoteSQL( value ), userID, nodeID )
+query  = string.format( "INSERT OR REPLACE INTO NodeSettings ( node_id, key, value ) SELECT Node.id, '%s', '%s' FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Node.project_uuid = Project.uuid WHERE User.enabled = 1 AND user_id = %d AND Node.id = %d;", enquoteSQL( key ), enquoteSQL( value ), userID, nodeID )
 
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
