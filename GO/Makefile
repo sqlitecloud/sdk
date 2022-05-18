@@ -132,7 +132,7 @@ bin/sqliteweb_osx: src/sqliteweb/*.go
 	go build -o bin/sqliteweb_osx src/sqliteweb/*.go
 	
 bin/sqliteweb_linux: src/sqliteweb/*.go
-	GOOS=linux go build -o bin/sqliteweb_linux src/sqliteweb/*.go
+	GOOS=linux GOARCH=amd64 go build -o bin/sqliteweb_linux src/sqliteweb/*.go
 	
 bin/sqliteweb_win: src/sqliteweb/*.go
 	GOOS=windows go build -o bin/sqliteweb_win src/sqliteweb/*.go
