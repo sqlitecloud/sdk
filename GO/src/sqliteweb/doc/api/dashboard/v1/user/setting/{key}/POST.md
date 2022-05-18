@@ -17,7 +17,7 @@ curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/user/setting/testk
 
 ### Request object
 
-```code
+```json
 {
   value           = "SomeValue",        ; Data as string
 }
@@ -27,7 +27,7 @@ curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/user/setting/testk
 
 #### root Response:
 
-```code
+```json
 {
   message         = "OK",
   status          = 200
@@ -36,7 +36,7 @@ curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/user/setting/testk
 
 ### Example Request:
 
-```
+```http
 POST /dashboard/v1/user/setting/testkey
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTI5OTUsImp0aSI6IjEiLCJpYXQiOjE2NDc1MjI5OTUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyOTk1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.SaOn2-XJbf6_irYDvhTGEkDHNHJobiNeEO7CPQVHUi8
 Content-Type: application/json; charset=utf-8
@@ -52,7 +52,7 @@ Content-Length: 21
 
 ### Example Response (user is in the auth database):
 
-```
+```http
 HTTP/1.1 200 OK
 Access-Control-Allow-Headers: Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization
 Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE

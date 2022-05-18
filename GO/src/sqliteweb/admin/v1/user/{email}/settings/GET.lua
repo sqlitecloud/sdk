@@ -36,7 +36,7 @@ if settings.NumberOfRows > 0                                                    
 Response = {
   status    = 200,
   message   = "OK",
-  settings  = settings,
+  value  = settings,
 }
 
 SetStatus( 200 )

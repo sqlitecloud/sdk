@@ -18,7 +18,7 @@ curl -X "PUT" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6-
 
 ### Request object
 
-```code
+```json
 {
   key               = "",             // optional: if encryption key is empty, the database will be decrypted, 
                                       // if there is a key present, the database will be encrypted with this key
@@ -29,7 +29,7 @@ curl -X "PUT" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6-
 
 #### root Response:
 
-```code
+```json
 {
   message         = "OK",
   status          = 200
@@ -38,7 +38,7 @@ curl -X "PUT" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6-
 
 ### Example Request:
 
-```
+```http
 PUT /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/database/xx/encryption HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc2MjA5NTcsImp0aSI6IjEiLCJpYXQiOjE2NDc1OTA5NTcsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTkwOTU3LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.erjwvn7RsILHA5cmcrCWdlaOvoyzvysutkab1CGyZGU
 Content-Type: application/json; charset=utf-8
@@ -54,7 +54,7 @@ Content-Length: 10
 
 ### Example Response (user is in the auth database):
 
-```
+```http
 HTTP/1.1 200 OK
 Access-Control-Allow-Headers: Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization
 Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE

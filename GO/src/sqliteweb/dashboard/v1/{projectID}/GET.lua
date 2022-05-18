@@ -25,7 +25,6 @@ local projectID, err, msg = checkProjectID( projectID )                   if err
 
 Project = {
   id               = "00000000-0000-0000-0000-000000000000",  -- UUID of the project
- 
   name             = "",                                      -- Project name
   description      = ""                                       -- Project description
 }
@@ -33,8 +32,7 @@ Project = {
 Response = {
   status           = 200,                                     -- status code: 200 = no error, error otherwise
   message          = "OK",                                    -- "OK" or error message
-
-  project          = nil                                      -- Array with project objects
+  value            = nil                                      -- Array with project objects
 }
 
 if userID == 0 then
@@ -51,7 +49,7 @@ else
   if project.ErrorMessage               ~= ""                                         then return error( 502, project.ErrorMessage )    end
   if project.ErrorNumber                ~= 0                                          then return error( 502, "Bad Gateway" )           end
   if project.NumberOfColumns            ~= 3                                          then return error( 502, "Bad Gateway" )           end
-  if project.NumberOfRows               == 1                                          then Response.project = project.Rows[ 1 ]         end
+  if project.NumberOfRows               == 1                                          then Response.value = project.Rows[ 1 ]           end
 end
 
 SetStatus( 200 )

@@ -30,13 +30,13 @@ Response = {
   status            = 200,                       -- status code: 0 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
 
-  node              = {
+  value             = {
     id              = nodeID,                    -- NodeID - It is not good to have a simple int number!!!!!!
     name            = "",                        -- Name of this node
     type            = "",                        -- Type fo this node, for example: Leader, Worker
     provider        = "",                        -- Provider of this node
     details         = "?/?/?",                   -- "SFO1/1GB/25GB disk
-    region          = "",                        -- Regin data for this node
+    region          = "",                        -- Region data for this node
     size            = "",                        -- Size info for this node
     address         = "",                        -- IPv[4,6] address or host name of this node
     port            = 0,                         -- Port this node is listening on
@@ -64,24 +64,24 @@ if userID == 0 then
       
       if nodeID == i - 1 then
 
-        Response.node.id          = i
-        Response.node.name        = string.format( "SQLiteCloud CORE Server node [%d]", i )
-        Response.node.type        = getINIString( projectID, "type",      "Worker"        )
-        Response.node.provider    = getINIString( projectID, "provider",  "On Premise"    )
-        Response.node.details     = getINIString( projectID, "image",     "?/?/?"         )
-        Response.node.region      = getINIString( projectID, "region",    "On Premise"    )
-        Response.node.size        = getINIString( projectID, "type",      "Unknown"       )
-        Response.node.address     = url.Host
-        Response.node.port        = url.Port
-        Response.node.latitude    = 44.931
-        Response.node.longitude   = 10.533
+        Response.value.id          = i
+        Response.value.name        = string.format( "SQLiteCloud CORE Server node [%d]", i )
+        Response.value.type        = getINIString( projectID, "type",      "Worker"        )
+        Response.value.provider    = getINIString( projectID, "provider",  "On Premise"    )
+        Response.value.details     = getINIString( projectID, "image",     "?/?/?"         )
+        Response.value.region      = getINIString( projectID, "region",    "On Premise"    )
+        Response.value.size        = getINIString( projectID, "type",      "Unknown"       )
+        Response.value.address     = url.Host
+        Response.value.port        = url.Port
+        Response.value.latitude    = 44.931
+        Response.value.longitude   = 10.533
 
-        Response.node.stats       = {}
+        Response.value.stats       = {}
 
         -- get special values from the node
-        Response.node.status      = "Unknown"
+        Response.value.status      = "Unknown"
         
-        Response.node.raft        = { 0, 0 }
+        Response.value.raft        = { 0, 0 }
 
         goto done
       end
@@ -102,21 +102,21 @@ else
   if nodes.NumberOfColumns          ~= 12 then return error( 502, "Bad Gateway" )                   end
   if nodes.NumberOfRows             ~= 1  then return error( 404, "ProjectID OR NodeID not found" ) end
 
-  Response.node             = nodes.Rows[ 1 ]  -- id, node_id, name, type, provider, image->details, region, size, address, port
+  Response.value             = nodes.Rows[ 1 ]  -- id, node_id, name, type, provider, image->details, region, size, address, port
 
-  Response.node.stats       = {}
+  Response.value.stats       = {}
 
-  Response.node.status      = "Unknown"
-  Response.node.raft        = { 0, 0 }
+  Response.value.status      = "Unknown"
+  Response.value.raft        = { 0, 0 }
 
   status = executeSQL( projectID, "LIST NODES;" )
 
   for i = 1, status.NumberOfRows do
-    if status.Rows[ i ].status == "Leader" then Response.node.raft[ 2 ] = status.Rows[ i ].match end
+    if status.Rows[ i ].status == "Leader" then Response.value.raft[ 2 ] = status.Rows[ i ].match end
     if i == machineNodeID then
-      Response.node.status    = status.Rows[ i ].progress
-      Response.node.raft[ 1 ] = status.Rows[ i ].match
-      Response.node.type      = status.Rows[ i ].status
+      Response.value.status    = status.Rows[ i ].progress
+      Response.value.raft[ 1 ] = status.Rows[ i ].match
+      Response.value.type      = status.Rows[ i ].status
     end
   end
 
@@ -124,7 +124,7 @@ else
   load = executeSQL( projectID, query )
   -- print("query:", query)
 
-  Response.node.load = {
+  Response.value.load = {
     load.Rows[ 2 ].ARRAY, -- num_clients
     load.Rows[ 1 ].ARRAY  -- server_load
   }
@@ -146,12 +146,12 @@ else
     if stats.Rows[ i ].key == "BYTES_IN"        then row.bytes.reads      = stats.Rows[ i ].value end
     if stats.Rows[ i ].key == "BYTES_OUT"       then row.bytes.writes     = stats.Rows[ i ].value
                                                      row.sampletime       = stats.Rows[ i ].datetime
-      Response.node.stats[ #Response.node.stats + 1 ] = row
+      Response.value.stats[ #Response.value.stats + 1 ] = row
       row = nil
     end
   end
 
-  if #Response.node.stats == 0 then Response.node.stats = nil end
+  if #Response.value.stats == 0 then Response.value.stats = nil end
 end
 
 ::done::

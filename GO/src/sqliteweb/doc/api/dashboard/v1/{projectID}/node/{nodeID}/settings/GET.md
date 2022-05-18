@@ -21,18 +21,18 @@ none
 
 #### root Response:
 
-```code
+```json
 {
   status            = 200,                       -- status code: 200 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
 
-  settings          = {},                        -- Array with Setting object (key value pairs)
+  value             = {},                        -- Array with Setting object (key value pairs)
 }
 ```
 
 #### Setting object (key/value pair):
 
-```code
+```json
 {
   key   = "",
   value = "",
@@ -41,7 +41,7 @@ none
 
 ### Example Request:
 
-```
+```http
 GET /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/node/1/settings HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMjcuMC4wLjEiLCJleHAiOjE2NDU1NzY5NDUsImp0aSI6IjAiLCJpYXQiOjE2NDU1NDY5NDUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ1NTQ2OTQ1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.Ru7lvh1tx72CWfsoL2-ZM2b1sB6bB59V6oSlN-gEs2E
 Host: localhost:8443
@@ -51,7 +51,7 @@ User-Agent: Paw/3.3.6 (Macintosh; OS X/10.14.6) GCDHTTPRequest
 
 ### Example Response :
 
-```
+```http
 HTTP/1.1 200 OK
 Access-Control-Allow-Headers: Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization
 Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE
@@ -63,7 +63,7 @@ Connection: close
 
 {
   "message": "OK",
-  "settings": [
+  "value": [
     {
       "key": "license",
       "value": "1234-5678-9098"

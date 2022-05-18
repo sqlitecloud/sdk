@@ -25,7 +25,7 @@ local nodeID,    err, msg = checkNodeID( nodeID )                        if err 
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                          end
 
 local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                          end
-local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                          end
+local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                   end
 
 sql         = string.format( "LIST CONNECTIONS NODE %d;", machineNodeID )
 connections = executeSQL( projectID, sql )
@@ -40,16 +40,15 @@ if connections.NumberOfRows > 0 then
                                      [ "address"         ] = "address", 
                                      [ "username"        ] = "username",
                                      [ "database"        ] = "database",
-                                     [ "connection_date" ] = "connectionDateTime",
-                                     [ "last_activity"   ] = "activityDateTime",
+                                     [ "connection_date" ] = "connection_date",
+                                     [ "last_activity"   ] = "last_activity",
                                    } )
 end
 
 Response = {
   status            = 200,           -- status code: 200 = no error, error otherwise
   message           = "OK",          -- "OK" or error message
-
-  connections       = fcon           -- Array with key value pairs
+  value             = fcon           -- Array with key value pairs
 }
 
 SetStatus( 200 )

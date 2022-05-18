@@ -29,8 +29,7 @@ local projectID,    err, msg = verifyProjectID( userID, projectID )         if e
 Response = {
   status            = 200,           -- status code: 200 = no error, error otherwise
   message           = "OK",          -- "OK" or error message
-
-  snapshots         = {}             -- Array with key value pairs
+  value             = {}             -- Array with key value pairs
 }
 
 snapshots = executeSQL( projectID, string.format( "LIST BACKUPS DATABASE '%s';", enquoteSQL( databaseName ) ) )
@@ -39,14 +38,14 @@ if snapshots.ErrorNumber     ~= 0                                               
 if snapshots.NumberOfColumns ~= 7                                                       then return error( 502, "Bad Gateway" )                end
 
 if #snapshots.Rows > 0 then
-  Response.snapshots = filter( snapshots.Rows, {
+  Response.value = filter( snapshots.Rows, {
     type    = "type",
     replica = "replica",
     size    = "size",
-    created = "timeStamp",
+    created = "time_stamp",
   } )
 else 
-  Response.snapshots = nil
+  Response.value = nil
 end
 
 SetStatus( 200 )

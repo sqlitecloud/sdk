@@ -29,23 +29,21 @@ local projectID, err, msg = checkProjectID( projectID )                  if err 
 Response = {
   status            = 200,                       -- status code: 0 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
-
-  node              = {
+  value             = {
     id              = nodeID,                    -- NodeID - It is not good to have a simple int number!!!!!! 
     stats           = {},
   },
 }
 
 local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
-local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                     end
+local machineNodeID, err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                 end
 
 query = string.format( "LIST STATS NODE %d;", machineNodeID )
 stats = executeSQL( projectID, query )
 
 for i = 1, stats.NumberOfRows do
-  if not row                                  then row = { memory = { current = 0, max = 0 }, cpu = { sys = 0, user = 0 }, clients = { current = 0, max = 0 }, commands = 0, io = { reads = 0, writes = 0 }, bytes = { reads = 0, writes = 0 }, sampletime = "0000-00-00 00:00:00" } end
-  if stats.Rows[ i ].key == "CPU_USAGE_SYS"   then row.cpu.user         = stats.Rows[ i ].value end
-  if stats.Rows[ i ].key == "CPU_USAGE_USER"  then row.cpu.sys          = stats.Rows[ i ].value end
+  if not row                                  then row = { memory = { current = 0, max = 0 }, cpu = 0, clients = { current = 0, max = 0 }, commands = 0, io = { reads = 0, writes = 0 }, bytes = { reads = 0, writes = 0 }, sampletime = "0000-00-00 00:00:00" } end
+  if stats.Rows[ i ].key == "CPU_LOAD"        then row.cpu              = stats.Rows[ i ].value end
   if stats.Rows[ i ].key == "CURRENT_MEMORY"  then row.memory.current   = stats.Rows[ i ].value end
   if stats.Rows[ i ].key == "MAX_MEMORY"      then row.memory.max       = stats.Rows[ i ].value end
   if stats.Rows[ i ].key == "CURRENT_CLIENTS" then row.clients.current  = stats.Rows[ i ].value end
@@ -56,12 +54,12 @@ for i = 1, stats.NumberOfRows do
   if stats.Rows[ i ].key == "BYTES_IN"        then row.bytes.reads      = stats.Rows[ i ].value end
   if stats.Rows[ i ].key == "BYTES_OUT"       then row.bytes.writes     = stats.Rows[ i ].value
                                                    row.sampletime       = stats.Rows[ i ].datetime
-    Response.node.stats[ #Response.node.stats + 1 ] = row
+    Response.value.stats[ #Response.value.stats + 1 ] = row
     row = nil
   end
 end
 
-if #Response.node.stats == 0 then Response.node.stats = nil end
+if #Response.value.stats == 0 then Response.value.stats = nil end
 
 SetStatus( 200 )
 Write( jsonEncode( Response ) )

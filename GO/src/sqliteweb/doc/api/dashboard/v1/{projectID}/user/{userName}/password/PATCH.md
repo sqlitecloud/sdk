@@ -18,7 +18,7 @@ curl -X "PATCH" "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-840
 
 ### Request object
 
-```code
+```json
 {
   password           = "<newPassword>",      -- mandatory: new username as string
 }
@@ -28,7 +28,7 @@ curl -X "PATCH" "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-840
 
 #### root Response:
 
-```code
+```json
 {
   message         = "OK",
   status          = 200
@@ -37,7 +37,7 @@ curl -X "PATCH" "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-840
 
 ### Example Request:
 
-```
+```http
 PATCH /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/user/admin/name HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMjcuMC4wLjEiLCJleHAiOjE2NTEwMjQ0MzIsImp0aSI6IjEiLCJpYXQiOjE2NTA5OTQ0MzIsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjUwOTk0NDMyLCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.1WLqJGTuPu-BEJJ3ExNFdIAaEv3iRc3bec4fVMZ9Jzk
 Content-Type: application/json; charset=utf-8
@@ -53,7 +53,7 @@ Content-Length: 18
 
 ### Example Response:
 
-```
+```http
 HTTP/1.1 200 OK
 Access-Control-Allow-Headers: Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization
 Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE

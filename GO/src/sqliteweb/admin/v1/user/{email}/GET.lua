@@ -36,7 +36,7 @@ if user.NumberOfRows > 0                                                        
 Response = {
   status  = 200,
   message = "OK",
-  user    = user
+  value    = user
 }
 
 SetStatus( 200 )

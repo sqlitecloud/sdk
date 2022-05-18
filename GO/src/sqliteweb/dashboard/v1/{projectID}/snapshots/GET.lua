@@ -41,8 +41,7 @@ if #dbs == 0 then dbs = nil end
 Response = {
   status            = 200,           -- status code: 200 = no error, error otherwise
   message           = "OK",          -- "OK" or error message
-
-  databases         = dbs            -- Array with key value pairs
+  value             = dbs            -- Array with key value pairs
 }
 
 SetStatus( 200 )

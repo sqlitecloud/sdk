@@ -21,24 +21,24 @@ none
 
 #### root Response:
 
-```code
+```json
 {
   status            = 200,                       ; status code: 200 = no error, error otherwise
   message           = "OK",                      ; "OK" or error message
 
-  stats             = [{}],                      ; Array with Time Sample Objects
+  value             = [{}],                      ; Array with Time Sample Objects
 }
 ```
 
 #### Time Sample object:
 
-```code
+```json
 {
   sampletime = "2022-04-28 07:35:12",           ; Date and Time of last activity
   bytes      = {},                              ; Byte Info Object
   clients    = {},                              ; Client Info Object
   commands   = 3,                               ; Number of commands executed
-  cpu        = {},                              ; CPU Info Object
+  cpu        = 0.543,                           ; CPU Load value
   io         = {},                              ; IO Info Object
   memory     = {}                               ; Memory Info Object  
 }
@@ -46,7 +46,7 @@ none
 
 #### Byte Info object:
 
-```code
+```json
 {
   read       = "123",                           ; Number of bytes read
   writes     = "3186"                           ; Number of bytes written
@@ -55,25 +55,16 @@ none
 
 #### Clients Info object:
 
-```code
+```json
 {
   current    = "4",                             ; Number of currently connected clients
   max        = "4"                              ; Maximum number of connected clients
 }
 ```
 
-#### CPU Info object:
-
-```code
-{
-  sys        = "148.619576",                    ; CPU usage for System (for Details ask Andrea)
-  user       = "71.133406"                      ; CPU usage for user (for Details ask Andrea)
-}
-```
-
 #### IO Info object:
 
-```code
+```json
 {
   read       = "123",                           ; Number of bytes read
   writes     = "3186"                           ; Number of bytes written
@@ -82,7 +73,7 @@ none
 
 #### Memory Info object:
 
-```code
+```json
 {
   current    = "2652944",                       ; Number of currently used bytes (for Details ask Andrea)
   max        = "2772472"                        ; Maximum number of bytes (for Details ask Andrea)
@@ -91,7 +82,7 @@ none
 
 ### Example Request:
 
-```
+```http
 GET /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/node/1/stat HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMjcuMC4wLjEiLCJleHAiOjE2NTExNjA3MDksImp0aSI6IjEiLCJpYXQiOjE2NTExMzA3MDksImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjUxMTMwNzA5LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.W7HGTl0uKcDLcdsM0wM6Jw-65Reu57WVRVIai9VAw1c
 Host: localhost:8443
@@ -101,7 +92,7 @@ User-Agent: Paw/3.3.6 (Macintosh; OS X/10.14.6) GCDHTTPRequest
 
 ### Example Response:
 
-```
+```http
 HTTP/1.1 200 OK
 Access-Control-Allow-Headers: Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization
 Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE
@@ -115,7 +106,7 @@ Transfer-Encoding: chunked
 {
 {
   "message": "OK",
-  "node": {
+  "value": {
     "id": 1,
     "stats": [
       {
@@ -128,10 +119,7 @@ Transfer-Encoding: chunked
           "max": "4"
         },
         "commands": "3",
-        "cpu": {
-          "sys": "148.619576",
-          "user": "71.133406"
-        },
+        "cpu": 0.5432,
         "io": {
           "reads": "0",
           "writes": "0"

@@ -34,8 +34,7 @@ Setting = {
 Response = {
   status            = 200,                       -- status code: 0 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
-
-  settings          = {},                        -- Array with key value pairs
+  value             = {},                        -- Array with key value pairs
 }
 
 if userID == 0 then
@@ -48,22 +47,22 @@ if userID == 0 then
 
 else
 
-  local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
+  local projectID, err, msg = verifyProjectID( userID, projectID )                if err ~= 0 then return error( err, msg )                     end
   local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                     end
 
-  query = string.format( "SELECT key, value FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid JOIN NodeSettings ON Node.id = node_id WHERE User.enabled = 1 AND User.id = %d AND Node.id = %d AND uuid='%s';", userID, nodeID, enquoteSQL( projectID ) )
+  query = string.format( "SELECT key, value FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid JOIN NodeSettings ON Node.id = NodeSettings.node_id WHERE User.enabled = 1 AND User.id = %d AND Node.id = %d AND uuid='%s';", userID, nodeID, enquoteSQL( projectID ) )
   settings = executeSQL( "auth", query )
 
   if not settings                          then return error( 404, "ProjectID OR NodeID not found" ) end
   if settings.ErrorNumber            ~= 0  then return error( 502, "Bad Gateway" )                   end
   if settings.NumberOfColumns        ~= 2  then return error( 502, "Bad Gateway" )                   end
-  if settings.NumberOfRows           ~= 1  then return error( 404, "ProjectID OR NodeID not found" ) end
+  -- if settings.NumberOfRows           ~= 1  then return error( 404, "ProjectID OR NodeID not found" ) end
 
-  Response.settings = settings.Rows
+  Response.value = settings.Rows
 
 end
 
-if #Response.settings == 0 then Response.settings = nil end
+if #Response.value == 0 then Response.value = nil end
 
 SetStatus( 200 )
 Write( jsonEncode( Response ) )

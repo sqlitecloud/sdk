@@ -24,7 +24,7 @@ none
 
 #### root Response:
 
-```code
+```json
 {
   status            = 200,                       ; status code: 200 = no error, error otherwise
   message           = "OK",                      ; "OK" or error message

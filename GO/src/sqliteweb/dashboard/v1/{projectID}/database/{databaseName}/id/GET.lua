@@ -48,8 +48,7 @@ if id.NumberOfRows                  ~= 0  then return error( 200, "OK" )        
 Response = {
   status            = 200,                       -- status code: 0 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
-
-  id                = id.Value,                  -- The database ID
+  value             = id.Value,                  -- The database ID
 }
 
 SetStatus( 200 )

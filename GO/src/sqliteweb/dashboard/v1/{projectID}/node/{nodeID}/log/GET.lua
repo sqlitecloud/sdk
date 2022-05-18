@@ -30,9 +30,10 @@ local projectID, err, msg = checkProjectID( projectID )                  if err 
 local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                          end
 local machineNodeID, err, msg = verifyNodeID( userID, projectID, nodeID )if err ~= 0 then return error( err, msg )                          end
 
+local isDefault = (not query.level) and (not query.type) and (not query.from) and (not query.to)
+
 if not query.level  then query.level = ""     end
 if not query.type   then query.type  = ""     end
-if not query.order  then query.order = "DESC" end
 
 local slevel = ""
 local stype  = ""
@@ -45,13 +46,10 @@ if string.len( query.type ) > 0 then
   stype = string.format( "TYPE %d", type )
 end
 
-if query.order ~= "DESC" and query.order ~= "ASC"                                    then return error( 400, "Order must be ASC or DESC" )   end
-local order = string.format( "ORDER %s", query.order )
+local order = "ORDER DESC"
 
-if query.rows then
-  local rows,    err, msg = checkNumber( query.rows, 1, 10000 )          if err ~= 0 then return error( err, string.format( msg, "level" ) ) end
-
-  sql = string.format( "LIST %d ROWS FROM LOG %s %s %s NODE %d", rows, slevel, stype, order, machineNodeID )
+if (isDefault) then
+  sql = string.format( "LIST 100 ROWS FROM LOG ORDER DESC NODE %d;", machineNodeID ) 
 else
   if not query.to     then query.to     = now    end
   if not query.from   then query.from   = now_1h end
@@ -81,8 +79,7 @@ end
 Response = {
   status            = 200,                       -- status code: 0 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
-
-  logs              = flog                       -- Array with key value pairs
+  value             = flog                       -- Array with key value pairs
 }
 
 SetStatus( 200 )

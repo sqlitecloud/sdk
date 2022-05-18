@@ -31,7 +31,7 @@ Node = {
   type          = "",                               -- Type fo this node, for example: Leader, Worker
   provider      = "",                               -- Provider of this node
   image         = "",                               -- Image data for this node
-  region        = "",                               -- Regin data for this node
+  region        = "",                               -- Region data for this node
   size          = "",                               -- Size info for this node
   address       = "",                               -- IPv[4,6] address or host name of this node
   port          = "",                               -- Port this node is listening on
@@ -39,7 +39,7 @@ Node = {
   longitude     = 10.533,
   node_id       = 0,                                -- id of the node inside de cluster
   status        = "",                               -- raft status of the node in the cluster (LIST NODES)
-  progress      = "",                               -- progress is in one of the three statethree state: probe, replicate, snapshot. (LIST NODES)
+  progress      = "",                               -- progress is in one of the three states: probe, replicate, snapshot. (LIST NODES)
   match         = 0,                                -- is the index of the highest known matched raft entry (LIST NODES)
   last_activity = "",                               -- date and time of the last contact with a follower. Leader has NULL. (LIST NODES)
 }
@@ -47,8 +47,7 @@ Node = {
 Response = {
   status           = 200,                           -- status code: 200 = no error, error otherwise
   message          = "OK",                          -- "OK" or error message
-
-  nodes            = {},                            -- Array with node objects
+  value            = {},                            -- Array with node objects
 }
 
 if userID == 0 then         
@@ -61,8 +60,8 @@ if userID == 0 then
       if url.Port == 0 then url.Port = 8860 end
 
       Node = {}
-      Node.id       = #Response.nodes -- TODO: This is not good
-      Node.name     = string.format( "SQLiteCloud CORE Server node [%d]", #Response.nodes )
+      Node.id       = #Response.value -- TODO: This is not good
+      Node.name     = string.format( "SQLiteCloud CORE Server node [%d]", #Response.value )
       Node.type     = getINIString( projectID, "type",      "Worker"     )
       Node.provider = getINIString( projectID, "provider",  "On Premise" )
       Node.image    = getINIString( projectID, "image",     "Unknown"    )
@@ -72,7 +71,7 @@ if userID == 0 then
       Node.address  = url.Host
       Node.port     = url.Port
   
-      Response.nodes[ #Response.nodes + 1 ] = Node
+      Response.value[ #Response.value + 1 ] = Node
     end
   end
 
@@ -117,11 +116,11 @@ else
     end  
   end
 
-  Response.nodes = nodes.Rows
+  Response.value = nodes.Rows
   
 end
 
-if #Response.nodes == 0 then Response.nodes = nil end
+if #Response.value == 0 then Response.value = nil end
 
 SetStatus( 200 )
 Write( jsonEncode( Response ) )

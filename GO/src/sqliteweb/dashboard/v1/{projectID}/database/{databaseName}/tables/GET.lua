@@ -25,8 +25,7 @@ SetHeader( "Content-Encoding", "utf-8" )
 Response = {
   status            = 200,                       -- status code: 200 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
-
-  tables            = nil,                       -- List of table info
+  value             = nil,                       -- List of table info
 }
 
 local userID,        err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                                   end
@@ -46,14 +45,13 @@ if tables.ErrorNumber                   ~= 0  then return error( 502, "Bad Gatew
 if tables.NumberOfColumns               ~= 6  then return error( 502, "Bad Gateway" )         end
 
 if tables.NumberOfRows                  > 0   then 
-  Response.tables = filter( tables.Rows, { [ "name"   ] = "name", 
+  Response.value = filter( tables.Rows,  { [ "name"   ] = "name", 
                                            [ "schema" ] = "schema", 
                                            [ "type"   ] = "type", 
                                            [ "ncol"   ] = "columns", 
                                            [ "strict" ] = "strict",
                                            [ "wr"     ] = "wr",  
                                            } )
-
 end
 
 SetStatus( 200 )

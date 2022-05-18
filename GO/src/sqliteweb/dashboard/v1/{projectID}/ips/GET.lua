@@ -64,8 +64,7 @@ IP = {
 Response = {
   status            = 200,                       -- status code: 200 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
-
-  ips               = ips.Rows,                  -- Array with allowded IP's for this role or user
+  value             = ips.Rows,                  -- Array with allowed IP's for this role or user
 }
 
 SetStatus( 200 )

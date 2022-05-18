@@ -64,8 +64,7 @@ Role = {
 Response = {
   status            = 200,                       -- status code: 0 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
-
-  roles             = froles,                    -- Array with roles
+  value             = froles,                    -- Array with roles
 }
 
 SetStatus( 200 )

@@ -22,7 +22,7 @@ none
 
 #### root Response:
 
-```code
+```json
 {
   status           = 200,                         ; status code: 200 = no error, error otherwise
   message          = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTIxNTEsImp0aSI6IjAiLCJpYXQiOjE2NDc1MjIxNTEsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyMTUxLCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.hMPSCUP0hLYAA2UTddQgMqCAzOYepE6nXAU-iBspWZs"
@@ -31,7 +31,7 @@ none
 
 ### Example Request:
 
-```
+```http
 GET /dashboard/v1/auth HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTI0MzEsImp0aSI6IjAiLCJpYXQiOjE2NDc1MjI0MzEsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyNDMxLCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.Tp4cCDfapafLeSqZ5q8Cfok-LQaGi7szi686Vp9Zqeg
 Content-Type: application/json; charset=utf-8
@@ -43,7 +43,7 @@ User-Agent: Paw/3.3.6 (Macintosh; OS X/10.14.6) GCDHTTPRequest
 
 ### Example Response (user is in the auth database):
 
-```
+```http
 HTTP/1.1 200 OK
 Access-Control-Allow-Headers: Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization
 Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE

@@ -61,7 +61,7 @@ if #fusers == 0 then fusers = nil end
 User = {
   user              = "admin",                    -- Username
   enabled           = 1,                          -- 1 = enabled, 0 = disabled
-  roles             = "ADMIN",                    -- Comma seperated list of roles
+  roles             = "ADMIN",                    -- Comma separated list of roles
   database          = "",                         -- Database
   table             = ""                          -- Table
 }
@@ -69,8 +69,7 @@ User = {
 Response = {
   status            = 200,                        -- status code: 0 = no error, error otherwise
   message           = "OK",                       -- "OK" or error message
- 
-  users             = fusers,                     -- Array with user info
+  value             = fusers,                     -- Array with user info
 }
 
 SetStatus( 200 )

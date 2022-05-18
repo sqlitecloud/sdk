@@ -20,7 +20,7 @@ curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/auth" \
 
 ### Request object
 
-```code
+```json
 {
   login           = "email@domain.name",        ; Email Adress of user
   password        = "secret",                   ; Secret Password for user
@@ -31,7 +31,7 @@ curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/auth" \
 
 #### root Response:
 
-```code
+```json
 {
   status           = 200,                       ; status code: 200 = no error, error otherwise
   message          = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTIxNTEsImp0aSI6IjAiLCJpYXQiOjE2NDc1MjIxNTEsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyMTUxLCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.hMPSCUP0hLYAA2UTddQgMqCAzOYepE6nXAU-iBspWZs"
@@ -40,7 +40,7 @@ curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/auth" \
 
 ### Example Request:
 
-```
+```http
 POST /dashboard/v1/auth HTTP/1.1
 Content-Type: application/json; charset=utf-8
 Host: web1.sqlitecloud.io:8443
@@ -56,7 +56,7 @@ Content-Length: 54
 
 ### Example Response (user is in the auth database):
 
-```
+```http
 HTTP/1.1 200 OK
 Access-Control-Allow-Headers: Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization
 Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE

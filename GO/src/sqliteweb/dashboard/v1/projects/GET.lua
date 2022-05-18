@@ -32,25 +32,24 @@ Project = {
 Response = {
   status           = 200,                                     -- status code: 200 = no error, error otherwise
   message          = "OK",                                    -- "OK" or error message
-
-  projects         = nil                                      -- Array with project objects
+  value            = nil                                      -- Array with project objects
 }
 
 if userID == 0 then                                           -- get list of projects in ini file
   projects = listINIProjects()
 
   if #projects > 0 then
-    Response.projects = {}
+    Response.value = {}
     
     for i = 1, #projects do  
       if getINIBoolean( projects[ i ], "enabled", false ) then
         Project = {}
         
         Project.id          = projects[ i ]
-        Project.name        = getINIString( Project.id, "name", string.format( "SQLiteCloud CORE Server node [%d]", 1 + #Response.projects ) ) -- Falsch!
+        Project.name        = getINIString( Project.id, "name", string.format( "SQLiteCloud CORE Server node [%d]", 1 + #Response.value ) ) -- Falsch!
         Project.description = getINIString( Project.id, "description", "unknown" )
 
-        Response.projects[ 1 + #Response.projects ] = Project
+        Response.value[ 1 + #Response.value ] = Project
       end
     end
   end
@@ -63,7 +62,7 @@ else
   if data.ErrorNumber                ~= 0  then return error( 502, "Bad Gateway" )                   end
   if data.NumberOfColumns            ~= 3  then return error( 502, "Bad Gateway" )                   end
 
-  if data.NumberOfRows                > 0  then Response.projects = data.Rows                        end
+  if data.NumberOfRows                > 0  then Response.value = data.Rows                        end
 end
 
 SetStatus( 200 )
