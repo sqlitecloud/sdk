@@ -24,7 +24,7 @@ INSERT INTO t1 (b) VALUES (randomblob(100000));
 --// start a query on each worker, it should work fine on some workers and should return error on others
 --loop i=1; i<=n; i=i+1;
     --task i
-        WITH RECURSIVE cnt(x) AS ( SELECT 1 UNION ALL SELECT x+1 FROM cnt LIMIT 10000000 ) SELECT x FROM cnt WHERE x=10000000; 
+        WITH RECURSIVE cnt(x) AS ( SELECT 1 UNION ALL SELECT x+1 FROM cnt LIMIT 1000000 ) SELECT x FROM cnt WHERE x=1000000; 
         SELECT sum(length(b)) FROM t1;
         --exit
     --end
@@ -45,6 +45,9 @@ DROP DATABASE {{.dbname}}
 --match type is ERROR 
 
 --wait all
+
+DROP DATABASE {{.dbname}}
+--match type is OK 
 
 LIST CONNECTIONS 
 -- --dump

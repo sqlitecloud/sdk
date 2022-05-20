@@ -688,9 +688,12 @@ func commandMatchRowsCols(w *worker, args []string, opts []bool, t *task) error 
 
 	w.stats.nchecks++
 
-	if !w.res.IsRowSet() && !w.res.IsArray() {
+	if w.res == nil || (!w.res.IsRowSet() && !w.res.IsArray()) {
 		// TODO: print the human-readable representation of the type
 		w.stats.nfailedchecks++
+		if w.res == nil {
+			return fmt.Errorf("expected RowSet or Array, got nil")
+		}
 		return fmt.Errorf("expected RowSet or Array, got %v", w.res.GetType())
 	}
 
@@ -1449,7 +1452,7 @@ func (w *worker) processTask(task *task) error {
 
 				// TODO: change the name of the function from Select to Execute
 				w.res, w.reserr = w.conn.Select(sql)
-				
+
 				if debug {
 					Debugf("w%d executed: %s", w.id, sql)
 					if w.res != nil {
