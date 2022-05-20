@@ -1,8 +1,4 @@
---// This test is designed to be executed with the main worker connected to the leader 
---// and the other workers to a follower, otherwise it would fail with the following error:
---// tester_test.go:1510: w0, task:dropfollower.test(l:40), expected: OK, got error Unable to drop database (null) because there are 20 clients connected.
-
---set dbname=tester_dropfollower.sqlite
+--set dbname=concurrent-use-database.sqlite
 --set n=10
 
 --// create a database 
@@ -16,8 +12,10 @@ INSERT INTO t1 (b) VALUES (randomblob(100000));
 
 --// create n workers connected to a follower node, each worker use the database 
 --loop i=1; i<=n; i=i+1;
-    --task i name read-on-follower sqlitecloud://admin:admin@localhost:8870
+    --task i name read-workers
         USE DATABASE {{.dbname}}
+        -- // must not fail, otherwise there is an concurrency issue 
+        --match type is OK
     --end
 --end
 
@@ -28,6 +26,7 @@ INSERT INTO t1 (b) VALUES (randomblob(100000));
     --task i
         WITH RECURSIVE cnt(x) AS ( SELECT 1 UNION ALL SELECT x+1 FROM cnt LIMIT 10000000 ) SELECT x FROM cnt WHERE x=10000000; 
         SELECT sum(length(b)) FROM t1;
+        --exit
     --end
 --end
 
@@ -37,38 +36,16 @@ INSERT INTO t1 (b) VALUES (randomblob(100000));
 --// are connected clients, the node must not crash and clients using that db must be disconnected.
 --// But first wait a while so workers can start the slow query.
 --sleep 1000
+LIST CONNECTIONS 
+--match type is ROWSET 
+
 UNUSE DATABASE 
 DROP DATABASE {{.dbname}}
---match type is OK
--- --dump 
+--// must fail because there are connections using the db
+--match type is ERROR 
 
 --wait all
 
---sleep 100
-
---// Each worker must be disconnected. Check it by executing a query
---loop i=1; i<=n; i=i+1;
-    --task i
-        SELECT length(b)+a FROM t1 LIMIT 1;
-        --match type is ERROR
-        --exit
-    --end
---end
-
---// The database must be dropped on the follower. Check it using a new connection
---set j=n+2
---task j name read-on-follower sqlitecloud://admin:admin@localhost:8870
-    LIST DATABASES
-    --match rows 0
-    USE DATABASE {{.dbname}}
-    --dump
-    --match type is ERROR
-    --exit
---end 
-
---wait all
-
---// execute a command on the follower node
-LIST CONNECTIONS NODE 2
+LIST CONNECTIONS 
 -- --dump
 --match rows 1

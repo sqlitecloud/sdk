@@ -40,6 +40,6 @@ LIST CONNECTIONS;
 -- --match cols 6
 LIST DATABASE CONNECTIONS {{.dbname}};
 -- --dump
---match rows 0
+--match type is null -- WAS --match rows 0
 DROP DATABASE {{.dbname}};
 --match type is ok
