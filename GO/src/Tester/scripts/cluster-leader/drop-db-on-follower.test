@@ -3,7 +3,7 @@
 --// tester_test.go:1510: w0, task:dropfollower.test(l:40), expected: OK, got error Unable to drop database (null) because there are 20 clients connected.
 
 --set dbname=tester_dropfollower.sqlite
---set n=10
+--set n=20
 
 --// create a database 
 CREATE DATABASE {{.dbname}} IF NOT EXISTS; USE DATABASE {{.dbname}};

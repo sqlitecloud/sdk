@@ -1,5 +1,5 @@
---set dbname=concurrent-use-database.sqlite
---set n=10
+--set dbname=concurrent-use-database-leader.sqlite
+--set n=20
 
 --// create a database 
 CREATE DATABASE {{.dbname}} IF NOT EXISTS; USE DATABASE {{.dbname}};
@@ -24,8 +24,8 @@ INSERT INTO t1 (b) VALUES (randomblob(100000));
 --// start a query on each worker, it should work fine on some workers and should return error on others
 --loop i=1; i<=n; i=i+1;
     --task i
-        WITH RECURSIVE cnt(x) AS ( SELECT 1 UNION ALL SELECT x+1 FROM cnt LIMIT 1000000 ) SELECT x FROM cnt WHERE x=1000000; 
         SELECT sum(length(b)) FROM t1;
+        --sleep 2000
         --exit
     --end
 --end

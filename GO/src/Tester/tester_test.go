@@ -1470,6 +1470,37 @@ func (w *worker) processTask(task *task) error {
 	return nil
 }
 
+func processDir(t *testing.T, path string, connstring string) {
+	// do directory stuff
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	for _, f := range files {
+		fpath := filepath.Join(path, f.Name())
+
+		fi, err := os.Stat(fpath)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		switch mode := fi.Mode(); {
+		case mode.IsDir():
+			processDir(t, fpath, connstring)
+
+		case mode.IsRegular():
+			if filepath.Ext(f.Name()) != ".test" {
+				continue
+			}
+
+			processFile(t, fpath, connstring)
+		}
+	}
+}
+
 func processFile(t *testing.T, path string, connstring string) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -1487,7 +1518,7 @@ func processFile(t *testing.T, path string, connstring string) {
 	taskenv := copyMap(env)
 	envMutex.RUnlock()
 
-	task := task{name: filepath.Base(file.Name()), line: 1, file: file, env: taskenv}
+	task := task{name: path, line: 1, file: file, env: taskenv} // filepath.Base(file.Name())
 	t.Run(task.name, func(t *testing.T) {
 		w, err := newWorker(0, connstring, t)
 		if err != nil {
@@ -1532,8 +1563,8 @@ func processFile(t *testing.T, path string, connstring string) {
 	Debugf("w0 stopping ...")
 	tryStopc(true)
 
-	// give time to workers loops to close
-	time.Sleep(time.Duration(100) * time.Millisecond)
+	// wait for workers loops to close
+	wg.Wait()
 	Debugf("w0 stopped")
 }
 
@@ -1565,7 +1596,7 @@ func init() {
 	initCommands()
 }
 
-var ppath = flag.String("path", "scripts", "File or Directory containing the test scripts")
+var ppath = flag.String("path", "scripts/general", "File or Directory containing the test scripts")
 var pconnstring = flag.String("connstring", "sqlitecloud://dev1.sqlitecloud.io/", "Connection string for the main worker")
 var pdebug = flag.Bool("debug", false, "Enable debug logs")
 var debug = false
@@ -1609,28 +1640,7 @@ func TestTester(t *testing.T) {
 	}
 	switch mode := fi.Mode(); {
 	case mode.IsDir():
-		// do directory stuff
-		files, err := ioutil.ReadDir(path)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		var dirpath string
-		if len(wd) > 0 {
-			dirpath = filepath.Join(wd, fi.Name())
-		} else {
-			dirpath = fi.Name()
-		}
-
-		for _, f := range files {
-			if filepath.Ext(f.Name()) != ".test" {
-				continue
-			}
-
-			path = filepath.Join(dirpath, f.Name())
-			processFile(t, path, connstring)
-		}
+		processDir(t, path, connstring)
 	case mode.IsRegular():
 		processFile(t, path, connstring)
 	}

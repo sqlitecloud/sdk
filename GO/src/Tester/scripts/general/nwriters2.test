@@ -36,3 +36,6 @@ UNUSE DATABASE;
 
 ----sleep 100
 LIST CONNECTIONS;
+
+DROP DATABASE {{.dbname}};
+--match type is ok

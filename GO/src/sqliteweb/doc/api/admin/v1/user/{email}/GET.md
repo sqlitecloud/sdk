@@ -6,9 +6,7 @@ Get all customer data
 
 ```sh
 curl "https://localhost:8443/admin/v1/user/sqlitecloud@synergiezentrum.com" \
-     -H 'Content-Type: application/json; charset=utf-8' \
-     -u 'admin:password' \
-     -d $'{}'
+     -u 'admin:password'
 ```
 
 ### **GET** - /admin/v1/user/{email}
@@ -26,7 +24,7 @@ none
 {
   status            = 200,                       -- status code: 200 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
-  value              = {},                       -- User objects
+  user              = {},                        -- User objects
 }
 ```
 
