@@ -191,3 +191,8 @@ clean:
 	rm -rf bin/tls-* bin/dump* bin/selc* 
 
 all: sdk cli test
+
+# Go Tester for sqlitecloud
+
+test_gotester_leader_run: install-prerequirements
+	go test src/Tester/tester_test.go -connstring=sqlitecloud://admin:admin@localhost:8860 -path=scripts -v

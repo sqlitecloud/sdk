@@ -454,6 +454,7 @@ PRAGMA integrity_check(10);
   PRAGMA integrity_check;
   --match value ok
   UNUSE DATABASE;
+  --exit
 --end
 --task 5
   SELECT t1.a FROM t1, t2 WHERE t2.b GLOB 'x3?y' AND t1.b=('x'||(t2.a+3)||'y') ORDER BY t1.a LIMIT 4
@@ -472,6 +473,7 @@ PRAGMA integrity_check(10);
   PRAGMA integrity_check;
   --match value ok
   UNUSE DATABASE;
+  --exit
 --end
 --task 3
   SELECT t1.a FROM t1, t2 WHERE t2.b GLOB 'x3?y' AND t1.b=('x'||(t2.a+3)||'y') ORDER BY t1.a LIMIT 4
@@ -490,6 +492,7 @@ PRAGMA integrity_check(10);
   PRAGMA integrity_check;
   --match value ok
   UNUSE DATABASE;
+  --exit
 --end
 --task 2
   SELECT t1.a FROM t1, t2 WHERE t2.b GLOB 'x3?y' AND t1.b=('x'||(t2.a+3)||'y') ORDER BY t1.a LIMIT 4
@@ -508,6 +511,7 @@ PRAGMA integrity_check(10);
   PRAGMA integrity_check;
   --match value ok
   UNUSE DATABASE;
+  --exit
 --end
 --task 4
   SELECT t1.a FROM t1, t2 WHERE t2.b GLOB 'x3?y' AND t1.b=('x'||(t2.a+3)||'y') ORDER BY t1.a LIMIT 4
@@ -526,6 +530,7 @@ PRAGMA integrity_check(10);
   PRAGMA integrity_check;
   --match value ok
   UNUSE DATABASE;
+  --exit
 --end
 --wait all
 
