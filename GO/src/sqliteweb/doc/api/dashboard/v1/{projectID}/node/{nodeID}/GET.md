@@ -33,70 +33,15 @@ none
     details         = "?/?/?",                   ; "SFO1/1GB/25GB disk or "i386/1/1MB/100MB",
     latidude        = float,
     longitude       = float,
-    load            = [ float, float ],          ; some load info (for Details ask Andrea)
-    id              = 1,                         ; NodeID - It is not good to have a simple int number!!!!!!
+    id              = 1,                         ; Unique node id 
     name            = "Dev1 Server",             ; Name of this node
-    node_id         = 1,
+    node_id         = 1,                         ; node_id of the machine in the cluster
     provider        = "DigitalOcean",            ; Provider of this node
-    raft            = [ int, int ],              ; array 8960, 8960 (for Details ask Andrea)
     region          = "Rome/Italy",              ; Regin data for this node
     size            = "small",                   ; Size info for this node
-    stats           = [{}],                      ; Array with Time Sample Objects
-    type            = "worker",                  ; Type fo this node, for example: Leader, Worker
-    status          = "Unknown",                 ; Replicating
   },
 }
 ```
-#### Time Sample object:
-
-```json
-{
-  sampletime = "2022-04-28 07:35:12",           ; Date and Time of last activity
-  bytes      = {},                              ; Byte Info Object
-  clients    = {},                              ; Client Info Object
-  commands   = 3,                               ; Number of commands executed
-  cpu        = 0.543,                           ; CPU Load Value
-  io         = {},                              ; IO Info Object
-  memory     = {}                               ; Memory Info Object  
-}
-```
-
-#### Byte Info object:
-
-```json
-{
-  read       = "123",                           ; Number of bytes read
-  writes     = "3186"                           ; Number of bytes written
-}
-```
-
-#### Clients Info object:
-
-```json
-{
-  current    = "4",                             ; Number of currently connected clients
-  max        = "4"                              ; Maximum number of connected clients
-}
-```
-
-#### IO Info object:
-
-```json
-{
-  read       = "123",                           ; Number of bytes read
-  writes     = "3186"                           ; Number of bytes written
-}
-```
-
-#### Memory Info object:
-
-```json
-{
-  current    = "2652944",                       ; Number of currently used bytes (for Details ask Andrea)
-  max        = "2772472"                        ; Maximum number of bytes (for Details ask Andrea)
-}
-```
-
 
 ### Example Request:
 
@@ -128,10 +73,6 @@ Transfer-Encoding: chunked
     "details": "i386/1/1MB/100MB",
     "id": 1,
     "latitude": 40.793,
-    "load": [
-      1,
-      0.5
-    ],
     "longitude": -74.0247,
     "name": "Dev1 Server",
     "node_id": 1,
@@ -143,31 +84,6 @@ Transfer-Encoding: chunked
     ],
     "region": "Rome/Italy",
     "size": "small",
-    "stats": [
-      {
-        "bytes": {
-          "reads": "864",
-          "writes": "164262"
-        },
-        "clients": {
-          "current": "4",
-          "max": "4"
-        },
-        "commands": "27",
-        "cpu": 0.5432,
-        "io": {
-          "reads": "0",
-          "writes": "0"
-        },
-        "memory": {
-          "current": "4534280",
-          "max": "4682488"
-        },
-        "sampletime": "2022-04-28 07:13:42"
-      },
-      ...
-    } ],
-    "status": "Unknown",
     "type": "worker"
   },
   "status": 200

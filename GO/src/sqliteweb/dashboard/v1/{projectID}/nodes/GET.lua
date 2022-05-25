@@ -38,8 +38,8 @@ Node = {
   latitude      = 44.931,
   longitude     = 10.533,
   node_id       = 0,                                -- id of the node inside de cluster
-  status        = "",                               -- raft status of the node in the cluster (LIST NODES)
-  progress      = "",                               -- progress is in one of the three states: probe, replicate, snapshot. (LIST NODES)
+  type          = "",                               -- Type fo this node, for example: Leader, Follower, Worker
+  status        = "",                               -- progress status of the node, for example: Probe, Replicate, Snapshot (cluster) or Running (nocluster).
   match         = 0,                                -- is the index of the highest known matched raft entry (LIST NODES)
   last_activity = "",                               -- date and time of the last contact with a follower. Leader has NULL. (LIST NODES)
 }
@@ -78,18 +78,18 @@ if userID == 0 then
 else
   
   local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
-  local query     = string.format( "SELECT Node.id, Node.name, type, provider, image AS details, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port, latitude, longitude, node_id FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid WHERE User.enabled = 1 AND User.id = %d AND uuid='%s';", userID, enquoteSQL( projectID ) )
+  local query     = string.format( "SELECT Node.id, Node.name, provider, image AS details, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port, latitude, longitude, node_id FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid WHERE User.enabled = 1 AND User.id = %d AND uuid='%s';", userID, enquoteSQL( projectID ) )
 
   local databases = nil
 
   nodes = executeSQL( "auth", query )
   if not nodes                            then return error( 404, "ProjectID not found" ) end
   if nodes.ErrorNumber              ~= 0  then return error( 502, "Bad Gateway" )         end
-  if nodes.NumberOfColumns          ~= 12 then return error( 502, "Bad Gateway" )         end
+  if nodes.NumberOfColumns          ~= 11 then return error( 502, "Bad Gateway" )         end
   if nodes.NumberOfRows             <  1  then return error( 200, "OK" )                  end
 
   listNodes = executeSQL( projectID,  "LIST NODES" )
-  if (listNodes.NumberOfColumns == 8) then  
+  if (listNodes.NumberOfColumns == 7) then  
     -- find the match value of the leader
       match_leader = 0
       for j = 1, listNodes.NumberOfRows do
@@ -108,8 +108,8 @@ else
       nodes.Rows[ i ].match_leader = match_leader
 
       if row > 0 then
-        nodes.Rows[ i ].status        = listNodes.Rows[ row ].status 
-        nodes.Rows[ i ].progress      = listNodes.Rows[ row ].progress 
+        nodes.Rows[ i ].type          = listNodes.Rows[ row ].status 
+        nodes.Rows[ i ].status        = listNodes.Rows[ row ].progress 
         nodes.Rows[ i ].match         = listNodes.Rows[ row ].match
         nodes.Rows[ i ].last_activity = listNodes.Rows[ row ].last_activity 
       end

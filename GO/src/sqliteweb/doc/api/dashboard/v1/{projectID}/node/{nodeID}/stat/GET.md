@@ -25,8 +25,14 @@ none
 {
   status            = 200,                       ; status code: 200 = no error, error otherwise
   message           = "OK",                      ; "OK" or error message
-
-  value             = [{}],                      ; Array with Time Sample Objects
+  value             = {
+    id              = 6,                         ; Unique Node ID 
+    type            = "Leader",                  ; Type fo this node, for example: Leader, Follower, Worker
+    status          = "Replicate",               ; progress status of the node, for example: "Replicate", "Probe", "Snapshot" (cluster) or "Running" (nocluster)
+    raft            = [ 0, 0 ],                  ; array, index of the last raft entry matched by the node and by the leader, respectively
+    load            = [12,0.5,36.52],            ; Array with machine's info: num_clients, server_load, disk_usage_perc
+    stats           = [{}]                       ; Array with Time Sample Objects
+  },
 }
 ```
 
@@ -108,6 +114,17 @@ Transfer-Encoding: chunked
   "message": "OK",
   "value": {
     "id": 1,
+    "type": "Leader"
+    "status": "Replicate",
+    "raft":[
+      449,
+      449
+    ],
+    "load": [
+        10,
+        0.5,
+        36.6
+    ],
     "stats": [
       {
         "bytes": {

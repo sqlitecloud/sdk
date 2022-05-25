@@ -37,7 +37,6 @@ none
 {
   id            = 0,                            -- NodeID - 
   name          = "",                           -- Name of this node
-  type          = "",                           -- Type fo this node, for example: Leader, Worker
   provider      = "",                           -- Provider of this node
   image         = "",                           -- Image data for this node
   region        = "",                           -- Regin data for this node
@@ -47,8 +46,8 @@ none
   latitude      = 44.931,       
   longitude     = 10.533,       
   node_id       = 0,                            -- id of the node inside de cluster
-  status        = "",                           -- raft status of the node in the cluster (LIST NODES)
-  progress      = "",                           -- progress is in one of the three statethree state: probe, replicate, snapshot. (LIST NODES)
+  type          = "",                           -- Type fo this node, for example: Leader, Follower, Worker
+  status        = "",                           -- progress status of the node, for example: Probe, Replicate, Snapshot (cluster) or Running (nocluster).
   match         = 0,                            -- is the index of the highest known matched raft entry (LIST NODES)
   match_leader  = 0,                            -- is the index of the highest known matched raft entry of the Leader (LIST NODES)
   last_activity = "",                           -- date and time of the last contact with a follower. Leader has NULL. (LIST NODES)
@@ -92,12 +91,11 @@ Connection: close
       "name": "Dev1 Server",
       "node_id": 1,
       "port": 9960,
-      "progress": "Replicate",
+      "status": "Replicate",
       "provider": "DigitalOcean",
       "region": "Rome/Italy",
       "size": "small",
-      "status": "Follower",
-      "type": "worker"
+      "type": "Follower",
     },
     ...
   } ],

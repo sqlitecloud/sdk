@@ -27,16 +27,41 @@ local nodeID,    err, msg = checkNodeID( nodeID )                        if err 
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                     end
 
 Response = {
-  status            = 200,                       -- status code: 0 = no error, error otherwise
-  message           = "OK",                      -- "OK" or error message
+  status            = 200,          -- status code: 0 = no error, error otherwise
+  message           = "OK",         -- "OK" or error message
   value             = {
-    id              = nodeID,                    -- NodeID - It is not good to have a simple int number!!!!!! 
+    id              = nodeID,       -- Unique node ID 
+    type            = "Leader",     -- Type fo this node, for example: Leader, Worker
+    status          = "Replicate",  -- progress status of the node, for example: "Replicate", "Probe", "Snapshot" (cluster) or "Running" (nocluster)
+    raft            = { 0, 0 },     -- array, index of the last raft entry matched by the node and by the leader, respectively
+    load            = nil,          -- Load of the machine: num_clients, server_load, disk_usage_perc, example: [12,0.5,36.52]
     stats           = {},
   },
 }
 
 local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
 local machineNodeID, err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                 end
+
+status = executeSQL( projectID, "LIST NODES;" )
+
+for i = 1, status.NumberOfRows do
+  if status.Rows[ i ].status == "Leader" then Response.value.raft[ 2 ] = status.Rows[ i ].match end
+  if i == machineNodeID then
+    Response.value.status    = status.Rows[ i ].progress
+    Response.value.raft[ 1 ] = status.Rows[ i ].match
+    Response.value.type      = status.Rows[ i ].status
+  end
+end
+
+query = string.format( "GET INFO LOAD,NUM_CLIENTS,DISK_USAGE_PERC NODE %d;", machineNodeID ) -- server_load, num_clients, cpu_time, mem_current, mem_max
+load = executeSQL( projectID, query )
+-- print("query:", query)
+
+Response.value.load = {
+  load.Rows[ 2 ].ARRAY, -- num_clients
+  load.Rows[ 1 ].ARRAY, -- server_load
+  load.Rows[ 3 ].ARRAY  -- disk_usage_perc
+}
 
 query = string.format( "LIST STATS NODE %d;", machineNodeID )
 stats = executeSQL( projectID, query )

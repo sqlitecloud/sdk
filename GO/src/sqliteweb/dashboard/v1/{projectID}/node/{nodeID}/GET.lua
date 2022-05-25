@@ -33,7 +33,6 @@ Response = {
   value             = {
     id              = nodeID,                    -- NodeID - It is not good to have a simple int number!!!!!!
     name            = "",                        -- Name of this node
-    type            = "",                        -- Type fo this node, for example: Leader, Worker
     provider        = "",                        -- Provider of this node
     details         = "?/?/?",                   -- "SFO1/1GB/25GB disk
     region          = "",                        -- Region data for this node
@@ -42,12 +41,6 @@ Response = {
     port            = 0,                         -- Port this node is listening on
     latitude        = 44.931,                    -- coordinates of the machine
     longitude       = 10.533,
- 
-    stats           = {},
-
-    status          = "unknown",                 -- Replicating
-    
-    raft            = { 0, 0 },                  -- array 8960, 8960
   },
 }
 
@@ -76,13 +69,6 @@ if userID == 0 then
         Response.value.latitude    = 44.931
         Response.value.longitude   = 10.533
 
-        Response.value.stats       = {}
-
-        -- get special values from the node
-        Response.value.status      = "Unknown"
-        
-        Response.value.raft        = { 0, 0 }
-
         goto done
       end
     end
@@ -94,64 +80,15 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
   local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )              end
 
-  query = string.format( "SELECT Node.id, Node.node_id, Node.name, type, provider, image AS details, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port, latitude, longitude FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid WHERE User.enabled = 1 AND User.id = %d AND Node.id = %d AND uuid='%s';", userID, nodeID, enquoteSQL( projectID ) )
+  query = string.format( "SELECT Node.id, Node.node_id, Node.name, provider, image AS details, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port, latitude, longitude FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid WHERE User.enabled = 1 AND User.id = %d AND Node.id = %d AND uuid='%s';", userID, nodeID, enquoteSQL( projectID ) )
   nodes = executeSQL( "auth", query )
 
   if not nodes                            then return error( 404, "ProjectID OR NodeID not found" ) end
   if nodes.ErrorNumber              ~= 0  then return error( 502, "Bad Gateway" )                   end
-  if nodes.NumberOfColumns          ~= 12 then return error( 502, "Bad Gateway" )                   end
+  if nodes.NumberOfColumns          ~= 11 then return error( 502, "Bad Gateway" )                   end
   if nodes.NumberOfRows             ~= 1  then return error( 404, "ProjectID OR NodeID not found" ) end
 
   Response.value             = nodes.Rows[ 1 ]  -- id, node_id, name, type, provider, image->details, region, size, address, port
-
-  Response.value.stats       = {}
-
-  Response.value.status      = "Unknown"
-  Response.value.raft        = { 0, 0 }
-
-  status = executeSQL( projectID, "LIST NODES;" )
-
-  for i = 1, status.NumberOfRows do
-    if status.Rows[ i ].status == "Leader" then Response.value.raft[ 2 ] = status.Rows[ i ].match end
-    if i == machineNodeID then
-      Response.value.status    = status.Rows[ i ].progress
-      Response.value.raft[ 1 ] = status.Rows[ i ].match
-      Response.value.type      = status.Rows[ i ].status
-    end
-  end
-
-  query = string.format( "GET INFO LOAD,NUM_CLIENTS,DISK_USAGE_PERC NODE %d;", machineNodeID ) -- server_load, num_clients, cpu_time, mem_current, mem_max
-  load = executeSQL( projectID, query )
-  -- print("query:", query)
-
-  Response.value.load = {
-    load.Rows[ 2 ].ARRAY, -- num_clients
-    load.Rows[ 1 ].ARRAY  -- server_load
-  }
-
-  query = string.format( "LIST STATS NODE %d;", machineNodeID )
-  stats = executeSQL( projectID, query )
-  
-  for i = 1, stats.NumberOfRows do
-    if not row                                  then row = { memory = { current = 0, max = 0 }, cpu = { sys = 0, user = 0 }, clients = { current = 0, max = 0 }, commands = 0, io = { reads = 0, writes = 0 }, bytes = { reads = 0, writes = 0 }, sampletime = "0000-00-00 00:00:00" } end
-    if stats.Rows[ i ].key == "CPU_USAGE_SYS"   then row.cpu.user         = stats.Rows[ i ].value end
-    if stats.Rows[ i ].key == "CPU_USAGE_USER"  then row.cpu.sys          = stats.Rows[ i ].value end
-    if stats.Rows[ i ].key == "CURRENT_MEMORY"  then row.memory.current   = stats.Rows[ i ].value end
-    if stats.Rows[ i ].key == "MAX_MEMORY"      then row.memory.max       = stats.Rows[ i ].value end
-    if stats.Rows[ i ].key == "CURRENT_CLIENTS" then row.clients.current  = stats.Rows[ i ].value end
-    if stats.Rows[ i ].key == "MAX_CLIENTS"     then row.clients.max      = stats.Rows[ i ].value end
-    if stats.Rows[ i ].key == "NUM_COMMANDS"    then row.commands         = stats.Rows[ i ].value end
-    if stats.Rows[ i ].key == "NUM_READS"       then row.io.reads         = stats.Rows[ i ].value end
-    if stats.Rows[ i ].key == "NUM_WRITES"      then row.io.writes        = stats.Rows[ i ].value end
-    if stats.Rows[ i ].key == "BYTES_IN"        then row.bytes.reads      = stats.Rows[ i ].value end
-    if stats.Rows[ i ].key == "BYTES_OUT"       then row.bytes.writes     = stats.Rows[ i ].value
-                                                     row.sampletime       = stats.Rows[ i ].datetime
-      Response.value.stats[ #Response.value.stats + 1 ] = row
-      row = nil
-    end
-  end
-
-  if #Response.value.stats == 0 then Response.value.stats = nil end
 end
 
 ::done::
