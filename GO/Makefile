@@ -194,5 +194,12 @@ all: sdk cli test
 
 # Go Tester for sqlitecloud
 
-test_gotester_leader_run: install-prerequirements
+install-tester-prerequirements: paesslerag-gval
+
+paesslerag-gval:
+ifeq ($(wildcard src/github.com/PaesslerAG/gval),)
+	-go get -v github.com/PaesslerAG/gval
+endif
+
+test_gotester_leader_run: install-prerequirements install-tester-prerequirements
 	go test src/Tester/tester_test.go -connstring=sqlitecloud://admin:admin@localhost:8860 -path=scripts -v
