@@ -102,7 +102,7 @@ else
       -- lookup which row from LIST NODES matches the cluster_node_id of the current row
       row = 0
       for j = 1, listNodes.NumberOfRows do
-        if listNodes.Rows[ j ].id == cluster_node_id then row = j break end
+        if listNodes.Rows[ j ].id == cluster_node_id or nodes.NumberOfRows then row = j break end
       end
 
       nodes.Rows[ i ].match_leader = match_leader
