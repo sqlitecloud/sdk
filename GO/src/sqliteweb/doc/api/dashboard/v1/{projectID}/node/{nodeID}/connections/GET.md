@@ -38,7 +38,8 @@ none
   address            = "143.198.231.152",        ; Client IP address
   connection_date    = "2022-04-28 07:34:37",    ; Date and Time of connection creation
   id                 = 454,                      ; Conneciton ID
-  username           = "admin"                   ; Username for this connection
+  username           = "admin",                  ; Username for this connection
+  database           = "db1.sqlite"              ; Database in use
 }
 ```
 
@@ -72,7 +73,8 @@ Connection: close
       "address": "143.198.231.152",
       "connectionDateTime": "2022-04-28 07:34:37",
       "id": 454,
-      "username": "admin"
+      "username": "admin",
+      "database": "db1.sqlite"
     }
   ],
   "message": "OK",
