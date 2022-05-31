@@ -89,7 +89,6 @@ if string.len( query.limit ) > 0 then
     if countlog.NumberOfColumns ~= 2                          then return error( 502, "Bad Gateway" )                end
 
     Response.value.count = countlog.Rows[1].count
-    print( "Response.value.count: " .. Response.value.count )
     scursor = string.format( "CURSOR %d", countlog.Rows[1].next_cursor )
   end
 end
