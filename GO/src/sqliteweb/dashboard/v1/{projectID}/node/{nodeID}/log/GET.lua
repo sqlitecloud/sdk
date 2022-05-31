@@ -15,8 +15,8 @@
 --
 -- -----------------------------------------------------------------------TAB=2
 
--- LIST LOG FROM % TO % [LEVEL %] [TYPE %] [ORDER DESC]    
--- LIST % ROWS FROM LOG [LEVEL %] [TYPE %] [ORDER DESC]
+-- LIST LOG [FROM <start_date>] [TO <end_date>] [LEVEL <log_level>] [TYPE <log_type>] [ID] [ORDER DESC] [LIMIT <count>] [CURSOR <cursorid>] [NODE <nodeid>]", PRIVILEGE_HOSTADMIN, command_list_log_date, true, false, false, BITMASK(COMMAND_FLAG_READ)},
+-- COUNT LOG [FROM <start_date>] [TO <end_date>] [LEVEL <log_level>] [TYPE <log_type>] [ID] [ORDER DESC] [NODE <nodeid>]  
 
 require "sqlitecloud"
 
@@ -30,10 +30,22 @@ local projectID, err, msg = checkProjectID( projectID )                  if err 
 local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                          end
 local machineNodeID, err, msg = verifyNodeID( userID, projectID, nodeID )if err ~= 0 then return error( err, msg )                          end
 
-local isDefault = (not query.level) and (not query.type) and (not query.from) and (not query.to)
+Response = {
+  status            = 200,          -- status code: 0 = no error, error otherwise
+  message           = "OK",         -- "OK" or error message
+  value             = {
+    count           = nil,          -- Number of logs for the current filters, only returned if the CURSOR arg is empty
+    next_cursor     = nil,          -- Value to be used in the next request to get the next page
+    logs            = {},           -- Array of logs
+  },
+}
 
-if not query.level  then query.level = ""     end
-if not query.type   then query.type  = ""     end
+if not query.level    then query.level  = ""     end
+if not query.type     then query.type   = ""     end
+if not query.limit    then query.limit  = "100"  end
+if not query.cursor   then query.cursor = ""     end
+if not query.from     then query.from   = ""     end
+if not query.to       then query.to     = ""     end
 
 local slevel = ""
 local stype  = ""
@@ -48,21 +60,45 @@ end
 
 local order = "ORDER DESC"
 
-if (isDefault) then
-  sql = string.format( "LIST 100 ROWS FROM LOG ORDER DESC NODE %d;", machineNodeID ) 
-else
-  if not query.to     then query.to     = now    end
-  if not query.from   then query.from   = now_1h end
-
+local sfrom = ""
+local sto = ""
+if string.len( query.from ) > 0 then  
   local from,    err, msg = checkDateTime( query.from )                  if err ~= 0 then return error( err, string.format( msg, "from" ) ) end
-  local to,      err, msg = checkDateTime( query.to )                    if err ~= 0 then return error( err, string.format( msg, "to" ) )   end
-
-  sql = string.format( "LIST LOG FROM '%s' TO '%s' %s %s %s NODE %d;", from, to, slevel, stype, order, machineNodeID ) 
+  sfrom = string.format( "FROM '%s'", from)
 end
+if string.len( query.to ) > 0 then  
+  local to,      err, msg = checkDateTime( query.to )                    if err ~= 0 then return error( err, string.format( msg, "to" ) )   end
+  sto = string.format( "TO '%s'", to)
+end
+
+local slimit = ""
+local scursor = ""
+if string.len( query.limit ) > 0 then
+  local limit,     err, msg = checkNumber( query.limit, 0, 1000 )          if err ~= 0 then return error( err, string.format( msg, "limit" ) ) end
+  slimit = string.format( "LIMIT %d", limit )
+
+  if string.len( query.cursor ) > 0 then
+    local cursor,     err, msg = checkNumber( query.cursor, 0, 18446744073709551615 )      if err ~= 0 then return error( err, string.format( msg, "cursor" ) ) end
+    scursor = string.format( "CURSOR %d", cursor )
+  else 
+    -- get the total COUNT
+    sql = string.format( "COUNT LOG %s %s %s %s ID %s NODE %d;", sfrom, sto, slevel, stype, order, machineNodeID ) 
+    countlog = executeSQL( projectID, sql )
+    if not countlog                                           then return error( 504, "Gateway Timeout" )            end
+    if countlog.ErrorNumber ~= 0                              then return error( 502, countlog.ErrorMessage )        end
+    if countlog.NumberOfColumns ~= 2                          then return error( 502, "Bad Gateway" )                end
+
+    Response.value.count = countlog.Rows[1].count
+    print( "Response.value.count: " .. Response.value.count )
+    scursor = string.format( "CURSOR %d", countlog.Rows[1].next_cursor )
+  end
+end
+
+sql = string.format( "LIST LOG %s %s %s %s ID %s %s %s NODE %d;", sfrom, sto, slevel, stype, order, slimit, scursor, machineNodeID ) 
 
 log = executeSQL( projectID, sql )
 if not log                                                                           then return error( 504, "Gateway Timeout" )            end
-if log.ErrorNumber ~= 0                                                              then return error( 502, result.ErrorMessage )          end
+if log.ErrorNumber ~= 0                                                              then return error( 502, log.ErrorMessage )             end
 
 flog = nil
 if log.NumberOfRows > 0 then
@@ -73,14 +109,14 @@ if log.NumberOfRows > 0 then
                              [ "username"    ] = "username",
                              [ "database"    ] = "database",
                              [ "ip_address"  ] = "address",
+                             [ "connection_id" ] = "connection_id",
                            } )
+
+  -- get the next cursor 
+  if string.len(slimit) > 0  then   Response.value.next_cursor = log.Rows[log.NumberOfRows].id - 1     end
 end
 
-Response = {
-  status            = 200,                       -- status code: 0 = no error, error otherwise
-  message           = "OK",                      -- "OK" or error message
-  value             = flog                       -- Array with key value pairs
-}
+Response.value.logs = flog                      
 
 SetStatus( 200 )
 Write( jsonEncode( Response ) )
