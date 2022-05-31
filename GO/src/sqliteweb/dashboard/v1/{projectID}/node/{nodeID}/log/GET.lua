@@ -36,7 +36,7 @@ Response = {
   value             = {
     count           = nil,          -- Number of logs for the current filters, only returned if the CURSOR arg is empty
     next_cursor     = nil,          -- Value to be used in the next request to get the next page
-    logs            = {},           -- Array of logs
+    logs            = nil,           -- Array of logs
   },
 }
 
@@ -89,8 +89,12 @@ if string.len( query.limit ) > 0 then
     if countlog.NumberOfColumns ~= 2                          then return error( 502, "Bad Gateway" )                end
 
     Response.value.count = countlog.Rows[1].count
-    if countlog.Rows[1].next_cursor then 
+    if Response.value.count > 0 and countlog.Rows[1].next_cursor then 
       scursor = string.format( "CURSOR %d", countlog.Rows[1].next_cursor )
+    else 
+      SetStatus( 200 )
+      Write( jsonEncode( Response ) )
+      return
     end
   end
 end
