@@ -39,7 +39,7 @@ else
   if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
 end
 
-result = executeSQL( projectID, string.format( "DROP DATABASE '%s' IF EXISTS;", enquoteSQL( dbName ) ) )
+result = executeSQL( projectID, string.format( "DROP DATABASE '%s';", enquoteSQL( dbName ) ) )
 if not result                             then return error( 404, "ProjectID not found" ) end
 if result.ErrorNumber       ~= 0          then return error( 404, "Database not found" )  end
 if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end
