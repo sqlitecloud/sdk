@@ -89,32 +89,34 @@ else
   if nodes.NumberOfRows             <  1  then return error( 200, "OK" )                  end
 
   listNodes = executeSQL( projectID,  "LIST NODES" )
-  if (listNodes.NumberOfColumns == 7) then  
-    -- find the match value of the leader
-      match_leader = 0
-      for j = 1, listNodes.NumberOfRows do
-        if listNodes.Rows[ j ].status == "Leader" then match_leader = listNodes.Rows[ j ].match end
-      end
+  if not listNodes                            then return error( 404, "ProjectID not found" ) end
+  if listNodes.ErrorNumber              ~= 0  then return error( 502, "Bad Gateway" )         end
+  if listNodes.NumberOfColumns          ~= 7  then return error( 502, "Bad Gateway" )         end
 
-    for i = 1, nodes.NumberOfRows do
-      cluster_node_id = nodes.Rows[ i ].node_id
-
-      -- lookup which row from LIST NODES matches the cluster_node_id of the current row
-      row = 0
-      for j = 1, listNodes.NumberOfRows do
-        if listNodes.Rows[ j ].id == cluster_node_id or nodes.NumberOfRows then row = j break end
-      end
-
-      nodes.Rows[ i ].match_leader = match_leader
-
-      if row > 0 then
-        nodes.Rows[ i ].type          = listNodes.Rows[ row ].status 
-        nodes.Rows[ i ].status        = listNodes.Rows[ row ].progress 
-        nodes.Rows[ i ].match         = listNodes.Rows[ row ].match
-        nodes.Rows[ i ].last_activity = listNodes.Rows[ row ].last_activity 
-      end
-    end  
+  -- find the match value of the leader
+  match_leader = 0
+  for j = 1, listNodes.NumberOfRows do
+    if listNodes.Rows[ j ].status == "Leader" then match_leader = listNodes.Rows[ j ].match end
   end
+
+  for i = 1, nodes.NumberOfRows do
+    cluster_node_id = nodes.Rows[ i ].node_id
+
+    -- lookup which row from LIST NODES matches the cluster_node_id of the current row
+    row = 0
+    for j = 1, listNodes.NumberOfRows do
+      if listNodes.Rows[ j ].id == cluster_node_id or nodes.NumberOfRows then row = j break end
+    end
+
+    nodes.Rows[ i ].match_leader = match_leader
+
+    if row > 0 then
+      nodes.Rows[ i ].type          = listNodes.Rows[ row ].status 
+      nodes.Rows[ i ].status        = listNodes.Rows[ row ].progress 
+      nodes.Rows[ i ].match         = listNodes.Rows[ row ].match
+      nodes.Rows[ i ].last_activity = listNodes.Rows[ row ].last_activity 
+    end
+  end  
 
   Response.value = nodes.Rows
   
