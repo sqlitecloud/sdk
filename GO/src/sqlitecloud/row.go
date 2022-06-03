@@ -1,29 +1,31 @@
 //
 //                    ////              SQLite Cloud
-//        ////////////  ///             
+//        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
 //     ///             ///  ///         Version     : 1.0.0
 //     //             ///   ///  ///    Date        : 2021/08/31
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
-//   ///             ///   ///  ///     
+//   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : GO Methods related to the
 //   ////                ///  ///                     ResultRow class.
-//     ////     //////////   ///        
-//        ////            ////          
-//          ////     /////              
+//     ////     //////////   ///
+//        ////            ////
+//          ////     /////
 //             ///                      Copyright   : 2021 by SQLite Cloud Inc.
 //
 // -----------------------------------------------------------------------TAB=2
 
 package sqlitecloud
 
-import "fmt"
-import "io"
-import "strings"
-import "time"
-import "html"
-import "errors"
-import "encoding/json"
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"html"
+	"io"
+	"strings"
+	"time"
+)
 
 type ResultRow struct {
   result  *Result
@@ -263,17 +265,21 @@ func (this *ResultRow) DumpToWriter( Out io.Writer, Format int, Separator string
     buffer = trimStringToMaxLength( strings.TrimRight( buffer, Separator ), MaxLineLength ) + NewLine
   
   case OUTFORMAT_JSON:
+    sep := Separator
     for forThisColumn := uint64( 0 ); forThisColumn < this.GetNumberOfColumns(); forThisColumn++ {
+      if forThisColumn == this.GetNumberOfColumns()-1 { 
+        sep = "" 
+      }
       columnName, _ := this.GetName( forThisColumn )
       switch Type, err := this.GetType( forThisColumn ); {
         case err != nil:  
         case Type == '+': fallthrough
         case Type == '!': fallthrough
-        case Type == '$': buffer += fmt.Sprintf( "\"%s\":\"%s\"%s", strings.Replace( columnName, "\"", "\\\"", -1 ), strings.Replace( this.renderValue( forThisColumn, "", NullValue ), "\"", "\\\"", -1 ), Separator )
-      default:            buffer += fmt.Sprintf( "\"%s\":%s%s", strings.Replace( columnName, "\"", "\\\"", -1 ), this.renderValue( forThisColumn, "", NullValue ), Separator )
+        case Type == '$': buffer += fmt.Sprintf( "\"%s\":\"%s\"%s", strings.Replace( columnName, "\"", "\\\"", -1 ), strings.Replace( this.renderValue( forThisColumn, "", NullValue ), "\"", "\\\"", -1 ), sep )
+      default:            buffer += fmt.Sprintf( "\"%s\":%s%s", strings.Replace( columnName, "\"", "\\\"", -1 ), this.renderValue( forThisColumn, "", NullValue ), sep )
       }
     }
-    buffer = trimStringToMaxLength( fmt.Sprintf( "  {%s}%s", buffer, Separator ), MaxLineLength ) + NewLine
+    buffer = trimStringToMaxLength( fmt.Sprintf( "  {%s}", buffer ), MaxLineLength ) + NewLine
 
   case OUTFORMAT_HTML:
     buffer = trimStringToMaxLength( "<TR>", MaxLineLength )               + NewLine +
