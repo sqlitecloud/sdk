@@ -103,7 +103,9 @@ func (this *Result ) Dump() {
 // ToJSON returns a JSON representation of this query result.
 // BUG(andreas): The Result.ToJSON method is not implemented yet.
 func (this *Result ) ToJSON() string {
-  return "todo" // Use Writer into Buffer
+  buf := new(bytes.Buffer)
+  this.DumpToWriter( bufio.NewWriter( buf ), OUTFORMAT_JSON, false, "<AUTO>", "NULL", "", 0, false )
+  return buf.String()
 }
 
 // Additional ResultSet Methods (100% GO)
@@ -568,6 +570,16 @@ func (this *Result) DumpToWriter( Out *bufio.Writer, Format int, NoHeader bool, 
         totalOutputLength += len
       } else {
         return len + totalOutputLength, err
+      }
+      if row.Next() != nil {
+        switch( Format ) {
+        case OUTFORMAT_JSON:
+          if len, err := io.WriteString( Out, Separator ); err == nil {
+            totalOutputLength += len
+          } else {
+            return len + totalOutputLength, err
+          }
+        }
       }
     }
 
