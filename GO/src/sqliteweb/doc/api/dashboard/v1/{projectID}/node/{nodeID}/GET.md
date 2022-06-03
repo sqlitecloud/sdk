@@ -30,7 +30,7 @@ none
   value             = {
     address         = "127.0.0.1",               ; IPv[4,6] address or host name of this node
     port            = 9960,                      ; Port this node is listening on
-    details         = "?/?/?",                   ; "SFO1/1GB/25GB disk or "i386/1/1MB/100MB",
+    details         = "?/?/?",                   ; "SFO1/1GB/25GB" or "i386/1/1MB/100MB",
     latidude        = float,
     longitude       = float,
     id              = 1,                         ; Unique node id 

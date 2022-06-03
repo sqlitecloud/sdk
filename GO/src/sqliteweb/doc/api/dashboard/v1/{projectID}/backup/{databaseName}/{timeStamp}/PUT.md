@@ -1,15 +1,15 @@
 # API Documentation
 
-Resore this snapshot and make it actual (restore)
+Resore this backup and make it actual (restore)
 
 ## Requests
 
 ```sh
-curl -X "PUT" "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/snapshot/db1.sqlite/2022-04-26T15:05:40Z" \
+curl -X "PUT" "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/backup/db1.sqlite/2022-04-26T15:05:40Z" \
      -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMjcuMC4wLjEiLCJleHAiOjE2NTExNjA3MDksImp0aSI6IjEiLCJpYXQiOjE2NTExMzA3MDksImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjUxMTMwNzA5LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.W7HGTl0uKcDLcdsM0wM6Jw-65Reu57WVRVIai9VAw1c'
 ```
 
-### **PUT** - /dashboard/v1/{projectID}/snapshot/{databaseName}/{timeStamp}
+### **PUT** - /dashboard/v1/{projectID}/backup/{databaseName}/{timeStamp}
 
 ### Request object
 
@@ -31,7 +31,7 @@ none
 ### Example Request:
 
 ```http
-PUT /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/snapshot/db1.sqlite/2022-04-26T15:05:40Z HTTP/1.1
+PUT /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/backup/db1.sqlite/2022-04-26T15:05:40Z HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMjcuMC4wLjEiLCJleHAiOjE2NTExNjA3MDksImp0aSI6IjEiLCJpYXQiOjE2NTExMzA3MDksImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjUxMTMwNzA5LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.W7HGTl0uKcDLcdsM0wM6Jw-65Reu57WVRVIai9VAw1c
 Host: localhost:8443
 Connection: close

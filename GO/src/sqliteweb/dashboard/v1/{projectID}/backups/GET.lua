@@ -7,7 +7,7 @@
 --    ///             ///   ///  ///    Author      : Andreas Pfeil
 --   ///             ///   ///  ///
 --   ///     //////////   ///  ///      Description : Get a list of databases
---   ////                ///  ///                     that have snapshots
+--   ////                ///  ///                     that have backup enabled
 --     ////     //////////   ///                      
 --        ////            ////          Requires    : Authentication
 --          ////     /////              Output      : 

@@ -1,16 +1,16 @@
 # API Documentation
 
-Upload a snapshot
+Download a backup
 
 NOT IMPLMENTED
 
 ## Requests
 
 ```sh
-NOT IMPLMENTED
+NOT IMPLEMENTED
 ```
 
-### **GET** - /dashboard/v1/{projectID}/snapshot/{databaseName}/{timeStamp}
+### **GET** - /dashboard/v1/{projectID}/backup/{databaseName}/{timeStamp}
 
 ### Query parameters
 
@@ -35,11 +35,11 @@ none
 ### Example Request:
 
 ```
-NOT IMPLMENTED
+NOT IMPLEMENTED
 ```
 
 ### Example Response:
 
 ```
-NOT IMPLMENTED
+NOT IMPLEMENTED
 ```

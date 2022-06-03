@@ -6,7 +6,7 @@
 --     //             ///   ///  ///    Date        : 2022/03/30
 --    ///             ///   ///  ///    Author      : Andreas Pfeil
 --   ///             ///   ///  ///
---   ///     //////////   ///  ///      Description : Filter log
+--   ///     //////////   ///  ///      Description : List available backups for a database
 --   ////                ///  ///                     
 --     ////     //////////   ///                      
 --        ////            ////          Requires    : Authentication
@@ -32,13 +32,13 @@ Response = {
   value             = {}             -- Array with key value pairs
 }
 
-snapshots = executeSQL( projectID, string.format( "LIST BACKUPS DATABASE '%s';", enquoteSQL( databaseName ) ) )
-if not snapshots                                                                        then return error( 504, "Gateway Timeout" )            end
-if snapshots.ErrorNumber     ~= 0                                                       then return error( 502, result.ErrorMessage )          end
-if snapshots.NumberOfColumns ~= 7                                                       then return error( 502, "Bad Gateway" )                end
+backups = executeSQL( projectID, string.format( "LIST BACKUPS DATABASE '%s';", enquoteSQL( databaseName ) ) )
+if not backups                                                                        then return error( 504, "Gateway Timeout" )            end
+if backups.ErrorNumber     ~= 0                                                       then return error( 502, result.ErrorMessage )          end
+if backups.NumberOfColumns ~= 7                                                       then return error( 502, "Bad Gateway" )                end
 
-if #snapshots.Rows > 0 then
-  Response.value = filter( snapshots.Rows, {
+if #backups.Rows > 0 then
+  Response.value = filter( backups.Rows, {
     type    = "type",
     replica = "replica",
     size    = "size",

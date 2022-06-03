@@ -6,7 +6,7 @@
 --     //             ///   ///  ///    Date        : 2022/04/11
 --    ///             ///   ///  ///    Author      : Andreas Pfeil
 --   ///             ///   ///  ///
---   ///     //////////   ///  ///      Description : Restore this snapshot and 
+--   ///     //////////   ///  ///      Description : Restore this backup and 
 --   ////                ///  ///                     make it actual (restore)
 --     ////     //////////   ///                      
 --        ////            ////          Requires    : Authentication
@@ -16,7 +16,7 @@
 -- -----------------------------------------------------------------------TAB=2
 
 -- Restore this snapshot and make it actual (restore)
--- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/snapshot/{datebaseName}/{timeStamp}
+-- https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/backup/{datebaseName}/{timeStamp}
 
 require "sqlitecloud"
 

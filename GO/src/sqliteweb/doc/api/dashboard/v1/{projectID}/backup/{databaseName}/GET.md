@@ -1,15 +1,15 @@
 # API Documentation
 
-Return list of available snapshots
+Return list of available backups
 
 ## Requests
 
 ```sh
-curl "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/snapshot/db1.sqlite" \
+curl "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/backup/db1.sqlite" \
      -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMjcuMC4wLjEiLCJleHAiOjE2NTEwOTM4MzUsImp0aSI6IjEiLCJpYXQiOjE2NTEwNjM4MzUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjUxMDYzODM1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.6oTRZEBprnPjHoPpxd89RDfHifXn38MQmvureXl2XbY'
 ```
 
-### **GET** - /dashboard/v1/{projectID}/snapshot/{databaseName}
+### **GET** - /dashboard/v1/{projectID}/backup/{databaseName}
 
 ### Request object
 
@@ -26,7 +26,7 @@ none
   status            = 200,                        ; status code: 200 = no error, error otherwise
   message           = "OK",                       ; "OK" or error message
 
-  value             = [ {snapshot info objcts } ] ; Array with snapshot info objects
+  value             = [ {backup info objcts } ] ; Array with backup info objects
 }
 ```
 
@@ -44,7 +44,7 @@ none
 ### Example Request:
 
 ```http
-GET /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/snapshot/db1.sqlite HTTP/1.1
+GET /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/backup/db1.sqlite HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMjcuMC4wLjEiLCJleHAiOjE2NTEwOTM4MzUsImp0aSI6IjEiLCJpYXQiOjE2NTEwNjM4MzUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjUxMDYzODM1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.6oTRZEBprnPjHoPpxd89RDfHifXn38MQmvureXl2XbY
 Host: localhost:8443
 Connection: close
