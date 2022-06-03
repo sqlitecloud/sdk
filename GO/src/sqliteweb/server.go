@@ -66,6 +66,13 @@ type Server struct{
 
 var SQLiteWeb *Server = nil
 
+func sendError( writer http.ResponseWriter, message string, statusCode int ) {
+  writer.Header().Set( "Content-Type", "application/json" )
+  writer.Header().Set( "Content-Encoding", "utf-8" )
+	writer.WriteHeader( statusCode )
+  writer.Write( []byte( fmt.Sprintf( "{\"status\":%d,\"message\":\"%s\"}", statusCode, message ) ) )
+}
+
 func initializeSQLiteWeb() {
   if SQLiteWeb == nil {
     SQLiteWeb = &Server{

@@ -491,7 +491,8 @@ func (this *Server) executeLua( basePath string, endpoint string, userID int64, 
             continue NextPart
           }
         }
-        panic( "not found" )
+        sendError( writer, "Endpoint not found.", http.StatusNotFound )
+        return
       }
     }
     //fmt.Printf( "i=%d, path=%s, part=%s\r\n", i, path, part )
@@ -623,6 +624,7 @@ func (this *Server) executeLua( basePath string, endpoint string, userID int64, 
       panic( err )
     }
   } else {
-    http.Error( writer, "Endpoint not found.", http.StatusNotFound )
+    sendError(writer, "Endpoint not found.", http.StatusNotFound)
   }
 }
+
