@@ -26,7 +26,11 @@ Response = {
   status        = 200,                       -- status code: 0 = no error, error otherwise
   message       = "OK",                      -- "OK" or error message
 
-  value         = nil
+  value         = {
+    result      = 0,                         -- 0 -> value is an error string, 1 -> value is a string, 2 -> value is a rowset
+    value       = nil,
+    columns     = nil
+  }
 }
         
 local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                                    end
@@ -51,9 +55,18 @@ end
 
 result = executeSQL( projectID, query )
 if not result                             then return error( 504, "Gateway Timeout" )     end
-if result.ErrorNumber ~= 0                then Response.value = string.format( "ERROR: %s (%d)", result.ErrorMessage, result.ErrorNumber )
-elseif result.Value                       then Response.value = result.Value
-elseif result.Rows                        then Response.value = result.Rows               end 
+
+if result.ErrorNumber ~= 0                then 
+  Response.value.result = 0
+  Response.value.value = string.format( "%s (%d)", result.ErrorMessage, result.ErrorNumber )
+elseif result.Value                       then 
+  Response.value.result = 1
+  Response.value.value = result.Value
+elseif result.Rows                        then 
+  Response.value.result = 2
+  Response.value.columns = result.Columns
+  Response.value.value = result.Rows               
+end 
 
 SetStatus( 200 )
 Write( jsonEncode( Response ) )

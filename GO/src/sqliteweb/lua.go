@@ -353,6 +353,16 @@ func lua_executeSQL( L *lua.State ) int {
         }
         L.SetTable( -3 )
 
+        L.PushString( "Columns" )
+        L.NewTable()
+        for c, C := null, res.GetNumberOfColumns(); c < C; c++ {
+          L.PushInteger( int( c ) + 1 )
+          colname, _ := res.GetName( c )
+          L.PushString( colname )
+          L.SetTable( -3 ) 
+        }
+        L.SetTable( -3 ) 
+
 //res.DumpToWriter( out, sqlitecloud.OUTFORMAT_LIST, false, "|", "NULL", "\r\n", 0, false )
         return 1
   	} }
