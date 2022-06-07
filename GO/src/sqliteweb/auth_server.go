@@ -84,7 +84,7 @@ func (this *AuthServer) lookupUserID( Login string, Password string ) int64 {
 
   query   := fmt.Sprintf( "SELECT id FROM User WHERE email = '%s' AND ( password = '%s' OR password = '%s' ) AND enabled = 1 LIMIT 1;", Login, Password, MD5( Password ) )
 
-  if res, err := cm.ExecuteSQL( "auth", query ); res != nil {
+  if res, err, _, _ := cm.ExecuteSQL( "auth", query ); res != nil {
     defer res.Free()
     switch {
     case err != nil                     : return -5

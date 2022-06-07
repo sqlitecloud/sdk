@@ -137,7 +137,7 @@ func ( this *ConnectionManager ) getServerList( node string ) ( []string, error 
     if node != "auth" {
       query := fmt.Sprintf( "SELECT 'sqlitecloud://' || admin_username || ':' || admin_password || '@' || IIF( addr6, addr6, addr4 ) || IIF( port, ':' || port, '' ) AS Node FROM Project JOIN Node ON uuid == project_uuid WHERE uuid = '%s';", sqlitecloud.SQCloudEnquoteString( node ) );
 
-      if result, err := this.ExecuteSQL( "auth", query ); result == nil {
+      if result, err, _, _ := this.ExecuteSQL( "auth", query ); result == nil {
         return []string{}, errors.New( "ERROR: Query returned no result (-1)" )
       } else {
         defer result.Free()
@@ -347,7 +347,7 @@ func ( this *ConnectionManager ) ReleaseConnection( node string, connection *Con
   return err
 }
 
-func ( this *ConnectionManager ) ExecuteSQL( node string, query string ) ( *sqlitecloud.Result, error ) {
+func ( this *ConnectionManager ) ExecuteSQL( node string, query string ) ( *sqlitecloud.Result, error, int, int ) {
   var connection *Connection  = nil
   var res *sqlitecloud.Result = nil
   var err error               = nil
@@ -366,6 +366,8 @@ func ( this *ConnectionManager ) ExecuteSQL( node string, query string ) ( *sqli
       connection.uses++
 
       start := time.Now()
+      errCode := int(0)
+      extErrCode := int(0)
       if res, err = connection.connection.Select( query ); res == nil && err == nil {
         continue
       } else if connection.connection.ErrorCode >= 100000 {
@@ -374,16 +376,20 @@ func ( this *ConnectionManager ) ExecuteSQL( node string, query string ) ( *sqli
         // for example: 
         // - 100001 Internal Error: SQCloud.readNextRawChunk (%s)
         // - 100003 Internal Error: sendString (%s)
+        errCode = connection.connection.ErrorCode
+        extErrCode = connection.connection.ExtErrorCode
         this.closeAndRemoveLockedConnection( node, connection )
         continue
       } else {
+        errCode = connection.connection.ErrorCode
+        extErrCode = connection.connection.ExtErrorCode
         this.ReleaseConnection( node, connection )
         t := time.Since( start )
         SQLiteWeb.Logger.Debugf("(%s) ExecuteSQL query:\"%s\" time:%s", node, query, t)
-        return res, err
+        return res, err, errCode, extErrCode
       }
     }
     this.closeAndRemoveLockedConnection( node, connection )
   }
-  return nil, nil
+  return nil, nil, 0, 0
 }

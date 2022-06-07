@@ -60,7 +60,7 @@ if not result                             then return error( 504, "Gateway Timeo
 
 if result.ErrorNumber ~= 0                then 
   Response.value.result = 0
-  Response.value.value = string.format( "%s (%d)", result.ErrorMessage, result.ErrorNumber )
+  Response.value.value = string.format( "%s (%d:%d)", result.ErrorMessage, result.ErrorNumber, result.ExtendedErrorNumber ) 
 elseif result.Value                       then 
   Response.value.result = 1
   Response.value.value = result.Value

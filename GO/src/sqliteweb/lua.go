@@ -295,7 +295,7 @@ func lua_executeSQL( L *lua.State ) int {
     // var res *sqlitecloud.Result
     // var err error
 
-    res, err := cm.ExecuteSQL( uuid, query )
+    res, err, errCode, extErrCode := cm.ExecuteSQL( uuid, query )
 
     // switch uuid {
     // case "auth" : res, err = adb.Select( query )
@@ -308,9 +308,12 @@ func lua_executeSQL( L *lua.State ) int {
       if err == nil {
         L.NewTable()
 
-        errorNumber, errorMessage := res.GetError_()
+        errorNumber, extErrorCode, errorMessage, _ := res.GetError()
         L.PushString( "ErrorNumber" )
         L.PushInteger( errorNumber )
+        L.SetTable( -3 )
+        L.PushString( "ExtendedErrorNumber" )
+        L.PushInteger( extErrorCode )
         L.SetTable( -3 )
         L.PushString( "ErrorMessage" )
         L.PushString( errorMessage )
@@ -383,7 +386,11 @@ func lua_executeSQL( L *lua.State ) int {
 		if err != nil {
 			L.NewTable()
       L.PushString( "ErrorNumber" )
-      L.PushInteger( -1 )
+      L.PushInteger( errCode )
+      L.SetTable( -3 )
+
+      L.PushString( "ExtendedErrorNumber" )
+      L.PushInteger( extErrCode )
       L.SetTable( -3 )
 
       L.PushString( "ErrorMessage" )
@@ -406,7 +413,7 @@ func lua_executeSQL( L *lua.State ) int {
 			L.NewTable() // row
 			L.SetTable( -3 )
 
-      SQLiteWeb.Logger.Errorf("Error in ExecuteSQL: %s", err)
+      SQLiteWeb.Logger.Errorf("Error in ExecuteSQL: %s (%d:%d)", err, errCode, extErrCode)
 
 			return 1
 	} }
