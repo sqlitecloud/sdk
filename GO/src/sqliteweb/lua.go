@@ -122,14 +122,18 @@ func LUATable2MI( L *lua.State ) map[string]interface{} {
       case lua.TypeString:  tree[ key ] = lua.CheckString( L, -1 )
       case lua.TypeTable:
         L.PushNil() // Or Array??? -> Do a look ahead...
-        L.Next( -2 )
-        isArray := lua.CheckString( L, -2 ) == "1" // if nested key == 1 (this is prohipited and therefore an indicator for an array)
-        L.Pop( 2 )
+        // sanity check, avoid infinite loop in case of empty table
+        if L.Next( -2 ) {
+          // not empty table
+          isArray := lua.CheckString( L, -2 ) == "1" // if nested key == 1 (this is prohipited and therefore an indicator for an array)
+          L.Pop( 2 ) 
 
-        switch isArray {
-        case true : tree[ key ] = LUAArray2IA( L )
-        default   : tree[ key ] = LUATable2MI( L )
-      } }
+          switch isArray {
+          case true : tree[ key ] = LUAArray2IA( L )
+          default   : tree[ key ] = LUATable2MI( L )
+          }
+        } 
+      }
       L.Pop( 1 )
   } }
   return tree
@@ -329,37 +333,46 @@ func lua_executeSQL( L *lua.State ) int {
         L.PushInteger( int( res.GetNumberOfColumns() ) )
         L.SetTable( -3 )
 
-        L.PushString( "Rows" )
-        L.NewTable() // row
-
         null := uint64( 0 )
 
-        for r, R := null, res.GetNumberOfRows(); r < R; r++ {
-          L.PushInteger( int( r ) + 1 )
+        L.PushString( "Rows" )
+        if numRows := res.GetNumberOfRows(); numRows > 0 {
+          L.NewTable() // row
 
-          L.NewTable() // columns
-          for c, C := null, res.GetNumberOfColumns(); c < C; c++ {
-            // L.PushInteger( int( c ) + 1 )
-            L.PushString( res.GetName_( c ) )
-            switch res.GetValueType_( r, c ) {
-            case '_':  L.PushNil()
-            case ':':  L.PushInteger( int(res.GetInt32Value_( r, c ) ) )
-            case ',':  L.PushNumber( res.GetFloat64Value_( r, c ) )
-            default :  L.PushString( res.GetStringValue_( r, c ) )
+          for r, R := null, numRows; r < R; r++ {
+            L.PushInteger( int( r ) + 1 )
+          
+            L.NewTable() // columns
+            for c, C := null, res.GetNumberOfColumns(); c < C; c++ {
+              // L.PushInteger( int( c ) + 1 )
+              L.PushString( res.GetName_( c ) )
+              switch res.GetValueType_( r, c ) {
+              case '_':  L.PushNil()
+              case ':':  L.PushInteger( int(res.GetInt32Value_( r, c ) ) )
+              case ',':  L.PushNumber( res.GetFloat64Value_( r, c ) )
+              default :  L.PushString( res.GetStringValue_( r, c ) )
+              }
+              L.SetTable( -3 )
             }
             L.SetTable( -3 )
-          }
-          L.SetTable( -3 )
+          } 
+        } else {
+          L.PushNil()
         }
         L.SetTable( -3 )
+        
 
         L.PushString( "Columns" )
-        L.NewTable()
-        for c, C := null, res.GetNumberOfColumns(); c < C; c++ {
-          L.PushInteger( int( c ) + 1 )
-          colname, _ := res.GetName( c )
-          L.PushString( colname )
-          L.SetTable( -3 ) 
+        if numCols := res.GetNumberOfColumns(); numCols > 0 {
+          L.NewTable()
+          for c, C := null, numCols; c < C; c++ {
+            L.PushInteger( int( c ) + 1 )
+            colname, _ := res.GetName( c )
+            L.PushString( colname )
+            L.SetTable( -3 ) 
+          }
+        } else {
+          L.PushNil()
         }
         L.SetTable( -3 ) 
 

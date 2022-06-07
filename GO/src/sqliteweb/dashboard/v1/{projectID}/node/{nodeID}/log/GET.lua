@@ -119,9 +119,10 @@ if log.NumberOfRows > 0 then
 
   -- get the next cursor 
   if string.len(slimit) > 0  then   Response.value.next_cursor = log.Rows[log.NumberOfRows].id - 1     end
+  Response.value.logs = flog                      
+else
+  Response.value = nil
 end
-
-Response.value.logs = flog                      
 
 SetStatus( 200 )
 Write( jsonEncode( Response ) )

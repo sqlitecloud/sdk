@@ -56,13 +56,15 @@ end
 result = executeSQL( projectID, query )
 if not result                             then return error( 504, "Gateway Timeout" )     end
 
+-- print("executeSQL err:" .. result.ErrorMessage .. " value:" .. result.Value .. " Rows:" .. result.Rows )
+
 if result.ErrorNumber ~= 0                then 
   Response.value.result = 0
   Response.value.value = string.format( "%s (%d)", result.ErrorMessage, result.ErrorNumber )
 elseif result.Value                       then 
   Response.value.result = 1
   Response.value.value = result.Value
-elseif result.Rows                        then 
+elseif result.NumberOfColumns > 0         then 
   Response.value.result = 2
   Response.value.columns = result.Columns
   Response.value.value = result.Rows               

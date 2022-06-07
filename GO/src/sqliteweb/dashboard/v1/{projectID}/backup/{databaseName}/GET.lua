@@ -34,7 +34,7 @@ Response = {
 
 backups = executeSQL( projectID, string.format( "LIST BACKUPS DATABASE '%s';", enquoteSQL( databaseName ) ) )
 if not backups                                                                        then return error( 504, "Gateway Timeout" )            end
-if backups.ErrorNumber     ~= 0                                                       then return error( 502, result.ErrorMessage )          end
+if backups.ErrorNumber     ~= 0                                                       then return error( 502, backups.ErrorMessage )          end
 if backups.NumberOfColumns ~= 7                                                       then return error( 502, "Bad Gateway" )                end
 
 if #backups.Rows > 0 then

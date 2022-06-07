@@ -115,7 +115,7 @@ func (this *AuthServer) decodeClaims( tokenString string ) ( *jwt.StandardClaims
     }
     return this.JWTSecret, nil
   } )
-
+  
   switch {
   case err   != nil:    return nil, err
   case token == nil:    return nil, fmt.Errorf( "Could not parse token" )
@@ -131,7 +131,7 @@ func (this *AuthServer) verifyClaims( claims *jwt.StandardClaims, reader *http.R
   now        := time.Now().Unix()
   ip, _, err := net.SplitHostPort( reader.RemoteAddr )
   uip        := net.ParseIP( ip )
-
+  
   switch {
     case err    != nil                                : return err
     case uip    == nil                                : return fmt.Errorf( "Invalid ClientIP" )
