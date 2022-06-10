@@ -877,6 +877,14 @@
 #define NID_id_ct_geofeedCSVwithCRLF		1013
 #define OBJ_id_ct_geofeedCSVwithCRLF		OBJ_id_smime_ct,47L
 
+#define SN_id_ct_signedChecklist		"id-ct-signedChecklist"
+#define NID_id_ct_signedChecklist		1014
+#define OBJ_id_ct_signedChecklist		OBJ_id_smime_ct,48L
+
+#define SN_id_ct_ASPA		"id-ct-ASPA"
+#define NID_id_ct_ASPA		1017
+#define OBJ_id_ct_ASPA		OBJ_id_smime_ct,49L
+
 #define SN_id_smime_aa_receiptRequest		"id-smime-aa-receiptRequest"
 #define NID_id_smime_aa_receiptRequest		212
 #define OBJ_id_smime_aa_receiptRequest		OBJ_id_smime_aa,1L
@@ -1514,6 +1522,11 @@
 #define NID_proxyCertInfo		663
 #define OBJ_proxyCertInfo		OBJ_id_pe,14L
 
+#define SN_tlsfeature		"tlsfeature"
+#define LN_tlsfeature		"TLS Feature"
+#define NID_tlsfeature		1016
+#define OBJ_tlsfeature		OBJ_id_pe,24L
+
 #define SN_sbgp_ipAddrBlockv2		"sbgp-ipAddrBlockv2"
 #define NID_sbgp_ipAddrBlockv2		1006
 #define OBJ_sbgp_ipAddrBlockv2		OBJ_id_pe,28L
@@ -1585,6 +1598,11 @@
 #define LN_dvcs		"dvcs"
 #define NID_dvcs		297
 #define OBJ_dvcs		OBJ_id_kp,10L
+
+#define SN_id_kp_bgpsec_router		"id-kp-bgpsec-router"
+#define LN_id_kp_bgpsec_router		"BGPsec Router"
+#define NID_id_kp_bgpsec_router		1015
+#define OBJ_id_kp_bgpsec_router		OBJ_id_kp,30L
 
 #define SN_id_it_caProtEncCert		"id-it-caProtEncCert"
 #define NID_id_it_caProtEncCert		298
@@ -4211,6 +4229,26 @@
 
 #define SN_dh_cofactor_kdf		"dh-cofactor-kdf"
 #define NID_dh_cofactor_kdf		991
+
+#define SN_ct_precert_scts		"ct_precert_scts"
+#define LN_ct_precert_scts		"CT Precertificate SCTs"
+#define NID_ct_precert_scts		1018
+#define OBJ_ct_precert_scts		1L,3L,6L,1L,4L,1L,11129L,2L,4L,2L
+
+#define SN_ct_precert_poison		"ct_precert_poison"
+#define LN_ct_precert_poison		"CT Precertificate Poison"
+#define NID_ct_precert_poison		1019
+#define OBJ_ct_precert_poison		1L,3L,6L,1L,4L,1L,11129L,2L,4L,3L
+
+#define SN_ct_precert_signer		"ct_precert_signer"
+#define LN_ct_precert_signer		"CT Precertificate Signer"
+#define NID_ct_precert_signer		1020
+#define OBJ_ct_precert_signer		1L,3L,6L,1L,4L,1L,11129L,2L,4L,4L
+
+#define SN_ct_cert_scts		"ct_cert_scts"
+#define LN_ct_cert_scts		"CT Certificate SCTs"
+#define NID_ct_cert_scts		1021
+#define OBJ_ct_cert_scts		1L,3L,6L,1L,4L,1L,11129L,2L,4L,5L
 
 #define SN_teletrust		"teletrust"
 #define NID_teletrust		920

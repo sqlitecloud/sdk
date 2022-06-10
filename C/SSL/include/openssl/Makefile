@@ -86,8 +86,8 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-build_triplet = x86_64-apple-darwin20.6.0
-host_triplet = x86_64-apple-darwin20.6.0
+build_triplet = arm-apple-darwin21.5.0
+host_triplet = arm-apple-darwin21.5.0
 subdir = include/openssl
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_add_fortify_source.m4 \
@@ -127,15 +127,15 @@ am__can_run_installinfo = \
   esac
 am__opensslinclude_HEADERS_DIST = aes.h asn1.h asn1t.h bio.h \
 	blowfish.h bn.h buffer.h camellia.h cast.h chacha.h cmac.h \
-	cms.h comp.h conf.h conf_api.h crypto.h curve25519.h des.h \
-	dh.h dsa.h dso.h dtls1.h ec.h ecdh.h ecdsa.h engine.h err.h \
-	evp.h gost.h hkdf.h hmac.h idea.h lhash.h md4.h md5.h modes.h \
-	obj_mac.h objects.h ocsp.h opensslconf.h opensslfeatures.h \
-	opensslv.h ossl_typ.h pem.h pem2.h pkcs12.h pkcs7.h poly1305.h \
-	rand.h rc2.h rc4.h ripemd.h rsa.h safestack.h sha.h sm3.h \
-	sm4.h srtp.h ssl.h ssl2.h ssl23.h ssl3.h stack.h tls1.h ts.h \
-	txt_db.h ui.h ui_compat.h whrlpool.h x509.h x509_verify.h \
-	x509_vfy.h x509v3.h
+	cms.h comp.h conf.h conf_api.h crypto.h ct.h cterr.h \
+	curve25519.h des.h dh.h dsa.h dso.h dtls1.h ec.h ecdh.h \
+	ecdsa.h engine.h err.h evp.h gost.h hkdf.h hmac.h idea.h \
+	lhash.h md4.h md5.h modes.h obj_mac.h objects.h ocsp.h \
+	opensslconf.h opensslfeatures.h opensslv.h ossl_typ.h pem.h \
+	pem2.h pkcs12.h pkcs7.h poly1305.h rand.h rc2.h rc4.h ripemd.h \
+	rsa.h safestack.h sha.h sm3.h sm4.h srtp.h ssl.h ssl2.h \
+	ssl23.h ssl3.h stack.h tls1.h ts.h txt_db.h ui.h ui_compat.h \
+	whrlpool.h x509.h x509_verify.h x509_vfy.h x509v3.h
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -187,13 +187,13 @@ CTAGS = ctags
 am__DIST_COMMON = $(srcdir)/Makefile.in \
 	$(top_srcdir)/Makefile.am.common
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-ACLOCAL = ${SHELL} '/Users/marco/Desktop/libressl-3.3.3/missing' aclocal-1.16
+ACLOCAL = ${SHELL} '/Users/marco/Desktop/libressl-3.5.3/missing' aclocal-1.16
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 0
 AR = ar
-AUTOCONF = ${SHELL} '/Users/marco/Desktop/libressl-3.3.3/missing' autoconf
-AUTOHEADER = ${SHELL} '/Users/marco/Desktop/libressl-3.3.3/missing' autoheader
-AUTOMAKE = ${SHELL} '/Users/marco/Desktop/libressl-3.3.3/missing' automake-1.16
+AUTOCONF = ${SHELL} '/Users/marco/Desktop/libressl-3.5.3/missing' autoconf
+AUTOHEADER = ${SHELL} '/Users/marco/Desktop/libressl-3.5.3/missing' autoheader
+AUTOMAKE = ${SHELL} '/Users/marco/Desktop/libressl-3.5.3/missing' automake-1.16
 AWK = awk
 CC = cc
 CCAS = cc
@@ -204,7 +204,7 @@ CFLAGS = -g -O2 -Wall -std=gnu99 -fno-strict-aliasing  -fno-strict-overflow -fst
 CPP = cc -E
 CPPFLAGS =  -D_FORTIFY_SOURCE=2
 CYGPATH_W = echo
-DEFS = -DPACKAGE_NAME=\"libressl\" -DPACKAGE_TARNAME=\"libressl\" -DPACKAGE_VERSION=\"3.3.3\" -DPACKAGE_STRING=\"libressl\ 3.3.3\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DPACKAGE=\"libressl\" -DVERSION=\"3.3.3\" -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1 -DLT_OBJDIR=\".libs/\" -DSIZEOF_TIME_T=8 -DHAVE_SYMLINK=1 -DHAVE_ERR_H=1 -DHAVE_READPASSPHRASE_H=1 -DHAVE_ASPRINTF=1 -DHAVE_MEMMEM=1 -DHAVE_READPASSPHRASE=1 -DHAVE_STRLCAT=1 -DHAVE_STRLCPY=1 -DHAVE_STRNDUP=1 -DHAVE_STRNLEN=1 -DHAVE_STRSEP=1 -DHAVE_STRTONUM=1 -DHAVE_TIMEGM=1 -DHAVE_GETPROGNAME=1 -DHAVE_SYSLOG=1 -DHAVE_POLL=1 -DHAVE_SOCKETPAIR=1 -DHAVE_ARC4RANDOM=1 -DHAVE_ARC4RANDOM_BUF=1 -DHAVE_ARC4RANDOM_UNIFORM=1 -DHAVE_TIMINGSAFE_BCMP=1 -DHAVE_CLOCK_GETTIME=1 -DHAVE_VA_COPY=1 -DHAVE___VA_COPY=1
+DEFS = -DPACKAGE_NAME=\"libressl\" -DPACKAGE_TARNAME=\"libressl\" -DPACKAGE_VERSION=\"3.5.3\" -DPACKAGE_STRING=\"libressl\ 3.5.3\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DPACKAGE=\"libressl\" -DVERSION=\"3.5.3\" -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1 -DLT_OBJDIR=\".libs/\" -DSIZEOF_TIME_T=8 -DHAVE_SYMLINK=1 -DHAVE_ERR_H=1 -DHAVE_READPASSPHRASE_H=1 -DHAVE_NETINET_IP_H=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_NETINET_IN_H=1 -DHAVE_ARPA_NAMESER_H=1 -DHAVE_NETDB_H=1 -DHAVE_RESOLV_H=1 -DHAVE_ASPRINTF=1 -DHAVE_MEMMEM=1 -DHAVE_READPASSPHRASE=1 -DHAVE_STRLCAT=1 -DHAVE_STRLCPY=1 -DHAVE_STRNDUP=1 -DHAVE_STRNLEN=1 -DHAVE_STRSEP=1 -DHAVE_STRTONUM=1 -DHAVE_TIMEGM=1 -DHAVE_GETPROGNAME=1 -DHAVE_SYSLOG=1 -DHAVE_POLL=1 -DHAVE_SOCKETPAIR=1 -DHAVE_ARC4RANDOM=1 -DHAVE_ARC4RANDOM_BUF=1 -DHAVE_ARC4RANDOM_UNIFORM=1 -DHAVE_TIMINGSAFE_BCMP=1 -DHAVE_CLOCK_GETTIME=1 -DHAVE_VA_COPY=1 -DHAVE___VA_COPY=1
 DEPDIR = .deps
 DLLTOOL = false
 DSYMUTIL = dsymutil
@@ -221,18 +221,18 @@ INSTALL_DATA = ${INSTALL} -m 644
 INSTALL_PROGRAM = ${INSTALL}
 INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
-LD = /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
+LD = /Library/Developer/CommandLineTools/usr/bin/ld
 LDFLAGS =   -Qunused-arguments
-LIBCRYPTO_VERSION = 46:2:0
+LIBCRYPTO_VERSION = 49:0:0
 LIBOBJS = 
 LIBS = 
-LIBSSL_VERSION = 48:2:0
-LIBTLS_VERSION = 20:3:0
+LIBSSL_VERSION = 52:0:0
+LIBTLS_VERSION = 25:0:0
 LIBTOOL = $(SHELL) $(top_builddir)/libtool
 LIPO = lipo
 LN_S = ln -s
 LTLIBOBJS = 
-MAKEINFO = ${SHELL} '/Users/marco/Desktop/libressl-3.3.3/missing' makeinfo
+MAKEINFO = ${SHELL} '/Users/marco/Desktop/libressl-3.5.3/missing' makeinfo
 MANIFEST_TOOL = :
 MKDIR_P = ../.././install-sh -c -d
 NM = /usr/bin/nm -B
@@ -245,10 +245,10 @@ OTOOL64 = :
 PACKAGE = libressl
 PACKAGE_BUGREPORT = 
 PACKAGE_NAME = libressl
-PACKAGE_STRING = libressl 3.3.3
+PACKAGE_STRING = libressl 3.5.3
 PACKAGE_TARNAME = libressl
 PACKAGE_URL = 
-PACKAGE_VERSION = 3.3.3
+PACKAGE_VERSION = 3.5.3
 PATH_SEPARATOR = :
 PLATFORM_LDADD = 
 PROG_LDADD = 
@@ -257,11 +257,11 @@ SED = /usr/bin/sed
 SET_MAKE = 
 SHELL = /bin/sh
 STRIP = strip
-VERSION = 3.3.3
-abs_builddir = /Users/marco/Desktop/libressl-3.3.3/include/openssl
-abs_srcdir = /Users/marco/Desktop/libressl-3.3.3/include/openssl
-abs_top_builddir = /Users/marco/Desktop/libressl-3.3.3
-abs_top_srcdir = /Users/marco/Desktop/libressl-3.3.3
+VERSION = 3.5.3
+abs_builddir = /Users/marco/Desktop/libressl-3.5.3/include/openssl
+abs_srcdir = /Users/marco/Desktop/libressl-3.5.3/include/openssl
+abs_top_builddir = /Users/marco/Desktop/libressl-3.5.3
+abs_top_srcdir = /Users/marco/Desktop/libressl-3.5.3
 ac_ct_AR = ar
 ac_ct_CC = cc
 ac_ct_DUMPBIN = 
@@ -271,10 +271,10 @@ am__quote =
 am__tar = $${TAR-tar} chof - "$$tardir"
 am__untar = $${TAR-tar} xf -
 bindir = ${exec_prefix}/bin
-build = x86_64-apple-darwin20.6.0
+build = arm-apple-darwin21.5.0
 build_alias = 
-build_cpu = x86_64
-build_os = darwin20.6.0
+build_cpu = arm
+build_os = darwin21.5.0
 build_vendor = apple
 builddir = .
 datadir = ${datarootdir}
@@ -282,15 +282,15 @@ datarootdir = ${prefix}/share
 docdir = ${datarootdir}/doc/${PACKAGE_TARNAME}
 dvidir = ${docdir}
 exec_prefix = ${prefix}
-host = x86_64-apple-darwin20.6.0
+host = arm-apple-darwin21.5.0
 host_alias = 
-host_cpu = x86_64
-host_os = darwin20.6.0
+host_cpu = arm
+host_os = darwin21.5.0
 host_vendor = apple
 htmldir = ${docdir}
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = ${SHELL} /Users/marco/Desktop/libressl-3.3.3/install-sh
+install_sh = ${SHELL} /Users/marco/Desktop/libressl-3.5.3/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
@@ -320,21 +320,21 @@ AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/include/compat \
 #	asn1t.h bio.h blowfish.h bn.h \
 #	buffer.h camellia.h cast.h chacha.h \
 #	cmac.h cms.h comp.h conf.h \
-#	conf_api.h crypto.h curve25519.h \
-#	des.h dh.h dsa.h dso.h dtls1.h ec.h \
-#	ecdh.h ecdsa.h engine.h err.h evp.h \
-#	gost.h hkdf.h hmac.h idea.h lhash.h \
-#	md4.h md5.h modes.h obj_mac.h \
-#	objects.h ocsp.h opensslconf.h \
-#	opensslfeatures.h opensslv.h \
-#	ossl_typ.h pem.h pem2.h pkcs12.h \
-#	pkcs7.h poly1305.h rand.h rc2.h \
-#	rc4.h ripemd.h rsa.h safestack.h \
-#	sha.h sm3.h sm4.h srtp.h ssl.h \
-#	ssl2.h ssl23.h ssl3.h stack.h tls1.h \
-#	ts.h txt_db.h ui.h ui_compat.h \
-#	whrlpool.h x509.h x509_verify.h \
-#	x509_vfy.h x509v3.h
+#	conf_api.h crypto.h ct.h cterr.h \
+#	curve25519.h des.h dh.h dsa.h dso.h \
+#	dtls1.h ec.h ecdh.h ecdsa.h engine.h \
+#	err.h evp.h gost.h hkdf.h hmac.h \
+#	idea.h lhash.h md4.h md5.h modes.h \
+#	obj_mac.h objects.h ocsp.h \
+#	opensslconf.h opensslfeatures.h \
+#	opensslv.h ossl_typ.h pem.h pem2.h \
+#	pkcs12.h pkcs7.h poly1305.h rand.h \
+#	rc2.h rc4.h ripemd.h rsa.h \
+#	safestack.h sha.h sm3.h sm4.h srtp.h \
+#	ssl.h ssl2.h ssl23.h ssl3.h stack.h \
+#	tls1.h ts.h txt_db.h ui.h \
+#	ui_compat.h whrlpool.h x509.h \
+#	x509_verify.h x509_vfy.h x509v3.h
 all: all-am
 
 .SUFFIXES:

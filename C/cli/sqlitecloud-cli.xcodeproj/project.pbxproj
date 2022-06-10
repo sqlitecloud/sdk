@@ -273,6 +273,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../SSL/include\"";
 				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../SSL/macos_fat\"";
+				MACOSX_DEPLOYMENT_TARGET = 12.3;
 				OTHER_CODE_SIGN_FLAGS = "--timestamp";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.sqlabs.sqlitecloud-cli";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -289,6 +290,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../SSL/include\"";
 				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../SSL/macos_fat\"";
+				MACOSX_DEPLOYMENT_TARGET = 12.3;
 				OTHER_CODE_SIGN_FLAGS = "--timestamp";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.sqlabs.sqlitecloud-cli";
 				PRODUCT_NAME = "$(TARGET_NAME)";
