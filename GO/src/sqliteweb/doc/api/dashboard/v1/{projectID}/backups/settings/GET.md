@@ -1,11 +1,11 @@
 # API Documentation
 
-Return list of databases with backups
+Return list of the backup settings
 
 ## Requests
 
 ```sh
-curl "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/backups" \
+curl "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/backups/settings" \
      -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMjcuMC4wLjEiLCJleHAiOjE2NTEwOTM4MzUsImp0aSI6IjEiLCJpYXQiOjE2NTEwNjM4MzUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjUxMDYzODM1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.6oTRZEBprnPjHoPpxd89RDfHifXn38MQmvureXl2XbY'
 ```
 
@@ -26,14 +26,25 @@ none
   status            = 200,                        ; status code: 200 = no error, error otherwise
   message           = "OK",                       ; "OK" or error message
 
-  value             = [ database names as string ]; Array with database that have snapshots
+  value             = [ list of settings objects ]; Array with backup settings for each database
+}
+```
+
+#### settings object:
+
+```json
+{ 
+  name                      = "",                                   -- database name
+  enabled                   = 1,                                    -- backup enabled or disabled
+  backup_retention          = "12h",                                -- retention (null if default value)
+  backup_snapshot_interval  = "6h"                                  -- snapshot interval (null if default value)
 }
 ```
 
 ### Example Request:
 
 ```http
-GET /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/backups HTTP/1.1
+GET /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/backups/settings HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMjcuMC4wLjEiLCJleHAiOjE2NTEwOTM4MzUsImp0aSI6IjEiLCJpYXQiOjE2NTEwNjM4MzUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjUxMDYzODM1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.6oTRZEBprnPjHoPpxd89RDfHifXn38MQmvureXl2XbY
 Host: localhost:8443
 Connection: close
@@ -54,11 +65,36 @@ Content-Length: 69
 Connection: close
 
 {
-  "value": [
-    "db1.sqlite",
-    "db2.sqlite"
-  ],
-  "message": "OK",
-  "status": 200
+   "message":"OK",
+   "status":200,
+   "value":[
+      {
+         "backup_retention":"24h",
+         "enabled":1,
+         "name":"chinook.sqlite"
+      },
+      {
+         "backup_retention":"12h",
+         "backup_snapshot_interval":"6h",
+         "enabled":1,
+         "name":"db1.sqlite"
+      },
+      {
+         "enabled":0,
+         "name":"db3.sqlite"
+      },
+      {
+         "enabled":0,
+         "name":"db4enc.sqlite"
+      },
+      {
+         "enabled":0,
+         "name":"db5enc.sqlite"
+      },
+      {
+         "enabled":0,
+         "name":"dbempty.sqlite"
+      }
+   ]
 }
 ```
