@@ -76,11 +76,26 @@ func MI2LUATable( L *lua.State, x map[string]interface{} ) {
     case bool   : L.PushBoolean( m.(bool) )
     case float64: L.PushNumber( m.(float64) )
     case string : L.PushString( m.(string) )
-    default:
-      switch {
-      case m == nil : L.PushNil()
-      default       : MI2LUATable( L, m.(map[string]interface{}) )
-    } }
+    case map[string]interface{}: MI2LUATable( L, m.(map[string]interface{}) )
+    case []interface{}: MI2LUAArray( L, m.([]interface{}) )
+    default: L.PushNil()  
+    }
+    L.SetTable( -3 )
+  }
+}
+
+func MI2LUAArray( L *lua.State, x []interface{} ) {
+  L.NewTable()
+  for k, m := range x {
+    L.PushInteger( k )
+    switch m.(type) {
+    case bool   : L.PushBoolean( m.(bool) )
+    case float64: L.PushNumber( m.(float64) )
+    case string : L.PushString( m.(string) )
+    case map[string]interface{}: MI2LUATable( L, m.(map[string]interface{}) )
+    case []interface{}: MI2LUAArray( L, m.([]interface{}) )
+    default: L.PushNil()
+    }
     L.SetTable( -3 )
   }
 }
@@ -153,12 +168,23 @@ func lua_jsonEncode( L *lua.State ) int {
 
 func lua_jsonDecode( L *lua.State ) int {
   if L.TypeOf( 1 ) == lua.TypeString {
-    var x map[string]interface{}
+    var x interface{} // map[string]interface{}
 
     if err := json.Unmarshal( []byte( lua.CheckString( L, 1 ) ), &x ); err == nil {
-      MI2LUATable( L, x )
+      // type-specific logic
+      switch val := x.(type) {
+      case map[string]interface{}: 
+        MI2LUATable( L, val ) 
+        SQLiteWeb.Logger.Infof("lua_jsonDecode map: %v", val)
+      case []interface{}: 
+        MI2LUAArray( L, val )
+        SQLiteWeb.Logger.Infof("lua_jsonDecode arr: %v", val)
+      }
       return 1
-  } }
+    } else {
+      SQLiteWeb.Logger.Errorf("Error in lua_jsonDecode: %s", err)
+    }
+  }
 
   L.PushNil()
   return 1
