@@ -33,9 +33,16 @@ dbs = {}
 if not settings                                                          then return error( 504, "Gateway Timeout" )                        end
 if settings.ErrorNumber     ~= 0                                         then return error( 502, settings.ErrorMessage )                    end
 if settings.NumberOfColumns ~= 4                                         then return error( 502, "Bad Gateway" )                            end
-if settings.NumberOfRows    > 0                                          then dbs = settings.Rows                                           end
 
-if #dbs == 0 then dbs = nil end
+if #settings.Rows > 0 then
+  dbs = filter( settings.Rows, {
+    name              = "name",
+    enabled           = "enabled",
+    backup_retention  = "backup_retention",
+  } )
+else 
+  dbs = nil
+end
 
 Response = {
   status            = 200,           -- status code: 200 = no error, error otherwise

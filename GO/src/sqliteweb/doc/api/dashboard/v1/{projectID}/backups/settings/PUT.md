@@ -13,13 +13,12 @@ curl -X "PUT" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6-
             {
                 "name": "db1.sqlite",
                 "enabled": "1",
-                "retention": "12h",
-                "snapshot_interval": "6h"
+                "backup_retention": "168h",
             },
             {
                 "name": "chinook.sqlite",
                 "enabled": "1",
-                "retention": "24h"
+                "backup_retention": "24h"
             },
             {
                "name": "db3.sqlite",
@@ -45,8 +44,7 @@ curl -X "PUT" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6-
 { 
   name                      = "",                                   -- database name
   enabled                   = 1,                                    -- backup enabled or disabled
-  backup_retention          = "12h",                                -- retention (null if default value)
-  backup_snapshot_interval  = "6h"                                  -- snapshot interval, must be equal or smaller than  backup_retention (null if default value, by default it is equal to backup_retention )
+  backup_retention          = "24h",                                -- retention (null if default value)
 }
 ```
 
@@ -77,13 +75,12 @@ Content-Length: 115
     {
       "name": "db1.sqlite",
       "enabled": "1",
-      "retention": "12h",
-      "snapshot_interval": "6h"
+      "backup_retention": "168h",
     },
     {
       "name": "chinook.sqlite",
       "enabled": "1",
-      "retention": "24h"
+      "backup_retention": "24h"
     },
     {
       "name": "db3.sqlite",

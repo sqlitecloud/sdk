@@ -36,8 +36,7 @@ none
 { 
   name                      = "",                                   -- database name
   enabled                   = 1,                                    -- backup enabled or disabled
-  backup_retention          = "12h",                                -- retention (null if default value)
-  backup_snapshot_interval  = "6h"                                  -- snapshot interval (null if default value)
+  backup_retention          = "24h",                                -- retention (null if default value)
 }
 ```
 
@@ -74,8 +73,7 @@ Connection: close
          "name":"chinook.sqlite"
       },
       {
-         "backup_retention":"12h",
-         "backup_snapshot_interval":"6h",
+         "backup_retention":"168h",
          "enabled":1,
          "name":"db1.sqlite"
       },
