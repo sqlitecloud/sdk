@@ -42,28 +42,25 @@ if userID == 0 then
 else     
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                          end
 
+--   print("values:" .. #values)
+
   local c = ""
   for i = 1, #values do
     local value = values[ i ]
     local name = value[ "name" ]
+    -- print("values i:" .. i .. " name:" .. name)
+
     if name then
       local enabled = value["enabled"] 
       if enabled == nil then enabled = 0 end
       c = c .. "SET DATABASE " .. name .. " KEY backup TO " .. enabled .. ";"
       
-      local retention = value["retention"]
+      local retention = value["backup_retention"]
       if retention and string.len(retention) then 
         c = c .. " SET DATABASE " .. name .. " KEY backup_retention TO '" .. retention .. "';"
       else 
         c = c .. " DROP DATABASE " .. name .. " KEY backup_retention; "
       end 
-      
-      local snapshot_interval = value["snapshot_interval"]
-      if snapshot_interval and string.len(snapshot_interval) then 
-        c = c .. " SET DATABASE " .. name .. " KEY snapshot_interval TO '" .. snapshot_interval .. "';"
-      else 
-        c = c .. " DROP DATABASE " .. name .. " KEY snapshot_interval;"
-      end  
     end
   end
 

@@ -69,6 +69,7 @@ end
 
 // Interface map to LUA Object (Table)
 func MI2LUATable( L *lua.State, x map[string]interface{} ) {
+  // SQLiteWeb.Logger.Infof("MI2LUATable map: %v", x)
   L.NewTable()
   for k, m := range x {
     L.PushString( k )
@@ -85,9 +86,11 @@ func MI2LUATable( L *lua.State, x map[string]interface{} ) {
 }
 
 func MI2LUAArray( L *lua.State, x []interface{} ) {
+  // SQLiteWeb.Logger.Infof("MI2LUATable array: %v", x)
   L.NewTable()
   for k, m := range x {
-    L.PushInteger( k )
+    // SQLiteWeb.Logger.Infof("MI2LUAArray k: %v", k)
+    L.PushInteger( k + 1 )
     switch m.(type) {
     case bool   : L.PushBoolean( m.(bool) )
     case float64: L.PushNumber( m.(float64) )
@@ -175,10 +178,10 @@ func lua_jsonDecode( L *lua.State ) int {
       switch val := x.(type) {
       case map[string]interface{}: 
         MI2LUATable( L, val ) 
-        SQLiteWeb.Logger.Infof("lua_jsonDecode map: %v", val)
+        // SQLiteWeb.Logger.Infof("lua_jsonDecode map: %v", val)
       case []interface{}: 
         MI2LUAArray( L, val )
-        SQLiteWeb.Logger.Infof("lua_jsonDecode arr: %v", val)
+        // SQLiteWeb.Logger.Infof("lua_jsonDecode arr: %v", val)
       }
       return 1
     } else {
