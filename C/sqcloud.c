@@ -1001,7 +1001,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         char *hstart = &buffer[cstart1 + cstart2 + cstart3 + 1];
         
         // try to allocate a buffer big enough to hold uncompressed data + raw header
-        long clonelen = ulen + (zdata - hstart) + 1;
+        uint32_t clonelen = ulen + (uint32_t)(hstart - buffer);
         char *clone = mem_alloc (clonelen);
         if (!clone) {
             internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory to uncompress buffer: %d.", clonelen);
@@ -1025,7 +1025,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         
         isstatic = false;
         buffer = clone;
-        blen = ulen;
+        blen = clonelen;
         
         // at this point the buffer used in the SQCloudResult is a newly allocated one (clone)
         // so externalbuffer flag must be set to false
@@ -1618,7 +1618,6 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
 void internal_rowset_dump (SQCloudResult *result, uint32_t maxline, bool quiet) {
     uint32_t nrows = result->nrows;
     uint32_t ncols = result->ncols;
-//    uint32_t blen = result->blen;
     
     // if user specify a maxline then do not print more than maxline characters for every column
     if (maxline > 0) {
