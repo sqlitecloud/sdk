@@ -38,7 +38,7 @@ Response = {
   
 local projectID, err, msg = verifyProjectID( userID, projectID )                if err ~= 0 then return error( err, msg )                     end
   
-query = "LIST COMMANDS"
+query = "LIST COMMANDS DETAILED"
 result = executeSQL( projectID, query )
   
 if not result                          then return error( 404, "ProjectID OR NodeID not found" ) end

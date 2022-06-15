@@ -37,7 +37,7 @@ none
     command: "LIST STATS [FROM <start_date> TO <end_date>] [NODE <nodeid>]",
     count: 0,
     avgtime: 0.0,
-    privileges: "33554432",
+    privileges: "CLUSTERADMIN",
 }
 ```
 
@@ -65,462 +65,471 @@ Connection: close
 {
   "message": "OK",
   "status": 200,
+  "value": {
+  "message": "OK",
+  "status": 200,
   "value": [
     {
       "avgtime": 0,
-      "command": "ADD ALLOWED IP <ip_address> [ROLE <role_name>] [USER <username>]",
+      "command": "ADD ALLOWED IP \u003cip_address\u003e [ROLE \u003crole_name\u003e] [USER \u003cusername\u003e]",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "ADD [LEARNER] NODE <nodeid> ADDRESS <ip_address:port> CLUSTER <ip_address:port>",
+      "command": "ADD [LEARNER] NODE \u003cnodeid\u003e ADDRESS \u003cip_address:port\u003e CLUSTER \u003cip_address:port\u003e",
       "count": 0,
-      "privileges": "33554432"
+      "privileges": "CLUSTERADMIN"
     },
     {
       "avgtime": 0,
       "command": "APPLY BACKUP SETTINGS",
       "count": 0,
-      "privileges": "524288"
+      "privileges": "BACKUP"
     },
     {
-      "avgtime": 0.416,
-      "command": "AUTH USER <username> PASSWORD <password>",
-      "count": 2,
-      "privileges": "0"
-    },
-    {
-      "avgtime": 0,
-      "command": "CLOSE CONNECTION <connectionid> [NODE <nodeid>]",
-      "count": 0,
-      "privileges": "423100416"
+      "avgtime": 1.21,
+      "command": "AUTH USER \u003cusername\u003e PASSWORD \u003cpassword\u003e",
+      "count": 1,
+      "privileges": "NONE"
     },
     {
       "avgtime": 0,
-      "command": "CREATE DATABASE <database_name> [KEY <encryption_key>] [ENCODING <encoding_value>] [PAGESIZE <pagesize_value>] [IF NOT EXISTS]",
+      "command": "CLOSE CONNECTION \u003cconnectionid\u003e [NODE \u003cnodeid\u003e]",
       "count": 0,
-      "privileges": "134217728"
+      "privileges": "BACKUP,RESTORE,DOWNLOAD,USERADMIN,CREATE_DATABASE,DROP_DATABASE,HOSTADMIN"
     },
     {
       "avgtime": 0,
-      "command": "CREATE ROLE <role_name> [PRIVILEGE <privilege_name>] [DATABASE <database_name>] [TABLE <table_name>]",
+      "command": "CREATE DATABASE \u003cdatabase_name\u003e [KEY \u003cencryption_key\u003e] [ENCODING \u003cencoding_value\u003e] [PAGESIZE \u003cpagesize_value\u003e] [IF NOT EXISTS]",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "CREATE_DATABASE"
     },
     {
       "avgtime": 0,
-      "command": "CREATE USER <username> PASSWORD <password> [ROLE <role_name>] [DATABASE <database_name>] [TABLE <table_name>]",
+      "command": "CREATE ROLE \u003crole_name\u003e [PRIVILEGE \u003cprivilege_name\u003e] [DATABASE \u003cdatabase_name\u003e] [TABLE \u003ctable_name\u003e]",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "DECRYPT DATABASE <database_name>",
+      "command": "CREATE USER \u003cusername\u003e PASSWORD \u003cpassword\u003e [ROLE \u003crole_name\u003e] [DATABASE \u003cdatabase_name\u003e] [TABLE \u003ctable_name\u003e]",
       "count": 0,
-      "privileges": "134217728"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "DISABLE PLUGIN <plugin_name>",
+      "command": "DECRYPT DATABASE \u003cdatabase_name\u003e",
       "count": 0,
-      "privileges": "4194304"
+      "privileges": "CREATE_DATABASE"
     },
     {
       "avgtime": 0,
-      "command": "DISABLE USER <username>",
+      "command": "DISABLE PLUGIN \u003cplugin_name\u003e",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "PLUGIN"
     },
     {
       "avgtime": 0,
-      "command": "DROP CLIENT KEY <keyname>",
+      "command": "DISABLE USER \u003cusername\u003e",
       "count": 0,
-      "privileges": "0"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "DROP DATABASE <database_name> KEY <keyname>",
+      "command": "DROP CLIENT KEY \u003ckeyname\u003e",
       "count": 0,
-      "privileges": "131071"
+      "privileges": "NONE"
     },
     {
       "avgtime": 0,
-      "command": "DROP DATABASE <database_name> [IF EXISTS]",
+      "command": "DROP DATABASE \u003cdatabase_name\u003e KEY \u003ckeyname\u003e",
       "count": 0,
-      "privileges": "268435456"
+      "privileges": "READ,INSERT,UPDATE,DELETE,READWRITE,PRAGMA,CREATE_TABLE,CREATE_INDEX,CREATE_VIEW,CREATE_TRIGGER,DROP_TABLE,DROP_INDEX,DROP_VIEW,DROP_TRIGGER,ALTER_TABLE,ANALYZE,ATTACH,DETACH,DBADMIN"
     },
     {
       "avgtime": 0,
-      "command": "DROP KEY <keyname>",
+      "command": "DROP DATABASE \u003cdatabase_name\u003e [IF EXISTS]",
       "count": 0,
-      "privileges": "8388608"
+      "privileges": "DROP_DATABASE"
     },
     {
       "avgtime": 0,
-      "command": "DROP ROLE <role_name>",
+      "command": "DROP KEY \u003ckeyname\u003e",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "SETTINGS"
     },
     {
       "avgtime": 0,
-      "command": "DROP USER <username>",
+      "command": "DROP ROLE \u003crole_name\u003e",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "ENABLE PLUGIN <plugin_name>",
+      "command": "DROP USER \u003cusername\u003e",
       "count": 0,
-      "privileges": "4194304"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "ENABLE USER <username>",
+      "command": "ENABLE PLUGIN \u003cplugin_name\u003e",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "PLUGIN"
     },
     {
       "avgtime": 0,
-      "command": "ENCRYPT DATABASE <database_name> WITH KEY <encryption_key>",
+      "command": "ENABLE USER \u003cusername\u003e",
       "count": 0,
-      "privileges": "134217728"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "GET CLIENT KEY <keyname>",
+      "command": "ENCRYPT DATABASE \u003cdatabase_name\u003e WITH KEY \u003cencryption_key\u003e",
       "count": 0,
-      "privileges": "0"
+      "privileges": "CREATE_DATABASE"
     },
     {
       "avgtime": 0,
-      "command": "GET DATABASE <database_name> KEY <keyname>",
+      "command": "GET CLIENT KEY \u003ckeyname\u003e",
       "count": 0,
-      "privileges": "131071"
+      "privileges": "NONE"
     },
     {
       "avgtime": 0,
-      "command": "GET DATABASE [<value>]",
+      "command": "GET DATABASE \u003cdatabase_name\u003e KEY \u003ckeyname\u003e",
       "count": 0,
-      "privileges": "406323200"
+      "privileges": "READ,INSERT,UPDATE,DELETE,READWRITE,PRAGMA,CREATE_TABLE,CREATE_INDEX,CREATE_VIEW,CREATE_TRIGGER,DROP_TABLE,DROP_INDEX,DROP_VIEW,DROP_TRIGGER,ALTER_TABLE,ANALYZE,ATTACH,DETACH,DBADMIN"
     },
     {
       "avgtime": 0,
-      "command": "GET INFO <key> [NODE <nodeid>]",
+      "command": "GET DATABASE [\u003cvalue\u003e]",
       "count": 0,
-      "privileges": "100663296"
+      "privileges": "BACKUP,RESTORE,DOWNLOAD,CREATE_DATABASE,DROP_DATABASE,HOSTADMIN"
     },
     {
       "avgtime": 0,
-      "command": "GET KEY <keyname>",
+      "command": "GET INFO \u003ckey\u003e [NODE \u003cnodeid\u003e]",
       "count": 0,
-      "privileges": "8388608"
+      "privileges": "CLUSTERADMIN,CLUSTERMONITOR"
+    },
+    {
+      "avgtime": 0,
+      "command": "GET KEY \u003ckeyname\u003e",
+      "count": 0,
+      "privileges": "SETTINGS"
     },
     {
       "avgtime": 0,
       "command": "GET LEADER",
       "count": 0,
-      "privileges": "100663296"
+      "privileges": "CLUSTERADMIN,CLUSTERMONITOR"
     },
     {
       "avgtime": 0,
-      "command": "GET RUNTIME KEY <keyname>",
+      "command": "GET RUNTIME KEY \u003ckeyname\u003e",
       "count": 0,
-      "privileges": "8388608"
+      "privileges": "SETTINGS"
     },
     {
       "avgtime": 0,
-      "command": "GET SQL <table_name>",
+      "command": "GET SQL \u003ctable_name\u003e",
       "count": 0,
-      "privileges": "15"
+      "privileges": "READ,INSERT,UPDATE,DELETE,READWRITE"
     },
     {
       "avgtime": 0,
       "command": "GET USER",
       "count": 0,
-      "privileges": "0"
+      "privileges": "NONE"
     },
     {
       "avgtime": 0,
-      "command": "GRANT PRIVILEGE <privilege_name> ROLE <role_name> [DATABASE <database_name>] [TABLE <table_name>]",
+      "command": "GRANT PRIVILEGE \u003cprivilege_name\u003e ROLE \u003crole_name\u003e [DATABASE \u003cdatabase_name\u003e] [TABLE \u003ctable_name\u003e]",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "GRANT ROLE <role_name> USER <username> [DATABASE <database_name>] [TABLE <table_name>]",
+      "command": "GRANT ROLE \u003crole_name\u003e USER \u003cusername\u003e [DATABASE \u003cdatabase_name\u003e] [TABLE \u003ctable_name\u003e]",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "HELP <<command>>",
+      "command": "HELP \u003c\u003ccommand\u003e\u003e",
       "count": 0,
-      "privileges": "0"
+      "privileges": "NONE"
     },
     {
       "avgtime": 0,
-      "command": "LIST ALLOWED IP [ROLE <role_name>] [USER <username>]",
+      "command": "LIST ALLOWED IP [ROLE \u003crole_name\u003e] [USER \u003cusername\u003e]",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
       "command": "LIST BACKUP SETTINGS",
       "count": 0,
-      "privileges": "524288"
+      "privileges": "BACKUP"
     },
     {
       "avgtime": 0,
       "command": "LIST BACKUPS",
       "count": 0,
-      "privileges": "524288"
+      "privileges": "BACKUP"
     },
     {
       "avgtime": 0,
-      "command": "LIST BACKUPS DATABASE <database_name>",
+      "command": "LIST BACKUPS DATABASE \u003cdatabase_name\u003e",
       "count": 0,
-      "privileges": "524288"
+      "privileges": "BACKUP"
     },
     {
       "avgtime": 0,
       "command": "LIST CLIENT KEYS",
       "count": 0,
-      "privileges": "0"
-    },
-    {
-      "avgtime": 4.67,
-      "command": "LIST COMMANDS",
-      "count": 2,
-      "privileges": "0"
+      "privileges": "NONE"
     },
     {
       "avgtime": 0,
-      "command": "LIST CONNECTIONS [NODE <nodeid>]",
-      "count": 0,
-      "privileges": "423100416"
+      "command": "LIST COMMANDS [DETAILED]",
+      "count": 1,
+      "privileges": "NONE"
     },
     {
       "avgtime": 0,
-      "command": "LIST DATABASE <database_name> KEYS",
+      "command": "LIST CONNECTIONS [NODE \u003cnodeid\u003e]",
       "count": 0,
-      "privileges": "131071"
+      "privileges": "BACKUP,RESTORE,DOWNLOAD,USERADMIN,CREATE_DATABASE,DROP_DATABASE,HOSTADMIN"
     },
     {
       "avgtime": 0,
-      "command": "LIST DATABASE CONNECTIONS [ID] <database_name>",
+      "command": "LIST DATABASE \u003cdatabase_name\u003e KEYS",
       "count": 0,
-      "privileges": "406323200"
+      "privileges": "READ,INSERT,UPDATE,DELETE,READWRITE,PRAGMA,CREATE_TABLE,CREATE_INDEX,CREATE_VIEW,CREATE_TRIGGER,DROP_TABLE,DROP_INDEX,DROP_VIEW,DROP_TRIGGER,ALTER_TABLE,ANALYZE,ATTACH,DETACH,DBADMIN"
+    },
+    {
+      "avgtime": 0,
+      "command": "LIST DATABASE CONNECTIONS [ID] \u003cdatabase_name\u003e",
+      "count": 0,
+      "privileges": "BACKUP,RESTORE,DOWNLOAD,CREATE_DATABASE,DROP_DATABASE,HOSTADMIN"
     },
     {
       "avgtime": 0,
       "command": "LIST DATABASES [DETAILED]",
       "count": 0,
-      "privileges": "0"
+      "privileges": "NONE"
     },
     {
       "avgtime": 0,
       "command": "LIST INFO",
       "count": 0,
-      "privileges": "100663296"
+      "privileges": "CLUSTERADMIN,CLUSTERMONITOR"
     },
     {
       "avgtime": 0,
       "command": "LIST KEYS [DETAILED]",
       "count": 0,
-      "privileges": "8388608"
+      "privileges": "SETTINGS"
     },
     {
       "avgtime": 0,
       "command": "LIST KEYWORDS",
       "count": 0,
-      "privileges": "131071"
+      "privileges": "READ,INSERT,UPDATE,DELETE,READWRITE,PRAGMA,CREATE_TABLE,CREATE_INDEX,CREATE_VIEW,CREATE_TRIGGER,DROP_TABLE,DROP_INDEX,DROP_VIEW,DROP_TRIGGER,ALTER_TABLE,ANALYZE,ATTACH,DETACH,DBADMIN"
     },
     {
       "avgtime": 0,
-      "command": "LIST LATENCY KEY <keyname> [NODE <nodeid>]",
+      "command": "LIST LATENCY KEY \u003ckeyname\u003e [NODE \u003cnodeid\u003e]",
       "count": 0,
-      "privileges": "506986496"
+      "privileges": "BACKUP,RESTORE,DOWNLOAD,CLUSTERADMIN,CLUSTERMONITOR,CREATE_DATABASE,DROP_DATABASE,HOSTADMIN"
     },
     {
       "avgtime": 0,
-      "command": "LIST LATENCY [NODE <nodeid>]",
+      "command": "LIST LATENCY [NODE \u003cnodeid\u003e]",
       "count": 0,
-      "privileges": "506986496"
+      "privileges": "BACKUP,RESTORE,DOWNLOAD,CLUSTERADMIN,CLUSTERMONITOR,CREATE_DATABASE,DROP_DATABASE,HOSTADMIN"
     },
     {
       "avgtime": 0,
-      "command": "LIST LOG [FROM <start_date>] [TO <end_date>] [LEVEL <log_level>] [TYPE <log_type>] [ID] [ORDER DESC] [LIMIT <count>] [CURSOR <cursorid>] [NODE <nodeid>]",
+      "command": "LIST LOG [FROM \u003cstart_date\u003e] [TO \u003cend_date\u003e] [LEVEL \u003clog_level\u003e] [TYPE \u003clog_type\u003e] [ID] [ORDER DESC] [LIMIT \u003ccount\u003e] [CURSOR \u003ccursorid\u003e] [NODE \u003cnodeid\u003e]",
       "count": 0,
-      "privileges": "406323200"
+      "privileges": "BACKUP,RESTORE,DOWNLOAD,CREATE_DATABASE,DROP_DATABASE,HOSTADMIN"
     },
     {
       "avgtime": 0,
       "command": "LIST NODES",
       "count": 0,
-      "privileges": "100663296"
+      "privileges": "CLUSTERADMIN,CLUSTERMONITOR"
     },
     {
-      "avgtime": 0.108,
+      "avgtime": 0,
       "command": "LIST PLUGINS",
-      "count": 5,
-      "privileges": "4194304"
+      "count": 0,
+      "privileges": "PLUGIN"
     },
     {
       "avgtime": 0,
       "command": "LIST PRIVILEGES",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
       "command": "LIST ROLES",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
       "command": "LIST RUNTIME KEYS",
       "count": 0,
-      "privileges": "8388608"
+      "privileges": "SETTINGS"
     },
     {
       "avgtime": 0,
-      "command": "LIST STATS [FROM <start_date> TO <end_date>] [NODE <nodeid>]",
+      "command": "LIST STATS [FROM \u003cstart_date\u003e TO \u003cend_date\u003e] [NODE \u003cnodeid\u003e]",
       "count": 0,
-      "privileges": "33554432"
+      "privileges": "CLUSTERADMIN"
     },
     {
       "avgtime": 0,
       "command": "LIST TABLES",
       "count": 0,
-      "privileges": "15"
+      "privileges": "READ,INSERT,UPDATE,DELETE,READWRITE"
     },
     {
       "avgtime": 0,
-      "command": "LIST USERS [WITH ROLES] [DATABASE <database_name>] [TABLE <table_name>]",
+      "command": "LIST USERS [WITH ROLES] [DATABASE \u003cdatabase_name\u003e] [TABLE \u003ctable_name\u003e]",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "LISTEN <channel_name>",
+      "command": "LISTEN \u003cchannel_name\u003e",
       "count": 0,
-      "privileges": "131072"
+      "privileges": "SUB"
     },
     {
       "avgtime": 0,
-      "command": "NOTIFY <channel_name> [<payload_value>]",
+      "command": "LOAD PLUGIN \u003cplugin_name\u003e",
       "count": 0,
-      "privileges": "262144"
+      "privileges": "PLUGIN"
+    },
+    {
+      "avgtime": 0,
+      "command": "NOTIFY \u003cchannel_name\u003e [\u003cpayload_value\u003e]",
+      "count": 0,
+      "privileges": "PUB"
     },
     {
       "avgtime": 0,
       "command": "PING",
       "count": 0,
-      "privileges": "0"
+      "privileges": "NONE"
     },
     {
       "avgtime": 0,
-      "command": "REMOVE ALLOWED IP <ip_address> [ROLE <role_name>] [USER <username>]",
+      "command": "REMOVE ALLOWED IP \u003cip_address\u003e [ROLE \u003crole_name\u003e] [USER \u003cusername\u003e]",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "REMOVE NODE <nodeid>",
+      "command": "REMOVE NODE \u003cnodeid\u003e",
       "count": 0,
-      "privileges": "33554432"
+      "privileges": "CLUSTERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "RENAME ROLE <role_name> TO <new_role_name>",
+      "command": "RENAME ROLE \u003crole_name\u003e TO \u003cnew_role_name\u003e",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "RENAME USER <username> TO <new_username>",
+      "command": "RENAME USER \u003cusername\u003e TO \u003cnew_username\u003e",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "RESTORE BACKUP DATABASE <database_name> [GENERATION <generation>] [INDEX <index>] [TIMESTAMP <timestamp>]",
+      "command": "RESTORE BACKUP DATABASE \u003cdatabase_name\u003e [GENERATION \u003cgeneration\u003e] [INDEX \u003cindex\u003e] [TIMESTAMP \u003ctimestamp\u003e]",
       "count": 0,
-      "privileges": "1048576"
+      "privileges": "RESTORE"
     },
     {
       "avgtime": 0,
-      "command": "REVOKE PRIVILEGE <privilege_name> ROLE <role_name> [DATABASE <database_name>] [TABLE <table_name>]",
+      "command": "REVOKE PRIVILEGE \u003cprivilege_name\u003e ROLE \u003crole_name\u003e [DATABASE \u003cdatabase_name\u003e] [TABLE \u003ctable_name\u003e]",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "REVOKE ROLE <role_name> USER <username> [DATABASE <database_name>] [TABLE <table_name>]",
+      "command": "REVOKE ROLE \u003crole_name\u003e USER \u003cusername\u003e [DATABASE \u003cdatabase_name\u003e] [TABLE \u003ctable_name\u003e]",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
-      "avgtime": 0,
-      "command": "SET CLIENT KEY <keyname> TO <keyvalue>",
+      "avgtime": 0.001,
+      "command": "SET CLIENT KEY \u003ckeyname\u003e TO \u003ckeyvalue\u003e",
       "count": 1,
-      "privileges": "0"
+      "privileges": "NONE"
     },
     {
       "avgtime": 0,
-      "command": "SET DATABASE <database_name> KEY <keyname> TO <keyvalue>",
+      "command": "SET DATABASE \u003cdatabase_name\u003e KEY \u003ckeyname\u003e TO \u003ckeyvalue\u003e",
       "count": 0,
-      "privileges": "131071"
+      "privileges": "READ,INSERT,UPDATE,DELETE,READWRITE,PRAGMA,CREATE_TABLE,CREATE_INDEX,CREATE_VIEW,CREATE_TRIGGER,DROP_TABLE,DROP_INDEX,DROP_VIEW,DROP_TRIGGER,ALTER_TABLE,ANALYZE,ATTACH,DETACH,DBADMIN"
     },
     {
       "avgtime": 0,
-      "command": "SET KEY <keyname> TO <keyvalue>",
+      "command": "SET KEY \u003ckeyname\u003e TO \u003ckeyvalue\u003e",
       "count": 0,
-      "privileges": "8388608"
+      "privileges": "SETTINGS"
     },
     {
       "avgtime": 0,
-      "command": "SET MY PASSWORD <password>",
+      "command": "SET MY PASSWORD \u003cpassword\u003e",
       "count": 0,
-      "privileges": "0"
+      "privileges": "NONE"
     },
     {
       "avgtime": 0,
-      "command": "SET PASSWORD <password> USER <username>",
+      "command": "SET PASSWORD \u003cpassword\u003e USER \u003cusername\u003e",
       "count": 0,
-      "privileges": "16777216"
+      "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "SLEEP <ms>",
+      "command": "SLEEP \u003cms\u003e",
       "count": 0,
-      "privileges": "0"
+      "privileges": "NONE"
     },
     {
       "avgtime": 0,
-      "command": "TEST <test_name> [COMPRESSED]",
+      "command": "TEST \u003ctest_name\u003e [COMPRESSED]",
       "count": 0,
-      "privileges": "0"
+      "privileges": "NONE"
     },
     {
       "avgtime": 0,
-      "command": "UNLISTEN <channel_name>",
+      "command": "UNLISTEN \u003cchannel_name\u003e",
       "count": 0,
-      "privileges": "0"
+      "privileges": "NONE"
     },
     {
       "avgtime": 0,
       "command": "UNUSE DATABASE",
       "count": 0,
-      "privileges": "15"
+      "privileges": "READ,INSERT,UPDATE,DELETE,READWRITE"
     },
     {
       "avgtime": 0,
-      "command": "USE [OR CREATE] DATABASE <database_name>",
+      "command": "USE [OR CREATE] DATABASE \u003cdatabase_name\u003e",
       "count": 0,
-      "privileges": "524287"
+      "privileges": "READ,INSERT,UPDATE,DELETE,READWRITE,PRAGMA,CREATE_TABLE,CREATE_INDEX,CREATE_VIEW,CREATE_TRIGGER,DROP_TABLE,DROP_INDEX,DROP_VIEW,DROP_TRIGGER,ALTER_TABLE,ANALYZE,ATTACH,DETACH,DBADMIN,SUB,PUB,PUBSUB"
     }
   ]
 }
