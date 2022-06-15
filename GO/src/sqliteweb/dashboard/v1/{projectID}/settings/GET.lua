@@ -44,11 +44,13 @@ settings = executeSQL( projectID, query )
 if not settings                          then return error( 404, "ProjectID OR NodeID not found" ) end
 if settings.ErrorNumber            ~= 0  then return error( 502, "Bad Gateway" )                   end
 if settings.NumberOfColumns        ~= 5  then return error( 502, "Bad Gateway" )                   end
--- if settings.NumberOfRows           ~= 1  then return error( 404, "ProjectID OR NodeID not found" ) end
 
-Response.value = settings.Rows
+if settings.NumberOfRows           ~= 0  then 
+  Response.value = settings.Rows 
+else 
+  Response.value = nil                                                                        
+end
 
-if #Response.value == 0 then Response.value = nil end
 
 SetStatus( 200 )
 Write( jsonEncode( Response ) )

@@ -52,12 +52,15 @@ else
 
     if name then
       local enabled = value["enabled"] 
-      if enabled == nil then enabled = 0 end
-      c = c .. "SET DATABASE " .. name .. " KEY backup TO " .. enabled .. ";"
+      if enabled == nil or enabled == "" then enabled = 0 end
+      if type(enabled) == "string" then 
+        enabled,     err, msg = checkNumber( enabled, 0, 1 )           if err ~= 0 then return error( err, string.format( msg, "enabled" ) ) end
+      end
+      c = c .. "SET DATABASE " .. name .. " KEY backup TO '" .. enabled .. "';"
       
       local retention = value["backup_retention"]
       if retention and string.len(retention) then 
-        c = c .. " SET DATABASE " .. name .. " KEY backup_retention TO '" .. retention .. "';"
+        c = c .. " SET DATABASE " .. name .. " KEY backup_retention TO '" .. enquoteSQL(retention) .. "';"
       else 
         c = c .. " DROP DATABASE " .. name .. " KEY backup_retention; "
       end 
