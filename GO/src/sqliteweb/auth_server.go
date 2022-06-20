@@ -53,6 +53,15 @@ type AuthServer struct {
   cert          string
 }
 
+// Create a struct that will be encoded to a JWT.
+// We add jwt.RegisteredClaims as an embedded type, to provide fields like expiry time
+type Claims struct {
+	FirstName     string `json:"first_name,omitempty"`
+  LastName      string `json:"last_name,omitempty"`
+  IPAddress     string `json:"ipa,omitempty"`
+	jwt.RegisteredClaims
+}
+
 func init() {
   initializeSQLiteWeb()
 
@@ -70,30 +79,30 @@ func init() {
  * return -5 = Internal error: could not send auth query
  * return -6 = Internal error: invalid response from db
 */
-func (this *AuthServer) lookupUserID( Login string, Password string ) int64 {
+func (this *AuthServer) lookupUserID( Login string, Password string ) (int64, string, string) {
   Login    = strings.TrimSpace( Login )
   Password = strings.TrimSpace( Password )
 
-  if Login    == "" { return -1 }
-  if Password == "" { return -1 }
+  if Login    == "" { return -1, "", "" }
+  if Password == "" { return -1, "", "" }
 
-  if CheckCredentials( "dashboard", Login, Password ) { return 0 }
+  if CheckCredentials( "dashboard", Login, Password ) { return 0, "", "" }
 
   Login    = sqlitecloud.SQCloudEnquoteString( Login )
   Password = sqlitecloud.SQCloudEnquoteString( Password )
 
-  query   := fmt.Sprintf( "SELECT id FROM User WHERE email = '%s' AND ( password = '%s' OR password = '%s' ) AND enabled = 1 LIMIT 1;", Login, Password, MD5( Password ) )
+  query   := fmt.Sprintf( "SELECT id, first_name, last_name FROM User WHERE email = '%s' AND ( password = '%s' OR password = '%s' ) AND enabled = 1 LIMIT 1;", Login, Password, MD5( Password ) )
 
   if res, err, _, _ := cm.ExecuteSQL( "auth", query ); res != nil {
     defer res.Free()
     switch {
-    case err != nil                     : return -5
-    case res.GetNumberOfRows() < 1      : return -2
-    case res.GetNumberOfColumns() != 1  : return -6
-    default                             : return res.GetInt64Value_( 0, 0 )
+    case err != nil                     : return -5, "", ""
+    case res.GetNumberOfRows() < 1      : return -2, "", ""
+    case res.GetNumberOfColumns() != 3  : return -6, "", ""
+    default                             : return res.GetInt64Value_( 0, 0 ), res.GetStringValue_(0, 1), res.GetStringValue_(0, 2)
     }
   }
-  return -7
+  return -7, "", ""
 }
 
 func (this *AuthServer) getAuthorization( Header http.Header ) ( string, error ) {
@@ -107,9 +116,9 @@ func (this *AuthServer) getAuthorization( Header http.Header ) ( string, error )
       return Header[ "Authorization" ][ 0 ], nil
   }
 }
-func (this *AuthServer) decodeClaims( tokenString string ) ( *jwt.StandardClaims, error ) {
+func (this *AuthServer) decodeClaims( tokenString string ) ( *Claims, error ) {
   //SigningMethodHS256
-  token, err := jwt.ParseWithClaims( tokenString, &jwt.StandardClaims{}, func( token *jwt.Token ) ( interface{}, error ) {
+  token, err := jwt.ParseWithClaims( tokenString, &Claims{}, func( token *jwt.Token ) ( interface{}, error ) {
     if _, ok := token.Method.( *jwt.SigningMethodHMAC ); !ok  {
       return nil, fmt.Errorf( "Unexpected signing method: '%v'", token.Header[ "alg" ] )
     }
@@ -121,29 +130,33 @@ func (this *AuthServer) decodeClaims( tokenString string ) ( *jwt.StandardClaims
   case token == nil:    return nil, fmt.Errorf( "Could not parse token" )
   case !token.Valid:    return nil, fmt.Errorf( "Invalid token" )
   default:
-    switch claims, ok := token.Claims.(*jwt.StandardClaims); {
+    switch claims, ok := token.Claims.(*Claims); {
     case !ok:           return nil, fmt.Errorf( "No claims found" )
     case claims == nil: return nil, fmt.Errorf( "Could not parse token claims" )
     default:            return claims, nil
   } }
 }
-func (this *AuthServer) verifyClaims( claims *jwt.StandardClaims, reader *http.Request ) error {
+func (this *AuthServer) verifyClaims( claims *Claims, reader *http.Request ) error {
   now        := time.Now().Unix()
   ip, _, err := net.SplitHostPort( reader.RemoteAddr )
+  // Note: IP validation has been diabled because the new dashboard calls backend endpoints from nodejs, node from the user's browser
   uip        := net.ParseIP( ip )
-  
+
   switch {
-    case err    != nil                                : return err
-    case uip    == nil                                : return fmt.Errorf( "Invalid ClientIP" )
-    case claims == nil                                : return fmt.Errorf( "Nil Claims" )
-    case !claims.VerifyAudience( uip.String(), true ) : return fmt.Errorf( "Invalid Audience" )
-    case !claims.VerifyExpiresAt( now, true )         : return fmt.Errorf( "Clain has expired" )
-    case !claims.VerifyIssuedAt( now, true )          : return fmt.Errorf( "Invalid Issue Date" )
-    case !claims.VerifyIssuer( long_name, true )      : return fmt.Errorf( "Invalidf Issuer" )
-    case !claims.VerifyNotBefore( now, true )         : return fmt.Errorf( "Claim from the future" )
-    case claims.Subject != this.Realm                 : return fmt.Errorf( "Invalid SUbject" )
-    default                                           : return nil
+    case err    != nil                                            : 
+    case uip    == nil                                            : err = fmt.Errorf( "Invalid ClientIP" )
+    case claims == nil                                            : err = fmt.Errorf( "Nil Claims" )
+    case !claims.VerifyAudience( service_name, true )             : err = fmt.Errorf( "Invalid Audience" )
+    case !claims.VerifyExpiresAt( time.Unix(now,0), true )        : err = fmt.Errorf( "Claim has expired" )
+    case !claims.VerifyIssuedAt( time.Unix(now,0), true )         : err = fmt.Errorf( "Invalid Issue Date" )
+    case !claims.VerifyIssuer( jwt_issuer, true )                 : err = fmt.Errorf( "Invalid Issuer" )
+    case !claims.VerifyNotBefore( time.Unix(now,0), true )        : err = fmt.Errorf( "Claim from the future" )
+    // case claims.Subject != this.Realm                             : return fmt.Errorf( "Invalid Subject" )
+    default                                                       : return nil
   }
+
+  SQLiteWeb.Logger.Errorf( "verifyClaims error: %s", err )
+  return err
 }
 
 func (this *AuthServer) JWTAuth( nextHandler http.HandlerFunc ) http.HandlerFunc {
@@ -163,7 +176,7 @@ func (this *AuthServer) JWTAuth( nextHandler http.HandlerFunc ) http.HandlerFunc
 func (this *AuthServer) GetUserID( request *http.Request ) ( int64, error ) {
   if token, err  := SQLiteWeb.Auth.getAuthorization( request.Header ); err == nil && token != "" {
 		if claims, err := SQLiteWeb.Auth.decodeClaims( token ); err == nil && claims != nil {
-			switch userID, err := strconv.ParseInt( claims.Id, 10, 64 ); {
+			switch userID, err := strconv.ParseInt( claims.Subject, 10, 64 ); {
 			case err != nil : return -1, err
 			case userID < 1 : return userID, fmt.Errorf( "Invalid UserID" )
 			default         : return userID, nil
@@ -185,7 +198,9 @@ func (this *AuthServer) auth( writer http.ResponseWriter, request *http.Request 
 
   switch err := json.NewDecoder( request.Body ).Decode( &credentials ); {
   case err != nil : sendError( writer, err.Error(), http.StatusBadRequest )
-  default         : this.authorize( writer, request, this.lookupUserID( credentials.Login, credentials.Password ) )
+  default         : 
+    uid, fName, lName := this.lookupUserID( credentials.Login, credentials.Password )
+    this.authorize( writer, request, uid, fName, lName )
   }
 }
 
@@ -195,10 +210,10 @@ func (this *AuthServer) reAuth( writer http.ResponseWriter, request *http.Reques
   token, _  := SQLiteWeb.Auth.getAuthorization( request.Header )
   claims, _ := SQLiteWeb.Auth.decodeClaims( token )
 
-  switch userID, err := strconv.ParseInt( claims.Id, 10, 64 ); {
+  switch userID, err := strconv.ParseInt( claims.Subject, 10, 64 ); {
   case err != nil : sendError( writer, err.Error(), http.StatusBadRequest )
   case userID < 0 : sendError( writer, "Invalid UserID", http.StatusBadRequest )
-  default         : this.authorize( writer, request, userID )
+  default         : this.authorize( writer, request, userID, claims.FirstName, claims.LastName )
   }
 }
 
@@ -219,7 +234,7 @@ func (this *AuthServer) challengeAuth( writer http.ResponseWriter ) {
  *              4 = wrong credentials (not found on auth server)
  *              5 = insternal server error
 */
-func (this *AuthServer) authorize( writer http.ResponseWriter, request *http.Request, userID int64 ) {
+func (this *AuthServer) authorize( writer http.ResponseWriter, request *http.Request, userID int64, firstName string, lastName string ) {
   response := Response {
     Status:     500,
     Message:    "Internal Server Error",
@@ -250,14 +265,19 @@ func (this *AuthServer) authorize( writer http.ResponseWriter, request *http.Req
 
   default:
 
-    claims := &jwt.StandardClaims {
-      Audience:   uip.String(),
-      ExpiresAt:  now + this.JWTTTL,
-      Id:         fmt.Sprintf( "%d", userID ),
-      IssuedAt:   now,
-      Issuer:     long_name,
-      NotBefore:  now,
-      Subject:    this.Realm,
+    claims := &Claims {
+      FirstName:  firstName,
+      LastName:   lastName,
+      IPAddress:  uip.String(),
+      
+      RegisteredClaims: jwt.RegisteredClaims{
+        Audience:   []string{service_name},
+        ExpiresAt:  jwt.NewNumericDate(time.Unix(now + this.JWTTTL, 0))  ,
+        IssuedAt:   jwt.NewNumericDate(time.Unix(now, 0)),
+        Issuer:     jwt_issuer,
+        NotBefore:  jwt.NewNumericDate(time.Unix(now, 0)),
+        Subject:    fmt.Sprintf( "%d", userID ),
+      },
     }
 
     Token            := jwt.NewWithClaims( jwt.SigningMethodHS256, claims )

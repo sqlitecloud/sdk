@@ -61,6 +61,9 @@ var app_name     = "sqliteweb"
 var long_name    = "SQLite Cloud Web Server"
 var version      = "version 0.1.0"
 var copyright    = "(c) 2022 by SQLite Cloud Inc."
+var service_name = "web.sqlitecloud.io"
+var jwt_issuer   = "web.sqlitecloud.io"
+
 
 var cfg *ini.File
 
