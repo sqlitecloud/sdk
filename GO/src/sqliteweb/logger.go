@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/gorilla/handlers"
 )
@@ -122,7 +121,8 @@ func (l *Logger) Panicf(format string, v ...interface{}) {
 }
 
 func header(lvl, msg string) string {
-	return fmt.Sprintf("%s %s: %s", time.Now().UTC().Format("2006-01-02T15:04:05.999Z"), lvl, msg)
+	// return fmt.Sprintf("%s %s: %s", time.Now().UTC().Format("2006-01-02T15:04:05.999Z"), lvl, msg)
+	return fmt.Sprintf("%s: %s", lvl, msg)
 }
 
 // logger
