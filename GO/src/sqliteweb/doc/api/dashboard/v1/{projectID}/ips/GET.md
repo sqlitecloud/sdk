@@ -14,12 +14,11 @@ curl "/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/ips?user=admin" \
 
 ### Query parameters
 
-The user MUST give only one of the following two query parameteres:
+The user can give, at most, one of the following two query parameteres:
 
 role = {roleName}
 user = {userName}
 
-If none is provided, an error is raised.
 If both are provided, only the user parameter is taken into account.
 
 ### Request object
