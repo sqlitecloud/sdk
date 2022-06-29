@@ -135,16 +135,15 @@ func ( this *Server ) Start( s service.Service ) error {
   }
   if this.ticker == nil { return errors.New( "ZZZ" ) }
 
-  fmt.Printf( "%s, starting at: %s:%d\r\n", long_name, this.Address, this.Port )
+  SQLiteWeb.Logger.Infof( "%s, starting at: %s:%d\r\n", long_name, this.Address, this.Port )
   go this.run()
   return nil
 }
 func ( this *Server ) run() {
-    if this.server.ListenAndServeTLS( this.CertPath, this.KeyPath ) != http.ErrServerClosed { // Diese Zeile hängt jetzt bis Shutdown aufgerufen wird...
-    // ich wurde friedlich per Shutdown beendet...
-    println( "Drin" )
-  }
-  println( "Ende" )
+   // This line now hangs until shutdown is called
+  err := this.server.ListenAndServeTLS( this.CertPath, this.KeyPath )
+  // After Shutdown or Close, the returned error is ErrServerClosed.
+  SQLiteWeb.Logger.Infof("SQLiteWeb ListenAndServeTLS ended: %s", err)
   //this.Stop()
 }
 func (this *Server ) Stop( s service.Service ) error {

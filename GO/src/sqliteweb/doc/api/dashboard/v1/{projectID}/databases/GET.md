@@ -41,7 +41,9 @@ none
   backup            = "Daily",
   stats             = { 521, 12 },
   bytes             = { 8700000, 712 },
-  fragmentation     = { Used = 2400000, total = 712000 }
+  fragmentation     = { Used = 2400000, total = 712000 },
+  pagesize          = 4096,
+  encoding          = "UTF-8"
 }
 ```
 
@@ -78,6 +80,8 @@ Connection: close
       ],
       "connections": 0,
       "encryption": "",
+      "encoding": "UTF-8",
+      "pagesize": 1024,
       "fragmentation": {
         "Used": 2400000,
         "total": 712000
@@ -97,6 +101,8 @@ Connection: close
       ],
       "connections": 0,
       "encryption": "",
+      "encoding": "UTF-8",
+      "pagesize": 1024,
       "fragmentation": {
         "Used": 2400000,
         "total": 712000
@@ -116,6 +122,8 @@ Connection: close
       ],
       "connections": 0,
       "encryption": "",
+      "encoding": "UTF-8",
+      "pagesize": 1024,
       "fragmentation": {
         "Used": 2400000,
         "total": 712000
@@ -135,6 +143,8 @@ Connection: close
       ],
       "connections": 0,
       "encryption": "",
+      "encoding": "UTF-8",
+      "pagesize": 1024,
       "fragmentation": {
         "Used": 2400000,
         "total": 712000
@@ -154,6 +164,8 @@ Connection: close
       ],
       "connections": 0,
       "encryption": "",
+      "encoding": "UTF-8",
+      "pagesize": 1024,
       "fragmentation": {
         "Used": 2400000,
         "total": 712000
@@ -173,6 +185,8 @@ Connection: close
       ],
       "connections": 0,
       "encryption": "",
+      "encoding": "UTF-8",
+      "pagesize": 1024,
       "fragmentation": {
         "Used": 2400000,
         "total": 712000
@@ -192,6 +206,8 @@ Connection: close
       ],
       "connections": 0,
       "encryption": "",
+      "encoding": "UTF-8",
+      "pagesize": 1024,
       "fragmentation": {
         "Used": 2400000,
         "total": 712000
@@ -211,6 +227,8 @@ Connection: close
       ],
       "connections": 0,
       "encryption": "",
+      "encoding": "UTF-8",
+      "pagesize": 1024,
       "fragmentation": {
         "Used": 2400000,
         "total": 712000
@@ -230,6 +248,8 @@ Connection: close
       ],
       "connections": 0,
       "encryption": "",
+      "encoding": "UTF-8",
+      "pagesize": 1024,
       "fragmentation": {
         "Used": 2400000,
         "total": 712000
@@ -249,6 +269,8 @@ Connection: close
       ],
       "connections": 0,
       "encryption": "",
+      "encoding": "UTF-8",
+      "pagesize": 1024,
       "fragmentation": {
         "Used": 2400000,
         "total": 712000

@@ -34,14 +34,7 @@ users = nil
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false )                                then return error( 401, "Project Disabled" )           end
 else
-  check_access = string.format( "SELECT COUNT( User.id ) AS granted FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled = 1 AND Company.enabled = 1 AND User.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
-  check_access = executeSQL( "auth", check_access )
-
-  if not check_access                       then return error( 504, "Gateway Timeout" )     end
-  if check_access.ErrorNumber       ~= 0    then return error( 502, "Bad Gateway" )         end
-  if check_access.NumberOfColumns   ~= 1    then return error( 502, "Bad Gateway" )         end 
-  if check_access.NumberOfRows      ~= 1    then return error( 502, "Bad Gateway" )         end
-  if check_access.Rows[ 1 ].granted ~= 1    then return error( 401, "Unauthorized" )        end
+  local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg ) end  
 end
 
 users = executeSQL( projectID, query )
@@ -56,20 +49,34 @@ fusers = filter( users.Rows, { [ "username"     ] = "user",
                                [ "databasename" ] = "database",
                                [ "tablename"    ] = "table",
                              } )
-if #fusers == 0 then fusers = nil end
 
-User = {
-  user              = "admin",                    -- Username
-  enabled           = 1,                          -- 1 = enabled, 0 = disabled
-  roles             = "ADMIN",                    -- Comma separated list of roles
-  database          = "",                         -- Database
-  table             = ""                          -- Table
-}
+hierarchyusers = nil
+
+if #fusers == 0 then 
+  fusers = nil  
+else 
+  hierarchyusers = {}
+
+  for i = 1, #fusers do 
+    local u = fusers[ i ]
+    local username = u.user
+    local userroles = hierarchyusers[username]
+
+    if not userroles then 
+      userroles = {}
+      hierarchyusers[username] = userroles
+    end  
+
+    fusers[ i ].username = nil
+    userroles[ #userroles + 1 ] = u
+  end
+end
+
 
 Response = {
   status            = 200,                        -- status code: 0 = no error, error otherwise
   message           = "OK",                       -- "OK" or error message
-  value             = fusers,                     -- Array with user info
+  value             = hierarchyusers,             -- Array with user info
 }
 
 SetStatus( 200 )

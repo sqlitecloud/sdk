@@ -5,7 +5,7 @@ ADD ALLOWED IP % [ROLE %] [USER %]
 ## Requests
 
 ```sh
-curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/ip/127.0.0.2" \
+curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/ip" \
      -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc2MjA5NTcsImp0aSI6IjEiLCJpYXQiOjE2NDc1OTA5NTcsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTkwOTU3LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.erjwvn7RsILHA5cmcrCWdlaOvoyzvysutkab1CGyZGU' \
      -H 'Content-Type: application/json; charset=utf-8' \
      -d $'{
@@ -14,13 +14,14 @@ curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6
 
 ```
 
-### **POST** - /dashboard/v1/{projectID}/ip/{ip46}
+### **POST** - /dashboard/v1/{projectID}/ip
 
 ### Request object
 
 ```json
 {
-  role           = "RoleName",  ; - AND/OR -
+  ip             = "177.247.122.0/24",      single IP v4 or v6 address or multiple addresses in CIDR notation
+  role           = "RoleName",              ; role OR user
   user           = "UserName",
 }
 ```
@@ -39,7 +40,7 @@ curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6
 ### Example Request:
 
 ```http
-POST /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/ip/127.0.0.2 HTTP/1.1
+POST /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/ip HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc2MjA5NTcsImp0aSI6IjEiLCJpYXQiOjE2NDc1OTA5NTcsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTkwOTU3LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.erjwvn7RsILHA5cmcrCWdlaOvoyzvysutkab1CGyZGU
 Content-Type: application/json; charset=utf-8
 Host: web1.sqlitecloud.io:8443
@@ -48,6 +49,7 @@ User-Agent: Paw/3.3.6 (Macintosh; OS X/10.14.6) GCDHTTPRequest
 Content-Length: 14
 
 {
+  "ip": "177.247.122.0/24",
   "role": "PUB"
 }
 ```
