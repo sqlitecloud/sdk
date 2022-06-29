@@ -62,7 +62,7 @@
 #define mem_zeroalloc(_s)                   calloc(1,_s)
 #define mem_alloc(_s)                       malloc(_s)
 #define mem_free(_s)                        free(_s)
-#define string_dup(_s)                      strdup(_s)
+#define mem_string_dup(_s)                  strdup(_s)
 #endif
 #define MIN(a,b)                            (((a)<(b))?(a):(b))
 
@@ -1980,8 +1980,8 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
         return NULL;
     }
     if (rc) {
-        config->username = string_dup(username);
-        config->password = string_dup(password);
+        config->username = mem_string_dup(username);
+        config->password = mem_string_dup(password);
     }
     
     // lookup for mandatory hostname
@@ -2005,7 +2005,7 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
         return NULL;
     }
     if (rc > 0) {
-        config->database = string_dup(database);
+        config->database = mem_string_dup(database);
     }
     
     // lookup for optional key(s)/value(s)
@@ -2031,7 +2031,7 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
         }
         else if (strcasecmp(key, "memory") == 0) {
             int in_memory = (int)strtol(value, NULL, 0);
-            if (in_memory) config->database = string_dup(":memory:");
+            if (in_memory) config->database = mem_string_dup(":memory:");
         }
         #ifndef SQLITECLOUD_DISABLE_TSL
         else if (strcasecmp(key, "insecure") == 0) {
