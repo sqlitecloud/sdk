@@ -53,6 +53,8 @@ if string.len(name) > 0 then
   if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end
   if result.NumberOfRows      ~= 0          then return error( 502, "Bad Gateway" )         end
   if result.Value             ~= "OK"       then return error( 502, "Bad Gateway" )         end
+
+  roleName = name
 end
 
 -- update privilege, if needed
