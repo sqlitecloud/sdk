@@ -25,28 +25,51 @@ SetHeader( "Content-Encoding", "utf-8" )
 local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                               end
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                               end
 local roleName,  err, msg = checkParameter( roleName, 3 )                if err ~= 0 then return error( err, string.format( msg, "roleName" ) )  end
-local name,      err, msg = getBodyValue( "name", 1 )                    if err ~= 0 then return error( err, msg )                               end
+local name,      err, msg = getBodyValue( "name", 0 )                    if err ~= 0 then return error( err, msg )                               end
 
-query  = string.format( "RENAME ROLE '%s' TO '%s'; ", enquoteSQL( roleName ), enquoteSQL( name ) )
+-- get privilege, it's differet if it is null or empty string
+-- local privilege, err, msg = getBodyValue( "privilege", 0 )               if err ~= 0 then return error( err, msg )                               end
+if not body                                then return error(400, "Missing body")                                                                end
+if string.len( body ) == 0                 then return error(400, "Empty body")                                                                  end 
+local jbody = jsonDecode( body )
+if not jbody                               then return error(400, "Invalid body")                                                                end 
+local privilege = jbody[ "privilege" ]
+
+local database,  err, msg = getBodyValue( "database", 0 )                if err ~= 0 then return error( err, msg )                               end
+local table,     err, msg = getBodyValue( "table", 0 )                   if err ~= 0 then return error( err, msg )                               end
 
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
 else
-  check_access = string.format( "SELECT COUNT( User.id ) AS granted FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled = 1 AND Company.enabled = 1 AND User.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
-  check_access = executeSQL( "auth", check_access )
-
-  if not check_access                     then return error( 504, "Gateway Timeout" )     end
-  if check_access.ErrorNumber       ~= 0  then return error( 502, "Bad Gateway" )         end
-  if check_access.NumberOfColumns   ~= 1  then return error( 502, "Bad Gateway" )         end 
-  if check_access.NumberOfRows      ~= 1  then return error( 502, "Bad Gateway" )         end
-  if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
+  local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                               end
 end
 
-result = executeSQL( projectID, query )
-if not result                             then return error( 404, "ProjectID not found" ) end
-if result.ErrorNumber       ~= 0          then return error( 404, "Database not found" )  end
-if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end
-if result.NumberOfRows      ~= 0          then return error( 502, "Bad Gateway" )         end
-if result.Value             ~= "OK"       then return error( 502, "Bad Gateway" )         end
+-- update name, if needed
+if string.len(name) > 0 then
+  query  = string.format( "RENAME ROLE '%s' TO '%s'; ", enquoteSQL( roleName ), enquoteSQL( name ) )
+  result = executeSQL( projectID, query )
+  if not result                             then return error( 404, "ProjectID not found" ) end
+  if result.ErrorNumber       ~= 0          then return error( 404, result.ErrorMessage )  end
+  if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end
+  if result.NumberOfRows      ~= 0          then return error( 502, "Bad Gateway" )         end
+  if result.Value             ~= "OK"       then return error( 502, "Bad Gateway" )         end
+end
+
+-- update privilege, if needed
+if privilege then
+  if string.len(privilege) == 0             then return error( 404, string.format( "Invalid privilege", value ))                  end
+  
+  query = string.format( "GRANT PRIVILEGE '%s' ROLE '%s'", enquoteSQL( privilege ), enquoteSQL( roleName ) )
+  if string.len( database )   > 0    then query = string.format( "%s DATABASE '%s'",             query, enquoteSQL( database  ) ) end
+  if string.len( table )      > 0    then query = string.format( "%s TABLE '%s'",                query, enquoteSQL( table     ) ) end
+                                          query = string.format( "%s FROM SCRATCH;",             query )
+
+  result = executeSQL( projectID, query )
+  if not result                             then return error( 404, "ProjectID not found" ) end
+  if result.ErrorNumber       ~= 0          then return error( 404, result.ErrorMessage )  end
+  if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end
+  if result.NumberOfRows      ~= 0          then return error( 502, "Bad Gateway" )         end
+  if result.Value             ~= "OK"       then return error( 502, "Bad Gateway" )         end
+end
 
 error( 200, "OK" )

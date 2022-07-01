@@ -33,21 +33,30 @@ none
   status            = 200,                       ; status code: 200 = no error, error otherwise
   message           = "OK",                      ; "OK" or error message
 
-  value             = [{}],                      ; Array with user objects
+  value             = {                          ; Map with user objects
+                        "user1": userobj,
+                        "user2": userobj
+                      },                        
 }
 ```
 
-#### Value object:
+#### User object:
 
 ```json
 {
-  user              = "admin",                   ; Username
   enabled           = 1,                         ; 1 = enabled, 0 = disabled
-  roles             = "ADMIN",                   ; Comma seperated list of roles
+  roles             = []                         ; list of roles
+}
+```
+
+#### Role object
+
+```json
+{
+  "ADMIN",                                       ; Comma seperated list of roles
   database          = "",                        ; Database
   table             = ""                         ; Table
 }
-```
 
 ### Example Request:
 
@@ -75,14 +84,38 @@ Connection: close
 {
   "message": "OK",
   "status": 200,
-  "value": [
-    {
-      "database": "",
+  "value": {
+    "admin": {
       "enabled": 1,
-      "roles": "ADMIN",
-      "table": "",
-      "user": "admin"
-    }
-  ]
+      "roles": [
+        {
+          "database": "*",
+          "roles": "ADMIN",
+          "table": "*"
+        }
+      ]
+    },
+    "andrea": {
+      "enabled": 1,
+      "roles": [
+        {
+          "database": "test*",
+          "roles": "DBADMIN",
+          "table": "*"
+        },
+        {
+          "database": "*",
+          "roles": "HOSTADMIN,READWRITEANYDATABASE",
+          "table": "*"
+        }
+      ]
+    },
+    "emptyuser": {
+      "enabled": 1,
+      "roles": [
+        {}
+      ]
+    },  
+  }
 }
 ```

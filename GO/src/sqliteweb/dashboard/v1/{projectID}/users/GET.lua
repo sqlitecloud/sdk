@@ -60,15 +60,27 @@ else
   for i = 1, #fusers do 
     local u = fusers[ i ]
     local username = u.user
-    local userroles = hierarchyusers[username]
+    local usermap = hierarchyusers[username]
 
-    if not userroles then 
-      userroles = {}
-      hierarchyusers[username] = userroles
+    if not usermap then 
+      usermap = {}
+      hierarchyusers[username] = usermap
     end  
 
-    fusers[ i ].username = nil
-    userroles[ #userroles + 1 ] = u
+    usermap[ "enabled" ] = fusers[ i ].enabled
+    local roles = usermap[ "roles" ]
+
+    if not roles then 
+      roles = {}
+      usermap[ "roles" ] = roles
+    end
+
+    u.user = nil
+    u.enabled = nil
+
+    roles[ #roles + 1 ] = u
+
+
   end
 end
 

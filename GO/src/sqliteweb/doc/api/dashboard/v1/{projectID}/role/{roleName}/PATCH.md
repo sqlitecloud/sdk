@@ -19,7 +19,10 @@ curl -X "PATCH" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc
 
 ```code
 {
-  name            = "NEWNAME",          // New role name
+  name            = "NEWNAME",          // optional: New role name
+  privilege       = "READ,INSERT",      // optional: Comma separated list of privilege, it can be empty string
+  database         = "*",               // optional: database name, can contain wildcard *
+  table            = "*",               // optional: table name, can contain wildcard *
 }
 ```
 

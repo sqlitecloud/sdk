@@ -22,8 +22,8 @@ curl -X "POST" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6
 ```json
 {
   privilege        = "READ",          // mandatory: Comma separated list of privilege
-  database         = "*",             // mandatory: database name
-  table            = "*",             // mandatory: table name
+  database         = "*",             // database name, can contain wildcard *
+  table            = "*",             // table name, can contain wildcard *
 }
 ```
 
