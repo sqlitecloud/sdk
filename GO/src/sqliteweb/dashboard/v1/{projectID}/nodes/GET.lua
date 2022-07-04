@@ -105,8 +105,10 @@ else
     -- lookup which row from LIST NODES matches the cluster_node_id of the current row
     row = 0
     for j = 1, listNodes.NumberOfRows do
-      if listNodes.Rows[ j ].id == cluster_node_id or nodes.NumberOfRows then row = j break end
+      if listNodes.Rows[ j ].id == cluster_node_id or nodes.NumberOfRows == 1 then row = j break end
     end
+
+    --print("i, row: " .. i .. ", " .. row .. " (" .. cluster_node_id .. ", " .. nodes.Rows[ i ].name .. ", " .. listNodes.Rows[ row ].node ..  ")")
 
     nodes.Rows[ i ].match_leader = match_leader
 

@@ -61,10 +61,10 @@ end
 if privilege then
   if string.len(privilege) == 0             then return error( 404, string.format( "Invalid privilege", value ))                  end
   
-  query = string.format( "GRANT PRIVILEGE '%s' ROLE '%s'", enquoteSQL( privilege ), enquoteSQL( roleName ) )
+  query = string.format( "SET PRIVILEGE '%s' ROLE '%s'", enquoteSQL( privilege ), enquoteSQL( roleName ) )
   if string.len( database )   > 0    then query = string.format( "%s DATABASE '%s'",             query, enquoteSQL( database  ) ) end
   if string.len( table )      > 0    then query = string.format( "%s TABLE '%s'",                query, enquoteSQL( table     ) ) end
-                                          query = string.format( "%s FROM SCRATCH;",             query )
+                                          query = string.format( "%s;",                          query )
 
   result = executeSQL( projectID, query )
   if not result                             then return error( 404, "ProjectID not found" ) end
