@@ -44,6 +44,8 @@ else
   if not result                                                                      then return error( 504, "Gateway Timeout" )       end
   if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )     end
   if result.Value ~= "OK"                                                            then return error( 502, "Bad Gateway" )           end
+
+  reloadNodes(projectID)
 end
 
 error( 200, "OK" )

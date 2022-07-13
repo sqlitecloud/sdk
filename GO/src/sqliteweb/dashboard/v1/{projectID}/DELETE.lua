@@ -31,7 +31,7 @@ if userID == 0 then
 else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                     end
   
-  local query  = string.format( "SELECT NODE.id AS nodeID FROM NODE JOIN PROJECT ON PROJECT.uuid = NODE.project_uuid JOIN USER ON USER.id = PROJECT.user_id WHERE USER.enabled = 1 AND USER.id = %d AND PROJECT.uuid = '%s';", userID, enquoteSQL( projectID ) )
+  local query  = string.format( "SELECT NODE.id AS nodeID FROM Node JOIN Project ON Project.uuid = Node.project_uuid JOIN Company ON Company.id = Project.company_id JOIN User ON User.company_id = Company.id WHERE USER.enabled = 1 AND USER.id = %d AND PROJECT.uuid = '%s';", userID, enquoteSQL( projectID ) )
   local result = executeSQL( "auth", query ) 
 
   if not result                                                                       then return -1, 503, "Service Unavailable"       end
@@ -43,7 +43,7 @@ else
     nodeID = result.Rows[ i ].nodeID
     query  = string.format( "%s DELETE FROM NodeSettings WHERE node_id = %d; DELETE FROM Node WHERE id = %d;", query, nodeID, nodeID )
   end  
-  query = string.format( "%s END TRANSACTION;", query )
+  query = string.format( "%s DELETE FROM Project WHERE uuid = '%s'; END TRANSACTION;", query, enquoteSQL( projectID ) )
   
   result = executeSQL( "auth", query )
   if not result                                                                      then return error( 504, "Gateway Timeout" )            end

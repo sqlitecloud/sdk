@@ -89,7 +89,7 @@ else
   if nodes.NumberOfRows             <  1  then return error( 200, "OK" )                  end
 
   listNodes = executeSQL( projectID,  "LIST NODES" )
-  if not listNodes                            then return error( 404, "ProjectID not found" ) end
+  if not listNodes                            then return error( 404, "Can't list nodes" ) end
   if listNodes.ErrorNumber              ~= 0  then return error( 502, "Bad Gateway" )         end
   if listNodes.NumberOfColumns          ~= 7  then return error( 502, "Bad Gateway" )         end
 

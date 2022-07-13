@@ -316,6 +316,16 @@ func lua_enquoteSQL (L *lua.State) int {
   return 1
 }
 
+func lua_reloadNodes( L *lua.State ) int {
+  if L.TypeOf( 1 ) == lua.TypeString {
+    uuid  := lua.CheckString( L, 1 )
+    _, _ = cm.getNextServer(uuid, true)
+    return 1
+  }
+  
+  return 0
+}
+
 func lua_executeSQL( L *lua.State ) int {
   if L.TypeOf( 1 ) == lua.TypeString && L.TypeOf( 2 ) == lua.TypeString {
     uuid  := lua.CheckString( L, 1 )
@@ -573,6 +583,7 @@ func (this *Server) executeLua( basePath string, endpoint string, userID int64, 
     // register internal sql specific functons
 		l.Register( "parseConnectionString", lua_parseConnectionString )
     l.Register( "executeSQL", lua_executeSQL )
+    l.Register( "reloadNodes", lua_executeSQL )
     l.Register( "enquoteSQL", lua_enquoteSQL )
 
     // register internal json related functions
