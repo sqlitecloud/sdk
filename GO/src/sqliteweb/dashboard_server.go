@@ -38,32 +38,37 @@ import (
 )
 
 func init() {
-  initializeSQLiteWeb()
+	initializeSQLiteWeb()
 }
 
 func initDashboard() {
-  if PathExists( cfg.Section( "dashboard" ).Key( "path" ).String() ) && cfg.Section( "dashboard" ).Key( "enabled" ).MustBool( false ) {
-    // SQLiteWeb.router.HandleFunc( "/dashboard/{endpoint:.*}", SQLiteWeb.executeLua )
+	if PathExists(cfg.Section("dashboard").Key("path").String()) && cfg.Section("dashboard").Key("enabled").MustBool(false) {
+		// SQLiteWeb.router.HandleFunc( "/dashboard/{endpoint:.*}", SQLiteWeb.executeLua )
 
-    SQLiteWeb.router.HandleFunc( "/dashboard/{endpoint:.*}", SQLiteWeb.Auth.JWTAuth( SQLiteWeb.executeLuaDashboardServer ) )
-  }
+		// special dashboard paths processed with WebSocket connections
+		// SQLiteWeb.router.HandleFunc("/wsTestClient", wsTestClient)
+		SQLiteWeb.router.HandleFunc("/ws/{version:v[0-9]+}/{projectID}/database/{databaseName}/download", SQLiteWeb.Auth.JWTAuth(SQLiteWeb.Auth.getTokenFromCookie, SQLiteWeb.websocketDownload))
+		// SQLiteWeb.router.HandleFunc("/ws/{version:v[0-9]+}/{projectID}/database/{databaseName}/download", websocket.Handler(SQLiteWeb.websocketDownload))
+
+		// catch all with executeLuaDashboardServer
+		SQLiteWeb.router.HandleFunc("/dashboard/{endpoint:.*}", SQLiteWeb.Auth.JWTAuth(SQLiteWeb.Auth.getTokenFromAuthorization, SQLiteWeb.executeLuaDashboardServer))
+	}
 }
 
+func (this *Server) executeLuaDashboardServer(writer http.ResponseWriter, request *http.Request) {
+	start := time.Now()
 
-func (this *Server) executeLuaDashboardServer( writer http.ResponseWriter, request *http.Request ) {
-  start := time.Now()
+	this.Auth.cors(writer, request)
 
-  this.Auth.cors( writer, request )
+	id, _ := SQLiteWeb.Auth.GetUserID(SQLiteWeb.Auth.getTokenFromAuthorization, request)
 
-	id, _    := SQLiteWeb.Auth.GetUserID( request )
+	v := mux.Vars(request)                                       // len(): 1, endpoint: v1/auth
+	endpoint := strings.ReplaceAll(v["endpoint"]+"/", "//", "/") // "v1/fbf94289-64b0-4fc6-9c20-84083f82ee63/database/Foo/connections/"
 
-  v        := mux.Vars( request ) // len(): 1, endpoint: v1/auth
-  endpoint := strings.ReplaceAll( v[ "endpoint" ] + "/", "//", "/" ) // "v1/fbf94289-64b0-4fc6-9c20-84083f82ee63/database/Foo/connections/"
+	path := cfg.Section("dashboard").Key("path").String() // "/Users/pfeil/GitHub/SqliteCloud/sdk/GO/src/sqliteweb/dashboard"
 
-  path     := cfg.Section( "dashboard" ).Key( "path" ).String()      // "/Users/pfeil/GitHub/SqliteCloud/sdk/GO/src/sqliteweb/dashboard"
-  
-	this.executeLua( path, endpoint, id, writer, request )
+	this.executeLua(path, endpoint, id, writer, request)
 
-  t := time.Since( start )
-  SQLiteWeb.Logger.Debugf("Endpoint \"%s %s\" addr:%s user:%d exec_time:%s", request.Method, request.URL, request.RemoteAddr, id, t)
+	t := time.Since(start)
+	SQLiteWeb.Logger.Debugf("Endpoint \"%s %s\" addr:%s user:%d exec_time:%s", request.Method, request.URL, request.RemoteAddr, id, t)
 }
