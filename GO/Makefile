@@ -3,13 +3,17 @@ TEST_URL	:= https://web1.sqlitecloud.io:8443/dashboard/v1
 
 
 # Pre-requirements
-install-prerequirements:	liner term docopt-go dburl lz4 godoc gosec gorilla ini kardianos golang-jwt golua
+install-prerequirements:	liner term docopt-go dburl lz4 godoc gosec gorilla ini kardianos golang-jwt golua glob
 
 golua:
 ifeq ($(wildcard src/github.com/Shopify/go-lua),)
 	-go get -v github.com/Shopify/go-lua
 endif
 
+glob:
+ifeq ($(wildcard src/github.com/gobwas/glob),)
+	-go get -v github.com/gobwas/glob
+endif
 
 # liner
 liner:
@@ -149,7 +153,11 @@ web_update: bin/sqliteweb_linux
 	ssh root@web1.sqlitecloud.io '/etc/init.d/sqliteweb stop'
 	scp bin/sqliteweb_linux web1.sqlitecloud.io:/opt/sqliteweb/sbin/.
 	ssh root@web1.sqlitecloud.io '/etc/init.d/sqliteweb start &'
-	
+
+web_update_service: bin/sqliteweb_linux
+	ssh root@web1.sqlitecloud.io 'systemctl stop sqliteweb'
+	scp bin/sqliteweb_linux web1.sqlitecloud.io:/opt/sqliteweb/sbin/.
+	ssh root@web1.sqlitecloud.io 'systemctl start sqliteweb'	
 
 web_stop:
 	ssh root@web1.sqlitecloud.io '/etc/init.d/sqliteweb stop'
