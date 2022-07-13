@@ -18,17 +18,17 @@
 package sqlitecloud
 
 import (
-  "crypto/tls"
-  "crypto/x509"
-  "errors"
-  "fmt"
-  "io/ioutil"
-  "net"
-  "strconv"
-  "strings"
-  "time"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"net"
+	"strconv"
+	"strings"
+	"time"
 
-  "github.com/xo/dburl"
+	"github.com/xo/dburl"
 )
 
 type SQCloud struct {
