@@ -46,9 +46,9 @@ func initDashboard() {
 		// SQLiteWeb.router.HandleFunc( "/dashboard/{endpoint:.*}", SQLiteWeb.executeLua )
 
 		// special dashboard paths processed with WebSocket connections
-		// SQLiteWeb.router.HandleFunc("/wsTestClient", wsTestClient)
+		// SQLiteWeb.router.HandleFunc("/wsTestClient", wsTestClient) // only for test purpose
 		SQLiteWeb.router.HandleFunc("/ws/{version:v[0-9]+}/{projectID}/database/{databaseName}/download", SQLiteWeb.Auth.JWTAuth(SQLiteWeb.Auth.getTokenFromCookie, SQLiteWeb.websocketDownload))
-		// SQLiteWeb.router.HandleFunc("/ws/{version:v[0-9]+}/{projectID}/database/{databaseName}/download", websocket.Handler(SQLiteWeb.websocketDownload))
+		SQLiteWeb.router.HandleFunc("/ws/{version:v[0-9]+}/{projectID}/database/{databaseName}/upload", SQLiteWeb.Auth.JWTAuth(SQLiteWeb.Auth.getTokenFromCookie, SQLiteWeb.websocketUpload))
 
 		// catch all with executeLuaDashboardServer
 		SQLiteWeb.router.HandleFunc("/dashboard/{endpoint:.*}", SQLiteWeb.Auth.JWTAuth(SQLiteWeb.Auth.getTokenFromAuthorization, SQLiteWeb.executeLuaDashboardServer))
