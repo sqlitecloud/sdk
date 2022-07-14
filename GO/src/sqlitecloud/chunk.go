@@ -202,6 +202,31 @@ func ( this *SQCloud ) sendString( data string ) ( int, error ) {
   return bytesSent, nil
 }
 
+func ( this *SQCloud ) SendBytes( data []byte ) ( int, error ) {
+  var err         error
+  var bytesSent   int
+  var bytesToSend int
+
+  if err := this.reconnect()                                                           ; err != nil { return 0, err }
+  switch this.Timeout {
+  case 0:   if err := ( *this.sock ).SetWriteDeadline( time.Time{} );                    err != nil { return 0, err }
+  default:  if err := ( *this.sock ).SetWriteDeadline( time.Now().Add( this.Timeout ) ); err != nil { return 0, err }
+  }
+  
+
+  header := []byte(fmt.Sprintf( "$%d ", len( data )))
+  bytesToSend = len( header )
+
+  if bytesSent, err = (*this.sock).Write( header )                          ; err != nil { return bytesSent, err }
+  if bytesSent != bytesToSend                                                            { return bytesSent, errors.New( "Partitial data sent" ) }
+  
+  bytesToSend = len( data )
+  if bytesSent, err = (*this.sock).Write( data )                            ; err != nil { return bytesSent, err }
+  if bytesSent != bytesToSend                                                            { return bytesSent, errors.New( "Partitial data sent" ) }
+
+  return bytesSent, nil
+}
+
 
 func (this *SQCloud ) readNextRawChunk() ( *Chunk, error ) {
   // every chunk (except RAW JSON) starts with: (<type>)[data]_
