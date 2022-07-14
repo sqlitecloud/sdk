@@ -196,7 +196,7 @@ func (this *ConnectionManager) getNextServer(node string, reloadNodes bool) (ser
 	_, found := this.nodes[node]
 	this.nodeMutex.Unlock()
 
-	if !found || reloadNodes{
+	if !found || reloadNodes {
 		switch nodes, err := this.getServerList(node); {
 		case err != nil:
 			return "", err
@@ -433,7 +433,7 @@ func (this *ConnectionManager) ExecuteSQL(node string, query string) (*sqliteclo
 				errCode = connection.connection.ErrorCode
 				extErrCode = connection.connection.ExtErrorCode
 				this.closeAndRemoveLockedConnection(node, connection)
-				SQLiteWeb.Logger.Debugf("(%s) ExecuteSQL connection error %d %s", node, errCode, connection.connection.ErrorMessage)
+				SQLiteWeb.Logger.Debugf("(%s) ExecuteSQL connection error %d", node, errCode)
 				reloadNodes = true
 				continue
 			} else {
