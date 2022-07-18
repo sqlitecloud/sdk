@@ -2450,7 +2450,7 @@ bool SQCloudDownloadDatabase (SQCloudConnection *connection, const char *dbname,
     // execute command on server side
     SQCloudResult *res = SQCloudExec(connection, buffer);
     
-    // reply must be an Integer value (otherwise it is an error)
+    // reply must be an Array value (otherwise it is an error)
     if (SQCloudResultType(res) != RESULT_ARRAY) return false;
     
     // res is an ARRAY (database size, number of pages)
