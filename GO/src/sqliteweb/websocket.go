@@ -71,6 +71,14 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 
 	// SQLiteWeb.Logger.Debugf("websocketDownload: header %v", request.Header["Cookie"])
 
+	c, err := upgrader.Upgrade(writer, request, nil)
+	if err != nil {
+		SQLiteWeb.Logger.Debug("websocketDownload: upgrade error: ", err)
+		return
+	}
+	defer c.Close()
+	// SQLiteWeb.Logger.Debug("websocketDownload: upgrade")
+
 	query := fmt.Sprintf("DOWNLOAD DATABASE %s", v["databaseName"])
 	connection, err = cm.GetConnection(projectID, false)
 	switch {
@@ -91,11 +99,14 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 		// - 100003 Internal Error: sendString (%s)
 		cm.closeAndRemoveLockedConnection(projectID, connection)
 		SQLiteWeb.Logger.Debug("websocketDownload: Connection Error ", err)
+		c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 		return
 	} else if err != nil || !res.IsArray() {
 		// reply must be an Array value (otherwise it is an error)
+		_ = connection.connection.Execute("DOWNLOAD ABORT")
 		cm.ReleaseConnection(projectID, connection)
 		SQLiteWeb.Logger.Debug("websocketDownload: error on DOWNLOAD select ", err)
+		c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 		return
 	}
 
@@ -103,14 +114,6 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 
 	dbSize, _ := res.GetInt64Value(0, 0)
 	progressSize := int64(0)
-
-	c, err := upgrader.Upgrade(writer, request, nil)
-	if err != nil {
-		SQLiteWeb.Logger.Debug("websocketDownload: upgrade error: ", err)
-		return
-	}
-	defer c.Close()
-	// SQLiteWeb.Logger.Debug("websocketDownload: upgrade")
 
 	for progressSize < dbSize {
 		// reply must be a BLOB value (otherwise it is an error)
@@ -121,7 +124,12 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 
 			// execute callback (with progressSize updated)
 			progressSize = progressSize + int64(datalen)
-			c.WriteMessage(websocket.BinaryMessage, buf)
+			err = c.WriteMessage(websocket.BinaryMessage, buf)
+			if err != nil {
+				SQLiteWeb.Logger.Debug("websocketDownload: error on STEP writeMessage: ", err)
+				c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
+				return
+			}
 
 			// check exit condition
 			if datalen == 0 {
@@ -129,6 +137,7 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 			}
 		} else {
 			SQLiteWeb.Logger.Debug("websocketDownload: error while executing download step ", err)
+			_ = connection.connection.Execute("DOWNLOAD ABORT")
 			c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, "error while executing download step"), time.Now().Add(1*time.Second))
 			return
 		}
@@ -160,6 +169,13 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
+	c, err := upgrader.Upgrade(writer, request, nil)
+	if err != nil {
+		SQLiteWeb.Logger.Debug("websocketUpload: upgrade error: ", err)
+		return
+	}
+	defer c.Close()
+
 	// SQLiteWeb.Logger.Debugf("websocketUpload: header %v", request.Header["Cookie"])
 
 	query := fmt.Sprintf("UPLOAD DATABASE %s", v["databaseName"])
@@ -175,6 +191,7 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 		fallthrough
 	case connection.connection == nil:
 		SQLiteWeb.Logger.Debug("websocketUpload: error on getConnection: ", err)
+		c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, "Cannot connect to node"), time.Now().Add(1*time.Second))
 		return
 	}
 
@@ -186,22 +203,18 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 		// - 100003 Internal Error: sendString (%s)
 		cm.closeAndRemoveLockedConnection(projectID, connection)
 		SQLiteWeb.Logger.Debug("websocketUpload: Connection Error ", err)
+		c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 		return
 	} else if err != nil || !res.IsOK() {
-		// reply must be an Array value (otherwise it is an error)
+		// reply must be an OK value (otherwise it is an error)
+		_ = connection.connection.Execute("UPLOAD ABORT")
 		cm.ReleaseConnection(projectID, connection)
-		SQLiteWeb.Logger.Debug("websocketUpload: error on UPLOAD select", err)
+		SQLiteWeb.Logger.Debug("websocketUpload: error on UPLOAD select: ", err)
+		c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 		return
 	}
 
 	defer cm.ReleaseConnection(projectID, connection)
-
-	c, err := upgrader.Upgrade(writer, request, nil)
-	if err != nil {
-		SQLiteWeb.Logger.Debug("websocketUpload: upgrade error: ", err)
-		return
-	}
-	defer c.Close()
 
 	for {
 		_, message, err := c.ReadMessage()
@@ -209,6 +222,8 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 
 		if err != nil && !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 			SQLiteWeb.Logger.Debug("websocketUpload: read error: ", err)
+			_ = connection.connection.Execute("UPLOAD ABORT")
+			c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 			break
 		}
 
@@ -216,6 +231,8 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 		_, err = connection.connection.SendBytes(message)
 		if err != nil {
 			SQLiteWeb.Logger.Debug("websocketUpload: SendBytes error : ", err)
+			_ = connection.connection.Execute("UPLOAD ABORT")
+			c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 			break
 		}
 		// SQLiteWeb.Logger.Debugf("websocketUpload: SendBytes %d", len(message))
@@ -326,7 +343,7 @@ window.addEventListener("load", function(evt) {
             return false;
         }
 
-		url = "wss://" + "{{.}}" + "/ws/v1/f9cdd1d5-7d16-454b-8cc0-548dc1712c26/database/bigdb.sqlite/download"
+		url = "wss://" + "{{.}}" + "/ws/v1/f9cdd1d5-7d16-454b-8cc0-548dc1712c26/database/chinook.sqlite/download"
 		
 		print("DOWNLOAD " + url);
 
@@ -384,7 +401,7 @@ window.addEventListener("load", function(evt) {
         }
         ws.onclose = function(evt) {
 			addChunk(null)
-			print("CLOSE (code:" + evt.code + ")");
+			print("CLOSE: reason:" + evt.reason + ", code:" + evt.code);
             ws = null;
         }
         ws.onmessage = function(evt) {
@@ -446,7 +463,7 @@ window.addEventListener("load", function(evt) {
 		document.cookie = name+"="+value+expires+"; secure; samesite=lax; path=/";
 	}
 
-	createCookie('sqlite-cloud-token','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmaXJzdF9uYW1lIjoiQW5kcmVhIiwibGFzdF9uYW1lIjoiRG9uZXR0aSIsImlwYSI6IjEyNy4wLjAuMSIsImlzcyI6IndlYi5zcWxpdGVjbG91ZC5pbyIsInN1YiI6IjIiLCJhdWQiOlsid2ViLnNxbGl0ZWNsb3VkLmlvIl0sImV4cCI6MTY1Nzg0MTU1OSwibmJmIjoxNjU3ODExNTU5LCJpYXQiOjE2NTc4MTE1NTl9.kZN1V6AorVhA7ZGr4raHmcBux_WvDoB-NM31sTS5jvk',1)
+	createCookie('sqlite-cloud-token','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmaXJzdF9uYW1lIjoiQW5kcmVhIiwibGFzdF9uYW1lIjoiRG9uZXR0aSIsImlwYSI6IjEyNy4wLjAuMSIsImlzcyI6IndlYi5zcWxpdGVjbG91ZC5pbyIsInN1YiI6IjIiLCJhdWQiOlsid2ViLnNxbGl0ZWNsb3VkLmlvIl0sImV4cCI6MTY1ODE2Mjk2NSwibmJmIjoxNjU4MTMyOTY1LCJpYXQiOjE2NTgxMzI5NjV9.DcWTq6QvCfAaayyT0NgV9DLxnOkFmlFdhYAHwWZLT3s',1)
 
     // document.getElementById("send").onclick = function(evt) {
     //     if (!ws) {
