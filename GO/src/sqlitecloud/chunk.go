@@ -202,7 +202,7 @@ func ( this *SQCloud ) sendString( data string ) ( int, error ) {
   return bytesSent, nil
 }
 
-func ( this *SQCloud ) SendBytes( data []byte ) ( int, error ) {
+func ( this *SQCloud ) sendBytes( data []byte ) ( int, error ) {
   var err         error
   var bytesSent   int
   var bytesToSend int
