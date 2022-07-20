@@ -1705,9 +1705,9 @@ bool internal_upload_database (SQCloudConnection *connection, const char *dbname
     char command[512]; 
     if (isfiletransfer) {
         char *internalarg = isinternaldb ? "INTERNAL" : "";
-        snprintf(command, sizeof(command), "TRANSFER DATABASE %s %s%s SNAPSHOT %" PRIu64 " %s", dbname, keyarg, keyvalue, snapshotid, internalarg);
+        snprintf(command, sizeof(command), "TRANSFER DATABASE '%s' %s%s SNAPSHOT %" PRIu64 " %s", dbname, keyarg, keyvalue, snapshotid, internalarg);
     } else {
-        snprintf(command, sizeof(command), "UPLOAD DATABASE %s %s%s", dbname, keyarg, keyvalue);
+        snprintf(command, sizeof(command), "UPLOAD DATABASE '%s' %s%s", dbname, keyarg, keyvalue);
     }
     
     // execute command on server side
