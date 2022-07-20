@@ -34,7 +34,7 @@ end
 databases = executeSQL( projectID, "LIST DATABASES DETAILED;" )
 if not databases                          then return error( 404, "ProjectID not found" ) end
 if databases.ErrorNumber            ~= 0  then return error( 502, "Bad Gateway" )         end
-if databases.NumberOfColumns        < 10  then return error( 502, "Bad Gateway" )         end
+if databases.NumberOfColumns        < 13  then return error( 502, "Bad Gateway" )         end
 if databases.NumberOfRows           <  1  then return error( 200, "OK" )                  end
 
 db = {}
@@ -48,6 +48,7 @@ for i = 1, databases.NumberOfRows do
   database.fragmentation  = databases.Rows[ i ].fragmentation
   database.pagesize       = databases.Rows[ i ].pagesize
   database.encoding       = databases.Rows[ i ].encoding
+  database.status         = databases.Rows[ i ].status
   database.stats          = { databases.Rows[ i ].nread,   databases.Rows[ i ].nwrite   }
   database.bytes          = { databases.Rows[ i ].inbytes, databases.Rows[ i ].outbytes }
   db[ #db + 1 ]           = database

@@ -43,6 +43,9 @@ local projectID, err, msg = verifyProjectID( userID, projectID )         if err 
 local machineNodeID, err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                 end
 
 status = executeSQL( projectID, "LIST NODES;" )
+if not status                                 then return error( 504, "Gateway Timeout" )       end
+if status.ErrorNumber        ~= 0             then return error( 502, "Bad Gateway" )           end
+if status.NumberOfRows       == 0             then return error( 404, "Empty node list" )       end
 
 for i = 1, status.NumberOfRows do
   if status.Rows[ i ].status == "Leader" then Response.value.raft[ 2 ] = status.Rows[ i ].match end
@@ -56,6 +59,9 @@ end
 query = string.format( "GET INFO LOAD,NUM_CLIENTS,DISK_USAGE_PERC NODE %d;", machineNodeID ) -- server_load, num_clients, cpu_time, mem_current, mem_max
 load = executeSQL( projectID, query )
 -- print("query:", query)
+if not load                                   then return error( 504, "Gateway Timeout" )       end
+if load.ErrorNumber        ~= 0               then return error( 502, "Bad Gateway" )           end
+if load.NumberOfRows       ~= 3               then return error( 502, "Bad Gateway" )           end
 
 Response.value.load = {
   load.Rows[ 2 ].ARRAY, -- num_clients
@@ -65,6 +71,11 @@ Response.value.load = {
 
 query = string.format( "LIST STATS NODE %d;", machineNodeID )
 stats = executeSQL( projectID, query )
+
+if not stats                                  then return error( 504, "Gateway Timeout" )       end
+if stats.ErrorNumber        ~= 0              then return error( 502, "Bad Gateway" )           end
+if stats.NumberOfColumns    ~= 3              then return error( 502, "Bad Gateway" )           end
+if stats.NumberOfRows       == 0              then return error( 404, "Stats not found" )       end
 
 for i = 1, stats.NumberOfRows do
   if not row                                  then row = { memory = { current = 0, max = 0 }, cpu = 0, clients = { current = 0, max = 0 }, commands = 0, io = { reads = 0, writes = 0 }, bytes = { reads = 0, writes = 0 }, sampletime = "0000-00-00 00:00:00" } end

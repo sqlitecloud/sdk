@@ -691,6 +691,7 @@ func (this *Server) executeLua( basePath string, endpoint string, userID int64, 
     // execute the lua file
     err := lua.DoFile( l, path )
     if err != nil {
+      SQLiteWeb.Logger.Errorf("panic in %s: %s", path, err)
       panic( err )
     }
   } else {

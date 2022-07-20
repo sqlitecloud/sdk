@@ -429,6 +429,32 @@ func ( this *SQCloud ) Select( SQL string ) ( *Result, error ) {
   }
 }
 
+func ( this *SQCloud ) SendBlob( data []byte  ) ( error ) {
+  this.resetError()
+
+  if _, err := this.sendBytes( data ); err != nil {  
+    this.ErrorCode = 100003
+    this.ErrorMessage = fmt.Sprintf( "Internal Error: sendBytes (%s)", err.Error() )
+    return errors.New( this.ErrorMessage ) 
+  }
+
+  switch result, err := this.readResult(); {
+  case result == nil: return errors.New( "nil" )
+
+  case result.IsError():
+    this.ErrorCode, this.ExtErrorCode, this.ErrorMessage, _ = result.GetError()
+    result.Free()
+    return errors.New( this.ErrorMessage )
+
+  case err != nil:
+    this.ErrorCode, this.ExtErrorCode, this.ErrorMessage = 100000, 0, err.Error()
+    result.Free()
+    return err
+
+  default:            return nil
+  }
+}
+
 // Execute executes the given query.
 // If the execution was not successful, an error describing the reason of the failure is returned.
 func (this *SQCloud) Execute( SQL string ) error {
