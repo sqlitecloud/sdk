@@ -254,6 +254,19 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 
 	defer cm.ReleaseConnection(projectID, connection)
 
+	// temporarily increase the timeout, otherwise the SendBlob function would probably 
+	// give an "SQCloud.readNextRawChunk (Timeout)" error, expecially while waiting for
+	// the response for the last empty message sent with SendBlob. After the last message,
+	// the leader must transfer the database to every node, then send the load database 
+	// message and eventually reply with "OK", and all this process can last for minutes.
+	originaltimeout := connection.connection.Timeout
+	connection.connection.Timeout = time.Duration( 1 ) * time.Hour
+	defer func(connection *Connection, timeout time.Duration) {
+		if connection != nil && connection.connection != nil {
+			connection.connection.Timeout = originaltimeout
+		}	
+  	}(connection, originaltimeout)
+
 	for {
 		_, message, err := c.ReadMessage()
 		SQLiteWeb.Logger.Debugf("websocketUpload: ReadMessage %d", len(message))
@@ -279,7 +292,7 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 			c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 			break
 		}
-		SQLiteWeb.Logger.Debugf("websocketUpload: SendBytes %d", len(message))
+		SQLiteWeb.Logger.Debugf("websocketUpload: SendBytes %d completed", len(message))
 
 		if len(message) == 0 {
 			// empty message: end message
@@ -288,6 +301,16 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 		} else if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 			// closed channel: end message
 			break
+		} else {
+			// send back the ack message
+			if err = c.WriteMessage(websocket.TextMessage, []byte("OK")); err != nil {
+				if err1 := connection.connection.Execute("UPLOAD ABORT"); err1 != nil {
+					SQLiteWeb.Logger.Errorf("websocketUpload: UPLOAD ABORT error (%s) closing conn: %v", err1, connection)
+					cm.closeAndRemoveLockedConnection(projectID, connection)
+				}
+				c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
+			}
+			SQLiteWeb.Logger.Debug("websocketUpload: ack")
 		}
 	}
 
@@ -354,7 +377,9 @@ window.addEventListener("load", function(evt) {
 	var currentChunk = 0;
 	var mime = 'application/octet-binary';
 	var finalBlob = null;
-	var chunkBlobs =[];
+	var chunkBlobs = [];
+	var islast = false;
+	var nextstart = 0;
 
 	function addChunk(data) {
 		// chunkBlobs[currentChunk] = new Blob([data], {type: mime});
@@ -429,7 +454,7 @@ window.addEventListener("load", function(evt) {
 
 		var name = f.value.split(/(\\|\/)/g).pop();
 		var file = f.files[0];
-		var size = file.size;
+		var totalsize = file.size;
 		var key = (k.value && k.value.length) ? k.value : null;
 		var sliceSize = 1024*1024;
 
@@ -445,7 +470,9 @@ window.addEventListener("load", function(evt) {
 
         ws.onopen = function(evt) {
             print("OPEN");
-			uploadLoop(file, 0, size, sliceSize)
+			islast = false;
+			nextstart = 0;
+			uploadLoop(file, nextstart, totalsize, sliceSize)
         }
         ws.onclose = function(evt) {
 			addChunk(null)
@@ -454,6 +481,7 @@ window.addEventListener("load", function(evt) {
         }
         ws.onmessage = function(evt) {
             print("RECEIVED MESSAGE: " + evt.data + " size: " + evt.data.size);
+			if (evt.data === "OK") {(islast) ? uploadEnd() : uploadLoop(file, nextstart, totalsize, sliceSize);}
         }
         ws.onerror = function(evt) {
             print("WebSocket ERROR: ");
@@ -483,12 +511,14 @@ window.addEventListener("load", function(evt) {
 		// chunk is now a Blob that can only be read async
 		const reader = new FileReader();
 		reader.onloadend = function () {
-			print("onloadend length " + reader.result.byteLength)
+			print("sending bytes " + reader.result.byteLength)
 			ws.send(reader.result);
-			
-			var value = Math.floor(( start / end) * 100);
+			print("bytes sent")
+
+			// var value = Math.floor(( start / end) * 100);
 			// progressSet(value);
-			(islast) ? uploadEnd() : uploadLoop(file, start + size, end, size);
+
+			nextstart = start + size
 		}
 		reader.readAsArrayBuffer(chunk);
 	
@@ -511,7 +541,7 @@ window.addEventListener("load", function(evt) {
 		document.cookie = name+"="+value+expires+"; secure; samesite=lax; path=/";
 	}
 
-	createCookie('sqlite-cloud-token','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmaXJzdF9uYW1lIjoiQW5kcmVhIiwibGFzdF9uYW1lIjoiRG9uZXR0aSIsImlwYSI6IjEyNy4wLjAuMSIsImlzcyI6IndlYi5zcWxpdGVjbG91ZC5pbyIsInN1YiI6IjIiLCJhdWQiOlsid2ViLnNxbGl0ZWNsb3VkLmlvIl0sImV4cCI6MTY1ODE2Mjk2NSwibmJmIjoxNjU4MTMyOTY1LCJpYXQiOjE2NTgxMzI5NjV9.DcWTq6QvCfAaayyT0NgV9DLxnOkFmlFdhYAHwWZLT3s',1)
+	createCookie('sqlite-cloud-token','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmaXJzdF9uYW1lIjoiQW5kcmVhIiwibGFzdF9uYW1lIjoiRG9uZXR0aSIsImlwYSI6IjEyNy4wLjAuMSIsImlzcyI6IndlYi5zcWxpdGVjbG91ZC5pbyIsInN1YiI6IjIiLCJhdWQiOlsid2ViLnNxbGl0ZWNsb3VkLmlvIl0sImV4cCI6MTY1ODM1Mzc4NSwibmJmIjoxNjU4MzIzNzg1LCJpYXQiOjE2NTgzMjM3ODV9.AxFWUXgROrn_v2EGc9tv-DiLbg0U8_5oScjwhu-pv3M',1)
 
     // document.getElementById("send").onclick = function(evt) {
     //     if (!ws) {

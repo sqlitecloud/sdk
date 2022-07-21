@@ -213,7 +213,6 @@ func ( this *SQCloud ) sendBytes( data []byte ) ( int, error ) {
   default:  if err := ( *this.sock ).SetWriteDeadline( time.Now().Add( this.Timeout ) ); err != nil { return 0, err }
   }
   
-
   header := []byte(fmt.Sprintf( "$%d ", len( data )))
   bytesToSend = len( header )
 
@@ -221,8 +220,12 @@ func ( this *SQCloud ) sendBytes( data []byte ) ( int, error ) {
   if bytesSent != bytesToSend                                                            { return bytesSent, errors.New( "Partitial data sent" ) }
   
   bytesToSend = len( data )
-  if bytesSent, err = (*this.sock).Write( data )                            ; err != nil { return bytesSent, err }
-  if bytesSent != bytesToSend                                                            { return bytesSent, errors.New( "Partitial data sent" ) }
+  if bytesToSend > 0 {
+    if bytesSent, err = (*this.sock).Write( data )                            ; err != nil { return bytesSent, err }
+    if bytesSent != bytesToSend                                                            { return bytesSent, errors.New( "Partitial data sent" ) }
+  } else {
+    bytesSent = 0
+  }
 
   return bytesSent, nil
 }
