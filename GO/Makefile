@@ -177,6 +177,8 @@ sync:
 	rsync -a src/sqliteweb/dashboard/v1/*  ***REMOVED***:/opt/sqliteweb/dashboard/v1/.
 	rsync -a src/sqliteweb/lib/* ***REMOVED***:/opt/sqliteweb/lib/.
 
+sync_admin:
+	rsync -a src/sqliteweb/admin/v1/* ***REMOVED***:/opt/sqliteweb/admin/v1/.
 
 github:
 	open https://github.com/sqlitecloud/sdk 
