@@ -56,11 +56,11 @@ if userID == 0 then                                           -- get list of pro
 
 else
 
-  data = executeSQL( "auth", string.format( "SELECT uuid AS id, Project.name, description FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled = 1 AND Company.enabled = 1 AND User.id = %d;", userid ) )
+  data = executeSQL( "auth", string.format( "SELECT uuid AS id, Project.name, description, admin_username FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled = 1 AND Company.enabled = 1 AND User.id = %d;", userid ) )
 
   if not data                              then return error( 404, "User not found" )                end
   if data.ErrorNumber                ~= 0  then return error( 502, "Bad Gateway" )                   end
-  if data.NumberOfColumns            ~= 3  then return error( 502, "Bad Gateway" )                   end
+  if data.NumberOfColumns            ~= 4  then return error( 502, "Bad Gateway" )                   end
 
   if data.NumberOfRows                > 0  then Response.value = data.Rows                        end
 end

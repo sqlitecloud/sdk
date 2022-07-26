@@ -38,7 +38,8 @@ none
   id               = "00000000-0000-0000-0000-000000000000",  -- UUID of the project
  
   name             = "",                                      -- Project name
-  description      = ""                                       -- Project description
+  description      = "",                                      -- Project description
+  admin_username   = "admin"                                  -- Internal name for loggin into the nodes
 }
 ```
 
