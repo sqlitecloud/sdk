@@ -56,13 +56,13 @@ else
       if type(enabled) == "string" then 
         enabled,     err, msg = checkNumber( enabled, 0, 1 )           if err ~= 0 then return error( err, string.format( msg, "enabled" ) ) end
       end
-      c = c .. "SET DATABASE " .. name .. " KEY backup TO '" .. enabled .. "';"
+      c = c .. "SET DATABASE '" .. enquoteSQL(name) .. "' KEY backup TO '" .. enabled .. "';"
       
       local retention = value["backup_retention"]
       if retention and string.len(retention) then 
-        c = c .. " SET DATABASE " .. name .. " KEY backup_retention TO '" .. enquoteSQL(retention) .. "';"
+        c = c .. " SET DATABASE '" .. enquoteSQL(name) .. "' KEY backup_retention TO '" .. enquoteSQL(retention) .. "';"
       else 
-        c = c .. " DROP DATABASE " .. name .. " KEY backup_retention; "
+        c = c .. " DROP DATABASE '" .. enquoteSQL(name) .. "' KEY backup_retention; "
       end 
     end
   end
