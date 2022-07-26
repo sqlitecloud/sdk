@@ -103,7 +103,7 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 		return
 	} else if err != nil || !res.IsArray() {
 		// reply must be an Array value (otherwise it is an error)
-		
+
 		// try to abort the current download operation
 		if err1 := connection.connection.Execute("DOWNLOAD ABORT"); err1 != nil {
 			SQLiteWeb.Logger.Errorf("websocketDownload: DOWNLOAD ABORT error (%s) closing conn: %v", err1, connection)
@@ -115,8 +115,10 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 		// prepare the error message
 		closemsg := ""
 		switch {
-		case err != nil: closemsg = err.Error()
-		case !res.IsArray(): closemsg = fmt.Sprintf("expected array, got type %c", res.GetType())
+		case err != nil:
+			closemsg = err.Error()
+		case !res.IsArray():
+			closemsg = fmt.Sprintf("expected array, got type %c", res.GetType())
 		}
 		SQLiteWeb.Logger.Errorf("websocketDownload: error on DOWNLOAD (%s): %s", query, closemsg)
 
@@ -242,8 +244,10 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 		// prepare the error message
 		closemsg := ""
 		switch {
-		case err != nil: closemsg = err.Error()
-		case !res.IsOK(): closemsg = fmt.Sprintf("expected OK, got type %c", res.GetType())
+		case err != nil:
+			closemsg = err.Error()
+		case !res.IsOK():
+			closemsg = fmt.Sprintf("expected OK, got type %c", res.GetType())
 		}
 		SQLiteWeb.Logger.Errorf("websocketUpload: error on UPLOAD (%s): %s", query, closemsg)
 
@@ -254,18 +258,18 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 
 	defer cm.ReleaseConnection(projectID, connection)
 
-	// temporarily increase the timeout, otherwise the SendBlob function would probably 
+	// temporarily increase the timeout, otherwise the SendBlob function would probably
 	// give an "SQCloud.readNextRawChunk (Timeout)" error, expecially while waiting for
 	// the response for the last empty message sent with SendBlob. After the last message,
-	// the leader must transfer the database to every node, then send the load database 
+	// the leader must transfer the database to every node, then send the load database
 	// message and eventually reply with "OK", and all this process can last for minutes.
 	originaltimeout := connection.connection.Timeout
-	connection.connection.Timeout = time.Duration( 1 ) * time.Hour
+	connection.connection.Timeout = time.Duration(1) * time.Hour
 	defer func(connection *Connection, timeout time.Duration) {
 		if connection != nil && connection.connection != nil {
 			connection.connection.Timeout = originaltimeout
-		}	
-  	}(connection, originaltimeout)
+		}
+	}(connection, originaltimeout)
 
 	for {
 		_, message, err := c.ReadMessage()
@@ -416,7 +420,7 @@ window.addEventListener("load", function(evt) {
             return false;
         }
 
-		url = "wss://" + "{{.}}" + "/ws/v1/f9cdd1d5-7d16-454b-8cc0-548dc1712c26/database/chinook.sqlite/download"
+		url = "wss://" + "{{.}}" + "/ws/v1/f9cdd1d5-7d16-454b-8cc0-548dc1712c26/database/wrongdb.sqlite/download"
 		
 		print("DOWNLOAD " + url);
 
@@ -541,7 +545,7 @@ window.addEventListener("load", function(evt) {
 		document.cookie = name+"="+value+expires+"; secure; samesite=lax; path=/";
 	}
 
-	createCookie('sqlite-cloud-token','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmaXJzdF9uYW1lIjoiQW5kcmVhIiwibGFzdF9uYW1lIjoiRG9uZXR0aSIsImlwYSI6IjEyNy4wLjAuMSIsImlzcyI6IndlYi5zcWxpdGVjbG91ZC5pbyIsInN1YiI6IjIiLCJhdWQiOlsid2ViLnNxbGl0ZWNsb3VkLmlvIl0sImV4cCI6MTY1ODM1Mzc4NSwibmJmIjoxNjU4MzIzNzg1LCJpYXQiOjE2NTgzMjM3ODV9.AxFWUXgROrn_v2EGc9tv-DiLbg0U8_5oScjwhu-pv3M',1)
+	createCookie('sqlite-cloud-token','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmaXJzdF9uYW1lIjoiQW5kcmVhIiwibGFzdF9uYW1lIjoiRG9uZXR0aSIsImlwYSI6IjEyNy4wLjAuMSIsImlzcyI6IndlYi5zcWxpdGVjbG91ZC5pbyIsInN1YiI6IjIiLCJhdWQiOlsid2ViLnNxbGl0ZWNsb3VkLmlvIl0sImV4cCI6MTY1ODg1NjY5MCwibmJmIjoxNjU4ODI2NjkwLCJpYXQiOjE2NTg4MjY2OTB9.0bxqtFHuEZuz1wfN8NVX3kB7uffyPEM9xc_Zg17DOx0',1)
 
     // document.getElementById("send").onclick = function(evt) {
     //     if (!ws) {
