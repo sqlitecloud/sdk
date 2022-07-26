@@ -346,6 +346,80 @@ bool do_internal_upload (SQCloudConnection *conn, char *command) {
     return result;
 }
 
+bool do_internal_prepare (SQCloudConnection *conn, char *command) {
+    // .prepare sql
+    
+    // skip command name part
+    command += strlen(".prepare ");
+    
+    // sanity check
+    if (strlen(command) >= 1024) {
+        printf("SQL statement too long (%lu, max 1024)\n", strlen(command));
+        return false;
+    }
+    
+    // build and send PREPARE statement
+    char sql[1024];
+    snprintf(sql, sizeof(sql), "SELECT VM_PREPARE('%s');", command);
+    
+    /*
+     [0] 21     (ARRAY_TYPE_PREPARE_VM, see ARRAY_TYPE enum)
+     [1] 0      (VM index)
+     [2] 0      (number of SQL params)
+     [3] 1      (statement is read-only)
+     [4] 1      (number of columms in the SQL statement, if any)
+     [5] 0      (statement is explain)
+     [6] 0      (number of character to skip in original command to get next one, or 0 if none)
+     [7] 0      (statement is finalyzed)
+     */
+    
+    return do_command(conn, sql);
+}
+
+bool do_internal_step (SQCloudConnection *conn, char *command) {
+    // .step vm_index
+    
+    // skip command name part
+    command += strlen(".step ");
+    
+    // build and send PREPARE statement
+    char sql[128];
+    snprintf(sql, sizeof(sql), "SELECT VM_STEP(%s);", command);
+    
+    /*
+     [0] 21     (ARRAY_TYPE_SQLITE_EXEC or ARRAY_TYPE_DONE_VM, see ARRAY_TYPE enum)
+     [1] 0      (VM index, in ARRAY_TYPE_SQLITE_EXEC is always 0)
+     [2] 0      (sqlite3_last_insert_rowid)
+     [3] 1      (sqlite3_changes)
+     [4] 1      (sqlite3_total_changes)
+     [5] 0      (statement is finalyzed)
+     */
+    
+    return do_command(conn, sql);
+}
+
+bool do_internal_vmcommand (SQCloudConnection *conn, const char *cname, char *command) {
+    // sanity check
+    char sql[1024];
+    if (strlen(command) >= sizeof(sql)) {
+        printf("SQL statement too long (%lu, max 1024)\n", strlen(command));
+        return false;
+    }
+    
+    // build statement
+    char vmcommand[64];
+    if (strcmp(cname, ".prepare") == 0) snprintf(vmcommand, sizeof(vmcommand), "VM_PREPARE");
+    else if (strcmp(cname, ".step") == 0) snprintf(vmcommand, sizeof(vmcommand), "VM_STEP");
+    else if (strcmp(cname, ".clear") == 0) snprintf(vmcommand, sizeof(vmcommand), "VM_CLEAR");
+    else if (strcmp(cname, ".reset") == 0) snprintf(vmcommand, sizeof(vmcommand), "VM_RESET");
+    else if (strcmp(cname, ".finalize") == 0) snprintf(vmcommand, sizeof(vmcommand), "VM_FINALIZE");
+    
+    
+    // build and execute statement
+    snprintf(sql, sizeof(sql), "SELECT %s('%s');", vmcommand, command);
+    return do_command(conn, sql);
+}
+
 bool do_internal_command (SQCloudConnection *conn, char *command) {
     // extract command name
     char cname[512];
@@ -353,6 +427,12 @@ bool do_internal_command (SQCloudConnection *conn, char *command) {
     
     if (strcmp(cname, ".download") == 0) return do_internal_download(conn, command);
     if (strcmp(cname, ".upload") == 0) return do_internal_upload(conn, command);
+    
+    if ((strcmp(cname, ".prepare") == 0) || (strcmp(cname, ".step") == 0) || (strcmp(cname, ".clear") == 0) ||
+        (strcmp(cname, ".reset") == 0) || (strcmp(cname, ".finalize") == 0)) {
+        command += strlen(cname) + 1; // +1 to take in account the space separator
+        return do_internal_vmcommand(conn, cname, command);
+    }
     
     printf("Unable to recognize internal command: %s\n", command);
     return false;
