@@ -64,7 +64,9 @@
 #define mem_free(_s)                        free(_s)
 #define mem_string_dup(_s)                  strdup(_s)
 #endif
+#ifndef MIN
 #define MIN(a,b)                            (((a)<(b))?(a):(b))
+#endif
 
 #define MAX_SOCK_LIST                       6           // maximum number of socket descriptor to try to connect to
                                                         // this change is required to support IPv4/IPv6 connections
@@ -1596,7 +1598,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     if (mainfd) {
         connection->fd = sockfd;
         connection->port = port;
-        connection->hostname = strdup(hostname);
+        connection->hostname = mem_string_dup(hostname);
         #ifndef SQLITECLOUD_DISABLE_TSL
         if (config && !config->insecure) {
             int rc = tls_connect_socket(connection->tls_context, sockfd, hostname);
@@ -1963,6 +1965,7 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     const char domain[] = "sqlitecloud://";
     int n = sizeof(domain) - 1;
     if (strncmp(s, domain, n) != 0) return NULL;
+    size_t slen = strlen(s);
     
     // config struct
     SQCloudConfig *config = (SQCloudConfig *)mem_zeroalloc(sizeof(SQCloudConfig));
@@ -1986,6 +1989,10 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     
     // lookup for mandatory hostname
     n += rc;
+    if (n >= slen) {
+        mem_free(config);
+        return NULL;
+    }
     char hostname[512];
     char port_s[512];
     rc = url_extract_hostname_port(&s[n], hostname, port_s);
@@ -1998,21 +2005,23 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     
     // lookup for optional database
     n += rc;
-    char database[512];
-    rc = url_extract_database(&s[n], database);
-    if (rc == -1) {
-        mem_free(config);
-        return NULL;
-    }
-    if (rc > 0) {
-        config->database = mem_string_dup(database);
+    if (n < slen) {
+        char database[512];
+        rc = url_extract_database(&s[n], database);
+        if (rc == -1) {
+            mem_free(config);
+            return NULL;
+        }
+        if (rc > 0) {
+            config->database = mem_string_dup(database);
+        }
     }
     
     // lookup for optional key(s)/value(s)
     n += rc;
     char key[512];
     char value[512];
-    while ((rc = url_extract_keyvalue(&s[n], key, value)) > 0) {
+    while ((n < slen) && (rc = url_extract_keyvalue(&s[n], key, value)) > 0) {
         if (strcasecmp(key, "timeout") == 0) {
             int timeout = (int)strtol(value, NULL, 0);
             config->timeout = (timeout > 0) ? timeout : 0;
@@ -2039,13 +2048,13 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
             config->insecure = (insecure > 0) ? true : false;
         }
         else if (strcasecmp(key, "root_certificate") == 0) {
-            config->tls_root_certificate = strdup(value);
+            config->tls_root_certificate = mem_string_dup(value);
         }
         else if (strcasecmp(key, "client_certificate") == 0) {
-            config->tls_certificate = strdup(value);
+            config->tls_certificate = mem_string_dup(value);
         }
         else if (strcasecmp(key, "client_certificate_key") == 0) {
-            config->tls_certificate_key = strdup(value);
+            config->tls_certificate_key = mem_string_dup(value);
         }
         #endif
         n += rc;
