@@ -17,7 +17,7 @@ curl -X "PATCH" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc
 }'
 ```
 
-### **PUT** - /dashboard/v1/{projectID}
+### **PATCH** - /dashboard/v1/{projectID}
 
 ### Request object
 
@@ -44,7 +44,7 @@ curl -X "PATCH" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc
 ### Example Request:
 
 ```http
-PUT /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64?x=Hallo%20wie%20gehts&y=1&z=true&x=Second%20line HTTP/1.1
+PATCH /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64?x=Hallo%20wie%20gehts&y=1&z=true&x=Second%20line HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTI5OTUsImp0aSI6IjEiLCJpYXQiOjE2NDc1MjI5OTUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyOTk1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.SaOn2-XJbf6_irYDvhTGEkDHNHJobiNeEO7CPQVHUi8
 Content-Type: application/json; charset=utf-8
 Host: web1.sqlitecloud.io:8443
