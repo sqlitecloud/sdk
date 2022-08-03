@@ -488,7 +488,8 @@ static SQCloudValueType internal_type (char *buffer) {
     if (!buffer) return VALUE_NULL;
     
     switch (buffer[0]) {
-        case '+': return VALUE_TEXT;
+        case '+':
+        case '!': return VALUE_TEXT;
         case ':': return VALUE_INTEGER;
         case ',': return VALUE_FLOAT;
         case '_': return VALUE_NULL;
