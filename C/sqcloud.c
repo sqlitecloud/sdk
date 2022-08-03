@@ -701,6 +701,16 @@ static SQCloudResult *internal_rowset_type (SQCloudConnection *connection, char 
     return rowset;
 }
 
+static char *internal_get_rowset_header (SQCloudResult *result, char **header, uint32_t col, uint32_t *len) {
+    if (!result || result->tag != RESULT_ROWSET) return NULL;
+    if (col >= result->ncols) return NULL;
+    if (header == NULL) return NULL;
+    
+    char *buffer = (result->ischunk) ? result->buffers[0] : result->rawbuffer;
+    *len = result->blen - (uint32_t)(header[col] - buffer);
+    return internal_parse_value(header[col], len, NULL);
+}
+
 static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer, uint32_t *pblen, uint32_t ncols, uint32_t version) {
     char *buffer = *pbuffer;
     uint32_t blen = *pblen;
@@ -2273,12 +2283,23 @@ uint32_t SQCloudRowsetRowsMaxColumnLength (SQCloudResult *result, uint32_t col) 
 }
 
 char *SQCloudRowsetColumnName (SQCloudResult *result, uint32_t col, uint32_t *len) {
-    if (!result || result->tag != RESULT_ROWSET) return NULL;
-    if (col >= result->ncols) return NULL;
-    
-    char *buffer = (result->ischunk) ? result->buffers[0] : result->rawbuffer;
-    *len = result->blen - (uint32_t)(result->name[col] - buffer);
-    return internal_parse_value(result->name[col], len, NULL);
+    return internal_get_rowset_header(result, result->name, col, len);
+}
+
+char *SQCloudRowsetColumnDeclType (SQCloudResult *result, uint32_t col, uint32_t *len) {
+    return internal_get_rowset_header(result, result->decltype, col, len);
+}
+
+char *SQCloudRowsetColumnDBName (SQCloudResult *result, uint32_t col, uint32_t *len) {
+    return internal_get_rowset_header(result, result->dbname, col, len);
+}
+
+char *SQCloudRowsetColumnTblName (SQCloudResult *result, uint32_t col, uint32_t *len){
+    return internal_get_rowset_header(result, result->tblname, col, len);
+}
+
+char *SQCloudRowsetColumnOrigName (SQCloudResult *result, uint32_t col, uint32_t *len) {
+    return internal_get_rowset_header(result, result->origname, col, len);
 }
 
 uint32_t SQCloudRowsetRows (SQCloudResult *result) {
