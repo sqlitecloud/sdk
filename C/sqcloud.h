@@ -44,6 +44,9 @@ typedef struct SQCloudConfigStruct {
     bool            zero_text;              // flag to tell the server to zero-terminate strings
     bool            password_hashed;        // private flag
     bool            nonlinearizable;        // flag to request for immediate responses from the server node without waiting for linerizability guarantees
+    bool            no_blob;                // flag to tell the server to not send BLOB columns
+    int             max_data;               // value to tell the server to not send columns with more than max_data bytes
+    int             max_rows;               // value to control rowset chunks based on the number of rows
     #ifndef SQLITECLOUD_DISABLE_TSL
     const char      *tls_root_certificate;
     const char      *tls_certificate;

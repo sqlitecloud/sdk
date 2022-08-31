@@ -1446,6 +1446,18 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
         len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY NONLINEARIZABLE TO 1;");
     }
     
+    if (config->no_blob) {
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY NOBLOB TO 1;");
+    }
+    
+    if (config->max_data > 0) {
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY MAXDATA TO %d;", config->max_data);
+    }
+    
+    if (config->max_rows > 0) {
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY MAXROWS TO %d;", config->max_rows);
+    }
+    
     if (len > 0) {
         SQCloudResult *res = internal_run_command(connection, buffer, strlen(buffer), true);
         if (res != &SQCloudResultOK) return false;
@@ -2068,6 +2080,16 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
             config->tls_certificate_key = mem_string_dup(value);
         }
         #endif
+        else if (strcasecmp(key, "noblob") == 0) {
+            int no_blob = (int)strtol(value, NULL, 0);
+            config->no_blob = (no_blob > 0) ? true : false;
+        }
+        else if (strcasecmp(key, "maxdata") == 0) {
+            config->max_data = (int)strtol(value, NULL, 0);
+        }
+        else if (strcasecmp(key, "maxrows") == 0) {
+            config->max_rows = (int)strtol(value, NULL, 0);
+        }
         n += rc;
     }
     
