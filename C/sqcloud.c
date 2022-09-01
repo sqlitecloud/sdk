@@ -1458,6 +1458,10 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
         len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY MAXROWS TO %d;", config->max_rows);
     }
     
+    if (config->max_rowset > 0) {
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY MAXROWSET TO %d;", config->max_rowset);
+    }
+    
     if (len > 0) {
         SQCloudResult *res = internal_run_command(connection, buffer, strlen(buffer), true);
         if (res != &SQCloudResultOK) return false;
@@ -2089,6 +2093,9 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
         }
         else if (strcasecmp(key, "maxrows") == 0) {
             config->max_rows = (int)strtol(value, NULL, 0);
+        }
+        else if (strcasecmp(key, "maxrowset") == 0) {
+            config->max_rowset = (int)strtol(value, NULL, 0);
         }
         n += rc;
     }
