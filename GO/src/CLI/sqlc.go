@@ -17,19 +17,22 @@
 
 package main
 
-import "os"
-import "io"
-import "fmt"
-import "time"
-import "bufio"
-import "errors"
-import "strings"
-import "strconv"
-import "reflect"
-import "sqlitecloud"
-import "golang.org/x/term"
-import "github.com/peterh/liner"
-import "github.com/docopt/docopt-go"
+import (
+	"bufio"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"reflect"
+	"sqlitecloud"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/docopt/docopt-go"
+	"github.com/peterh/liner"
+	"golang.org/x/term"
+)
 
 var app_name     = "sqlc"
 var long_name    = "SQLite Cloud Command Line Application"
@@ -132,6 +135,7 @@ type Parameter struct {
   User          string      `docopt:"--user"`
   Password      string      `docopt:"--password"`
   Database      string      `docopt:"--dbname"`
+  ApiKey        string      `docopt:"--apikey"`
 
   Timeout       int         `docopt:"--timeout"`
   Compress      string      `docopt:"--compress"`
@@ -219,7 +223,7 @@ func parseParameters() ( Parameter, error ) {
 
     // If the connection string is set, parse and apply the connection string...
     if url, isSet := p[ "URL" ]; isSet && url != "<nil>" {
-      if Host, Port, Username, Password, Database, Timeout, Compress, Pam, err := sqlitecloud.ParseConnectionString( reflect.ValueOf( url ).String() ); err == nil {
+      if Host, Port, Username, Password, Database, Timeout, Compress, Pam, ApiKey, err := sqlitecloud.ParseConnectionString( reflect.ValueOf( url ).String() ); err == nil {
                           p[ "--host" ]     = getFirstNoneEmptyString( []string{ dropError( p.String( "--host" ) )    , Host                          } )
                           p[ "--user" ]     = getFirstNoneEmptyString( []string{ dropError( p.String( "--user" ) )    , Username                      } )
                           p[ "--password" ] = getFirstNoneEmptyString( []string{ dropError( p.String( "--password" ) ), Password                      } )
@@ -229,6 +233,7 @@ func parseParameters() ( Parameter, error ) {
         if Port    > 0  { p[ "--port" ]     = getFirstNoneEmptyString( []string{ dropError( p.String( "--port" ) )    , fmt.Sprintf( "%d", Port     ) } ) }
         if Timeout > 0  { p[ "--timeout" ]  = getFirstNoneEmptyString( []string{ dropError( p.String( "--timeout" ) ) , fmt.Sprintf( "%d", Timeout  ) } ) }
                           p[ "--tls" ]      = getFirstNoneEmptyString( []string{ dropError( p.String( "--tls" ) )     , Pam                           } )
+                          p[ "--apikey" ]   = getFirstNoneEmptyString( []string{ dropError( p.String( "--apikey" ) )  , ApiKey                           } )
       }
     } else {
       return Parameter{}, err
@@ -316,10 +321,15 @@ func main() {
     // print( out, fmt.Sprintf( "%s %s, %s", long_name, version, copyright ), &parameter )
 
     var db *sqlitecloud.SQCloud = sqlitecloud.New( parameter.Tls, uint( parameter.Timeout ) )
-    if err := db.Connect( parameter.Host, parameter.Port, parameter.User, parameter.Password, parameter.Database, uint( parameter.Timeout ), parameter.Compress, 0 ); err != nil {
+    if err := db.Connect( parameter.Host, parameter.Port, parameter.User, parameter.Password, parameter.Database, uint( parameter.Timeout ), parameter.Compress, 0, parameter.ApiKey ); err != nil {
       fatal( out, fmt.Sprintf( "ERROR: %s.", err.Error() ), &parameter )
     } else {
       defer db.Close()
+
+      db.Callback = func (conn *sqlitecloud.SQCloud, json string) {
+        print( out, json, &parameter )
+        out.Flush()
+      }
 
       //print( out, fmt.Sprintf( "Connected to %s.", parameter.Host ), &parameter )
       //print( out, strings.Split( help, "\n" )[ 0 ], &parameter )
