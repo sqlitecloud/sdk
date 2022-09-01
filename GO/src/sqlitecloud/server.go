@@ -1,27 +1,29 @@
 //
 //                    ////              SQLite Cloud
-//        ////////////  ///             
+//        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
 //     ///             ///  ///         Version     : 1.0.1
 //     //             ///   ///  ///    Date        : 2021/08/31
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
-//   ///             ///   ///  ///     
+//   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : Go Methods related to the
 //   ////                ///  ///                     SQCloud class for using
 //     ////     //////////   ///                      the internal server
 //        ////            ////                        commands.
-//          ////     /////              
+//          ////     /////
 //             ///                      Copyright   : 2021 by SQLite Cloud Inc.
 //
 // -----------------------------------------------------------------------TAB=2
 
 package sqlitecloud
 
-import "fmt"
-import "strings"
-import "time"
-import "errors"
-import "strconv"
+import (
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+)
 
 type SQCloudConnection struct {
   ClientID            int64
@@ -181,6 +183,15 @@ func (this *SQCloud) Auth( Username string, Password string ) error {
   if strings.TrimSpace( Password ) != "" {
     sql += fmt.Sprintf( " PASSWORD %s", SQCloudEnquoteString( Password ) )
   }
+  return this.Execute( sql )
+}
+
+// Auth - INTERNAL SERVER COMMAND: Authenticates User with the given API KEY.
+func (this *SQCloud) AuthWithKey( Key string ) error {
+  if strings.TrimSpace( Key ) == "" {
+    return errors.New( "ERROR: Unexpected Result (-1)")
+  }
+  sql := fmt.Sprintf( "AUTH APIKEY %s", SQCloudEnquoteString( Key ) )
   return this.Execute( sql )
 }
 
