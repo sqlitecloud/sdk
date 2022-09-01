@@ -153,7 +153,7 @@ func init() {
 
 func initApi() {
 	if cfg.Section("api").Key("enabled").MustBool(false) {
-		SQLiteWeb.router.HandleFunc("/apiWebsocketTest", apiWebsocketTestClient) // only for test purpose
+		SQLiteWeb.router.HandleFunc("/api/apiWebsocketTest", apiWebsocketTestClient) // only for test purpose
 		SQLiteWeb.router.HandleFunc("/api/{version:v[0-9]+}/{projectID}/ws", SQLiteWeb.serveApiWebsocket)
 		SQLiteWeb.router.HandleFunc("/api/{version:v[0-9]+}/wspsub", SQLiteWeb.serveApiWebsocketPubsub)
 	}
@@ -515,6 +515,7 @@ func resultToObj(result *sqlitecloud.Result) (interface{}, error) {
 // ----------------------------------------------------------------------------
 
 func apiWebsocketTestClient(w http.ResponseWriter, r *http.Request) {
+	SQLiteWeb.Logger.Debugf("apiWebsocketTestClient")
 	apiWebsocketTestClientTemplate.Execute(w, r.Host)
 }
 
@@ -606,13 +607,16 @@ window.addEventListener("load", function(evt) {
     };
 
 	document.getElementById("disconnect").onclick = function(evt) {
-        if (!ws) {
-            return false;
-        }
+        if (ws) {
+			ws.close(1000);
+			ws = null;
+		}
 
-		ws.close(1000);
-		ws = null;
-
+		if (wsPubsub) {
+			wsPubsub.close(1000);
+			wsPubsub = null;
+		}
+		
         return false;
     };
 
@@ -692,7 +696,7 @@ window.addEventListener("load", function(evt) {
 </form>
 
 <form>
-    <button id="disconnect">Dosconnect</button>
+    <button id="disconnect">Disconnect</button>
 </form>
 
 </td><td valign="top" width="50%">

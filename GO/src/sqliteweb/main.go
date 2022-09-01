@@ -156,8 +156,8 @@ func main() {
 			initDashboard()
 			initAdmin()
 			initStubs()
-			initWWW()
 			initApi()
+			initWWW()
 
 			// inittt()
 

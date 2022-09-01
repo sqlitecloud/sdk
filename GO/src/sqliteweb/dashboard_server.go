@@ -24,7 +24,6 @@ import (
 	// "io/ioutil"
 	// "net"
 
-	"fmt"
 	"net/http"
 	"time"
 
@@ -71,9 +70,7 @@ func (this *Server) executeLuaDashboardServer(writer http.ResponseWriter, reques
 
 	path := cfg.Section("dashboard").Key("path").String() // "/Users/pfeil/GitHub/SqliteCloud/sdk/GO/src/sqliteweb/dashboard"
 
-	fmt.Printf("%s executeLua LUA ...\n", time.Now())
 	this.executeLua(path, endpoint, id, writer, request)
-	fmt.Printf("%s executeLua LUA end\n", time.Now())
 
 	t := time.Since(start)
 	SQLiteWeb.Logger.Debugf("Endpoint \"%s %s\" addr:%s user:%d exec_time:%s", request.Method, request.URL, request.RemoteAddr, id, t)
