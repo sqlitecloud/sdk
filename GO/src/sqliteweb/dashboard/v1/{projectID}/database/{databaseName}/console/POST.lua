@@ -49,7 +49,7 @@ local query = string.format( "SWITCH DATABASE '%s'; %s", enquoteSQL( dbName ), c
 result = executeSQL( projectID, query )
 if not result                             then return error( 504, "Gateway Timeout" )     end
 
--- print("executeSQL err:" .. result.ErrorMessage .. " value:" .. result.Value .. " Rows:" .. result.Rows )
+-- print("executeSQL err:" .. result.ErrorMessage .. " Rows:" .. result.NumberOfRows )
 
 if result.ErrorNumber ~= 0                then 
   Response.value.result = 0

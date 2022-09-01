@@ -49,7 +49,7 @@ The **SQLiteWeb Server** requires a certain file/folder structure on the target 
 ```console
 /opt/sqliteweb/
 /opt/sqliteweb/www
-/opt/sqliteweb/api/v1
+/opt/sqliteweb/stubs/v1
 /opt/sqliteweb/sbin
 /opt/sqliteweb/etc
 /opt/sqliteweb/etc/sqliteweb
@@ -130,7 +130,7 @@ Connection Options:
 
 Server Options:
   --www=<PATH>             Server static web sites from <PATH>
-  --api=<PATH>             Server dummy REST stubs from <PATH>
+  --stubs=<PATH>           Server dummy REST stubs from <PATH>
 
 
 ```
@@ -173,8 +173,8 @@ The SQLiteWeb Server is configured with a config file, normally located under: `
 [www]
   path 	      = /opt/sqliteweb/www
 
-[api]
-  path        = /opt/sqliteweb/api
+[stubs]
+  path        = /opt/sqliteweb/stubs
 ```
 
 If you have made changes in the config file, you have to restart the server to make your changes take effect. You can restart the server with:
@@ -209,10 +209,10 @@ ON YOU LOCAL MACHINE> make web_restart
 or [https://web1.sqlitecloud.io:8443/firework/](https://web1.sqlitecloud.io:8443/firework/)
 
 
-### The (dummy) [api] section of the configuration file
-- path: This is the folder path where the (dummy) API requests are specified in the form of the directory structure and the responses are specified by <HTTP VERB>.json. files. To access those dummy request/response pairs, point your browser, or JSON clien to the hostname and port specified in the [server] section and add the path: `/api/vi/` to it. Example: [https://web1.sqlitecloud.io:8443/api/v1/ping](https://web1.sqlitecloud.io:8443/api/v1/ping)
+### The (dummy) [stubs] section of the configuration file
+- path: This is the folder path where the (dummy) stubs requests are specified in the form of the directory structure and the responses are specified by <HTTP VERB>.json. files. To access those dummy request/response pairs, point your browser, or JSON clien to the hostname and port specified in the [server] section and add the path: `/stubs/v1/` to it. Example: [https://web1.sqlitecloud.io:8443/stubs/v1/ping](https://web1.sqlitecloud.io:8443/stubs/v1/ping)
 
-**Please note: The path of the endpoint should start with: /api/v1/...**
+**Please note: The path of the endpoint should start with: /stubs/v1/...**
 
 ## Serving the REACT GUI
 Put all of your REACT files into the specified www.path folder (normally: /opt/sqliteweb/www). The effect of uploading new files is immediately, no server reload is necessary. A typical www folder contents could look like this for example:
@@ -241,13 +241,13 @@ Put all of your REACT files into the specified www.path folder (normally: /opt/s
 ```
 You can then access those files with your browser at this address: [https://web1.sqlitecloud.io:8443/](https://web1.sqlitecloud.io:8443/)
 
-## Using the JSON API
-To access the JSON API, call the required endpoint with the corresponding HTTP VERB.
+## Using the JSON stubs
+To access the JSON stubs, call the required endpoint with the corresponding HTTP VERB.
 
 #### Example:
 
 ```console
-curl --silent --insecure https://web1.sqlitecloud.io:8443/api/v1/ping 
+curl --silent --insecure https://web1.sqlitecloud.io:8443/stubs/v1/ping 
 ```
 
 The should output something like:
@@ -282,7 +282,7 @@ The second part is called the **"Claims"**. It contains the following informatio
 ```console
 echo "eyJleHAiOjE2Mzc3NjEwNTUsImp0aSI6IjE0MDUiLCJpYXQiOjE2Mzc3NjA3NTUsIm5iZiI6MTYzNzc2MDc1NSwic3ViIjoiYXBpL3YxLyJ9" | base64 -D
 
-{"exp":1637761055,"jti":"1405","iat":1637760755,"nbf":1637760755,"sub":"api/v1/"}
+{"exp":1637761055,"jti":"1405","iat":1637760755,"nbf":1637760755,"sub":"dashboard/v1/"}
 ```
 
 The third part (`j4ECkdbLPzLnB76H5NK9X4cH4SGp-m7FYLfFApOwovM`) is the cryptographic signature over the first and second part. The signature is salted by the secret jwt_key string (see config file).
@@ -293,7 +293,7 @@ To authenticate to the server, call the authentication provider like this:
 #### Example:
 
 ```console
-curl --silent --insecure -X POST https://web1.sqlitecloud.io:8443/api/v1/auth -H 'Content-Type: application/json; charset=utf-8' -d '{"RequestID":1405,"Login":"admin","Password":"foo"}'
+curl --silent --insecure -X POST https://web1.sqlitecloud.io:8443/dashboard/v1/auth -H 'Content-Type: application/json; charset=utf-8' -d '{"RequestID":1405,"Login":"admin","Password":"foo"}'
 ```
 
 The result should look like this:
@@ -312,7 +312,7 @@ This behavior can be used to refresh a JWT token that is about to expire. Howeve
 ```console
 curl --silent 
      --insecure 
-     -X POST https://web1.sqlitecloud.io:8443/api/v1/auth 
+     -X POST https://web1.sqlitecloud.io:8443/dashboard/v1/auth 
      -H 'Content-Type: application/json; charset=utf-8' 
      -H 'Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Mzc3NjEwNTUsImp0aSI6IjE0MDUiLCJpYXQiOjE2Mzc3NjA3NTUsIm5iZiI6MTYzNzc2MDc1NSwic3ViIjoiYXBpL3YxLyJ9.j4ECkdbLPzLnB76H5NK9X4cH4SGp-m7FYLfFApOwovM'
 ```
@@ -330,7 +330,7 @@ To render the actual JWT Token as invalid, just call the authentication provider
 ```console
 curl --silent 
      --insecure 
-     -X DELETE https://web1.sqlitecloud.io:8443/api/v1/auth 
+     -X DELETE https://web1.sqlitecloud.io:8443/dashboard/v1/auth 
      -H 'Content-Type: application/json; charset=utf-8' 
      -H 'Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Mzc3NjEwNTUsImp0aSI6IjE0MDUiLCJpYXQiOjE2Mzc3NjA3NTUsIm5iZiI6MTYzNzc2MDc1NSwic3ViIjoiYXBpL3YxLyJ9.j4ECkdbLPzLnB76H5NK9X4cH4SGp-m7FYLfFApOwovM'
 ```
@@ -345,10 +345,10 @@ If everything went fine, the server will respond like this:
 ### Dummy request
 To speed up the development, the feature of creating dummy REST request/response pairs and performing calls against those dummy endpoints has been added to the server. This way, new endpoints can be developed and tested and can be used in the front-end code just right from the beginning.
 
-To set up a new dummy endpoint, create a directory path under the api.path (see config file) like so:
+To set up a new dummy endpoint, create a directory path under the stubs.path (see config file) like so:
 
 ```console
-mkdir -p /opt/sqliteweb/api/v1/ping
+mkdir -p /opt/sqliteweb/stubs/v1/ping
 ```
 
 This directory path maps the URL endpoint path 1:1.
@@ -356,7 +356,7 @@ This directory path maps the URL endpoint path 1:1.
 Now, you can create a response for a specific HTTP verb like this:
 
 ```console
-touch /opt/sqliteweb/api/v1/ping/GET.json
+touch /opt/sqliteweb/stubs/v1/ping/GET.json
 ```
 Please note, that the filename MUST follow the following scheme: < VERB >.json
 
@@ -372,11 +372,11 @@ Those HTTP Verbs are supported:
 Finally, you can specify the contents of your dummy response like this:
 
 ```console
-echo "{                 " >> /opt/sqliteweb/api/v1/ping/GET.json
-echo "  ResponseID: 0,  " >> /opt/sqliteweb/api/v1/ping/GET.json
-echo "  Status:  0,     " >> /opt/sqliteweb/api/v1/ping/GET.json
-echo "  Message: "pong"," >> /opt/sqliteweb/api/v1/ping/GET.json
-echo "}                 " >> /opt/sqliteweb/api/v1/ping/GET.json
+echo "{                 " >> /opt/sqliteweb/stubs/v1/ping/GET.json
+echo "  ResponseID: 0,  " >> /opt/sqliteweb/stubs/v1/ping/GET.json
+echo "  Status:  0,     " >> /opt/sqliteweb/stubs/v1/ping/GET.json
+echo "  Message: "pong"," >> /opt/sqliteweb/stubs/v1/ping/GET.json
+echo "}                 " >> /opt/sqliteweb/stubs/v1/ping/GET.json
 ```
 
 However, it is strongly recommended, that you use the editor of your choice or upload this file from your local machine.
@@ -386,39 +386,39 @@ However, it is strongly recommended, that you use the editor of your choice or u
 ## Using Lua to write endpoints
 Lua version 5.2 is built right into the executable of sqliteweb. No external dll's or shared object files are required.
 
-Using Lua endpoints is straight forward and pretty much the same as using dummy.json files. To use Lua endpoints, you first have to create the corresponding folder structure, beginning with: `/api/v1/`. Then add the desired endpoint name like `luatest/` followed by one of the supported Verbs (see above) and an `.lua`. A Complete Lua endpoint path could look like this for example:
+Using Lua endpoints is straight forward and pretty much the same as using dummy.json files. To use Lua endpoints, you first have to create the corresponding folder structure, beginning with: `/dashboard/v1/`. Then add the desired endpoint name like `luatest/` followed by one of the supported Verbs (see above) and an `.lua`. A Complete Lua endpoint path could look like this for example:
 
 ```console
-/api/v1/luatest/GET.lua
+/dashboard/v1/luatest/GET.lua
 ```
 
 To execute this endpoint, point your browser or REST client to:
 
 ````console
-https://web1.sqlitecloud.io:8443/api/v1/luatest/
+https://web1.sqlitecloud.io:8443/dashboard/v1/luatest/
 ````
 In real life, you would most probably want to use some variable components in your endpoint path, like this for example:
 
 ````console
-https://web1.sqlitecloud.io:8443/api/v1/node/{nodeID}
+https://web1.sqlitecloud.io:8443/dashboard/v1/node/{nodeID}
 ````
 To implement this, you have to create the folder structure like this:
 
 ````console
-/api/v1/node/{0}
+/dashboard/v1/node/{0}
 ````
 
 You can add as many variable path components into your endpoint as you want, this could look like this for example:
 
 
 ````console
-/api/v1/stat/{0}/{1}/
+/dashboard/v1/stat/{0}/{1}/
 ````
 
 And then call it like this:
 
 ````console
-https://web1.sqlitecloud.io:8443/api/v1/stat/cpu/1/
+https://web1.sqlitecloud.io:8443/dashboard/v1/stat/cpu/1/
 ````
 
 Those variable path components must be numbered like this {0}, {1}...{n}. No number must be used twice an a path. The variable path components can be of any data type (no type check is done). The variable endpoint path components are passed to the lua script in a global `args[0,1...n]` array. It is up to the programmer to do the type checks in lua.

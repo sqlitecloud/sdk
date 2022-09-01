@@ -6,10 +6,10 @@
 //     //             ///   ///  ///    Date        : 2021/11/17
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
 //   ///             ///   ///  ///
-//   ///     //////////   ///  ///      Description : 
-//   ////                ///  ///                     
-//     ////     //////////   ///                      
-//        ////            ////                        
+//   ///     //////////   ///  ///      Description :
+//   ////                ///  ///
+//     ////     //////////   ///
+//        ////            ////
 //          ////     /////
 //             ///                      Copyright   : 2021 by SQLite Cloud Inc.
 //
@@ -41,5 +41,5 @@ Connection Options:
 
 Server Options:
   --www=<PATH>             Server static web sites from <PATH>
-  --api=<PATH>             Server dummy REST stubs from <PATH>
+  --stubs=<PATH>             Server dummy REST stubs from <PATH>
 `

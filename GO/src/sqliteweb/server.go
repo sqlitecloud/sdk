@@ -53,7 +53,7 @@ type Server struct{
 
   WWWPath       string
   WWW404URL     string
-  APIPath       string
+  StubsPath     string
 
   server        *http.Server
   router        *mux.Router
@@ -93,7 +93,7 @@ func initializeSQLiteWeb() {
 
       WWWPath:    "",
       WWW404URL:  "/",
-      APIPath:    "",
+      StubsPath:  "",
       server:     nil,
       router:     mux.NewRouter(),
       ticker:     nil,
