@@ -31,13 +31,13 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{} // use default options
+var dashboardWebsocketUpgrader = websocket.Upgrader{} // use default options
 
 func init() {
 	originChecker := glob.MustCompile("{https://*.sqlitecloud.io,https://*.sqlitecloud.io:*,https://sqlitecloud.io,https://sqlitecloud.io:*,https://fabulous-arithmetic-c4a014.netlify.app}")
 	localhostChecker := glob.MustCompile("{https://localhost:*,https://localhost}")
 
-	upgrader.CheckOrigin = func(r *http.Request) bool {
+	dashboardWebsocketUpgrader.CheckOrigin = func(r *http.Request) bool {
 		o := r.Header.Get("Origin")
 		allowed := originChecker.Match(o)
 
@@ -52,7 +52,7 @@ func init() {
 	}
 }
 
-func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.Request) {
+func (this *Server) dashboardWebsocketDownload(writer http.ResponseWriter, request *http.Request) {
 	var connection *Connection = nil
 	var res *sqlitecloud.Result = nil
 	var err error = nil
@@ -65,19 +65,19 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 
 	projectID, _, err = verifyProjectID(int(id), v["projectID"])
 	if err != nil {
-		SQLiteWeb.Logger.Error("websocketDownload: unauthorized: ", err)
+		SQLiteWeb.Logger.Error("dashboardWebsocketDownload: unauthorized: ", err)
 		return
 	}
 
-	// SQLiteWeb.Logger.Debugf("websocketDownload: header %v", request.Header["Cookie"])
+	// SQLiteWeb.Logger.Debugf("dashboardWebsocketDownload: header %v", request.Header["Cookie"])
 
-	c, err := upgrader.Upgrade(writer, request, nil)
+	c, err := dashboardWebsocketUpgrader.Upgrade(writer, request, nil)
 	if err != nil {
-		SQLiteWeb.Logger.Error("websocketDownload: upgrade error: ", err)
+		SQLiteWeb.Logger.Error("dashboardWebsocketDownload: upgrade error: ", err)
 		return
 	}
 	defer c.Close()
-	// SQLiteWeb.Logger.Debug("websocketDownload: upgrade")
+	// SQLiteWeb.Logger.Debug("dashboardWebsocketDownload: upgrade")
 
 	query := fmt.Sprintf("DOWNLOAD DATABASE '%s'", enquoteString(v["databaseName"]))
 	connection, err = cm.GetConnection(projectID, false)
@@ -87,7 +87,7 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 	case connection == nil:
 		fallthrough
 	case connection.connection == nil:
-		SQLiteWeb.Logger.Error("websocketDownload: error on getConnection")
+		SQLiteWeb.Logger.Error("dashboardWebsocketDownload: error on getConnection")
 		return
 	}
 
@@ -98,7 +98,7 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 		// - 100001 Internal Error: SQCloud.readNextRawChunk (%s)
 		// - 100003 Internal Error: sendString (%s)
 		cm.closeAndRemoveLockedConnection(projectID, connection)
-		SQLiteWeb.Logger.Debug("websocketDownload: Connection Error ", err)
+		SQLiteWeb.Logger.Debug("dashboardWebsocketDownload: Connection Error ", err)
 		c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 		return
 	} else if err != nil || !res.IsArray() {
@@ -106,7 +106,7 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 
 		// try to abort the current download operation
 		if err1 := connection.connection.Execute("DOWNLOAD ABORT"); err1 != nil {
-			SQLiteWeb.Logger.Errorf("websocketDownload: DOWNLOAD ABORT error (%s) closing conn: %v", err1, connection)
+			SQLiteWeb.Logger.Errorf("dashboardWebsocketDownload: DOWNLOAD ABORT error (%s) closing conn: %v", err1, connection)
 			cm.closeAndRemoveLockedConnection(projectID, connection)
 		} else {
 			cm.ReleaseConnection(projectID, connection)
@@ -120,7 +120,7 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 		case !res.IsArray():
 			closemsg = fmt.Sprintf("expected array, got type %c", res.GetType())
 		}
-		SQLiteWeb.Logger.Errorf("websocketDownload: error on DOWNLOAD (%s): %s", query, closemsg)
+		SQLiteWeb.Logger.Errorf("dashboardWebsocketDownload: error on DOWNLOAD (%s): %s", query, closemsg)
 
 		// send the close message
 		c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, closemsg), time.Now().Add(1*time.Second))
@@ -143,9 +143,9 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 			progressSize = progressSize + int64(datalen)
 			err = c.WriteMessage(websocket.BinaryMessage, buf)
 			if err != nil {
-				SQLiteWeb.Logger.Error("websocketDownload: error on STEP writeMessage: ", err)
+				SQLiteWeb.Logger.Error("dashboardWebsocketDownload: error on STEP writeMessage: ", err)
 				if err1 := connection.connection.Execute("DOWNLOAD ABORT"); err1 != nil {
-					SQLiteWeb.Logger.Errorf("websocketDownload: DOWNLOAD ABORT error (%s) closing conn: %v", err1, connection)
+					SQLiteWeb.Logger.Errorf("dashboardWebsocketDownload: DOWNLOAD ABORT error (%s) closing conn: %v", err1, connection)
 					cm.closeAndRemoveLockedConnection(projectID, connection)
 				}
 				c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
@@ -157,16 +157,16 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 				break
 			}
 		} else {
-			SQLiteWeb.Logger.Error("websocketDownload: error while executing download step ", err)
+			SQLiteWeb.Logger.Error("dashboardWebsocketDownload: error while executing download step ", err)
 			if err1 := connection.connection.Execute("DOWNLOAD ABORT"); err1 != nil {
-				SQLiteWeb.Logger.Errorf("websocketDownload: DOWNLOAD ABORT error (%s) closing conn: %v", err1, connection)
+				SQLiteWeb.Logger.Errorf("dashboardWebsocketDownload: DOWNLOAD ABORT error (%s) closing conn: %v", err1, connection)
 				cm.closeAndRemoveLockedConnection(projectID, connection)
 			}
 			c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, "error while executing download step"), time.Now().Add(1*time.Second))
 			return
 		}
 
-		// SQLiteWeb.Logger.Debugf("websocketDownload: loop (progressSize: %d, dbSize: %d)", progressSize, dbSize)
+		// SQLiteWeb.Logger.Debugf("dashboardWebsocketDownload: loop (progressSize: %d, dbSize: %d)", progressSize, dbSize)
 	}
 
 	c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "OK"), time.Now().Add(1*time.Second))
@@ -175,7 +175,7 @@ func (this *Server) websocketDownload(writer http.ResponseWriter, request *http.
 	SQLiteWeb.Logger.Debugf("Endpoint \"%s %s\" addr:%s user:%d exec_time:%s iserr:%v", request.Method, request.URL, request.RemoteAddr, id, t, err != nil)
 }
 
-func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Request) {
+func (this *Server) dashboardWebsocketUpload(writer http.ResponseWriter, request *http.Request) {
 	var connection *Connection = nil
 	var res *sqlitecloud.Result = nil
 	var err error = nil
@@ -189,18 +189,18 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 	// check authorization for projectID
 	projectID, _, err = verifyProjectID(int(id), v["projectID"])
 	if err != nil {
-		SQLiteWeb.Logger.Error("websocketUpload: unauthorized: ", err)
+		SQLiteWeb.Logger.Error("dashboardWebsocketUpload: unauthorized: ", err)
 		return
 	}
 
-	c, err := upgrader.Upgrade(writer, request, nil)
+	c, err := dashboardWebsocketUpgrader.Upgrade(writer, request, nil)
 	if err != nil {
-		SQLiteWeb.Logger.Error("websocketUpload: upgrade error: ", err)
+		SQLiteWeb.Logger.Error("dashboardWebsocketUpload: upgrade error: ", err)
 		return
 	}
 	defer c.Close()
 
-	// SQLiteWeb.Logger.Debugf("websocketUpload: header %v", request.Header["Cookie"])
+	// SQLiteWeb.Logger.Debugf("dashboardWebsocketUpload: header %v", request.Header["Cookie"])
 
 	query := fmt.Sprintf("UPLOAD DATABASE '%s'", enquoteString(v["databaseName"]))
 	if keys, ok := request.URL.Query()["key"]; ok && len(keys[0]) > 0 {
@@ -214,7 +214,7 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 	case connection == nil:
 		fallthrough
 	case connection.connection == nil:
-		SQLiteWeb.Logger.Error("websocketUpload: error on getConnection")
+		SQLiteWeb.Logger.Error("dashboardWebsocketUpload: error on getConnection")
 		c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, "Cannot connect to node"), time.Now().Add(1*time.Second))
 		return
 	}
@@ -226,7 +226,7 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 		// - 100001 Internal Error: SQCloud.readNextRawChunk (%s)
 		// - 100003 Internal Error: sendString (%s)
 		cm.closeAndRemoveLockedConnection(projectID, connection)
-		SQLiteWeb.Logger.Error("websocketUpload: Connection Error ", err)
+		SQLiteWeb.Logger.Error("dashboardWebsocketUpload: Connection Error ", err)
 		c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 		return
 	} else if err != nil || !res.IsOK() {
@@ -234,10 +234,10 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 
 		// try to abort the current download operation
 		if err1 := connection.connection.Execute("UPLOAD ABORT"); err1 != nil {
-			SQLiteWeb.Logger.Errorf("websocketUpload: UPLOAD ABORT error (%s) closing conn: %v", err1, connection)
+			SQLiteWeb.Logger.Errorf("dashboardWebsocketUpload: UPLOAD ABORT error (%s) closing conn: %v", err1, connection)
 			cm.closeAndRemoveLockedConnection(projectID, connection)
 		} else {
-			// SQLiteWeb.Logger.Debugf("websocketUpload: ReleaseConnection %v", connection)
+			// SQLiteWeb.Logger.Debugf("dashboardWebsocketUpload: ReleaseConnection %v", connection)
 			cm.ReleaseConnection(projectID, connection)
 		}
 
@@ -249,7 +249,7 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 		case !res.IsOK():
 			closemsg = fmt.Sprintf("expected OK, got type %c", res.GetType())
 		}
-		SQLiteWeb.Logger.Errorf("websocketUpload: error on UPLOAD (%s): %s", query, closemsg)
+		SQLiteWeb.Logger.Errorf("dashboardWebsocketUpload: error on UPLOAD (%s): %s", query, closemsg)
 
 		// send the close message
 		c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, closemsg), time.Now().Add(1*time.Second))
@@ -273,30 +273,30 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 
 	for {
 		_, message, err := c.ReadMessage()
-		SQLiteWeb.Logger.Debugf("websocketUpload: ReadMessage %d", len(message))
+		SQLiteWeb.Logger.Debugf("dashboardWebsocketUpload: ReadMessage %d", len(message))
 
 		if err != nil && !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-			SQLiteWeb.Logger.Debug("websocketUpload: read error: ", err)
+			SQLiteWeb.Logger.Debug("dashboardWebsocketUpload: read error: ", err)
 			if err1 := connection.connection.Execute("UPLOAD ABORT"); err1 != nil {
-				SQLiteWeb.Logger.Errorf("websocketUpload: UPLOAD ABORT error (%s) closing conn: %v", err1, connection)
+				SQLiteWeb.Logger.Errorf("dashboardWebsocketUpload: UPLOAD ABORT error (%s) closing conn: %v", err1, connection)
 				cm.closeAndRemoveLockedConnection(projectID, connection)
 			}
 			c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 			break
 		}
 
-		// send message, and send an 0-length message the received message was a CloseNormalClosure close message
+		// send message, and send an 0-length message if the received message was a CloseNormalClosure close message
 		err = connection.connection.SendBlob(message)
 		if err != nil {
-			SQLiteWeb.Logger.Error("websocketUpload: SendBytes error: ", err)
+			SQLiteWeb.Logger.Error("dashboardWebsocketUpload: SendBytes error: ", err)
 			if err1 := connection.connection.Execute("UPLOAD ABORT"); err1 != nil {
-				SQLiteWeb.Logger.Errorf("websocketUpload: UPLOAD ABORT error (%s) closing conn: %v", err1, connection)
+				SQLiteWeb.Logger.Errorf("dashboardWebsocketUpload: UPLOAD ABORT error (%s) closing conn: %v", err1, connection)
 				cm.closeAndRemoveLockedConnection(projectID, connection)
 			}
 			c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 			break
 		}
-		SQLiteWeb.Logger.Debugf("websocketUpload: SendBytes %d completed", len(message))
+		SQLiteWeb.Logger.Debugf("dashboardWebsocketUpload: SendBytes %d completed", len(message))
 
 		if len(message) == 0 {
 			// empty message: end message
@@ -309,12 +309,12 @@ func (this *Server) websocketUpload(writer http.ResponseWriter, request *http.Re
 			// send back the ack message
 			if err = c.WriteMessage(websocket.TextMessage, []byte("OK")); err != nil {
 				if err1 := connection.connection.Execute("UPLOAD ABORT"); err1 != nil {
-					SQLiteWeb.Logger.Errorf("websocketUpload: UPLOAD ABORT error (%s) closing conn: %v", err1, connection)
+					SQLiteWeb.Logger.Errorf("dashboardWebsocketUpload: UPLOAD ABORT error (%s) closing conn: %v", err1, connection)
 					cm.closeAndRemoveLockedConnection(projectID, connection)
 				}
 				c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 			}
-			SQLiteWeb.Logger.Debug("websocketUpload: ack")
+			SQLiteWeb.Logger.Debug("dashboardWebsocketUpload: ack")
 		}
 	}
 
@@ -356,11 +356,11 @@ func verifyProjectID(userID int, projectUUID string) (string, int, error) {
 	return res.GetStringValue_(0, 0), 0, nil
 }
 
-func wsTestClient(w http.ResponseWriter, r *http.Request) {
-	homeTemplate.Execute(w, r.Host)
+func dwsTestClient(w http.ResponseWriter, r *http.Request) {
+	dwsTestClientTemplate.Execute(w, r.Host)
 }
 
-var homeTemplate = template.Must(template.New("").Parse(`
+var dwsTestClientTemplate = template.Must(template.New("").Parse(`
 <!DOCTYPE html>
 <html>
 <head>
@@ -420,7 +420,7 @@ window.addEventListener("load", function(evt) {
             return false;
         }
 
-		url = "wss://" + "{{.}}" + "/ws/v1/f9cdd1d5-7d16-454b-8cc0-548dc1712c26/database/wrongdb.sqlite/download"
+		url = "wss://" + "{{.}}" + "/dashboard/v1/f9cdd1d5-7d16-454b-8cc0-548dc1712c26/database/wrongdb.sqlite/download"
 		
 		print("DOWNLOAD " + url);
 
@@ -462,7 +462,7 @@ window.addEventListener("load", function(evt) {
 		var key = (k.value && k.value.length) ? k.value : null;
 		var sliceSize = 1024*1024;
 
-		url = "wss://" + "{{.}}" + "/ws/v1/f9cdd1d5-7d16-454b-8cc0-548dc1712c26/database/" + name + "/upload"
+		url = "wss://" + "{{.}}" + "/dashboard/v1/f9cdd1d5-7d16-454b-8cc0-548dc1712c26/database/" + name + "/upload"
 		if (key != null) {
 			url = url + "?key=" + key
 		}

@@ -35,6 +35,7 @@ import (
 
 	//"github.com/Shopify/go-lua"
 	"github.com/gorilla/mux"
+	// _ "net/http/pprof"
 )
 
 func init() {
@@ -46,12 +47,14 @@ func initDashboard() {
 		// SQLiteWeb.router.HandleFunc( "/dashboard/{endpoint:.*}", SQLiteWeb.executeLua )
 
 		// special dashboard paths processed with WebSocket connections
-		// SQLiteWeb.router.HandleFunc("/wsTestClient", wsTestClient) // only for test purpose
-		SQLiteWeb.router.HandleFunc("/ws/{version:v[0-9]+}/{projectID}/database/{databaseName}/download", SQLiteWeb.Auth.JWTAuth(SQLiteWeb.Auth.getTokenFromCookie, SQLiteWeb.websocketDownload))
-		SQLiteWeb.router.HandleFunc("/ws/{version:v[0-9]+}/{projectID}/database/{databaseName}/upload", SQLiteWeb.Auth.JWTAuth(SQLiteWeb.Auth.getTokenFromCookie, SQLiteWeb.websocketUpload))
+		// SQLiteWeb.router.HandleFunc("/dwsTestClient", dwsTestClient) // only for test purpose
+		SQLiteWeb.router.HandleFunc("/dashboard/{version:v[0-9]+}/{projectID}/database/{databaseName}/download", SQLiteWeb.Auth.JWTAuth(SQLiteWeb.Auth.getTokenFromCookie, SQLiteWeb.dashboardWebsocketDownload))
+		SQLiteWeb.router.HandleFunc("/dashboard/{version:v[0-9]+}/{projectID}/database/{databaseName}/upload", SQLiteWeb.Auth.JWTAuth(SQLiteWeb.Auth.getTokenFromCookie, SQLiteWeb.dashboardWebsocketUpload))
 
 		// catch all with executeLuaDashboardServer
 		SQLiteWeb.router.HandleFunc("/dashboard/{endpoint:.*}", SQLiteWeb.Auth.JWTAuth(SQLiteWeb.Auth.getTokenFromAuthorization, SQLiteWeb.executeLuaDashboardServer))
+
+		// SQLiteWeb.router.PathPrefix("/debug/pprof/").Handler(http.DefaultServeMux)
 	}
 }
 

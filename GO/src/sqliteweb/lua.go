@@ -267,7 +267,7 @@ func lua_parseConnectionString( L *lua.State ) int {
 	switch {
 	case L.TypeOf( 1 ) != lua.TypeString  : L.PushNil() // defaultValue
 	default:
-		if Host, Port, Username, Password, Database, Timeout, Compress, Pem, err := sqlitecloud.ParseConnectionString( lua.CheckString( L, 1 ) ); err == nil {
+		if Host, Port, Username, Password, Database, Timeout, Compress, Pem, Key, err := sqlitecloud.ParseConnectionString( lua.CheckString( L, 1 ) ); err == nil {
 			L.NewTable()
 			L.PushString( "Host" )
 			L.PushString( Host )
@@ -292,6 +292,9 @@ func lua_parseConnectionString( L *lua.State ) int {
 			L.SetTable( -3 )
 			L.PushString( "Pem" )
 			L.PushString( Pem )
+			L.SetTable( -3 )
+      L.PushString( "Key" )
+			L.PushString( Key )
 			L.SetTable( -3 )
 		} else {
 			L.PushNil()
@@ -335,7 +338,7 @@ func lua_executeSQL( L *lua.State ) int {
     // var err error
 
     res, err, errCode, extErrCode := cm.ExecuteSQL( uuid, query )
-
+    
     // switch uuid {
     // case "auth" : res, err = adb.Select( query )
     // default     : res, err =  db.Select( query )

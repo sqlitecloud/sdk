@@ -676,12 +676,14 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
           switch bytesRead, err := result.value.readBufferAt( chunk, 1 ); {
           case err != nil:            return nil, err
           case bytesRead == 0:        return nil, errors.New( "No Data" )
-          case Type == '|':
+          case Type == '|':       
+            // PSUB
             pauth := result.GetString_()
 
             if this.psub == nil {
               tokens := append( strings.SplitN( pauth, " ", 3 ), []string{ "", "", "" }... ) // make sure that there are enough elements for max index 2
-            
+              
+              // this.psubc = make(chan string)
               this.psub = &SQCloud {
                 sock        : nil,
                 psub        : nil,
@@ -734,7 +736,12 @@ func( this *SQCloud ) readResult() ( *Result, error ) {
                     if result == nil    { return              }
                     if !result.IsJSON() { return              }
 
-                    this.Callback( result.GetString_() )
+                    this.Callback( this, result.GetString_() )
+                    // select {
+                    // case this.psubc <- result.GetString_():
+                    // default:
+                    //       // no message sent
+                    // }
                   }
                 }()
               }

@@ -151,7 +151,7 @@ func (this *AuthServer) getTokenFromCookie(r *http.Request) (string, error) {
 		return "", fmt.Errorf("Authorization cookie not found")
 	}
 	// SQLiteWeb.Logger.Debug("getTokenFromCookie: found cookie ", c)
-	
+
 	// TODO: check other fields of the cookie
 
 	return c.Value, nil

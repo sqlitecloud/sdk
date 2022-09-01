@@ -29,14 +29,14 @@ import (
 )
 
 type Connection struct {
-	node       string
+	project    string
 	locked     bool
 	uses       uint
 	connection *sqlitecloud.SQCloud
 }
 
 func (c Connection) String() string {
-	return fmt.Sprintf("{%p %v '%s' %s:%d %d}", c.connection, c.locked, c.node, c.connection.Host, c.connection.Port, c.uses)
+	return fmt.Sprintf("{%p %v '%s' %s:%d %d}", c.connection, c.locked, c.project, c.connection.Host, c.connection.Port, c.uses)
 }
 
 func printPool(m map[string][]*Connection) {
@@ -113,29 +113,29 @@ func (this *ConnectionManager) tick() {
 
 ////
 
-func (this *ConnectionManager) getServerList(node string) ([]string, error) {
+func (this *ConnectionManager) getServerList(project string) ([]string, error) {
 	switch {
-	case node == "server":
+	case project == "server":
 		fallthrough
-	case node == "core":
+	case project == "core":
 		fallthrough
-	case node == "www":
+	case project == "www":
 		fallthrough
-	case node == "lua":
+	case project == "lua":
 		fallthrough
-	case node == "api":
+	case project == "api":
 		fallthrough
-	case node == "dashboard":
+	case project == "dashboard":
 		fallthrough
-	case node == "admin":
+	case project == "admin":
 		return []string{}, errors.New("Access denied to this node")
 
 	// now remains: auth and uuid
 
 	// auth or uuid in config file?
-	case GetINIString(node, "nodes", "") != "":
+	case GetINIString(project, "nodes", "") != "":
 		serverList := []string{}
-		for _, server := range strings.Split(GetINIString(node, "nodes", ""), ",") {
+		for _, server := range strings.Split(GetINIString(project, "nodes", ""), ",") {
 			server = strings.TrimSpace(server)
 			if server != "" {
 				serverList = append(serverList, server)
@@ -145,11 +145,11 @@ func (this *ConnectionManager) getServerList(node string) ([]string, error) {
 
 	// search for uuid in auth database
 	default:
-		if node != "auth" {
-			query := fmt.Sprintf("SELECT 'sqlitecloud://' || admin_username || ':' || admin_password || '@' || IIF( addr6, addr6, addr4 ) || IIF( port, ':' || port, '' ) AS Node FROM Project JOIN Node ON uuid == project_uuid WHERE uuid = '%s';", sqlitecloud.SQCloudEnquoteString(node))
+		if project != "auth" {
+			query := fmt.Sprintf("SELECT 'sqlitecloud://' || admin_username || ':' || admin_password || '@' || IIF( addr6, addr6, addr4 ) || IIF( port, ':' || port, '' ) AS Node FROM Project JOIN Node ON uuid == project_uuid WHERE uuid = '%s';", sqlitecloud.SQCloudEnquoteString(project))
 			SQLiteWeb.Logger.Debugf("query %s\n", query)
 
-			if result, err, _, _ := this.ExecuteSQL("auth", query); result == nil {
+			if result, err, _, _ := this.ExecuteSQL("auth", query); result == nil || result.GetNumberOfRows() == 0 {
 				return []string{}, errors.New("ERROR: Query returned no result (-1)")
 			} else {
 				defer result.Free()
@@ -186,33 +186,33 @@ func (this *ConnectionManager) getServerList(node string) ([]string, error) {
 			}
 		}
 	}
-	return []string{}, fmt.Errorf("No Node found for project: '%s'", node)
+	return []string{}, fmt.Errorf("No Node found for project: '%s'", project)
 }
-func (this *ConnectionManager) getNextServer(node string, reloadNodes bool) (server string, err error) {
+func (this *ConnectionManager) getNextServer(project string, reloadNodes bool) (server string, err error) {
 	server = ""
 	err = nil
 
 	this.nodeMutex.Lock()
-	_, found := this.nodes[node]
+	_, found := this.nodes[project]
 	this.nodeMutex.Unlock()
 
 	if !found || reloadNodes {
-		switch nodes, err := this.getServerList(node); {
+		switch nodes, err := this.getServerList(project); {
 		case err != nil:
 			return "", err
 		case len(nodes) < 1:
 			return "", nil
 		default:
 			this.nodeMutex.Lock()
-			if _, found := this.nodes[node]; !found || reloadNodes {
-				this.nodes[node] = nodes
+			if _, found := this.nodes[project]; !found || reloadNodes {
+				this.nodes[project] = nodes
 			}
 			this.nodeMutex.Unlock()
 		}
 	}
 
 	this.nodeMutex.Lock()
-	nodes, found := this.nodes[node]
+	nodes, found := this.nodes[project]
 	switch {
 	case !found:
 		break
@@ -222,22 +222,22 @@ func (this *ConnectionManager) getNextServer(node string, reloadNodes bool) (ser
 		server = nodes[0]
 	default:
 		server = nodes[0]
-		this.nodes[node] = append(nodes[1:], server)
+		this.nodes[project] = append(nodes[1:], server)
 	}
 	this.nodeMutex.Unlock()
 	return server, nil
 }
 
 ////
-func (this *ConnectionManager) createAndAppendNewLockedConnection(node string, reloadNodes bool) (connection *Connection, err error) {
+func (this *ConnectionManager) createAndAppendNewLockedConnection(project string, reloadNodes bool) (connection *Connection, err error) {
 	connection = &Connection{
-		node:       node,
+		project:    project,
 		locked:     true,
 		uses:       0,
 		connection: nil,
 	}
 
-	if connectionString, err := this.getNextServer(node, reloadNodes); err == nil { // TODO: repeat...
+	if connectionString, err := this.getNextServer(project, reloadNodes); err == nil { // TODO: repeat...
 		if connection.connection, err = sqlitecloud.Connect(connectionString); err != nil {
 			if connection.connection != nil {
 				connection.connection.Close()
@@ -245,9 +245,16 @@ func (this *ConnectionManager) createAndAppendNewLockedConnection(node string, r
 			}
 			return nil, err
 		} else {
-
+			connection.connection.Timeout = time.Duration(1) * time.Minute
+			if err = connection.connection.Execute("SET CLIENT KEY NOBLOB TO 1; SET CLIENT KEY MAXDATA TO 2048;"); err != nil {
+				if connection.connection != nil {
+					connection.connection.Close()
+					connection.connection = nil
+				}
+				return nil, err
+			}
 			this.poolMutex.Lock()
-			this.pool[node] = append(this.pool[node], connection)
+			this.pool[project] = append(this.pool[project], connection)
 			this.poolMutex.Unlock()
 
 			return connection, nil
@@ -271,7 +278,7 @@ func (this *ConnectionManager) unLockConnection(connection *Connection) {
 	}
 }
 
-func (this *ConnectionManager) closeAndRemoveLockedConnection(node string, connection *Connection) error {
+func (this *ConnectionManager) closeAndRemoveLockedConnection(project string, connection *Connection) error {
 	if connection != nil {
 		if connection.locked {
 
@@ -280,13 +287,13 @@ func (this *ConnectionManager) closeAndRemoveLockedConnection(node string, conne
 				connection.connection = nil
 			}
 
-			for i, c := range this.pool[node] {
+			for i, c := range this.pool[project] {
 				switch {
 				case c != connection:
 					continue
 				default:
 					this.poolMutex.Lock()
-					this.pool[node] = append(this.pool[node][:i], this.pool[node][i+1:]...)
+					this.pool[project] = append(this.pool[project][:i], this.pool[project][i+1:]...)
 					this.poolMutex.Unlock()
 					return nil
 				}
@@ -299,11 +306,11 @@ func (this *ConnectionManager) closeAndRemoveLockedConnection(node string, conne
 	return errors.New("Connection not found")
 }
 
-func (this *ConnectionManager) getFirstUnlockedConnectionAndLockIt(node string) (connection *Connection) {
+func (this *ConnectionManager) getFirstUnlockedConnectionAndLockIt(project string) (connection *Connection) {
 	connection = nil
 	this.poolMutex.Lock()
 
-	switch connections, found := this.pool[node]; {
+	switch connections, found := this.pool[project]; {
 	case !found:
 		break
 	case len(connections) == 0:
@@ -318,13 +325,13 @@ func (this *ConnectionManager) getFirstUnlockedConnectionAndLockIt(node string) 
 	this.poolMutex.Unlock()
 	return connection
 }
-func (this *ConnectionManager) moveConnectionToEnd(node string, connection *Connection) (err error) {
+func (this *ConnectionManager) moveConnectionToEnd(project string, connection *Connection) (err error) {
 	err = nil
 	this.poolMutex.Lock()
 
 	if connection != nil {
 	MOVE:
-		switch connections, found := this.pool[node]; {
+		switch connections, found := this.pool[project]; {
 		case !found:
 			err = errors.New("Connection not found")
 		case len(connections) == 0:
@@ -335,7 +342,7 @@ func (this *ConnectionManager) moveConnectionToEnd(node string, connection *Conn
 				case c != connection:
 					continue
 				default:
-					this.pool[node] = append(connections[:i], append(connections[i+1:], connections[i])...)
+					this.pool[project] = append(connections[:i], append(connections[i+1:], connections[i])...)
 					break MOVE
 				}
 			}
@@ -346,9 +353,9 @@ func (this *ConnectionManager) moveConnectionToEnd(node string, connection *Conn
 	return nil
 }
 
-func (this *ConnectionManager) GetPoolLen(node string) (length int) {
+func (this *ConnectionManager) GetPoolLen(project string) (length int) {
 	length = 0
-	switch connections, found := this.pool[node]; {
+	switch connections, found := this.pool[project]; {
 	case !found:
 		break
 	default:
@@ -359,34 +366,34 @@ func (this *ConnectionManager) GetPoolLen(node string) (length int) {
 }
 
 // Retry!!!!
-func (this *ConnectionManager) GetConnection(node string, reloadNodes bool) (connection *Connection, err error) {
-	if connection = this.getFirstUnlockedConnectionAndLockIt(node); connection != nil {
-		err = this.moveConnectionToEnd(node, connection)
-		SQLiteWeb.Logger.Debugf("(%s) Reusing connection %v, pool len %d", node, connection, this.GetPoolLen(node))
+func (this *ConnectionManager) GetConnection(project string, reloadNodes bool) (connection *Connection, err error) {
+	if connection = this.getFirstUnlockedConnectionAndLockIt(project); connection != nil {
+		err = this.moveConnectionToEnd(project, connection)
+		SQLiteWeb.Logger.Debugf("(%s) Reusing connection %v, pool len %d", project, connection, this.GetPoolLen(project))
 	} else {
-		connection, err = this.createAndAppendNewLockedConnection(node, reloadNodes)
+		connection, err = this.createAndAppendNewLockedConnection(project, reloadNodes)
 		if err != nil {
-			SQLiteWeb.Logger.Errorf("(%s) Creating new connection %v, err:%s", node, connection, err)
+			SQLiteWeb.Logger.Errorf("(%s) Creating new connection %v, err:%s", project, connection, err)
 		} else {
-			SQLiteWeb.Logger.Debugf("(%s) Creating new connection %v, pool_len:%d", node, connection, this.GetPoolLen(node))
+			SQLiteWeb.Logger.Debugf("(%s) Creating new connection %v, pool_len:%d", project, connection, this.GetPoolLen(project))
 		}
 	}
 
-	// SQLiteWeb.Logger.Debugf("[%s] Using connection %v\n", node, connection)
+	// SQLiteWeb.Logger.Debugf("[%s] Using connection %v\n", project, connection)
 	// SQLiteWeb.Logger.Debugf("pool:")
 	// printPool(this.pool)
 
 	return connection, err
 }
 
-func (this *ConnectionManager) ReleaseConnection(node string, connection *Connection) (err error) {
+func (this *ConnectionManager) ReleaseConnection(project string, connection *Connection) (err error) {
 	err = nil
 
 	if connection != nil {
 		this.lockConnection(connection)
 		maxRequests := uint(GetINIInt("core", "maxrequests", 0))
 		if maxRequests != 0 && connection.uses > maxRequests {
-			err = this.closeAndRemoveLockedConnection(node, connection)
+			err = this.closeAndRemoveLockedConnection(project, connection)
 		} else {
 			this.unLockConnection(connection)
 		}
@@ -394,19 +401,19 @@ func (this *ConnectionManager) ReleaseConnection(node string, connection *Connec
 	return err
 }
 
-func (this *ConnectionManager) ExecuteSQL(node string, query string) (*sqlitecloud.Result, error, int, int) {
+func (this *ConnectionManager) ExecuteSQL(project string, query string) (*sqlitecloud.Result, error, int, int) {
 	var connection *Connection = nil
 	var res *sqlitecloud.Result = nil
 	var err error = nil
 	var reloadNodes bool = false
 
 	maxTries := 3
-	if _, nodeExists := this.nodes[node]; nodeExists {
-		maxTries = 3 + len(this.nodes[node])
+	if _, nodeExists := this.nodes[project]; nodeExists {
+		maxTries = 3 + len(this.nodes[project])
 	}
 
 	for try := 0; try < maxTries; try++ {
-		connection, err = this.GetConnection(node, reloadNodes)
+		connection, err = this.GetConnection(project, reloadNodes)
 		switch {
 		case err != nil:
 			fallthrough
@@ -432,20 +439,20 @@ func (this *ConnectionManager) ExecuteSQL(node string, query string) (*sqliteclo
 				// - 100003 Internal Error: sendString (%s)
 				errCode = connection.connection.ErrorCode
 				extErrCode = connection.connection.ExtErrorCode
-				this.closeAndRemoveLockedConnection(node, connection)
-				SQLiteWeb.Logger.Debugf("(%s) ExecuteSQL connection error %d", node, errCode)
+				this.closeAndRemoveLockedConnection(project, connection)
+				SQLiteWeb.Logger.Debugf("(%s) ExecuteSQL connection error %d", project, errCode)
 				reloadNodes = true
 				continue
 			} else {
 				errCode = connection.connection.ErrorCode
 				extErrCode = connection.connection.ExtErrorCode
-				this.ReleaseConnection(node, connection)
+				this.ReleaseConnection(project, connection)
 				t := time.Since(start)
-				SQLiteWeb.Logger.Debugf("(%s) ExecuteSQL query:\"%s\" time:%s", node, query, t)
+				SQLiteWeb.Logger.Debugf("(%s) ExecuteSQL query:\"%s\" time:%s", project, query, t)
 				return res, err, errCode, extErrCode
 			}
 		}
-		this.closeAndRemoveLockedConnection(node, connection)
+		this.closeAndRemoveLockedConnection(project, connection)
 	}
 	return nil, nil, 0, 0
 }
