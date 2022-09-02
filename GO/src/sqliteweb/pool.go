@@ -112,7 +112,6 @@ func (this *ConnectionManager) tick() {
 }
 
 ////
-
 func (this *ConnectionManager) getServerList(project string) ([]string, error) {
 	switch {
 	case project == "server":
@@ -167,6 +166,7 @@ func (this *ConnectionManager) getServerList(project string) ([]string, error) {
 					return []string{}, errors.New("ERROR: Query returned not exactly one column")
 				default:
 					stringList := []string{}
+
 					for _, row := range result.Rows() {
 						switch val, err := row.GetValue(0); {
 						case err != nil:
@@ -188,6 +188,7 @@ func (this *ConnectionManager) getServerList(project string) ([]string, error) {
 	}
 	return []string{}, fmt.Errorf("No Node found for project: '%s'", project)
 }
+
 func (this *ConnectionManager) getNextServer(project string, reloadNodes bool) (server string, err error) {
 	server = ""
 	err = nil
@@ -225,7 +226,35 @@ func (this *ConnectionManager) getNextServer(project string, reloadNodes bool) (
 		this.nodes[project] = append(nodes[1:], server)
 	}
 	this.nodeMutex.Unlock()
+
 	return server, nil
+}
+
+func isProjectUuid(project string) bool {
+	switch project {
+	case "server", "core", "www", "lua", "api", "dashboard", "admin", "auth":
+		return false
+
+	// project uuid
+	default:
+		return true
+	}
+}
+
+func (this *ConnectionManager) connectionWithIniParams(project string, connectionString string) (*sqlitecloud.SQCloud, error) {
+	config, err := sqlitecloud.ParseConnectionString(connectionString)
+	if err != nil {
+		return nil, err
+	}
+
+	if isProjectUuid(project) {
+		config.Timeout = GetINIDuration("core", "timeout", time.Duration(1)*time.Minute)
+		config.NoBlob = GetINIBoolean("core", "noblob", true)
+		config.MaxData = GetINIInt("core", "maxdata", 2048)
+		config.MaxRowset = GetINIInt("core", "maxrowset", 1048576)
+	}
+
+	return sqlitecloud.New(*config), nil
 }
 
 ////
@@ -238,21 +267,17 @@ func (this *ConnectionManager) createAndAppendNewLockedConnection(project string
 	}
 
 	if connectionString, err := this.getNextServer(project, reloadNodes); err == nil { // TODO: repeat...
-		if connection.connection, err = sqlitecloud.Connect(connectionString); err != nil {
+		if connection.connection, err = this.connectionWithIniParams(project, connectionString); err != nil {
+			return nil, err
+		}
+
+		if err = connection.connection.Connect(); err != nil {
 			if connection.connection != nil {
 				connection.connection.Close()
 				connection.connection = nil
 			}
 			return nil, err
 		} else {
-			connection.connection.Timeout = time.Duration(1) * time.Minute
-			if err = connection.connection.Execute("SET CLIENT KEY NOBLOB TO 1; SET CLIENT KEY MAXDATA TO 2048;"); err != nil {
-				if connection.connection != nil {
-					connection.connection.Close()
-					connection.connection = nil
-				}
-				return nil, err
-			}
 			this.poolMutex.Lock()
 			this.pool[project] = append(this.pool[project], connection)
 			this.poolMutex.Unlock()

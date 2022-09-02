@@ -194,7 +194,7 @@ func getSQCloudConnection(request *http.Request) (*sqlitecloud.SQCloud, error) {
 		err = fmt.Errorf("serveWebsocket: error in connection url %s", err.Error())
 		return nil, err
 	}
-	// connurl.User = nil
+	connurl.User = nil
 
 	// add api key to connection url
 	values := connurl.Query()
@@ -298,7 +298,8 @@ func (this *Server) serveApiWebsocket(writer http.ResponseWriter, request *http.
 			uuid = puuid
 
 		case "unlisten":
-			// TODO:
+			channel, _ := mmap["channel"].(string)
+			err = connection.Unlisten(channel)
 
 		case "notify":
 			channel, _ := mmap["channel"].(string)
@@ -527,8 +528,8 @@ var apiWebsocketTestClientTemplate = template.Must(template.New("").Parse(`
 <script>  
 window.addEventListener("load", function(evt) {
     var output = document.getElementById("output");
-    var input = document.getElementById("input");
-    var ws;
+
+	var ws;
 	var wsPubsub;
     var print = function(message) {
 		console.log(message);
@@ -616,7 +617,7 @@ window.addEventListener("load", function(evt) {
 			wsPubsub.close(1000);
 			wsPubsub = null;
 		}
-		
+
         return false;
     };
 
@@ -637,7 +638,6 @@ window.addEventListener("load", function(evt) {
    		var jsonString= JSON.stringify(obj);
 		print("Send: " + jsonString);
 		ws.send(JSON.stringify(obj))
-		lastmsg = "exec"
         return false;
     };
 
@@ -648,7 +648,7 @@ window.addEventListener("load", function(evt) {
 
 		var c = document.getElementById('channel');
 		if (!c.value) return false;
-		print("Exec: " + c.value);
+		print("Listen: " + c.value);
 
 		var obj = new Object();
    		obj.type = "listen";
@@ -657,8 +657,49 @@ window.addEventListener("load", function(evt) {
 
    		var jsonString= JSON.stringify(obj);
 		ws.send(JSON.stringify(obj))
-		lastmsg = "listen"
         return false;
+    };
+
+	document.getElementById("unlisten").onclick = function(evt) {
+        if (!ws) {
+            return false;
+        }
+
+		var c = document.getElementById('channel');
+		if (!c.value) return false;
+		print("Unlisten: " + c.value);
+
+		var obj = new Object();
+   		obj.type = "unlisten";
+   		obj.channel  = c.value;
+		obj.id = id++;
+
+   		var jsonString= JSON.stringify(obj);
+		ws.send(JSON.stringify(obj))
+        return false;
+    };
+
+	document.getElementById("notify").onclick = function(evt) {
+        if (!ws) {
+            return false;
+        }
+
+		var c = document.getElementById('notifychan');
+		if (!c.value) return false;
+		var p = document.getElementById('notifypayload');
+		if (!p.value) return false;
+
+		print("Notify: " + c.value, + ", " + p.value);
+
+		var obj = new Object();
+   		obj.type = "notify";
+   		obj.channel  = c.value;
+		obj.payload  = p.value;
+		obj.id = id++;
+
+   		var jsonString= JSON.stringify(obj);
+		ws.send(JSON.stringify(obj))
+		return false;
     };
 });
 </script>
@@ -683,16 +724,34 @@ window.addEventListener("load", function(evt) {
     <div>
         <label for="command">Command</label>
         <input type="text" id="command">
-    </div>
-    <button id="exec">Exec</button>
+	</div>
+	<div>
+    	<button id="exec">Exec</button>
+	</div>
 </form>
 
 <form>
     <div>
         <label for="channel">Channel</label>
         <input type="text" id="channel">
-    </div>
-    <button id="listen">Listen</button>
+	</div>
+	<div>
+    	<button id="listen">Listen</button><button id="unlisten">Unlisten</button>
+	</div>
+</form>
+
+<form>
+    <div>
+        <label for="notifychan">Channel</label>
+        <input type="text" id="notifychan">
+	</div>
+	<div>
+		<label for="notifypayload">Payload</label>
+        <input type="text" id="notifypayload">
+	</div>
+	<div>
+	    <button id="notify">Notify</button>
+	</div>
 </form>
 
 <form>

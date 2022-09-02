@@ -17,8 +17,11 @@
 
 package main
 
-import "fmt"
-import "crypto/md5"
+import (
+	"crypto/md5"
+	"fmt"
+	"time"
+)
 
 func GetINIString( section string, key string, defaultValue string ) string {
   for _, s := range cfg.SectionStrings() {
@@ -35,6 +38,26 @@ func GetINIInt( section string, key string, defaultValue int ) int {
     switch {
     case s != section                         : continue
     case cfg.Section( section ).HasKey( key ) : return cfg.Section( section ).Key( key ).MustInt( defaultValue )
+    default                                   : return defaultValue
+  } }
+  return defaultValue
+}
+
+func GetINIDuration( section string, key string, defaultValue time.Duration ) time.Duration {
+	for _, s := range cfg.SectionStrings() {
+    switch {
+    case s != section                         : continue
+    case cfg.Section( section ).HasKey( key ) : return cfg.Section( section ).Key( key ).MustDuration( defaultValue )
+    default                                   : return defaultValue
+  } }
+  return defaultValue
+}
+
+func GetINIBoolean( section string, key string, defaultValue bool ) bool {
+	for _, s := range cfg.SectionStrings() {
+    switch {
+    case s != section                         : continue
+    case cfg.Section( section ).HasKey( key ) : return cfg.Section( section ).Key( key ).MustBool( defaultValue )
     default                                   : return defaultValue
   } }
   return defaultValue

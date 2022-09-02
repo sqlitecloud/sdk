@@ -31,22 +31,32 @@ import (
 	"github.com/xo/dburl"
 )
 
+type SQCloudConfig struct {
+	Host         string
+	Port         int
+	Username     string
+	Password     string
+	Database     string
+	Timeout      time.Duration
+	CompressMode string
+	Pem          string
+	ApiKey       string
+	NoBlob       bool // flag to tell the server to not send BLOB columns
+	MaxData      int  // value to tell the server to not send columns with more than max_data bytes
+	MaxRows      int  // value to control rowset chunks based on the number of rows
+	MaxRowset    int  // value to control the maximum allowed size for a rowset
+}
+
 type SQCloud struct {
+	SQCloudConfig
+
 	sock *net.Conn
 
 	psub *SQCloud
 	// psubc    chan string
 	Callback func(*SQCloud, string)
 
-	Host     string
-	Port     int
-	Username string
-	Password string
-	ApiKey   string
-	Database string
-	cert     *tls.Config
-	Timeout  time.Duration
-	Family   int
+	cert *tls.Config
 
 	uuid   string // 36 runes -> remove maybe????
 	secret string // 36 runes -> remove maybe????
@@ -54,6 +64,10 @@ type SQCloud struct {
 	ErrorCode    int
 	ExtErrorCode int
 	ErrorMessage string
+}
+
+func New(config SQCloudConfig) *SQCloud {
+	return &SQCloud{SQCloudConfig: config}
 }
 
 // init registers the sqlitecloud scheme in the connection steing parser.
@@ -74,23 +88,29 @@ func init() {
 // An empty string ("") or -1 is returned as the corresponding return value, if a component of the connection string was not present.
 // No plausibility checks are done (see: CheckConnectionParameter).
 // If the connection string could not be parsed, an error is returned.
-func ParseConnectionString(ConnectionString string) (Host string, Port int, Username string, Password string, Database string, Timeout int, Compress string, Pem string, ApiKey string, err error) {
+func ParseConnectionString(ConnectionString string) (config *SQCloudConfig, err error) {
 	u, err := dburl.Parse(ConnectionString) // sqlitecloud://dev1.sqlitecloud.io/X?timeout=14&compress=LZ4&tls=INTERN
 	if err == nil {
+		config = &SQCloudConfig{}
 
-		host := u.Hostname()
-		user := u.User.Username()
-		pass, _ := u.User.Password()
-		database := strings.TrimPrefix(u.Path, "/")
-		timeout := 0
-		compress := "NO"
-		pem := "INTERN"
-		apikey := ""
-		port := 0
+		config.Host = u.Hostname()
+		config.Port = 0
+		config.Username = u.User.Username()
+		config.Password, _ = u.User.Password()
+		config.Database = strings.TrimPrefix(u.Path, "/")
+		config.Timeout = 0
+		config.CompressMode = "NO"
+		config.Pem = "INTERN"
+		config.ApiKey = ""
+		config.NoBlob = false
+		config.MaxData = 0
+		config.MaxRows = 0
+		config.MaxRowset = 0
+
 		sPort := strings.TrimSpace(u.Port())
 		if len(sPort) > 0 {
-			if port, err = strconv.Atoi(sPort); err != nil {
-				return "", -1, "", "", "", -1, "", "", "", err
+			if config.Port, err = strconv.Atoi(sPort); err != nil {
+				return nil, err
 			}
 		}
 
@@ -98,23 +118,41 @@ func ParseConnectionString(ConnectionString string) (Host string, Port int, User
 			lastLiteral := strings.TrimSpace(values[len(values)-1])
 			switch strings.ToLower(strings.TrimSpace(key)) {
 			case "timeout":
-				if timeout, err = strconv.Atoi(lastLiteral); err != nil {
-					return "", -1, "", "", "", -1, "", "", "", err
+				if timeout, err := strconv.Atoi(lastLiteral); err != nil {
+					return nil, err
+				} else {
+					config.Timeout = time.Duration(timeout) * time.Second
 				}
 
 			case "compress":
-				compress = strings.ToUpper(lastLiteral)
+				config.CompressMode = strings.ToUpper(lastLiteral)
 			case "tls":
-				pem = parsePEMString(lastLiteral)
+				config.Pem = parsePEMString(lastLiteral)
 			case "apikey":
-				apikey = lastLiteral
+				config.ApiKey = lastLiteral
+			case "noblob":
+				if b, err := parseBool(lastLiteral, config.NoBlob); err == nil {
+					config.NoBlob = b
+				}
+			case "maxdata":
+				if v, err := strconv.Atoi(lastLiteral); err == nil {
+					config.MaxData = v
+				}
+			case "maxrows":
+				if v, err := strconv.Atoi(lastLiteral); err == nil {
+					config.MaxRows = v
+				}
+			case "maxrowset":
+				if v, err := strconv.Atoi(lastLiteral); err == nil {
+					config.MaxRowset = v
+				}
 			}
 		}
 
 		// fmt.Printf( "NO ERROR: Host=%s, Port=%d, User=%s, Password=%s, Database=%s, Timeout=%d, Compress=%s\r\n", host, port, user, pass, database, timeout, compress )
-		return host, port, user, pass, database, timeout, compress, pem, apikey, nil
+		return config, nil
 	}
-	return "", -1, "", "", "", -1, "", "", "", err
+	return nil, err
 }
 
 func parsePEMString(Pem string) string {
@@ -135,38 +173,62 @@ func parsePEMString(Pem string) string {
 // Compress must be "NO" or "LZ4".
 // Username, Password and Database are ignored.
 // If a given value does not fulfill the above criteria's, an error is returned.
-func (this *SQCloud) CheckConnectionParameter(Host string, Port int, Username string, Password string, Database string, Timeout int, Compress string, Pem string) error {
+func (this *SQCloud) CheckConnectionParameter() error {
 
-	if strings.TrimSpace(Host) == "" {
-		return errors.New(fmt.Sprintf("Invalid hostname (%s)", Host))
+	if strings.TrimSpace(this.Host) == "" {
+		return errors.New(fmt.Sprintf("Invalid hostname (%s)", this.Host))
 	}
 
-	ip := net.ParseIP(Host)
+	ip := net.ParseIP(this.Host)
 	if ip == nil {
-		if _, err := net.LookupHost(Host); err != nil {
-			return errors.New(fmt.Sprintf("Can't resolve hostname (%s)", Host))
+		if _, err := net.LookupHost(this.Host); err != nil {
+			return errors.New(fmt.Sprintf("Can't resolve hostname (%s)", this.Host))
 		}
 	}
 
-	if Port < 1 || Port >= 0xFFFF {
-		return errors.New(fmt.Sprintf("Invalid Port (%d)", Port))
+	if this.Port == 0 {
+		this.Port = 8860
+	}
+	if this.Port < 1 || this.Port >= 0xFFFF {
+		return errors.New(fmt.Sprintf("Invalid Port (%d)", this.Port))
 	}
 
-	if Timeout < 0 {
-		return errors.New(fmt.Sprintf("Invalid Timeout (%d)", Timeout))
+	if this.Timeout == 0 {
+		this.Timeout = 10 * time.Second
 	}
+	if this.Timeout < 0 {
+		return errors.New(fmt.Sprintf("Invalid Timeout (%s)", this.Timeout.String))
+	} 
 
-	switch strings.ToUpper(Compress) {
+	switch strings.ToUpper(this.CompressMode) {
 	case "NO", "LZ4":
 	default:
-		return errors.New(fmt.Sprintf("Invalid compression method (%s)", Compress))
+		return errors.New(fmt.Sprintf("Invalid compression method (%s)", this.CompressMode))
 	}
 
-	switch trimmed := parsePEMString(Pem); trimmed {
-	case "", "<USE INTERNAL PEM>":
+	switch trimmed := parsePEMString(this.Pem); trimmed {
+	case "":
+		break // unencrypted connection
+	case "<USE INTERNAL PEM>":
+		this.Pem = PEM // use internal Certificate
 	default:
-		if _, err := ioutil.ReadFile(trimmed); err != nil {
+		switch pem, err := ioutil.ReadFile(trimmed); {
+		case err != nil:
 			return errors.New(fmt.Sprintf("Could not open PEM file in '%s'", trimmed))
+		default:
+			this.Pem = string(pem)
+		}
+	}
+
+	if len(this.Pem) != 0 {
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM([]byte(this.Pem)) {
+			return errors.New(fmt.Sprintf("Could not append certs from PEM"))
+		}
+
+		this.cert = &tls.Config{
+			RootCAs:            pool,
+			InsecureSkipVerify: true,
 		}
 	}
 
@@ -178,67 +240,9 @@ func (this *SQCloud) CheckConnectionParameter(Host string, Port int, Username st
 // reset resets all Connection attributes.
 func (this *SQCloud) reset() {
 	this.Close()
-	this.Host = ""
-	this.Port = -1
-	this.Username = ""
-	this.Password = ""
-	this.Database = ""
-	this.Family = -1
 	this.uuid = ""
 	this.secret = ""
 	this.resetError()
-}
-
-// New creates an empty connection and resets it.
-// A pointer to the newly created connection is returned (see: Connect).
-func New(Certificate string, TimeOut uint) *SQCloud {
-	connection := SQCloud{
-		sock: nil,
-
-		psub:     nil,
-		Callback: func(conn *SQCloud, json string) {}, // empty call back function
-
-		Host:         "",
-		Port:         -1,
-		Username:     "",
-		Password:     "",
-		Database:     "",
-		cert:         nil,
-		Timeout:      time.Duration(TimeOut) * time.Second,
-		Family:       1,
-		uuid:         "",
-		secret:       "",
-		ErrorCode:    0,
-		ErrorMessage: "",
-	}
-
-	switch trimmed := parsePEMString(Certificate); trimmed {
-	case "":
-		break // unencrypted connection
-	case "<USE INTERNAL PEM>":
-		Certificate = PEM // use internal Certificate
-	default:
-		switch pem, err := ioutil.ReadFile(trimmed); {
-		case err != nil:
-			return nil
-		default:
-			Certificate = string(pem)
-		}
-	}
-
-	if len(Certificate) != 0 {
-		pool := x509.NewCertPool()
-		if !pool.AppendCertsFromPEM([]byte(Certificate)) {
-			return nil
-		}
-
-		connection.cert = &tls.Config{
-			RootCAs:            pool,
-			InsecureSkipVerify: true,
-		}
-	}
-
-	return &connection
 }
 
 // Connect creates a new connection and tries to connect to the server using the given connection string.
@@ -246,25 +250,19 @@ func New(Certificate string, TimeOut uint) *SQCloud {
 // Nil and an error is returned if the connection string had invalid values or a connection to the server could not be established,
 // otherwise, a pointer to the newly established connection is returned.
 func Connect(ConnectionString string) (*SQCloud, error) {
-	Host, Port, Username, Password, Database, Timeout, Compress, Pem, ApiKey, err := ParseConnectionString(ConnectionString)
+	config, err := ParseConnectionString(ConnectionString)
 
 	if err != nil {
 		return nil, err
 	}
-	if Port == 0 {
-		Port = 8860
-	}
-	if Timeout == 0 {
-		Timeout = 10
-	}
 
-	connection := New(Pem, uint(Timeout)) // allways works
+	connection := &SQCloud{SQCloudConfig: *config}
 
-	if err = connection.Connect(Host, Port, Username, Password, Database, uint(Timeout), Compress, 0, ApiKey); err != nil {
+	if err = connection.Connect(); err != nil {
 		connection.Close()
 		return nil, err
 	} else {
-		connection.Compress(Compress)
+		connection.Compress(connection.CompressMode)
 		return connection, nil
 	}
 }
@@ -273,26 +271,15 @@ func Connect(ConnectionString string) (*SQCloud, error) {
 
 // Connect connects to a SQLite Cloud server instance using the given arguments.
 // If Connect is called on an already established connection, the old connection is closed first.
-// All arguments are checked for valid values (see: CheckConnectionParameter). An error is returned if the protocol Family was not '0',
+// All arguments are checked for valid values (see: CheckConnectionParameter).
 // invalid argument values where given or the connection could not be established.
-func (this *SQCloud) Connect(Host string, Port int, Username string, Password string, Database string, Timeout uint, Compression string, Family int, ApiKey string) error {
+func (this *SQCloud) Connect() error {
 	this.reset() // also closes an open connection
 
-	switch err := this.CheckConnectionParameter(Host, Port, Username, Password, Database, int(Timeout), Compression, ""); {
-	case Family != 0:
-		return errors.New("Invalid Protocol Family")
+	switch err := this.CheckConnectionParameter(); {
 	case err != nil:
 		return err
 	default:
-		this.Host = Host
-		this.Port = Port
-		this.Username = Username
-		this.Password = Password
-		this.ApiKey = ApiKey
-		this.Database = Database
-		this.Timeout = time.Duration(Timeout) * time.Second
-		this.Family = Family
-
 		return this.reconnect()
 	}
 }
@@ -330,24 +317,38 @@ func (this *SQCloud) reconnect() error {
 		}
 	}
 
+	commands := ""
+
 	if strings.TrimSpace(this.Username) != "" {
-		if err := this.Auth(this.Username, this.Password); err != nil {
-			this.ErrorCode = -1
-			this.ErrorMessage = err.Error()
-			return err
-		}
-	}  
-	
-	if strings.TrimSpace(this.ApiKey) != "" {
-		if err := this.AuthWithKey(this.ApiKey); err != nil {
-			this.ErrorCode = -1
-			this.ErrorMessage = err.Error()
-			return err
-		}
+		commands += authCommand(this.Username, this.Password)
+	} else if strings.TrimSpace(this.ApiKey) != "" {
+		commands += authWithKeyCommand(this.ApiKey)
 	}
 
 	if strings.TrimSpace(this.Database) != "" {
-		this.UseDatabase(this.Database)
+		commands += useDatabaseCommand(this.Database)
+	}
+
+	if this.NoBlob {
+		commands += noblobCommand(this.NoBlob)
+	}
+
+	if this.MaxData > 0 {
+		commands += maxdataCommand(this.MaxData)
+	}
+
+	if this.MaxRows > 0 {
+		commands += maxrowsCommand(this.MaxRows)
+	}
+
+	if this.MaxRowset > 0 {
+		commands += maxrowsetCommand(this.MaxRowset)
+	}
+	
+	if commands != "" {
+		if err := this.Execute(commands); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -379,18 +380,47 @@ func (this *SQCloud) Close() error {
 	return nil
 }
 
+func noblobCommand(NoBlob bool) string {
+	if NoBlob {
+		return "SET CLIENT KEY NOBLOB TO 1;"
+	} else {
+		return "SET CLIENT KEY NOBLOB TO 0;"
+	}
+}
+
+func maxdataCommand(v int) string {
+	return fmt.Sprintf("SET CLIENT KEY MAXDATA TO %d;", v)
+}
+
+func maxrowsCommand(v int) string {
+	return fmt.Sprintf("SET CLIENT KEY MAXROWS TO %d;", v)
+}
+
+func maxrowsetCommand(v int) string {
+	return fmt.Sprintf("SET CLIENT KEY MAXROWSET TO %d;", v)
+}
+
+func compressCommand(CompressMode string) string {
+	switch compression := strings.ToUpper(CompressMode); {
+	case compression == "NO":
+		return "SET CLIENT KEY COMPRESSION TO 0;"
+	case compression == "LZ4":
+		return "SET CLIENT KEY COMPRESSION TO 1;"
+	default:
+		return ""
+	}
+}
+
 // Compress enabled or disables data compression for this connection.
 // If enabled, the data is compressed with the LZ4 compression algorithm, otherwise no compression is applied the data.
 func (this *SQCloud) Compress(CompressMode string) error {
-	switch compression := strings.ToUpper(CompressMode); {
+	switch c := compressCommand(CompressMode); {
 	case this.sock == nil:
 		return errors.New("Not connected")
-	case compression == "NO":
-		return this.Execute("SET CLIENT KEY COMPRESSION TO 0")
-	case compression == "LZ4":
-		return this.Execute("SET CLIENT KEY COMPRESSION TO 1")
-	default:
+	case c == "":
 		return errors.New(fmt.Sprintf("Invalid method (%s)", CompressMode))
+	default:
+		return this.Execute(c)
 	}
 }
 

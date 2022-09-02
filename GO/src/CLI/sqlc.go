@@ -34,19 +34,19 @@ import (
 	"golang.org/x/term"
 )
 
-var app_name     = "sqlc"
-var long_name    = "SQLite Cloud Command Line Application"
-var version      = "version 1.1.1"
-var copyright    = "(c) 2021 by SQLite Cloud Inc."
-var history_file = fmt.Sprintf( "~/.%s_history.txt", app_name )
+var app_name = "sqlc"
+var long_name = "SQLite Cloud Command Line Application"
+var version = "version 1.1.1"
+var copyright = "(c) 2021 by SQLite Cloud Inc."
+var history_file = fmt.Sprintf("~/.%s_history.txt", app_name)
 
-var banner       = fmt.Sprintf( `   _____
+var banner = fmt.Sprintf(`   _____
   /    /     %s, %s
  / ___/ /    %s
  \  ___/ /
-  \_ ___/    Enter ".help" for usage hints.`, long_name, version, copyright )
+  \_ ___/    Enter ".help" for usage hints.`, long_name, version, copyright)
 
-var usage        = long_name + ` Command Line Interface.
+var usage = long_name + ` Command Line Interface.
 
 Usage:
   sqlc [URL] [options] [<FILE>...]
@@ -115,460 +115,569 @@ Boolean settings are toggled if no parameter is specified.
 `
 
 type Parameter struct {
-  URL           string      `docopt:"URL"`
+	URL string `docopt:"URL"`
 
-  OutFile       string      `docopt:"--output"`
-  Command       string      `docopt:"--cmd"`
-  List          bool        `docopt:"--list"`
-  Bail          bool        `docopt:"--bail"`
-  Echo          bool        `docopt:"--echo"`
-  Quiet         bool        `docopt:"--quiet"`
-  NoHeader      bool        `docopt:"--noheader"`
-  NullText      string      `docopt:"--nullvalue"`
-  NewLine       string      `docopt:"--newline"`
-  Separator     string      `docopt:"--separator"`
-  Format        string      `docopt:"--format"`
-  OutPutFormat  int         `docopt:"--outputformat"`
+	OutFile      string `docopt:"--output"`
+	Command      string `docopt:"--cmd"`
+	List         bool   `docopt:"--list"`
+	Bail         bool   `docopt:"--bail"`
+	Echo         bool   `docopt:"--echo"`
+	Quiet        bool   `docopt:"--quiet"`
+	NoHeader     bool   `docopt:"--noheader"`
+	NullText     string `docopt:"--nullvalue"`
+	NewLine      string `docopt:"--newline"`
+	Separator    string `docopt:"--separator"`
+	Format       string `docopt:"--format"`
+	OutPutFormat int    `docopt:"--outputformat"`
 
-  Host          string      `docopt:"--host"`
-  Port          int         `docopt:"--port"`
-  User          string      `docopt:"--user"`
-  Password      string      `docopt:"--password"`
-  Database      string      `docopt:"--dbname"`
-  ApiKey        string      `docopt:"--apikey"`
+	Host      string `docopt:"--host"`
+	Port      int    `docopt:"--port"`
+	User      string `docopt:"--user"`
+	Password  string `docopt:"--password"`
+	Database  string `docopt:"--dbname"`
+	ApiKey    string `docopt:"--apikey"`
+	NoBlob    bool   `docopt:"--noblob"`
+	MaxData   int    `docopt:"--maxdata"`
+	MaxRows   int    `docopt:"--maxrows"`
+	MaxRowset int    `docopt:"--maxrowset"`
 
-  Timeout       int         `docopt:"--timeout"`
-  Compress      string      `docopt:"--compress"`
-  Tls           string      `docopt:"--tls"`
-  UseStdIn      bool        `docopt:"-"`
-  Files         []string    `docopt:"<FILE>"`
+	Timeout  int      `docopt:"--timeout"`
+	Compress string   `docopt:"--compress"`
+	Tls      string   `docopt:"--tls"`
+	UseStdIn bool     `docopt:"-"`
+	Files    []string `docopt:"<FILE>"`
 }
 
-var tokens         = []string{  ".echo ", ".help ", ".bail ", ".quiet ", ".noheader ", ".nullvalue ", ".newline ", ".separator ", ".format ",
-    ".width ", ".quit ",
-    "SELECT ", "AS ", "FROM ", "JOIN ", "ON ", "USING ", "WHERE ", "LIKE ", "OR ", "AND ", "GROUP ", "ORDER ", "BY ", "ASC ", "DESC ", "LIMIT ", "TO ",
-    "INSERT ", "UPDATE ", "DROP ", "IF ", "NOT ", "EXISTS ", "FAIL ", "IGNORE ", "TABLE ", "VALUES ", "SET ", "INTO ",
-    "CREATE ", "ALTER ", "NULL ", "INTEGER ", "TEXT ", "PRIMARY ", "UNIQUE ", "DEFAULT ",
-    "ABORT ", "ACTION ", "AFTER ", "ALL ",  "ALWAYS ", "ANALYZE ", "ADD ",  "ATTACH ",
-    "AUTOINCREMENT ", "BEFORE ", "BEGIN ", "BETWEEN ", "CASCADE ", "CASE ", "CAST ", "CHECK ", "COLLATE ", "COLUMN ",
-    "COMMIT ", "CONFLICT ", "CONSTRAINT ", "CROSS ", "CURRENT ", "CURRENT_DATE ", "CURRENT_TIME ",
-    "CURRENT_TIMESTAMP ", "DATABASE ",  "DEFERRABLE ", "DEFERRED ", "DELETE ",  "DETACH ", "DISTINCT ",
-    "DO ", "EACH ", "ELSE ", "END ", "ESCAPE ", "EXCEPT ", "EXCLUDE ", "EXCLUSIVE ", "EXPLAIN ",
-    "FILTER ", "FIRST ", "FOLLOWING ", "FOR ", "FOREIGN ", "FULL ", "GENERATED ", "GLOB ", "GROUPS ",
-    "HAVING ",  "IMMEDIATE ", "IN ", "INDEX ", "INDEXED ", "INITIALLY ", "INNER ", "INSTEAD ",
-    "INTERSECT ", "IS ", "ISNULL ", "KEY ", "LAST ", "LEFT ", "MATCH ", "MATERIALIZED ",
-    "NATURAL ", "NO ",  "NOTHING ", "NOTNULL ", "NULLS ", "OF ", "OFFSET ",
-    "OTHERS ", "OUTER ", "OVER ", "PARTITION ", "PLAN ", "PRAGMA ", "PRECEDING ", "QUERY ", "RAISE ", "RANGE ",
-    "RECURSIVE ", "REFERENCES ", "REGEXP ", "REINDEX ", "RELEASE ", "RENAME ", "REPLACE ", "RESTRICT ", "RETURNING ",
-    "RIGHT ", "ROLLBACK ", "ROW ", "ROWS ", "SAVEPOINT ", "TEMP ", "TEMPORARY ", "THEN ",
-    "TIES ", "TRANSACTION ", "TRIGGER ", "UNBOUNDED ", "UNION ", "VACUUM ",
-    "VIEW ", "VIRTUAL ", "WHEN ", "WINDOW ", "WITH ", "WITHOUT ",
-    "ABS( ", "CHANGES( ", "CHAR( ", "COALESCE( ", "GLOB( ", "HEX( ", "IFNULL( ", "IIF( ", "INSTR( ", "LAST_INSERT_ROWID( ",
-    "LENGTH( ", "LIKE( ", "LIKELIHOOD( ", "LIKELY( ", "LOAD_EXTENSION( ", "LOWER( ", "LTRIM( ", "MAX( ", "MIN( ",
-    "NULLIF( ", "PRINTF( ", "QUOTE( ", "RANDOM() ", "RANDOMBLOB( ", "REPLACE( ", "ROUND( ", "RTRIM( ", "SIGN( ",
-    "SOUNDEX( ", "SQLITE_COMPILEOPTION_GET( ", "SQLITE_COMPILEOPTION_USED( ", "SQLITE_OFFSET( ", "SQLITE_SOURCE_ID() ",
-    "SQLITE_VERSION() ", "SUBSTR( ", "SUBSTRING( ", "TOTAL_CHANGES() ", "TRIM( ", "TYPEOF( ", "UNICODE( ", "UNLIKELY( ",
-    "UPPER( ", "ZEROBLOB( ", "DATE( ", "TIME( ", "DATETIME( ", "JULIANDAY( ", "STRFTIME( ", "DAYS ", "HOURS ", "MINUTES ",
-    "NOW", "SECONDS ", "MONTHS ", "YEARS ", "START OF MONTH ", "START OF YEAR ", "START OF DAY ", "WEEKDAY ", "UNIXEPOCH ",
-    "LOCALTIME ", "UTC ", "AVG( ", "COUNT( * ) ", "COUNT( ", "GROUP_CONCAT( ", "SUM( ", "TOTAL( ", "ACOS( ", "ACOSH( ",
-    "ASIN( ", "ASINH( ", "ATAN( ", "ATAN2( ", "ATANH( ", "CEIL( ", "CEILING( ", "COS( ", "COSH( ", "DEGREES( ", "EXP( ",
-    "FLOOR( ", "LN( ", "LOG( ", "LOG10( ", "LOG2( ", "MOD( ", "PI() ", "POW( ", "POWER( ", "RADIANS( ", "SIN( ", "SINH( ",
-    "SQRT( ", "TAN( ", "TANH( ", "TRUNC( ", "JSON( ", "JSON_ARRAY( ", "JSON_ARRAY_LENGTH( ", "JSON_EXTRACT( ",
-    "JSON_INSERT( ", "JSON_OBJECT( ", "JSON_PATCH( ", "JSON_REMOVE( ", "JSON_REPLACE( ", "JSON_SET( ", "JSON_TYPE( ",
-    "JSON_VALID( ", "JSON_QUOTE( ", "JSON_GROUP_ARRAY( ", "JSON_GROUP_OBJECT( ", "JSON_EACH( ", "JSON_TREE( ",
-    "LIST TABLES", "TABLES", "LIST DATABASES", "DATABASES", "LIST COMMANDS", "COMMANDS", "LIST INFO", "INFO",
-    "AUTH USER ", "USER", "PASS", "CLOSE CONNECTION ", "CONNECTION", "CREATE DATABASE ", "DATABASE",
-    "DISABLE PLUGIN ", "PLUGIN", "DROP DATABASE ", "DROP KEY ", "ENABLE PLUGIN ",
-    "GET DATABASE", "GET DATABASE ID", "ID", "GET KEY ", "LIST CONNECTIONS", "CONNECTIONS", "LIST DATABASE CONNECTIONS ",
-    "LIST DATABASE CONNECTIONS ID ", "LIST NODES", "LIST PLUGINS", "LIST CLIENT KEYS",
-    "LIST DATABASE KEYS", "LISTEN ", "NOTIFY ", "PING", "REMOVE NODE ", "SET KEY ", "UNLISTEN ", "UNUSE DATABASE", "USE DATABASE",
-    "on", "off", "enable", "disable", "true", "false",
+var tokens = []string{".echo ", ".help ", ".bail ", ".quiet ", ".noheader ", ".nullvalue ", ".newline ", ".separator ", ".format ",
+	".width ", ".quit ",
+	"SELECT ", "AS ", "FROM ", "JOIN ", "ON ", "USING ", "WHERE ", "LIKE ", "OR ", "AND ", "GROUP ", "ORDER ", "BY ", "ASC ", "DESC ", "LIMIT ", "TO ",
+	"INSERT ", "UPDATE ", "DROP ", "IF ", "NOT ", "EXISTS ", "FAIL ", "IGNORE ", "TABLE ", "VALUES ", "SET ", "INTO ",
+	"CREATE ", "ALTER ", "NULL ", "INTEGER ", "TEXT ", "PRIMARY ", "UNIQUE ", "DEFAULT ",
+	"ABORT ", "ACTION ", "AFTER ", "ALL ", "ALWAYS ", "ANALYZE ", "ADD ", "ATTACH ",
+	"AUTOINCREMENT ", "BEFORE ", "BEGIN ", "BETWEEN ", "CASCADE ", "CASE ", "CAST ", "CHECK ", "COLLATE ", "COLUMN ",
+	"COMMIT ", "CONFLICT ", "CONSTRAINT ", "CROSS ", "CURRENT ", "CURRENT_DATE ", "CURRENT_TIME ",
+	"CURRENT_TIMESTAMP ", "DATABASE ", "DEFERRABLE ", "DEFERRED ", "DELETE ", "DETACH ", "DISTINCT ",
+	"DO ", "EACH ", "ELSE ", "END ", "ESCAPE ", "EXCEPT ", "EXCLUDE ", "EXCLUSIVE ", "EXPLAIN ",
+	"FILTER ", "FIRST ", "FOLLOWING ", "FOR ", "FOREIGN ", "FULL ", "GENERATED ", "GLOB ", "GROUPS ",
+	"HAVING ", "IMMEDIATE ", "IN ", "INDEX ", "INDEXED ", "INITIALLY ", "INNER ", "INSTEAD ",
+	"INTERSECT ", "IS ", "ISNULL ", "KEY ", "LAST ", "LEFT ", "MATCH ", "MATERIALIZED ",
+	"NATURAL ", "NO ", "NOTHING ", "NOTNULL ", "NULLS ", "OF ", "OFFSET ",
+	"OTHERS ", "OUTER ", "OVER ", "PARTITION ", "PLAN ", "PRAGMA ", "PRECEDING ", "QUERY ", "RAISE ", "RANGE ",
+	"RECURSIVE ", "REFERENCES ", "REGEXP ", "REINDEX ", "RELEASE ", "RENAME ", "REPLACE ", "RESTRICT ", "RETURNING ",
+	"RIGHT ", "ROLLBACK ", "ROW ", "ROWS ", "SAVEPOINT ", "TEMP ", "TEMPORARY ", "THEN ",
+	"TIES ", "TRANSACTION ", "TRIGGER ", "UNBOUNDED ", "UNION ", "VACUUM ",
+	"VIEW ", "VIRTUAL ", "WHEN ", "WINDOW ", "WITH ", "WITHOUT ",
+	"ABS( ", "CHANGES( ", "CHAR( ", "COALESCE( ", "GLOB( ", "HEX( ", "IFNULL( ", "IIF( ", "INSTR( ", "LAST_INSERT_ROWID( ",
+	"LENGTH( ", "LIKE( ", "LIKELIHOOD( ", "LIKELY( ", "LOAD_EXTENSION( ", "LOWER( ", "LTRIM( ", "MAX( ", "MIN( ",
+	"NULLIF( ", "PRINTF( ", "QUOTE( ", "RANDOM() ", "RANDOMBLOB( ", "REPLACE( ", "ROUND( ", "RTRIM( ", "SIGN( ",
+	"SOUNDEX( ", "SQLITE_COMPILEOPTION_GET( ", "SQLITE_COMPILEOPTION_USED( ", "SQLITE_OFFSET( ", "SQLITE_SOURCE_ID() ",
+	"SQLITE_VERSION() ", "SUBSTR( ", "SUBSTRING( ", "TOTAL_CHANGES() ", "TRIM( ", "TYPEOF( ", "UNICODE( ", "UNLIKELY( ",
+	"UPPER( ", "ZEROBLOB( ", "DATE( ", "TIME( ", "DATETIME( ", "JULIANDAY( ", "STRFTIME( ", "DAYS ", "HOURS ", "MINUTES ",
+	"NOW", "SECONDS ", "MONTHS ", "YEARS ", "START OF MONTH ", "START OF YEAR ", "START OF DAY ", "WEEKDAY ", "UNIXEPOCH ",
+	"LOCALTIME ", "UTC ", "AVG( ", "COUNT( * ) ", "COUNT( ", "GROUP_CONCAT( ", "SUM( ", "TOTAL( ", "ACOS( ", "ACOSH( ",
+	"ASIN( ", "ASINH( ", "ATAN( ", "ATAN2( ", "ATANH( ", "CEIL( ", "CEILING( ", "COS( ", "COSH( ", "DEGREES( ", "EXP( ",
+	"FLOOR( ", "LN( ", "LOG( ", "LOG10( ", "LOG2( ", "MOD( ", "PI() ", "POW( ", "POWER( ", "RADIANS( ", "SIN( ", "SINH( ",
+	"SQRT( ", "TAN( ", "TANH( ", "TRUNC( ", "JSON( ", "JSON_ARRAY( ", "JSON_ARRAY_LENGTH( ", "JSON_EXTRACT( ",
+	"JSON_INSERT( ", "JSON_OBJECT( ", "JSON_PATCH( ", "JSON_REMOVE( ", "JSON_REPLACE( ", "JSON_SET( ", "JSON_TYPE( ",
+	"JSON_VALID( ", "JSON_QUOTE( ", "JSON_GROUP_ARRAY( ", "JSON_GROUP_OBJECT( ", "JSON_EACH( ", "JSON_TREE( ",
+	"LIST TABLES", "TABLES", "LIST DATABASES", "DATABASES", "LIST COMMANDS", "COMMANDS", "LIST INFO", "INFO",
+	"AUTH USER ", "USER", "PASS", "CLOSE CONNECTION ", "CONNECTION", "CREATE DATABASE ", "DATABASE",
+	"DISABLE PLUGIN ", "PLUGIN", "DROP DATABASE ", "DROP KEY ", "ENABLE PLUGIN ",
+	"GET DATABASE", "GET DATABASE ID", "ID", "GET KEY ", "LIST CONNECTIONS", "CONNECTIONS", "LIST DATABASE CONNECTIONS ",
+	"LIST DATABASE CONNECTIONS ID ", "LIST NODES", "LIST PLUGINS", "LIST CLIENT KEYS",
+	"LIST DATABASE KEYS", "LISTEN ", "NOTIFY ", "PING", "REMOVE NODE ", "SET KEY ", "UNLISTEN ", "UNUSE DATABASE", "USE DATABASE",
+	"on", "off", "enable", "disable", "true", "false",
 }
 var dynamic_tokens = []string{}
 
-func replaceControlChars( in string ) string {
-  for from, to := range map[string]string{ "\\0" : string( 0 ), "\\a" : "\a", "\\b" : "\b", "\\t" : "\t", "\\n" : "\n", "\\v" : "\v", "\\f" : "\f", "\\r" : "\r", } {
-    in = strings.ReplaceAll( in, from, to )
-  }
-  return in
+func replaceControlChars(in string) string {
+	for from, to := range map[string]string{"\\0": string(0), "\\a": "\a", "\\b": "\b", "\\t": "\t", "\\n": "\n", "\\v": "\v", "\\f": "\f", "\\r": "\r"} {
+		in = strings.ReplaceAll(in, from, to)
+	}
+	return in
 }
-func getFirstNoneEmptyString( args []string ) string {
-  for _, v := range args {
-    v = strings.TrimSpace( v )
-    if v != "" { return v }
-  }
-  return ""
+func getFirstNoneEmptyString(args []string) string {
+	for _, v := range args {
+		v = strings.TrimSpace(v)
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
-func parseParameters() ( Parameter, error ) {
-  parameter:= Parameter{}
-  var outputformat int
+func parseParameters() (Parameter, error) {
+	parameter := Parameter{}
+	var outputformat int
 
-  // Parse Command Line Parameter (Attention: "::" -> ":<CTRL+Space>")
-  if p, err := docopt.ParseArgs( strings.ReplaceAll( usage, "::", ": " ), nil, fmt.Sprintf( "%s %s, %s", app_name, version, copyright ) ); err == nil {
+	// Parse Command Line Parameter (Attention: "::" -> ":<CTRL+Space>")
+	if p, err := docopt.ParseArgs(strings.ReplaceAll(usage, "::", ": "), nil, fmt.Sprintf("%s %s, %s", app_name, version, copyright)); err == nil {
 
-    // Preprocessing...
-    if format, _ := p.String( "--format" )   ; format == ""   {                             // If --format was not specified, use default values...
-      if list, _ := p.Bool( "--list" )       ; list           { p[ "--format" ] = "LIST" }  // use --format=LIST when in list mode
-      if output, _ := p.String( "--output" ) ; output != ""   { p[ "--format" ] = "QUOTE" } // use --format=QUOTE when in batch mode
-    }
-    if format, _ := p.String( "--format" )   ; format == ""   { p[ "--format" ] = "BOX" }   // use --format=BOX when --format is stil not specified
+		// Preprocessing...
+		if format, _ := p.String("--format"); format == "" { // If --format was not specified, use default values...
+			if list, _ := p.Bool("--list"); list {
+				p["--format"] = "LIST"
+			} // use --format=LIST when in list mode
+			if output, _ := p.String("--output"); output != "" {
+				p["--format"] = "QUOTE"
+			} // use --format=QUOTE when in batch mode
+		}
+		if format, _ := p.String("--format"); format == "" {
+			p["--format"] = "BOX"
+		} // use --format=BOX when --format is stil not specified
 
-    format, err := p.String( "--format" )
-    if err    != nil { return Parameter{}, err                                   }
+		format, err := p.String("--format")
+		if err != nil {
+			return Parameter{}, err
+		}
 
-    outputformat, err = sqlitecloud.GetOutputFormatFromString( format )
-    if err    != nil { return Parameter{}, err                                   }
+		outputformat, err = sqlitecloud.GetOutputFormatFromString(format)
+		if err != nil {
+			return Parameter{}, err
+		}
 
-    p[ "--outputformat" ] = outputformat
+		p["--outputformat"] = outputformat
 
-    // If the connection string is set, parse and apply the connection string...
-    if url, isSet := p[ "URL" ]; isSet && url != "<nil>" {
-      if Host, Port, Username, Password, Database, Timeout, Compress, Pam, ApiKey, err := sqlitecloud.ParseConnectionString( reflect.ValueOf( url ).String() ); err == nil {
-                          p[ "--host" ]     = getFirstNoneEmptyString( []string{ dropError( p.String( "--host" ) )    , Host                          } )
-                          p[ "--user" ]     = getFirstNoneEmptyString( []string{ dropError( p.String( "--user" ) )    , Username                      } )
-                          p[ "--password" ] = getFirstNoneEmptyString( []string{ dropError( p.String( "--password" ) ), Password                      } )
-                          p[ "--dbname" ]   = getFirstNoneEmptyString( []string{ dropError( p.String( "--dbname" ) )  , Database                      } )
-                          p[ "--host" ]     = getFirstNoneEmptyString( []string{ dropError( p.String( "--host" ) )    , Host                          } )
-                          p[ "--compress" ] = getFirstNoneEmptyString( []string{ dropError( p.String( "--compress" ) ), Compress                      } )
-        if Port    > 0  { p[ "--port" ]     = getFirstNoneEmptyString( []string{ dropError( p.String( "--port" ) )    , fmt.Sprintf( "%d", Port     ) } ) }
-        if Timeout > 0  { p[ "--timeout" ]  = getFirstNoneEmptyString( []string{ dropError( p.String( "--timeout" ) ) , fmt.Sprintf( "%d", Timeout  ) } ) }
-                          p[ "--tls" ]      = getFirstNoneEmptyString( []string{ dropError( p.String( "--tls" ) )     , Pam                           } )
-                          p[ "--apikey" ]   = getFirstNoneEmptyString( []string{ dropError( p.String( "--apikey" ) )  , ApiKey                           } )
-      }
-    } else {
-      return Parameter{}, err
-    }
+		// If the connection string is set, parse and apply the connection string...
+		if url, isSet := p["URL"]; isSet && url != "<nil>" {
+			if conf, err := sqlitecloud.ParseConnectionString(reflect.ValueOf(url).String()); err == nil {
+				p["--host"] = getFirstNoneEmptyString([]string{dropError(p.String("--host")), conf.Host})
+				p["--user"] = getFirstNoneEmptyString([]string{dropError(p.String("--user")), conf.Username})
+				p["--password"] = getFirstNoneEmptyString([]string{dropError(p.String("--password")), conf.Password})
+				p["--dbname"] = getFirstNoneEmptyString([]string{dropError(p.String("--dbname")), conf.Database})
+				p["--host"] = getFirstNoneEmptyString([]string{dropError(p.String("--host")), conf.Host})
+				p["--compress"] = getFirstNoneEmptyString([]string{dropError(p.String("--compress")), conf.CompressMode})
+				if conf.Port > 0 {
+					p["--port"] = getFirstNoneEmptyString([]string{dropError(p.String("--port")), fmt.Sprintf("%d", conf.Port)})
+				}
+				if conf.Timeout > 0 {
+					p["--timeout"] = getFirstNoneEmptyString([]string{dropError(p.String("--timeout")), fmt.Sprintf("%d", conf.Timeout)})
+				}
+				p["--tls"] = getFirstNoneEmptyString([]string{dropError(p.String("--tls")), conf.Pem})
+				p["--apikey"] = getFirstNoneEmptyString([]string{dropError(p.String("--apikey")), conf.ApiKey})
+				if conf.NoBlob {
+					p["--noblob"] = getFirstNoneEmptyString([]string{dropError(p.String("--noblob")), strconv.FormatBool(conf.NoBlob)})
+				}
+				if conf.MaxData > 0 {
+					p["--maxdata"] = getFirstNoneEmptyString([]string{dropError(p.String("--maxdata")), fmt.Sprintf("%d", conf.MaxData)})
+				}
+				if conf.MaxRows > 0 {
+					p["--maxrows"] = getFirstNoneEmptyString([]string{dropError(p.String("--maxrows")), fmt.Sprintf("%d", conf.MaxRows)})
+				}
+				if conf.MaxRowset > 0 {
+					p["--maxrowset"] = getFirstNoneEmptyString([]string{dropError(p.String("--maxrowset")), fmt.Sprintf("%d", conf.MaxRowset)})
+				}
+			}
+		} else {
+			return Parameter{}, err
+		}
 
-    // Set default Values
-    p[ "--host" ]       = getFirstNoneEmptyString( []string{ dropError( p.String( "--host" ) )    , "localhost" } )
-    p[ "--port" ]       = getFirstNoneEmptyString( []string{ dropError( p.String( "--port" ) )    , "8860"      } )
-    p[ "--timeout" ]    = getFirstNoneEmptyString( []string{ dropError( p.String( "--timeout" ) ) , "10"        } )
-    p[ "--compress" ]   = getFirstNoneEmptyString( []string{ dropError( p.String( "--compress" ) ), "NO"        } )
-    p[ "--tls" ]        = getFirstNoneEmptyString( []string{ dropError( p.String( "--tls" ) ),      "INTERN"    } )
-    p[ "--separator" ]  = getFirstNoneEmptyString( []string{ dropError( p.String( "--separator" ) ), dropError( sqlitecloud.GetDefaultSeparatorForOutputFormat( outputformat ) ), "|" } )
+		// Set default Values
+		p["--host"] = getFirstNoneEmptyString([]string{dropError(p.String("--host")), "localhost"})
+		p["--port"] = getFirstNoneEmptyString([]string{dropError(p.String("--port")), "8860"})
+		p["--timeout"] = getFirstNoneEmptyString([]string{dropError(p.String("--timeout")), "10"})
+		p["--compress"] = getFirstNoneEmptyString([]string{dropError(p.String("--compress")), "NO"})
+		p["--tls"] = getFirstNoneEmptyString([]string{dropError(p.String("--tls")), "INTERN"})
+		p["--separator"] = getFirstNoneEmptyString([]string{dropError(p.String("--separator")), dropError(sqlitecloud.GetDefaultSeparatorForOutputFormat(outputformat)), "|"})
 
-    // Fix invalid(=unset) parameters, quotation & control-chars
-    for k, v := range p {
-      switch reflect.ValueOf( v ).Kind() {
-      case reflect.Invalid: p[ k ] = ""
-      case reflect.String:  p[ k ] = replaceControlChars( strings.Trim( reflect.ValueOf( v ).String(), "'\"" ) )
-      default:
-      }
-    }
+		// Fix invalid(=unset) parameters, quotation & control-chars
+		for k, v := range p {
+			switch reflect.ValueOf(v).Kind() {
+			case reflect.Invalid:
+				p[k] = ""
+			case reflect.String:
+				p[k] = replaceControlChars(strings.Trim(reflect.ValueOf(v).String(), "'\""))
+			default:
+			}
+		}
 
-    // for k, v := range p { fmt.Printf( "%s='%v'\r\n", k, v ) }
+		// for k, v := range p { fmt.Printf( "%s='%v'\r\n", k, v ) }
 
-    // Copy map data into Object
-    if err := p.Bind( &parameter ); err != nil { return Parameter{}, err }
+		// Copy map data into Object
+		if err := p.Bind(&parameter); err != nil {
+			return Parameter{}, err
+		}
 
-    // Postprocessing...
-    if parameter.OutFile != "" {
-      parameter.Echo  = false
-      parameter.Quiet = true
-    }
-    if q, _ := p.Bool( "--echo" ); q  { parameter.Echo  = true  }
-    if parameter.Echo                 { parameter.Quiet = false }
-    if q, _ := p.Bool( "--quiet" ); q {
-      parameter.Quiet = true
-      parameter.Echo  = false
-    }
+		// Postprocessing...
+		if parameter.OutFile != "" {
+			parameter.Echo = false
+			parameter.Quiet = true
+		}
+		if q, _ := p.Bool("--echo"); q {
+			parameter.Echo = true
+		}
+		if parameter.Echo {
+			parameter.Quiet = false
+		}
+		if q, _ := p.Bool("--quiet"); q {
+			parameter.Quiet = true
+			parameter.Echo = false
+		}
 
-  } else {
-    return Parameter{}, err
-  }
-  return parameter, nil
+	} else {
+		return Parameter{}, err
+	}
+	return parameter, nil
 }
 
-func autocomplete( line string, pos int ) ( head string, suggestions []string, tail string ) {
-  start := line[ 0 : pos ]
-  tail   = strings.TrimPrefix( line[ pos : ], " " )
-  split := strings.LastIndex( start, " " )
-  head   = ""
-  line   = start
-  if split > 0 {
-    head   = start[ 0 : split + 1 ]
-    line   = start[ split + 1 : ]
-  }
-  // fmt.Printf( "start=>%s<, tail=>%s<, head=>%s<, line=>%s<\r\n", start, tail, head, line )
+func autocomplete(line string, pos int) (head string, suggestions []string, tail string) {
+	start := line[0:pos]
+	tail = strings.TrimPrefix(line[pos:], " ")
+	split := strings.LastIndex(start, " ")
+	head = ""
+	line = start
+	if split > 0 {
+		head = start[0 : split+1]
+		line = start[split+1:]
+	}
+	// fmt.Printf( "start=>%s<, tail=>%s<, head=>%s<, line=>%s<\r\n", start, tail, head, line )
 
-  for _, token := range dynamic_tokens {
-    if strings.HasPrefix( strings.ToLower( token ), strings.ToLower( line ) ) { suggestions = append( suggestions, token ) }
-  }
-  for _, token := range tokens {
-    if strings.HasPrefix( strings.ToLower( token ), strings.ToLower( line ) ) { suggestions = append( suggestions, token ) }
-  }
-  return
+	for _, token := range dynamic_tokens {
+		if strings.HasPrefix(strings.ToLower(token), strings.ToLower(line)) {
+			suggestions = append(suggestions, token)
+		}
+	}
+	for _, token := range tokens {
+		if strings.HasPrefix(strings.ToLower(token), strings.ToLower(line)) {
+			suggestions = append(suggestions, token)
+		}
+	}
+	return
 }
 
 func main() {
-  width := -1
-  out   := bufio.NewWriter( os.Stdout )
+	width := -1
+	out := bufio.NewWriter(os.Stdout)
 
-  if parameter, err := parseParameters(); err != nil {
-    fatal( out, fmt.Sprintf( "ERROR: Could not parse arguments (%s).", err.Error() ), &parameter )
-  } else {
-    if parameter.OutFile != "" {
-      os.Remove( parameter.OutFile )
-      if file, err := os.OpenFile( parameter.OutFile, os.O_CREATE | os.O_RDWR, 0664 ); err != nil {
-        fatal( out, fmt.Sprintf( "ERROR: Could not create '%s' for writing", parameter.OutFile ), &parameter )
-      } else {
-        out   = bufio.NewWriter( file )
-        width = 0
-        defer file.Close()
-      }
-    }
+	if parameter, err := parseParameters(); err != nil {
+		fatal(out, fmt.Sprintf("ERROR: Could not parse arguments (%s).", err.Error()), &parameter)
+	} else {
+		if parameter.OutFile != "" {
+			os.Remove(parameter.OutFile)
+			if file, err := os.OpenFile(parameter.OutFile, os.O_CREATE|os.O_RDWR, 0664); err != nil {
+				fatal(out, fmt.Sprintf("ERROR: Could not create '%s' for writing", parameter.OutFile), &parameter)
+			} else {
+				out = bufio.NewWriter(file)
+				width = 0
+				defer file.Close()
+			}
+		}
 
-    // print( out, fmt.Sprintf( "%s %s, %s", long_name, version, copyright ), &parameter )
+		// print( out, fmt.Sprintf( "%s %s, %s", long_name, version, copyright ), &parameter )
 
-    var db *sqlitecloud.SQCloud = sqlitecloud.New( parameter.Tls, uint( parameter.Timeout ) )
-    if err := db.Connect( parameter.Host, parameter.Port, parameter.User, parameter.Password, parameter.Database, uint( parameter.Timeout ), parameter.Compress, 0, parameter.ApiKey ); err != nil {
-      fatal( out, fmt.Sprintf( "ERROR: %s.", err.Error() ), &parameter )
-    } else {
-      defer db.Close()
+		config := sqlitecloud.SQCloudConfig{
+			Host:         parameter.Host,
+			Port:         parameter.Port,
+			Username:     parameter.User,
+			Password:     parameter.Password,
+			Database:     parameter.Database,
+			Timeout:      time.Duration(parameter.Timeout) * time.Second,
+			CompressMode: parameter.Compress,
+			Pem:          parameter.Tls,
+			ApiKey:       parameter.ApiKey,
+			NoBlob:       parameter.NoBlob,
+			MaxData:      parameter.MaxData,
+			MaxRows:      parameter.MaxRows,
+			MaxRowset:    parameter.MaxRowset,
+		}
+		var db *sqlitecloud.SQCloud = sqlitecloud.New(config)
 
-      db.Callback = func (conn *sqlitecloud.SQCloud, json string) {
-        print( out, json, &parameter )
-        out.Flush()
-      }
+		if err := db.Connect(); err != nil {
+			fatal(out, fmt.Sprintf("ERROR: %s.", err.Error()), &parameter)
+		} else {
+			defer db.Close()
 
-      //print( out, fmt.Sprintf( "Connected to %s.", parameter.Host ), &parameter )
-      //print( out, strings.Split( help, "\n" )[ 0 ], &parameter )
+			db.Callback = func(conn *sqlitecloud.SQCloud, json string) {
+				print(out, json, &parameter)
+				out.Flush()
+			}
 
-      print( out, strings.ReplaceAll( banner, "<HOST>", parameter.Host ), &parameter )
-      print( out, "", &parameter )
+			//print( out, fmt.Sprintf( "Connected to %s.", parameter.Host ), &parameter )
+			//print( out, strings.Split( help, "\n" )[ 0 ], &parameter )
 
-      if parameter.List {
-        Execute( db, out, "LIST DATABASES", width, &parameter )
-        os.Exit( 0 )
-      }
+			print(out, strings.ReplaceAll(banner, "<HOST>", parameter.Host), &parameter)
+			print(out, "", &parameter)
 
-      // Execute single Command
-      if parameter.Command != "" {
-        Execute( db, out, parameter.Command, width, &parameter )
-      }
+			if parameter.List {
+				Execute(db, out, "LIST DATABASES", width, &parameter)
+				os.Exit(0)
+			}
 
-      // Batch Mode starts here ///////////////////////////////////////////////////////////////
+			// Execute single Command
+			if parameter.Command != "" {
+				Execute(db, out, parameter.Command, width, &parameter)
+			}
 
-      // Execute Files
-      if len( parameter.Files ) > 0 {
-        ExecuteFiles( db, out, parameter.Files, width, &parameter )
-      }
-      // Execute Stdin
-      if parameter.UseStdIn {
-        if err := ExecuteBuffer( db, out, os.Stdin, width, &parameter ); err != nil {
-          bail( out, fmt.Sprintf( "Could not execute (%s)", err.Error() ), &parameter )
-        }
-      }
-      // End Batch Mode
-      if parameter.OutFile != "" { os.Exit( 0 ) }
+			// Batch Mode starts here ///////////////////////////////////////////////////////////////
 
-      // Interactive Mode starts here /////////////////////////////////////////////////////////
+			// Execute Files
+			if len(parameter.Files) > 0 {
+				ExecuteFiles(db, out, parameter.Files, width, &parameter)
+			}
+			// Execute Stdin
+			if parameter.UseStdIn {
+				if err := ExecuteBuffer(db, out, os.Stdin, width, &parameter); err != nil {
+					bail(out, fmt.Sprintf("Could not execute (%s)", err.Error()), &parameter)
+				}
+			}
+			// End Batch Mode
+			if parameter.OutFile != "" {
+				os.Exit(0)
+			}
 
-      editor := liner.NewLiner()
-      defer editor.Close()
+			// Interactive Mode starts here /////////////////////////////////////////////////////////
 
-      editor.SetCtrlCAborts( true )
-      editor.SetMultiLineMode( true )
-      editor.SetWordCompleter( autocomplete )
+			editor := liner.NewLiner()
+			defer editor.Close()
 
-      if strings.HasPrefix( history_file, "~/" ) {  // fix Home directory for POSIX and Windows
-        if dir, err := os.UserHomeDir();  err == nil {
-          history_file = fmt.Sprintf( "%s/%s", dir, strings.TrimPrefix( history_file, "~/" ) )
-        }
-      }
-      if f, err := os.Open( history_file ); err == nil {
-        editor.ReadHistory( f )
-        f.Close()
-      }
+			editor.SetCtrlCAborts(true)
+			editor.SetMultiLineMode(true)
+			editor.SetWordCompleter(autocomplete)
 
-      prompt := "sqlc > "
-      prompt  = "\\H:\\p/\\d\\u > "
+			if strings.HasPrefix(history_file, "~/") { // fix Home directory for POSIX and Windows
+				if dir, err := os.UserHomeDir(); err == nil {
+					history_file = fmt.Sprintf("%s/%s", dir, strings.TrimPrefix(history_file, "~/"))
+				}
+			}
+			if f, err := os.Open(history_file); err == nil {
+				editor.ReadHistory(f)
+				f.Close()
+			}
 
-Loop: for {
-        out.Flush()
-        db.Database, _ = db.GetDatabase()
+			prompt := "sqlc > "
+			prompt = "\\H:\\p/\\d\\u > "
 
-        renderdPrompt := prompt
-        renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\H", parameter.Host )
-        renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\p", fmt.Sprintf( "%d", parameter.Port ) )
-        renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\u", parameter.User )
-        renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\d", db.Database )
+		Loop:
+			for {
+				out.Flush()
+				db.Database, _ = db.GetDatabase()
 
-        renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\T", time.Now().Format( "2006-01-02" ) )
-        renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\t", time.Now().Format( "15:04:05" ) )
-        renderdPrompt  = strings.ReplaceAll( renderdPrompt, "\\w", fmt.Sprintf( "/%s", dropError( os.Getwd() ) ) )
+				renderdPrompt := prompt
+				renderdPrompt = strings.ReplaceAll(renderdPrompt, "\\H", parameter.Host)
+				renderdPrompt = strings.ReplaceAll(renderdPrompt, "\\p", fmt.Sprintf("%d", parameter.Port))
+				renderdPrompt = strings.ReplaceAll(renderdPrompt, "\\u", parameter.User)
+				renderdPrompt = strings.ReplaceAll(renderdPrompt, "\\d", db.Database)
 
-        go func() { dynamic_tokens = db.GetAutocompleteTokens() }() // Update the dynamic tokens in the background...
-        command, err  := editor.Prompt(renderdPrompt )
+				renderdPrompt = strings.ReplaceAll(renderdPrompt, "\\T", time.Now().Format("2006-01-02"))
+				renderdPrompt = strings.ReplaceAll(renderdPrompt, "\\t", time.Now().Format("15:04:05"))
+				renderdPrompt = strings.ReplaceAll(renderdPrompt, "\\w", fmt.Sprintf("/%s", dropError(os.Getwd())))
 
-        switch err {
-        case io.EOF: break
-        case nil:
-          switch tokens := strings.Split( strings.ToLower( strings.TrimSpace( command ) ), " " ); tokens[ 0 ] {
-          case "": continue Loop
-          case ".exit", "exit": break Loop
-          case ".help":             print( out, help, &parameter )
-          case ".bail":             parameter.Bail          = getNextTokenValueAsBool( out, parameter.Bail, tokens, &parameter )
-          case ".echo":             parameter.Echo          = getNextTokenValueAsBool( out, parameter.Echo, tokens, &parameter )
-          case ".quiet":            parameter.Quiet         = getNextTokenValueAsBool( out, parameter.Quiet, tokens, &parameter )
-          case ".noheader":         parameter.NoHeader      = getNextTokenValueAsBool( out, parameter.NoHeader, tokens, &parameter )
-          case ".width":            width                   = getNextTokenValueAsInteger( out, width, -1, tokens, &parameter )
-          case ".nullvalue":        parameter.NullText      = getNextTokenValueAsString( out, parameter.NullText, "NULL", "", tokens, &parameter )
-          case ".newline":          parameter.NewLine       = getNextTokenValueAsString( out, parameter.NewLine, "\r\n", "", tokens, &parameter )
-          case ".prompt":           prompt                  = getNextTokenValueAsString( out, prompt, "sqlc >", "", tokens, &parameter )
-          case ".separator":        parameter.Separator     = getNextTokenValueAsString( out, parameter.Separator, "<auto>", "", tokens, &parameter )
-          case ".timeout":          parameter.Timeout       = getNextTokenValueAsInteger( out, parameter.Timeout, 10, tokens, &parameter )
-          case ".compress":
-            parameter.Compress      = getNextTokenValueAsString( out, parameter.Compress, "NO", "|no|lz4|", tokens, &parameter )
-            db.Compress( parameter.Compress )
+				go func() { dynamic_tokens = db.GetAutocompleteTokens() }() // Update the dynamic tokens in the background...
+				command, err := editor.Prompt(renderdPrompt)
 
-          case ".format":
-            newFormat := getNextTokenValueAsString( out, parameter.Format, "BOX", "|list|csv|quote|tabs|line|json|html|xml|markdown|table|box|", tokens, &parameter )
-            if newFormat != parameter.Format {
-              parameter.Format          = newFormat
-              parameter.Separator       = "<auto>"
-              parameter.OutPutFormat, _ = sqlitecloud.GetOutputFormatFromString( newFormat )
-            }
+				switch err {
+				case io.EOF:
+					break
+				case nil:
+					switch tokens := strings.Split(strings.ToLower(strings.TrimSpace(command)), " "); tokens[0] {
+					case "":
+						continue Loop
+					case ".exit", "exit":
+						break Loop
+					case ".help":
+						print(out, help, &parameter)
+					case ".bail":
+						parameter.Bail = getNextTokenValueAsBool(out, parameter.Bail, tokens, &parameter)
+					case ".echo":
+						parameter.Echo = getNextTokenValueAsBool(out, parameter.Echo, tokens, &parameter)
+					case ".quiet":
+						parameter.Quiet = getNextTokenValueAsBool(out, parameter.Quiet, tokens, &parameter)
+					case ".noheader":
+						parameter.NoHeader = getNextTokenValueAsBool(out, parameter.NoHeader, tokens, &parameter)
+					case ".width":
+						width = getNextTokenValueAsInteger(out, width, -1, tokens, &parameter)
+					case ".nullvalue":
+						parameter.NullText = getNextTokenValueAsString(out, parameter.NullText, "NULL", "", tokens, &parameter)
+					case ".newline":
+						parameter.NewLine = getNextTokenValueAsString(out, parameter.NewLine, "\r\n", "", tokens, &parameter)
+					case ".prompt":
+						prompt = getNextTokenValueAsString(out, prompt, "sqlc >", "", tokens, &parameter)
+					case ".separator":
+						parameter.Separator = getNextTokenValueAsString(out, parameter.Separator, "<auto>", "", tokens, &parameter)
+					case ".timeout":
+						parameter.Timeout = getNextTokenValueAsInteger(out, parameter.Timeout, 10, tokens, &parameter)
+					case ".compress":
+						parameter.Compress = getNextTokenValueAsString(out, parameter.Compress, "NO", "|no|lz4|", tokens, &parameter)
+						db.Compress(parameter.Compress)
 
-          default:
-            Execute( db, out, command, width, &parameter )
-            switch tokens[ 0 ] {
-            case ".quit", "quit": break Loop
-            default:              editor.AppendHistory( command )
-            }
-          }
-        default: bail( out, err.Error(), &parameter )
-        }
-      }
+					case ".format":
+						newFormat := getNextTokenValueAsString(out, parameter.Format, "BOX", "|list|csv|quote|tabs|line|json|html|xml|markdown|table|box|", tokens, &parameter)
+						if newFormat != parameter.Format {
+							parameter.Format = newFormat
+							parameter.Separator = "<auto>"
+							parameter.OutPutFormat, _ = sqlitecloud.GetOutputFormatFromString(newFormat)
+						}
 
-      if f, err := os.Create( history_file ); err == nil {
-        editor.WriteHistory( f )
-        f.Close()
-      }
-    }
-  }
+					default:
+						Execute(db, out, command, width, &parameter)
+						switch tokens[0] {
+						case ".quit", "quit":
+							break Loop
+						default:
+							editor.AppendHistory(command)
+						}
+					}
+				default:
+					bail(out, err.Error(), &parameter)
+				}
+			}
+
+			if f, err := os.Create(history_file); err == nil {
+				editor.WriteHistory(f)
+				f.Close()
+			}
+		}
+	}
 }
 
-func Execute( db *sqlitecloud.SQCloud, out *bufio.Writer, cmd string, width int, Settings *Parameter ) {
-                                                          Seperator := Settings.Separator
-  if cmd == ""                                          { return                                                      }
-  if Settings.OutPutFormat == sqlitecloud.OUTFORMAT_XML { Seperator = cmd                                             }
-  if width < 0                                          { if w, _, err := term.GetSize( 0 ); err == nil { width = w } }
-  if Settings.Echo                                      { print( out, cmd, Settings )                                 }
+func Execute(db *sqlitecloud.SQCloud, out *bufio.Writer, cmd string, width int, Settings *Parameter) {
+	Seperator := Settings.Separator
+	if cmd == "" {
+		return
+	}
+	if Settings.OutPutFormat == sqlitecloud.OUTFORMAT_XML {
+		Seperator = cmd
+	}
+	if width < 0 {
+		if w, _, err := term.GetSize(0); err == nil {
+			width = w
+		}
+	}
+	if Settings.Echo {
+		print(out, cmd, Settings)
+	}
 
-  start := time.Now()
-  if res, err := db.Select( cmd ); res != nil {
-    defer res.Free()
+	start := time.Now()
+	if res, err := db.Select(cmd); res != nil {
+		defer res.Free()
 
-    if err == nil {
-      if !res.IsRowSet() || ( res.GetNumberOfRows() > 0 && res.GetNumberOfColumns() > 0 ) {
-        res.DumpToWriter( out, Settings.OutPutFormat, Settings.NoHeader, Seperator, Settings.NullText, Settings.NewLine, uint( width ), Settings.Quiet )
-      }
-      if res.IsRowSet() {
-        print( out, fmt.Sprintf( "Rows: %d - Cols: %d: %s Time: %s", res.GetNumberOfRows(), res.GetNumberOfColumns(), renderByteCount( int64( res.GetUncompressedChuckSizeSum() ) ), time.Since( start ) ), Settings )
-      }
-    }
-  } else {
-    bail( out, err.Error(), Settings )
-  }
-  print( out, "", Settings ) // Empty line
-}
-
-func ExecuteBuffer( db *sqlitecloud.SQCloud, out *bufio.Writer, in *os.File, width int, Settings *Parameter ) error {
-  if scanner := bufio.NewScanner( in ); scanner != nil {
-    for scanner.Scan() {
-      line := scanner.Text()
-      if strings.ToUpper( line ) == ".GOTO_PROMPT" {
-        return nil // break out of sql script
-      }
-      if strings.TrimSpace( line ) != "" {
-        Execute( db, out, line, width, Settings )
-      }
-    }
-    return scanner.Err() // nil or some error
-  }
-  return errors.New( "Could not instanciate the line scanner" )
-}
-func ExecuteFile( db *sqlitecloud.SQCloud, out *bufio.Writer, FilePath string, width int, Settings *Parameter ) error {
-  file, err := os.Open( FilePath )
-  if err == nil {
-    defer file.Close()
-    if err := ExecuteBuffer( db, out, file, width, Settings ); err != nil {
-      return err
-    }
-  }
-  return err
-}
-func ExecuteFiles( db *sqlitecloud.SQCloud, out *bufio.Writer, FilePathes []string, width int, Settings *Parameter ) error {
-  for _, file := range FilePathes {
-    err := ExecuteFile( db, out, file, width, Settings )
-    if( err != nil ) {
-      return err
-    }
-  }
-  return nil
+		if err == nil {
+			if !res.IsRowSet() || (res.GetNumberOfRows() > 0 && res.GetNumberOfColumns() > 0) {
+				res.DumpToWriter(out, Settings.OutPutFormat, Settings.NoHeader, Seperator, Settings.NullText, Settings.NewLine, uint(width), Settings.Quiet)
+			}
+			if res.IsRowSet() {
+				print(out, fmt.Sprintf("Rows: %d - Cols: %d: %s Time: %s", res.GetNumberOfRows(), res.GetNumberOfColumns(), renderByteCount(int64(res.GetUncompressedChuckSizeSum())), time.Since(start)), Settings)
+			}
+		}
+	} else {
+		bail(out, err.Error(), Settings)
+	}
+	print(out, "", Settings) // Empty line
 }
 
-func print( out *bufio.Writer, Message string, Settings *Parameter ) {
-  if !Settings.Quiet {
-    io.WriteString( out, Message )
-    io.WriteString( out, Settings.NewLine )
-  }
+func ExecuteBuffer(db *sqlitecloud.SQCloud, out *bufio.Writer, in *os.File, width int, Settings *Parameter) error {
+	if scanner := bufio.NewScanner(in); scanner != nil {
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.ToUpper(line) == ".GOTO_PROMPT" {
+				return nil // break out of sql script
+			}
+			if strings.TrimSpace(line) != "" {
+				Execute(db, out, line, width, Settings)
+			}
+		}
+		return scanner.Err() // nil or some error
+	}
+	return errors.New("Could not instanciate the line scanner")
 }
-func bail( out *bufio.Writer, Message string, Settings *Parameter ) {
-  print( out, Message, Settings )
-  if Settings.Bail { os.Exit( 1 ) }
+func ExecuteFile(db *sqlitecloud.SQCloud, out *bufio.Writer, FilePath string, width int, Settings *Parameter) error {
+	file, err := os.Open(FilePath)
+	if err == nil {
+		defer file.Close()
+		if err := ExecuteBuffer(db, out, file, width, Settings); err != nil {
+			return err
+		}
+	}
+	return err
 }
-func fatal( out *bufio.Writer, Message string, Settings *Parameter ) {
-  io.WriteString( out, Message )
-  io.WriteString( out, Settings.NewLine )
-  out.Flush()
-  os.Exit( 1 )
+func ExecuteFiles(db *sqlitecloud.SQCloud, out *bufio.Writer, FilePathes []string, width int, Settings *Parameter) error {
+	for _, file := range FilePathes {
+		err := ExecuteFile(db, out, file, width, Settings)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func renderByteCount( count int64) string {
-  const unit = 1000
-  if count < unit { return fmt.Sprintf( "%d Bytes", count) }
-  div, exp := int64( unit ), 0
-  for n := count / unit; n >= unit; n /= unit {
-      div *= unit
-      exp++
-  }
-  return fmt.Sprintf( "%.1f %cBytes", float64( count ) / float64( div ), "kMGTPE"[ exp ] )
+func print(out *bufio.Writer, Message string, Settings *Parameter) {
+	if !Settings.Quiet {
+		io.WriteString(out, Message)
+		io.WriteString(out, Settings.NewLine)
+	}
+}
+func bail(out *bufio.Writer, Message string, Settings *Parameter) {
+	print(out, Message, Settings)
+	if Settings.Bail {
+		os.Exit(1)
+	}
+}
+func fatal(out *bufio.Writer, Message string, Settings *Parameter) {
+	io.WriteString(out, Message)
+	io.WriteString(out, Settings.NewLine)
+	out.Flush()
+	os.Exit(1)
 }
 
-func dropError( val string, err error ) string { return val }
-func getNextTokenValueAsBool( out *bufio.Writer, oldValue bool, tokens []string, Settings *Parameter ) bool {
-  switch len( tokens ) {
-  case 1: return !oldValue
-  case 2:
-    switch tokens[ 1 ] {
-      case "on",  "true",  "1", "enable":  return true
-      case "off", "false", "0", "disable": return false
-      default:  bail( out, fmt.Sprintf( "SYNTHAX ERROR: Invalid parameter \"%s\".", tokens[ 1 ] ), Settings )
-    }
-  default:      bail( out, "SYNTHAX ERROR: Wrong number of parameters.", Settings )
-  }
-  return oldValue
+func renderByteCount(count int64) string {
+	const unit = 1000
+	if count < unit {
+		return fmt.Sprintf("%d Bytes", count)
+	}
+	div, exp := int64(unit), 0
+	for n := count / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cBytes", float64(count)/float64(div), "kMGTPE"[exp])
 }
-func getNextTokenValueAsInteger( out *bufio.Writer, oldValue int, defaultValue int, tokens []string, Settings *Parameter ) int {
-  switch len( tokens ) {
-  case 1: return defaultValue
-  case 2:
-    if i, err := strconv.Atoi( tokens[ 1 ] ); err == nil { return i }
-    bail( out, fmt.Sprintf( "SYNTHAX ERROR: \"%s\" is not a valid number.", tokens[ 1 ] ), Settings )
-  default: bail( out, "SYNTHAX ERROR: Wrong number of parameters.", Settings )
-  }
-  return oldValue
+
+func dropError(val string, err error) string { return val }
+func getNextTokenValueAsBool(out *bufio.Writer, oldValue bool, tokens []string, Settings *Parameter) bool {
+	switch len(tokens) {
+	case 1:
+		return !oldValue
+	case 2:
+		switch tokens[1] {
+		case "on", "true", "1", "enable":
+			return true
+		case "off", "false", "0", "disable":
+			return false
+		default:
+			bail(out, fmt.Sprintf("SYNTHAX ERROR: Invalid parameter \"%s\".", tokens[1]), Settings)
+		}
+	default:
+		bail(out, "SYNTHAX ERROR: Wrong number of parameters.", Settings)
+	}
+	return oldValue
 }
-func getNextTokenValueAsString( out *bufio.Writer, oldValue string, defaultValue string, allowedValues string, tokens []string, Settings *Parameter ) string {
-  switch len( tokens ) {
-  case 1: return defaultValue
-  case 2:
-    if allowedValues == "" { return replaceControlChars( tokens[ 1 ] ) }
-    if strings.Contains( allowedValues, fmt.Sprintf( "|%s|", tokens[ 1 ] ) ) { return tokens[ 1 ] }
-    bail( out, fmt.Sprintf( "SYNTHAX ERROR: Invalid parameter \"%s\".", tokens[ 1 ] ), Settings )
-  default: bail( out, "SYNTHAX ERROR: Wrong number of parameters.", Settings )
-  }
-  return oldValue
+func getNextTokenValueAsInteger(out *bufio.Writer, oldValue int, defaultValue int, tokens []string, Settings *Parameter) int {
+	switch len(tokens) {
+	case 1:
+		return defaultValue
+	case 2:
+		if i, err := strconv.Atoi(tokens[1]); err == nil {
+			return i
+		}
+		bail(out, fmt.Sprintf("SYNTHAX ERROR: \"%s\" is not a valid number.", tokens[1]), Settings)
+	default:
+		bail(out, "SYNTHAX ERROR: Wrong number of parameters.", Settings)
+	}
+	return oldValue
+}
+func getNextTokenValueAsString(out *bufio.Writer, oldValue string, defaultValue string, allowedValues string, tokens []string, Settings *Parameter) string {
+	switch len(tokens) {
+	case 1:
+		return defaultValue
+	case 2:
+		if allowedValues == "" {
+			return replaceControlChars(tokens[1])
+		}
+		if strings.Contains(allowedValues, fmt.Sprintf("|%s|", tokens[1])) {
+			return tokens[1]
+		}
+		bail(out, fmt.Sprintf("SYNTHAX ERROR: Invalid parameter \"%s\".", tokens[1]), Settings)
+	default:
+		bail(out, "SYNTHAX ERROR: Wrong number of parameters.", Settings)
+	}
+	return oldValue
 }
