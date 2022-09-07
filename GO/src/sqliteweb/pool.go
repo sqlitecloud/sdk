@@ -248,10 +248,10 @@ func (this *ConnectionManager) connectionWithIniParams(project string, connectio
 	}
 
 	if isProjectUuid(project) {
-		config.Timeout = GetINIDuration("core", "timeout", time.Duration(1)*time.Minute)
-		config.NoBlob = GetINIBoolean("core", "noblob", true)
-		config.MaxData = GetINIInt("core", "maxdata", 2048)
-		config.MaxRowset = GetINIInt("core", "maxrowset", 1048576)
+		config.Timeout = GetINIDuration("pool", "timeout", time.Duration(1)*time.Minute)
+		config.NoBlob = GetINIBoolean("pool", "noblob", true)
+		config.MaxData = GetINIInt("pool", "maxdata", 2048)
+		config.MaxRowset = GetINIInt("pool", "maxrowset", 1048576)
 	}
 
 	return sqlitecloud.New(*config), nil
@@ -416,7 +416,7 @@ func (this *ConnectionManager) ReleaseConnection(project string, connection *Con
 
 	if connection != nil {
 		this.lockConnection(connection)
-		maxRequests := uint(GetINIInt("core", "maxrequests", 0))
+		maxRequests := uint(GetINIInt("pool", "maxrequests", 0))
 		if maxRequests != 0 && connection.uses > maxRequests {
 			err = this.closeAndRemoveLockedConnection(project, connection)
 		} else {

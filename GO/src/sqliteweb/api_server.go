@@ -43,21 +43,25 @@ const (
 // ----------------------------------------------------------------------------
 
 type ApiResponse struct {
-	Status string `json:"status"` // mandatory, "success" or "error"
-	Id     int64  `json:"id"`     // mandatory
-	Type   string `json:"type"`   // mandatory
+	Status string      `json:"status"`         // mandatory, "success" or "error"
+	Id     string      `json:"id"`             // mandatory
+	Type   string      `json:"type"`           // mandatory
+	Data   interface{} `json:"data,omitempty"` // optional
+}
 
-	// success
-	Data interface{} `json:"data,omitempty"` // optional
-
-	// error
-	Code    int    `json:"code,omitempty"`    // optional
-	Message string `json:"message,omitempty"` // optional
+type ApiResponseDataError struct {
+	Code    int    `json:"code,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 type ApiResponseDataPAuth struct {
-	UUID   string `json:"uuid"`
-	Secret string `json:"secret"`
+	UUID    string `json:"uuid"`
+	Secret  string `json:"secret"`
+	Channel string `json:"channel"`
+}
+
+type ApiResponseDataChannel struct {
+	Channel string `json:"channel"`
 }
 
 type ApiConnection struct {
@@ -134,7 +138,7 @@ func init() {
 	m = make(map[string]*ApiConnection)
 
 	originChecker := glob.MustCompile("{https://*.sqlitecloud.io,https://*.sqlitecloud.io:*,https://sqlitecloud.io,https://sqlitecloud.io:*,https://fabulous-arithmetic-c4a014.netlify.app}")
-	localhostChecker := glob.MustCompile("{https://localhost:*,https://localhost}")
+	localhostChecker := glob.MustCompile("{https://localhost:*,https://localhost,http://localhost:*,http://localhost}")
 
 	apiWebsocketUpgrader.CheckOrigin = func(r *http.Request) bool {
 		o := r.Header.Get("Origin")
@@ -262,16 +266,17 @@ func (this *Server) serveApiWebsocket(writer http.ResponseWriter, request *http.
 		// get command type
 		t, ok := mmap["type"].(string)
 		if !ok {
-			SQLiteWeb.Logger.Debug("serveWebsocket: wrong json type")
-			wsconn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseProtocolError, "wrong json type"), time.Now().Add(1*time.Second))
+			errstring := fmt.Sprintf("wrong request: type")
+			SQLiteWeb.Logger.Debugf("serveWebsocket: %s", errstring)
+			wsconn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseProtocolError, errstring), time.Now().Add(1*time.Second))
 			break
 		}
-		id, ok := mmap["id"].(int64)
+		id, ok := mmap["id"].(string)
 		if !ok {
-			idf, ok := mmap["id"].(float64)
-			if ok {
-				id = int64(idf)
-			}
+			errstring := fmt.Sprintf("wrong request: id")
+			SQLiteWeb.Logger.Debugf("serveWebsocket: %s", errstring)
+			wsconn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseProtocolError, errstring), time.Now().Add(1*time.Second))
+			break
 		}
 
 		// get command options and exec the command using the opened connection
@@ -288,11 +293,13 @@ func (this *Server) serveApiWebsocket(writer http.ResponseWriter, request *http.
 			if puuid == "" || psecret == "" {
 				err = fmt.Errorf("pubsub: error during authentication")
 			} else {
-				_, found := getPubsubConn(uuid)
-				if !found {
+				pubsubConn, found := getPubsubConn(uuid)
+				if !found || pubsubConn.GetPubsubws() == nil {
 					pubsubConn := ApiConnection{ws: wsconn, pubsubws: nil, sqlcconn: connection}
 					setPubsubConn(puuid, &pubsubConn)
-					responsedata = ApiResponseDataPAuth{UUID: puuid, Secret: psecret}
+					responsedata = ApiResponseDataPAuth{UUID: puuid, Secret: psecret, Channel: channel}
+				} else {
+					responsedata = ApiResponseDataChannel{Channel: channel}
 				}
 			}
 			uuid = puuid
@@ -300,6 +307,9 @@ func (this *Server) serveApiWebsocket(writer http.ResponseWriter, request *http.
 		case "unlisten":
 			channel, _ := mmap["channel"].(string)
 			err = connection.Unlisten(channel)
+			if err == nil {
+				responsedata = ApiResponseDataChannel{Channel: channel}
+			}
 
 		case "notify":
 			channel, _ := mmap["channel"].(string)
@@ -325,8 +335,7 @@ func (this *Server) serveApiWebsocket(writer http.ResponseWriter, request *http.
 		response := ApiResponse{Id: id, Type: t}
 		if err != nil {
 			response.Status = ErrorStatus
-			response.Code = connection.ErrorCode
-			response.Message = err.Error()
+			response.Data = ApiResponseDataError{Code: connection.ErrorCode, Message: err.Error()}
 		} else {
 			response.Status = SuccessStatus
 			if responsedata != nil {
@@ -362,7 +371,7 @@ func (this *Server) serveApiWebsocket(writer http.ResponseWriter, request *http.
 			connection.Close()
 		}
 	} else {
-		// main websocket, and there is no pubsub websocket
+		// there is no pubsub websocket
 		connection.Close()
 	}
 }
@@ -437,6 +446,7 @@ func (this *Server) serveApiWebsocketPubsub(writer http.ResponseWriter, request 
 	}
 
 	// reset the websocket in the pubsubConn object
+	SQLiteWeb.Logger.Debug("serveApiWebsocketPubsub: closing pubsub ws %v", pubsubConn)
 	pubsubConn.SetPubsubws(nil)
 	closePubsubConnIfNeeded(pubsubConn, uuid)
 }
@@ -558,11 +568,13 @@ window.addEventListener("load", function(evt) {
 		
         wsPubsub.onclose = function(evt) {
 			print("PUBSUB CLOSE (code:" + evt.code + ")");
-            ws = null;
+            wsPubsub = null;
         }
 
         wsPubsub.onmessage = function(evt) {
             print("PUBSUB NOTIFICATION: " + evt.data);
+			print("PUBSUB PAYLOAD: " + JSON.parse(evt.data).payload);
+			print("PUBSUB PAYLOAD JSON MSG: " + JSON.parse(JSON.parse(evt.data).payload).msg);
         }
 
         wsPubsub.onerror = function(evt) {
@@ -607,20 +619,6 @@ window.addEventListener("load", function(evt) {
         return false;
     };
 
-	document.getElementById("disconnect").onclick = function(evt) {
-        if (ws) {
-			ws.close(1000);
-			ws = null;
-		}
-
-		if (wsPubsub) {
-			wsPubsub.close(1000);
-			wsPubsub = null;
-		}
-
-        return false;
-    };
-
 	document.getElementById("exec").onclick = function(evt) {
         if (!ws) {
             return false;
@@ -633,7 +631,8 @@ window.addEventListener("load", function(evt) {
 		var obj = new Object();
    		obj.type = "exec";
    		obj.command  = c.value;
-		obj.id = id++;
+		obj.id = id.toString(); 
+		id++;
 
    		var jsonString= JSON.stringify(obj);
 		print("Send: " + jsonString);
@@ -653,7 +652,8 @@ window.addEventListener("load", function(evt) {
 		var obj = new Object();
    		obj.type = "listen";
    		obj.channel  = c.value;
-		obj.id = id++;
+		obj.id = id.toString(); 
+		id++;
 
    		var jsonString= JSON.stringify(obj);
 		ws.send(JSON.stringify(obj))
@@ -672,9 +672,10 @@ window.addEventListener("load", function(evt) {
 		var obj = new Object();
    		obj.type = "unlisten";
    		obj.channel  = c.value;
-		obj.id = id++;
-
-   		var jsonString= JSON.stringify(obj);
+		obj.id = id.toString(); 
+		id++;
+   		
+		var jsonString= JSON.stringify(obj);
 		ws.send(JSON.stringify(obj))
         return false;
     };
@@ -689,18 +690,46 @@ window.addEventListener("load", function(evt) {
 		var p = document.getElementById('notifypayload');
 		if (!p.value) return false;
 
-		print("Notify: " + c.value, + ", " + p.value);
+		print("Notify: " + c.value + ", " + p.value);
 
 		var obj = new Object();
    		obj.type = "notify";
    		obj.channel  = c.value;
 		obj.payload  = p.value;
-		obj.id = id++;
+		obj.id = id.toString(); 
+		id++;
 
    		var jsonString= JSON.stringify(obj);
 		ws.send(JSON.stringify(obj))
 		return false;
     };
+
+	document.getElementById("disconnect_pubsub").onclick = function(evt) {
+        if (!wsPubsub) {
+            return false;
+        }
+
+		wsPubsub.close(1000);
+		wsPubsub = null;
+
+		print("Disconnect Pubsub websocket");
+
+        return false;
+    };
+
+	document.getElementById("disconnect").onclick = function(evt) {
+        if (!ws) {
+			return false;
+		}
+		
+		ws.close(1000);
+		ws = null;
+
+		print("Disconnect Main websocket");
+
+        return false;
+    };
+	
 });
 </script>
 </head>
@@ -752,6 +781,10 @@ window.addEventListener("load", function(evt) {
 	<div>
 	    <button id="notify">Notify</button>
 	</div>
+</form>
+
+<form>
+    <button id="disconnect_pubsub">Disconnect Pubsub</button>
 </form>
 
 <form>
