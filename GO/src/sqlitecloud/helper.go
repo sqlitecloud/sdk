@@ -26,6 +26,51 @@ import (
 
 // Helper functions
 
+func escapeString(s, quote string) string {
+	repeatedquote := quote + quote
+	s = strings.Replace(s, repeatedquote, quote, -1)
+	s = strings.Replace(s, quote, repeatedquote, -1)
+	return s
+}
+
+// SQCloudEnquoteString enquotes the given string if necessary and returns the result as a news created string.
+// If the given string contains a '"', the '"' is properly escaped.
+// If the given string contains one or more spaces, the whole string is enquoted with '"'
+func SQCloudEnquoteString2(s string) string {
+	s = strings.TrimSpace(s)
+
+	singlequote := "'"
+	doublequote := "\""
+
+	if !strings.Contains(s, singlequote) && !strings.Contains(s, doublequote) {
+		if strings.Contains(s, " ") {
+			return fmt.Sprintf("'%s'", s)
+		}
+
+		return s
+	}
+
+	if l := len(s); l > 1 {
+		for _, q := range []string{singlequote, doublequote} {
+			if strings.HasPrefix(s, q) && strings.HasSuffix(s, q) {
+				unquoted := s[1 : l-1]
+				if !strings.Contains(unquoted, q) {
+					return s
+				}
+				return q + escapeString(unquoted, q) + q
+			}
+		}
+	}
+
+  for _, q := range []string{singlequote, doublequote} {
+    if !strings.Contains(s, q) {
+      return q + s + q
+    }
+  }
+ 
+  return singlequote + escapeString(s, singlequote) + singlequote
+}
+
 // SQCloudEnquoteString enquotes the given string if necessary and returns the result as a news created string.
 // If the given string contains a '"', the '"' is properly escaped.
 // If the given string contains one or more spaces, the whole string is enquoted with '"'
