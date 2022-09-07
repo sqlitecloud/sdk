@@ -200,7 +200,7 @@ func (this *SQCloud) AuthWithKey(Key string) error {
 func (this *SQCloud) CreateDatabase(Database string, Key string, Encoding string, NoError bool) error {
 	sql := fmt.Sprintf("CREATE DATABASE %s", SQCloudEnquoteString(Database))
 	if strings.TrimSpace(Key) != "" {
-		sql += fmt.Sprintf(" KEY", SQCloudEnquoteString(Key))
+		sql += fmt.Sprintf(" KEY %s", SQCloudEnquoteString(Key))
 	}
 	if strings.TrimSpace(Encoding) != "" {
 		sql += fmt.Sprintf(" ENCODING %s", SQCloudEnquoteString(Encoding))
