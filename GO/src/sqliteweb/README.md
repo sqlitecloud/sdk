@@ -64,7 +64,10 @@ The **SQLiteWeb Server** requires a certain file/folder structure on the target 
 You then have to link the init.d script **ON THE SERVER** into the right place with:
 
 ```console
-ON SERVER> ln -s /opt/sqliteweb/etc/init.d/sqliteweb /etc/.
+ON SERVER> ln -s /opt/sqliteweb/etc/init.d/sqliteweb /etc/init.d/.
+ON SERVER> ln -s /opt/sqliteweb/etc/systemd/system/sqliteweb.service /etc/systemd/system/.
+ON SERVER> ln -s /opt/sqliteweb/etc/systemd/system/unit-status-mail@.service /etc/systemd/system/.
+ON SERVER> ln -s /opt/sqliteweb/etc/logrotate.d/sqliteweb /etc/logrotate.d/.
 ```
 
 ## Installing/Updating the SQLiteWeb Server

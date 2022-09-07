@@ -1,0 +1,17 @@
+[Unit]
+Description=SQLiteCloud Web Service
+After=network.target
+StartLimitIntervalSec=0
+OnFailure=unit-status-mail@%n.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+ExecStart=/opt/sqliteweb/sbin/sqliteweb_linux --config /opt/sqliteweb/etc/sqliteweb/sqliteweb.ini
+ExecStartPost=/opt/sqliteweb/sbin/unit-status-mail.sh %n "Start mail for unit" "Hostname: %H" "Machine ID: %m" "Boot ID: %b"
+#KillMode=process
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

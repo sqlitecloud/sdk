@@ -1,0 +1,12 @@
+/var/log/sqliteweb/sqliteweb*.log {
+        daily
+        missingok
+        rotate 14
+        compress
+        notifempty
+        create 0644 root root
+        sharedscripts
+        postrotate
+                /opt/sqliteweb/sbin/sqliteweb-rotate
+        endscript
+}
