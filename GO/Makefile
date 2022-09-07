@@ -168,6 +168,15 @@ web_start:
 web_restart:
 	ssh root@web1.sqlitecloud.io '/etc/init.d/sqliteweb restart'
 
+web_stop_service:
+        ssh root@web1.sqlitecloud.io 'systemctl stop sqliteweb'
+
+web_start_service:
+        ssh root@web1.sqlitecloud.io 'systemctl start sqliteweb'
+
+web_restart_service:
+        ssh root@web1.sqlitecloud.io 'systemctl restart sqliteweb'
+
 web_test:
 	$(eval JWT := $(shell $(CURL) "POST" $(TEST_URL)/auth -H 'Content-Type: application/json; charset=utf-8' -d '{ "Login": "my.address@domain.com ", "Password": "password" }' | grep -o 'message":"[^"]*' | cut -c 11-))
 	@echo Auth...success: \(JWT = $(JWT)\)

@@ -71,7 +71,8 @@ ON SERVER> ln -s /opt/sqliteweb/etc/init.d/sqliteweb /etc/.
 Now, you can upload/update the previously compiled server executable to the server with a:
 
 ```console
-make web_update
+make bin/sqliteweb_linux
+make web_update_service
 ```
 
 This command will at first stop the SQLiteWeb server on your remote host, then compile a fresh local version (if necessary) and after this install the Linux binary on the remote host. If everything went well, the new server is then started on the remote host again.
@@ -80,9 +81,9 @@ This command will at first stop the SQLiteWeb server on your remote host, then c
 You can **remote-control** the SQLiteWeb server with the following commands
 
 ```console
-make web_stop
-make web_start
-make web_restart
+make web_stop_service
+make web_start_service
+make web_restart_service
 ```
 
 ## Testing the SQLiteWeb Server
@@ -161,6 +162,13 @@ The SQLiteWeb Server is configured with a config file, normally located under: `
   logfile     = /var/log/sqliteweb.log
   clflogfile  = /var/log/sqliteweb-clf.log
 
+[admin] 
+  enabled     = true
+  path        = /opt/sqliteweb/admin
+  allow       = 0.0.0.0/0
+  login       = admin
+  password    = secret
+
 [auth]
   jwt_key     = "my_secret_iwt_key"
   jwt_ttl     = 300
@@ -169,6 +177,13 @@ The SQLiteWeb Server is configured with a config file, normally located under: `
   port        = 8860
   login       = admin
   password    = secret
+
+[dashboard]
+  enabled     = true
+  path        = /opt/sqliteweb/dashboard
+
+[api]
+  enabled     = true
 
 [www]
   path 	      = /opt/sqliteweb/www
@@ -204,10 +219,32 @@ ON YOU LOCAL MACHINE> make web_restart
 - login: This is the login name for logging in to the user authentication server (default is admin).
 - password: This is the password for logging into the user authentication server.
 
+### The [admin] section of the configuration file
+- enabled: This boolean key defines whether the admin endpoints are exposed or not 
+- path: Base path of the lua files implementing the admin endpoints. See [Using Lua to write endpoints](#using-lua-to-write-endpoints) 
+  allow: IP addresses authorized to access the admin enpoints, expressed in CIDR notation. Mandatory. To allow any address, set it to: 0.0.0.0/0
+  login: Username that must be used to access the admin endpoints using the HTTP Basic Auth
+  password: Password that must be used to access the admin endpoints using the HTTP Basic Auth
+
+### The [dashboard] section of the configuration file
+- enabled: This boolean key defines whether the dashboard endpoints are exposed or not 
+- path: Base path of the lua files implementing the dashboard endpoints. See [Using Lua to write endpoints](#using-lua-to-write-endpoints) 
+- email: Test username
+- password: Test password (can be set as the MD5 hash value of the password)
+
+### The [api] section of the configuration file
+- enabled: This boolean key defines whether the api endpoints are exposed or not 
+
+### The [pool] section of the configuration file
+- maxrequests: The number of requests after which a connection stops being reused and is removed from the pool.
+- timeout: Timeout is the maximum amount of time a pool's connection will wait for a request to complete. The default is "60s". A duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix, such as "300ms", "-1.5h" or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+- noblob: Set to true if client does not want to receive BLOB fields. Boolean value. The default value is true.
+- maxdata: Maximum size of a single field in a rowset returned by a query, if the value is greather that maxdata it is replaced by the following string: "DATA (<len>)". Integer value. The default value is 2048. There is no limit for fields size if maxdata value is 0.
+- maxrowset: Maximum size in bytes for a rowset. If a rowset is bigger than maxrowset, the response is: "RowSet too big to be sent (limit set to <maxrowset> bytes)". The default value is 1048576. There is no limit for the rowset size if maxrowset value is 0.
+
 ### The [www] section of the configuration file
 - path: This is the path where (static) web-resources are served from. To access those resources, point your browser to the hostname and port specified in the [server] section. Example: [https://web1.sqlitecloud.io:8443/](https://web1.sqlitecloud.io:8443/)
 or [https://web1.sqlitecloud.io:8443/firework/](https://web1.sqlitecloud.io:8443/firework/)
-
 
 ### The (dummy) [stubs] section of the configuration file
 - path: This is the folder path where the (dummy) stubs requests are specified in the form of the directory structure and the responses are specified by <HTTP VERB>.json. files. To access those dummy request/response pairs, point your browser, or JSON clien to the hostname and port specified in the [server] section and add the path: `/stubs/v1/` to it. Example: [https://web1.sqlitecloud.io:8443/stubs/v1/ping](https://web1.sqlitecloud.io:8443/stubs/v1/ping)
@@ -260,9 +297,21 @@ The should output something like:
 }
 ```
 
+## Admin
+
+The admin endpoints allow to manage the dasboard users in the auth server. See [doc files](/doc/admin/) for detailed info of each endpoint. 
 
 ### Auth
-Authentication to the REST API is done with the help of JWT tokens. JWT Tokens consist of 3 parts separated with a '.'. Every part is base64 encoded. Let's have a look at the following token: 
+
+Authentication to the ADMIN REST API is done with the HTTP Basic Authentication, using the credentials configured in the admin section of the ini file. 
+
+## Dashboard
+
+The dashboard endpoints expose the REST API used by the [SQLiteCloud Dashboard](https://dashboard.sqlitecloud.io). See [doc files](/doc/dashboard/) for detailed info of each endpoint. 
+
+### Auth
+
+Authentication to the DASHBOARD REST API is done with the help of JWT tokens. JWT Tokens consist of 3 parts separated with a '.'. Every part is base64 encoded. Let's have a look at the following token: 
 
 ```console
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Mzc3NjEwNTUsImp0a
@@ -497,3 +546,13 @@ Response = {
 Write( json.encode( Response ) )
 SetStatus( 200 )
 ````
+
+## API 
+
+The API endpoints expose the REST and Websocket API used by the Javascript SDK library. See [doc files](/doc/api/) for detailed info of each endpoint. 
+
+There are two websocket endpoints:
+- Main websocket, used to process requests from the client library.
+- Pubsub notification websocket, used to forward pubsub notifications to clients.
+
+The authentication is based on APIKEYs. One or more APIKEYs can be created for each user on SQLiteCloud servers. The authentication with the APIKEY grants the same privileges as the `AUTH USER <username> PASSWORD <password>` SQLiteCloud command for the related user.
