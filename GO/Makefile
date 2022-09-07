@@ -169,13 +169,13 @@ web_restart:
 	ssh ***REMOVED*** '/etc/init.d/sqliteweb restart'
 
 web_stop_service:
-        ssh ***REMOVED*** 'systemctl stop sqliteweb'
+	ssh ***REMOVED*** 'systemctl stop sqliteweb'
 
 web_start_service:
-        ssh ***REMOVED*** 'systemctl start sqliteweb'
+	ssh ***REMOVED*** 'systemctl start sqliteweb'
 
 web_restart_service:
-        ssh ***REMOVED*** 'systemctl restart sqliteweb'
+	ssh ***REMOVED*** 'systemctl restart sqliteweb'
 
 web_test:
 	$(eval JWT := $(shell $(CURL) "POST" $(TEST_URL)/auth -H 'Content-Type: application/json; charset=utf-8' -d '{ "Login": "my.address@domain.com ", "Password": "password" }' | grep -o 'message":"[^"]*' | cut -c 11-))
