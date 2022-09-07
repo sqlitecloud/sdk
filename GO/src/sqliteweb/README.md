@@ -89,6 +89,24 @@ make web_start_service
 make web_restart_service
 ```
 
+### Controlling the sqliteweb service on server
+
+```console
+systemctl daemon-reload
+
+systemctl enable sqliteweb
+systemctl status sqliteweb
+systemctl start sqliteweb
+systemctl restart sqliteweb
+systemctl stop sqliteweb
+
+systemctl cat logrotate.service
+systemctl show logrotate.service 
+systemctl list-units
+
+journalctl -u sqliteweb.service
+```
+
 ## Testing the SQLiteWeb Server
 To test the SQLiteWeb Server, enter a quick:
 
