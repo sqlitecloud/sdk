@@ -1427,7 +1427,7 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
     }
     
     if (config->database && strlen(config->database)) {
-        len += snprintf(&buffer[len], sizeof(buffer) - len, "USE DATABASE %s;", config->database);
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "USE %sDATABASE %s;", config->db_create ? "OR CREATE " : "", config->database);
     }
     
     if (config->sqlite_mode) {
@@ -2068,6 +2068,10 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
         else if (strcasecmp(key, "memory") == 0) {
             int in_memory = (int)strtol(value, NULL, 0);
             if (in_memory) config->database = mem_string_dup(":memory:");
+        }
+        else if (strcasecmp(key, "create") == 0) {
+            int db_create = (int)strtol(value, NULL, 0);
+            if (db_create) config->db_create = (db_create > 0) ? true : false;
         }
         #ifndef SQLITECLOUD_DISABLE_TSL
         else if (strcasecmp(key, "insecure") == 0) {
