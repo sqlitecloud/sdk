@@ -85,6 +85,13 @@ typedef enum {
 } SQCloudValueType;
 
 typedef enum {
+    CMD_ARRTYPE_EXEC = 10,
+    CMD_ARRTYPE_PREPARE,
+    CMD_ARRTYPE_STEP
+    
+} SQCloudCommandArrayType;
+
+typedef enum {
     ARRAY_TYPE_SQLITE_EXEC = 10,            // used in SQLITE_MODE only when a write statement is executed (instead of the OK reply)
     ARRAY_TYPE_DB_STATUS = 11,
     

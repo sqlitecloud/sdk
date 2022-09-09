@@ -79,22 +79,22 @@
 #define TIME_GET(_t1)                       struct timeval _t1; gettimeofday(&_t1, NULL)
 #define TIME_VAL(_t1, _t2)                  ((double)(_t2.tv_sec - _t1.tv_sec) + (double)((_t2.tv_usec - _t1.tv_usec)*1e-6))
 
-#define CMD_STRING                          '+'
-#define CMD_ZEROSTRING                      '!'
-#define CMD_ERROR                           '-'
-#define CMD_INT                             ':'
-#define CMD_FLOAT                           ','
-#define CMD_ROWSET                          '*'
-#define CMD_ROWSET_CHUNK                    '/'
-#define CMD_JSON                            '#'
-#define CMD_RAWJSON                         '{'
-#define CMD_NULL                            '_'
-#define CMD_BLOB                            '$'
-#define CMD_COMPRESSED                      '%'
-#define CMD_PUBSUB                          '|'
-#define CMD_COMMAND                         '^'
-#define CMD_RECONNECT                       '@'
-#define CMD_ARRAY                           '='
+int const CMD_STRING        = '+';
+int const CMD_ZEROSTRING    = '!';
+int const CMD_ERROR         = '-';
+int const CMD_INT           = ':';
+int const CMD_FLOAT         = ',';
+int const CMD_ROWSET        = '*';
+int const CMD_ROWSET_CHUNK  = '/';
+int const CMD_JSON          = '#';
+int const CMD_RAWJSON       = '{';
+int const CMD_NULL          = '_';
+int const CMD_BLOB          = '$';
+int const CMD_COMPRESSED    = '%';
+int const CMD_PUBSUB        = '|';
+int const CMD_COMMAND       = '^';
+int const CMD_RECONNECT     = '@';
+int const CMD_ARRAY         = '=';
 
 #define CMD_MINLEN                          2
 
@@ -488,12 +488,12 @@ static SQCloudValueType internal_type (char *buffer) {
     if (!buffer) return VALUE_NULL;
     
     switch (buffer[0]) {
-        case '+':
-        case '!': return VALUE_TEXT;
-        case ':': return VALUE_INTEGER;
-        case ',': return VALUE_FLOAT;
-        case '_': return VALUE_NULL;
-        case '$': return VALUE_BLOB;
+        case CMD_STRING:
+        case CMD_ZEROSTRING: return VALUE_TEXT;
+        case CMD_INT: return VALUE_INTEGER;
+        case CMD_FLOAT: return VALUE_FLOAT;
+        case CMD_NULL: return VALUE_NULL;
+        case CMD_BLOB: return VALUE_BLOB;
     }
     return VALUE_NULL;
 }
@@ -562,6 +562,11 @@ static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cs
     }
     
     return 0;
+}
+
+static int internal_parse_type (char *buffer) {
+    if (!buffer) return 0;
+    return buffer[0];
 }
 
 static char *internal_parse_value (char *buffer, uint32_t *len, uint32_t *cellsize) {
@@ -1348,7 +1353,7 @@ static bool internal_socket_write (SQCloudConnection *connection, const char *bu
     // write header
     char header[32];
     char *p = header;
-    int hlen = snprintf(header, sizeof(header), "%c%zu ", (connection->isblob) ? '$' : '+', len);
+    int hlen = snprintf(header, sizeof(header), "%c%zu ", (connection->isblob) ? CMD_BLOB : CMD_STRING, len);
     int len1 = hlen;
     while (len1) {
         #ifndef SQLITECLOUD_DISABLE_TSL
@@ -1962,6 +1967,14 @@ SQCloudResult *_reserved7 (SQCloudConnection *connection) {
 
 bool _reserved8 (SQCloudConnection *connection, const char *dbname, const char *key, uint64_t snapshotid, bool isinternaldb, void *xdata, int64_t dbsize, int (*xCallback)(void *xdata, void *buffer, uint32_t *blen, int64_t ntot, int64_t nprogress)) {
     return internal_upload_database(connection, dbname, key, true, snapshotid, isinternaldb, xdata, dbsize, xCallback);
+}
+
+int _reserved9 (char *buffer) {
+    return internal_parse_type(buffer);
+}
+
+char *_reserved10 (char *buffer, uint32_t *len, uint32_t *cellsize) {
+    return internal_parse_value(buffer, len, cellsize);
 }
 
 // MARK: - PUBLIC -
