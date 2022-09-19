@@ -19,6 +19,7 @@
 #define SQCloudTransferDatabase         _reserved8
 #define sqcloud_parse_type              _reserved9
 #define sqcloud_parse_value             _reserved10
+#define sqcloud_parse_array_value       _reserved11
 
 bool SQCloudForwardExec(SQCloudConnection *connection, const char *command, bool (*forward_cb) (char *buffer, size_t blen, void *xdata, void *xdata2), void *xdata, void *xdata2);
 SQCloudResult *SQCloudSetClientUUID (SQCloudConnection *connection, const char *UUID);
@@ -27,6 +28,7 @@ bool SQCloudTransferDatabase (SQCloudConnection *connection, const char *dbname,
 SQCloudResult *sqcloud_parse_buffer (char *buffer, uint32_t blen, uint32_t cstart, SQCloudResult *chunk);
 uint32_t sqcloud_parse_number (char *buffer, uint32_t blen, uint32_t *cstart);
 char *sqcloud_parse_value (char *buffer, uint32_t *len, uint32_t *cellsize);
+char *sqcloud_parse_array_value(char *buffer, uint32_t blen, uint32_t index, uint32_t *len, uint32_t *pos, int *type, INTERNAL_ERRCODE *errcode);
 bool sqcloud_result_is_chunk (SQCloudResult *res);
 int sqcloud_parse_type (char *buffer);
 
