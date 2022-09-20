@@ -248,7 +248,7 @@ func (this *ConnectionManager) connectionWithIniParams(project string, connectio
 	}
 
 	if isProjectUuid(project) {
-		config.Timeout = GetINIDuration("pool", "timeout", time.Duration(1)*time.Minute)
+		config.Timeout = GetINIDuration("pool", "timeout", time.Duration(10)*time.Second)
 		config.NoBlob = GetINIBoolean("pool", "noblob", true)
 		config.MaxData = GetINIInt("pool", "maxdata", 2048)
 		config.MaxRowset = GetINIInt("pool", "maxrowset", 1048576)
