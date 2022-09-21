@@ -1499,7 +1499,7 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
     }
     
     if (config->callback) {
-        config->callback(&buffer[len], sizeof(buffer) - len, config->data);
+        len += config->callback(&buffer[len], sizeof(buffer) - len, config->data);
     }
     
     if (len > 0) {
