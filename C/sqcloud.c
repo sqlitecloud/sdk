@@ -580,7 +580,7 @@ static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cs
         
         // check for end of value
         if (c == ' ') {
-            *cstart = i+1;
+            if (cstart) *cstart = i+1;
             if (extcode) *extcode = extvalue;
             return value;
         }
@@ -681,6 +681,21 @@ static SQCloudResult *internal_setup_pubsub (SQCloudConnection *connection, cons
 static SQCloudResult *internal_reconnect (SQCloudConnection *connection, const char *buffer, size_t blen) {
     // DO RE-CONNECT HERE
     return NULL;
+}
+
+static int32_t internal_array_count (char *buffer, uint32_t blen) {
+    // =LEN N VALUE1 VALUE2 ... VALUEN
+    if (buffer[0] != CMD_ARRAY) return -1;
+    
+    do {
+        ++buffer;
+        --blen;
+    }
+    while (buffer[0] != ' ');
+    ++buffer; --blen;
+    
+    uint32_t size = 0;
+    return internal_parse_number(buffer, blen, &size, NULL);
 }
 
 static SQCloudResult *internal_parse_array (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart) {
@@ -2050,7 +2065,7 @@ char *_reserved10 (char *buffer, uint32_t *len, uint32_t *cellsize) {
     return internal_parse_value(buffer, len, cellsize);
 }
 
-char *_reserved11(char *buffer, uint32_t blen, uint32_t index, uint32_t *len, uint32_t *pos, int *type, INTERNAL_ERRCODE *err) {
+char *_reserved11 (char *buffer, uint32_t blen, uint32_t index, uint32_t *len, uint32_t *pos, int *type, INTERNAL_ERRCODE *err) {
     if (err) *err = 0;
     
     // =LEN N VALUE1 VALUE2 ... VALUEN
@@ -2096,6 +2111,10 @@ char *_reserved11(char *buffer, uint32_t blen, uint32_t index, uint32_t *len, ui
     }
     
     return NULL;
+}
+
+int32_t _reserved12 (char *buffer, uint32_t blen) {
+    return internal_array_count(buffer, blen);
 }
 
 // MARK: - PUBLIC -
