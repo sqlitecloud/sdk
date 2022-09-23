@@ -33,7 +33,7 @@ typedef struct SQCloudResult        SQCloudResult;
 typedef struct SQCloudVM            SQCloudVM;
 typedef struct SQCloudBlob          SQCloudBlob;
 typedef void (*SQCloudPubSubCB)     (SQCloudConnection *connection, SQCloudResult *result, void *data);
-typedef int (*config_cb)           (char *buffer, int len, void *data);
+typedef int (*config_cb)            (char *buffer, int len, void *data);
 
 // configuration struct to be passed to the connect function (currently unused)
 typedef struct SQCloudConfigStruct {
