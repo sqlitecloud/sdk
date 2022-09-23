@@ -12,7 +12,6 @@
 		A94F56CD2614633200DB86A3 /* lz4.c in Sources */ = {isa = PBXBuildFile; fileRef = A94F56CB2614633200DB86A3 /* lz4.c */; };
 		A95B316025D284E600F9E1F8 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = A95B315F25D284E600F9E1F8 /* main.c */; };
 		A95B316425D284F000F9E1F8 /* sqcloud.c in Sources */ = {isa = PBXBuildFile; fileRef = A95B316325D284F000F9E1F8 /* sqcloud.c */; };
-		A9EB49A02706D0C900DFFD29 /* base64.c in Sources */ = {isa = PBXBuildFile; fileRef = A9EB499E2706D0C900DFFD29 /* base64.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -37,8 +36,6 @@
 		A95B316225D284F000F9E1F8 /* sqcloud.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqcloud.h; path = ../sqcloud.h; sourceTree = "<group>"; };
 		A95B316325D284F000F9E1F8 /* sqcloud.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqcloud.c; path = ../sqcloud.c; sourceTree = "<group>"; };
 		A972156525D1322500A207F8 /* sqlitecloud-cli */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "sqlitecloud-cli"; sourceTree = BUILT_PRODUCTS_DIR; };
-		A9EB499E2706D0C900DFFD29 /* base64.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = base64.c; path = ../base64.c; sourceTree = "<group>"; };
-		A9EB499F2706D0C900DFFD29 /* base64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = base64.h; path = ../base64.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,8 +58,6 @@
 				A922688025DCEBB00082A61F /* linenoise.h */,
 				A95B316325D284F000F9E1F8 /* sqcloud.c */,
 				A95B316225D284F000F9E1F8 /* sqcloud.h */,
-				A9EB499E2706D0C900DFFD29 /* base64.c */,
-				A9EB499F2706D0C900DFFD29 /* base64.h */,
 				A94F56CB2614633200DB86A3 /* lz4.c */,
 				A94F56CC2614633200DB86A3 /* lz4.h */,
 				A909A83626D547D4009DCDA3 /* libtls.a */,
@@ -112,7 +107,7 @@
 		A972155D25D1322500A207F8 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1330;
+				LastUpgradeCheck = 1400;
 				TargetAttributes = {
 					A972156425D1322500A207F8 = {
 						CreatedOnToolsVersion = 12.4;
@@ -142,7 +137,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A9EB49A02706D0C900DFFD29 /* base64.c in Sources */,
 				A94F56CD2614633200DB86A3 /* lz4.c in Sources */,
 				A922688125DCEBB00082A61F /* linenoise.c in Sources */,
 				A95B316025D284E600F9E1F8 /* main.c in Sources */,
@@ -187,6 +181,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -246,6 +241,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -269,6 +265,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 3ZH6236ET5;
 				ENABLE_HARDENED_RUNTIME = YES;
 				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../SSL/include\"";
@@ -286,6 +283,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 3ZH6236ET5;
 				ENABLE_HARDENED_RUNTIME = YES;
 				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../SSL/include\"";
