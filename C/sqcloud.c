@@ -1155,6 +1155,8 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             
             uint32_t bstart = cstart1 + cstart2 + cstart3 + cstart4 + 1;
             SQCloudResult *res = NULL;
+            // the externalbuffer flag can change in case of compressed rowset when the end chunk is received
+            if (connection->_chunk) connection->_chunk->externalbuffer = externalbuffer;
             if (buffer[0] == CMD_ROWSET) res = internal_parse_rowset(connection, buffer, blen, bstart, nrows, ncols, version);
             else res = internal_parse_rowset_chunck(connection, buffer, blen, bstart, idx, nrows, ncols, version);
             if (res) res->externalbuffer = externalbuffer;
