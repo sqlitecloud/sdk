@@ -168,6 +168,7 @@ struct SQCloudConnection {
     SQCloudResult   *_chunk;
     SQCloudConfig   *_config;
     bool            isblob;
+    bool            config_to_free;
     
     // pub/sub
     char            *uuid;
@@ -212,8 +213,8 @@ struct SQCloudBlob {
     int64_t             bytes;
 } _SQCloudBlob;
 
-static SQCloudResult SQCloudResultOK = {RESULT_OK, NULL, 0, 0, 0};
-static SQCloudResult SQCloudResultNULL = {RESULT_NULL, NULL, 0, 0, 0};
+static SQCloudResult SQCloudResultOK = {RESULT_OK, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0};
+static SQCloudResult SQCloudResultNULL = {RESULT_NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0};
 
 // MARK: - UTILS -
 
@@ -968,16 +969,16 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
         uint32_t n = rowset->bnum * 2;
         char **temp = (char **)mem_realloc(rowset->buffers, (sizeof(char *) * n));
         if (!temp) goto abort_rowset;
+        rowset->buffers = temp;
         
         uint32_t *temp2 = (uint32_t*)mem_realloc(rowset->blens, (sizeof(uint32_t) * n));
         if (!temp2) goto abort_rowset;
+        rowset->blens = temp2;
         
         uint32_t *temp3 = (uint32_t*)mem_realloc(rowset->nheads, (sizeof(uint32_t) * n));
         if (!temp3) goto abort_rowset;
-        
-        rowset->buffers = temp;
-        rowset->blens = temp2;
         rowset->nheads = temp3;
+        
         rowset->bnum = n;
     }
     
@@ -1683,7 +1684,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
         connection->hostname = mem_string_dup(hostname);
         #ifndef SQLITECLOUD_DISABLE_TSL
         if (config && !config->insecure) {
-            int rc = tls_connect_socket(connection->tls_context, sockfd, hostname);
+            rc = tls_connect_socket(connection->tls_context, sockfd, hostname);
             if (rc < 0) printf("Error on tls_connect_socket: %s\n", tls_error(connection->tls_context));
         }
         #endif
@@ -1691,7 +1692,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
         connection->pubsubfd = sockfd;
         #ifndef SQLITECLOUD_DISABLE_TSL
         if (config && !config->insecure) {
-            int rc = tls_connect_socket(connection->tls_pubsub_context, sockfd, hostname);
+            rc = tls_connect_socket(connection->tls_pubsub_context, sockfd, hostname);
             if (rc < 0) printf("Error on tls_connect_socket\n");
         }
         #endif
@@ -1861,6 +1862,16 @@ SQCloudResult *internal_array_exec (SQCloudConnection *connection, const char *r
     
 abort:
     return NULL;
+}
+
+void internal_free_config (SQCloudConfig *config) {
+    if (config->username) mem_free((void *)config->username);
+    if (config->password) mem_free((void *)config->password);
+    if (config->database) mem_free((void *)config->database);
+    if (config->tls_root_certificate) mem_free((void *)config->tls_root_certificate);
+    if (config->tls_certificate) mem_free((void *)config->tls_certificate);
+    if (config->tls_certificate_key) mem_free((void *)config->tls_certificate_key);
+    mem_free(config);
 }
 
 // MARK: - URL -
@@ -2066,7 +2077,7 @@ char *_reserved10 (char *buffer, uint32_t *len, uint32_t *cellsize) {
 }
 
 char *_reserved11 (char *buffer, uint32_t blen, uint32_t index, uint32_t *len, uint32_t *pos, int *type, INTERNAL_ERRCODE *err) {
-    if (err) *err = 0;
+    if (err) *err = INTERNAL_ERRCODE_NONE;
     
     // =LEN N VALUE1 VALUE2 ... VALUEN
     if (buffer[0] != CMD_ARRAY) {
@@ -2124,6 +2135,7 @@ SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig
     
     SQCloudConnection *connection = mem_zeroalloc(sizeof(SQCloudConnection));
     if (!connection) return NULL;
+    connection->_config = config;
     
     #ifndef SQLITECLOUD_DISABLE_TSL
     if (!internal_setup_tls(connection, config, true)) return connection;
@@ -2131,7 +2143,6 @@ SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig
     
     if (internal_connect(connection, hostname, port, config, true)) {
         if (config) internal_connect_apply_config(connection, config);
-        connection->_config = config;
     }
     
     return connection;
@@ -2158,10 +2169,8 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     char username[512];
     char password[512];
     int rc = url_extract_username_password(&s[n], username, password);
-    if (rc == -1) {
-        mem_free(config);
-        return NULL;
-    }
+    if (rc == -1) goto abort_connect;
+    
     if (rc) {
         config->username = mem_string_dup(username);
         config->password = mem_string_dup(password);
@@ -2169,17 +2178,13 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     
     // lookup for mandatory hostname
     n += rc;
-    if (n >= slen) {
-        mem_free(config);
-        return NULL;
-    }
+    if (n >= slen) goto abort_connect;
+    
     char hostname[512];
     char port_s[512];
     rc = url_extract_hostname_port(&s[n], hostname, port_s);
-    if (rc <= 0) {
-        mem_free(config);
-        return NULL;
-    }
+    if (rc <= 0) goto abort_connect;
+        
     int port = (int)strtol(port_s, NULL, 0);
     if (port <= 0) port = SQCLOUD_DEFAULT_PORT;
     
@@ -2188,10 +2193,8 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
     if (n < slen) {
         char database[512];
         rc = url_extract_database(&s[n], database);
-        if (rc == -1) {
-            mem_free(config);
-            return NULL;
-        }
+        if (rc == -1) goto abort_connect;
+        
         if (rc > 0) {
             config->database = mem_string_dup(database);
         }
@@ -2257,7 +2260,15 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
         n += rc;
     }
     
-    return SQCloudConnect(hostname, port, config);
+    SQCloudConnection *connection = SQCloudConnect(hostname, port, config);
+    if (connection) connection->config_to_free = true;
+    else goto abort_connect;
+    
+    return connection;
+    
+abort_connect:
+    if (config) internal_free_config(config);
+    return NULL;
 }
 
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command) {
@@ -2396,6 +2407,10 @@ void SQCloudDisconnect (SQCloudConnection *connection) {
     
     if (connection->uuid) {
         mem_free(connection->uuid);
+    }
+    
+    if (connection->config_to_free) {
+        internal_free_config(connection->_config);
     }
     
     mem_free(connection);
