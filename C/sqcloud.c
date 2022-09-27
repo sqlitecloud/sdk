@@ -2029,9 +2029,9 @@ static int url_extract_keyvalue (const char *s, char b1[512], char b2[512]) {
 
 // MARK: - RESERVED -
 
-bool _reserved1 (SQCloudConnection *connection, const char *command, bool (*forward_cb) (char *buffer, size_t blen, void *xdata, void *xdata2), void *xdata, void *xdata2) {
+bool _reserved1 (SQCloudConnection *connection, const char *command, size_t len, bool compute_header, bool (*forward_cb) (char *buffer, size_t blen, void *xdata, void *xdata2), void *xdata, void *xdata2) {
     if (!forward_cb) return false;
-    if (!internal_socket_write(connection, command, strlen(command), true, true)) return false;
+    if (!internal_socket_write(connection, command, len, true, compute_header)) return false;
     if (!internal_socket_forward_read(connection, forward_cb, xdata, xdata2)) return false;
     return true;
 }
