@@ -2898,9 +2898,7 @@ int32_t SQCloudArrayResultDecode (SQCloudVM *vm, SQCloudResult *result) {
         ARRAY_TYPE_VM_STEP_ONE
         ARRAY_TYPE_VM_SQL
         ARRAY_TYPE_VM_STATUS
-         
-        ARRAY_TYPE_BLOB_OPEN
-         
+                  
         ARRAY_TYPE_BACKUP_INIT
         ARRAY_TYPE_BACKUP_STEP
         ARRAY_TYPE_BACKUP_END

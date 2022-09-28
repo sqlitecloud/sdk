@@ -98,9 +98,7 @@ typedef enum {
     ARRAY_TYPE_VM_STEP_ONE = 22,            // unused in this version (will be used to step in a server-side rowset)
     ARRAY_TYPE_VM_SQL = 23,
     ARRAY_TYPE_VM_STATUS = 24,
-    
-    ARRAY_TYPE_BLOB_OPEN = 30,              // used in BLOB_OPEN
-    
+        
     ARRAY_TYPE_BACKUP_INIT = 40,            // used in BACKUP_INIT
     ARRAY_TYPE_BACKUP_STEP = 41,            // used in backupWrite (VFS)
     ARRAY_TYPE_BACKUP_END = 42              // used in backupClose (VFS)
