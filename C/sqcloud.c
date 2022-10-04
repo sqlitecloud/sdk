@@ -1836,6 +1836,7 @@ bool internal_upload_database (SQCloudConnection *connection, const char *dbname
 // that's the reason why count and n can be different
 SQCloudResult *internal_array_exec (SQCloudConnection *connection, const char *r[], int64_t len[], uint32_t n, uint32_t count) {
     char header[512];
+    char nitems[64];
     int64_t totsize = 0;
     
     internal_clear_error(connection);
@@ -1847,7 +1848,8 @@ SQCloudResult *internal_array_exec (SQCloudConnection *connection, const char *r
     // =LEN N VALUE1 VALUE2 ... VALUEN
     
     TIME_GET(tstart);
-    int hlen = snprintf(header, sizeof(header), "%c%lld %d ", CMD_ARRAY, totsize, n);
+    int nlen = snprintf(nitems, sizeof(nitems), "%d ", n);
+    int hlen = snprintf(header, sizeof(header), "%c%lld %s", CMD_ARRAY, totsize+nlen, nitems);
     if (!internal_socket_write(connection, header, hlen, true, false)) return NULL;
     
     // send each individual array item
