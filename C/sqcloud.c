@@ -620,6 +620,9 @@ static char *internal_parse_value (char *buffer, uint32_t *len, uint32_t *cellsi
         if (cellsize) *cellsize = cstart + 1;
         return &buffer[1];
     }
+
+    // sanity check
+    if (blen > *len) return NULL;
     
     *len = (buffer[0] == CMD_ZEROSTRING) ? blen - 1 : blen;
     if (cellsize) *cellsize = cstart + blen + 1;
