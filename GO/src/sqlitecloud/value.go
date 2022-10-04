@@ -18,99 +18,135 @@
 package sqlitecloud
 
 import (
-  "errors"
-  "strconv"
-  "time"
+	"errors"
+	"strconv"
+	"time"
+)
+
+const (
+	CMD_STRING       = '+'
+	CMD_ZEROSTRING   = '!'
+	CMD_ERROR        = '-'
+	CMD_INT          = ':'
+	CMD_FLOAT        = ','
+	CMD_ROWSET       = '*'
+	CMD_ROWSET_CHUNK = '/'
+	CMD_JSON         = '#'
+	CMD_RAWJSON      = '{'
+	CMD_NULL         = '_'
+	CMD_BLOB         = '$'
+	CMD_COMPRESSED   = '%'
+	CMD_PUBSUB       = '|'
+	CMD_COMMAND      = '^'
+	CMD_RECONNECT    = '@'
+	CMD_ARRAY        = '='
 )
 
 type Value struct {
-  Type     byte // _ + # : , $ ^ @ -   /// Types that are not in this Buffer: ROWSET, PUBSUB
-  Buffer []byte
+	Type   byte // _ + # : , $ ^ @ -   /// Types that are not in this Buffer: ROWSET, PUBSUB
+	Buffer []byte
 }
 
-func (this *Value) GetType() byte     { 
-  switch this.Type {
-  case '!':                             return '+'  // Translate C-String to String
-  case '{':                             return '#'  // Translate RAW-JSON to JSON 
-  case '*', '/':                        return '*'  // Translate to ROWSET
-  case '=':                             return '='  // Array
-  case ':', ',', '+', '#', '$', 
-       '^', '@', '-', '|', '_':   
-    if this.Buffer == nil {             return '_'  // unset buffer translates to NULL
-    } else {                            return this.Type
-    }
-  default:                              return 0
-  }
+func (this *Value) GetType() byte {
+	switch this.Type {
+	case CMD_ZEROSTRING:
+		return CMD_STRING // Translate C-String to String
+	case CMD_RAWJSON:
+		return CMD_JSON // Translate RAW-JSON to JSON
+	case CMD_ROWSET, CMD_ROWSET_CHUNK:
+		return CMD_ROWSET // Translate to ROWSET
+	case CMD_ARRAY:
+		return CMD_ARRAY // Array
+	case CMD_INT, CMD_FLOAT, CMD_STRING, CMD_JSON, CMD_BLOB,
+		CMD_COMMAND, CMD_RECONNECT, CMD_ERROR, CMD_PUBSUB, CMD_NULL:
+		if this.Buffer == nil {
+			return CMD_NULL // unset buffer translates to NULL
+		} else {
+			return this.Type
+		}
+	default:
+		return 0
+	}
 }
-func (this *Value) IsSet()       bool { return this.GetType() != 0   }
-func (this *Value) IsNULL()      bool { return this.GetType() == '_' }
-func (this *Value) IsString()    bool { return this.GetType() == '+' }
-func (this *Value) IsJSON()      bool { return this.GetType() == '#' }
-func (this *Value) IsInteger()   bool { return this.GetType() == ':' }
-func (this *Value) IsFloat()     bool { return this.GetType() == ',' }
-func (this *Value) IsBLOB()      bool { return this.GetType() == '$' }
-func (this *Value) IsPSUB()      bool { return this.GetType() == '|' }
-func (this *Value) IsCommand()   bool { return this.GetType() == '^' }
-func (this *Value) IsReconnect() bool { return this.GetType() == '@' }
-func (this *Value) IsError()     bool { return this.GetType() == '-' }
-func (this *Value) IsRowSet()    bool { return this.GetType() == '*' }
-func (this *Value) IsArray()     bool { return this.GetType() == '=' }
+func (this *Value) IsSet() bool       { return this.GetType() != 0 }
+func (this *Value) IsNULL() bool      { return this.GetType() == CMD_NULL }
+func (this *Value) IsString() bool    { return this.GetType() == CMD_STRING }
+func (this *Value) IsJSON() bool      { return this.GetType() == CMD_JSON }
+func (this *Value) IsInteger() bool   { return this.GetType() == CMD_INT }
+func (this *Value) IsFloat() bool     { return this.GetType() == CMD_FLOAT }
+func (this *Value) IsBLOB() bool      { return this.GetType() == CMD_BLOB }
+func (this *Value) IsPSUB() bool      { return this.GetType() == CMD_PUBSUB }
+func (this *Value) IsCommand() bool   { return this.GetType() == CMD_COMMAND }
+func (this *Value) IsReconnect() bool { return this.GetType() == CMD_RECONNECT }
+func (this *Value) IsError() bool     { return this.GetType() == CMD_ERROR }
+func (this *Value) IsRowSet() bool    { return this.GetType() == CMD_ROWSET }
+func (this *Value) IsArray() bool     { return this.GetType() == CMD_ARRAY }
 
-func (this *Value) IsText()      bool { return this.IsString() || this.IsInteger() || this.IsFloat() || this.IsBLOB() }
+func (this *Value) IsText() bool {
+	return this.IsString() || this.IsInteger() || this.IsFloat() || this.IsBLOB()
+}
 
-func (this *Value) GetLength() uint64 { return uint64( len( this.Buffer ) ) }
+func (this *Value) GetLength() uint64 { return uint64(len(this.Buffer)) }
 func (this *Value) GetBuffer() []byte { return this.Buffer } // Also good for BLOB
 
 func (this *Value) GetString() string { return string(this.GetBuffer()) } // Also good for: JSON, BLOB, Command, Reconnect
-func (this *Value) IsOK()        bool { return this.GetType() == '+' && this.GetString() == "OK" }
+func (this *Value) IsOK() bool        { return this.GetType() == '+' && this.GetString() == "OK" }
 
-func (this *Value) GetInt32() (int32, error)  {
-  switch value, err := strconv.ParseInt(this.GetString(), 0, 32); {
-  case err != nil:                      return 0, err
-  default:                              return int32(value), nil
-  }
+func (this *Value) GetInt32() (int32, error) {
+	switch value, err := strconv.ParseInt(this.GetString(), 0, 32); {
+	case err != nil:
+		return 0, err
+	default:
+		return int32(value), nil
+	}
 }
-func (this *Value) GetInt64() (int64, error) { return strconv.ParseInt( this.GetString(), 0, 64) }
+func (this *Value) GetInt64() (int64, error) { return strconv.ParseInt(this.GetString(), 0, 64) }
 
 func (this *Value) GetFloat32() (float32, error) {
-  switch value, err := strconv.ParseFloat(this.GetString(), 32); {
-  case err != nil:                      return 0, err
-  default:                              return float32(value), nil
-  }
+	switch value, err := strconv.ParseFloat(this.GetString(), 32); {
+	case err != nil:
+		return 0, err
+	default:
+		return float32(value), nil
+	}
 }
-func (this *Value) GetFloat64() (float64, error) { return strconv.ParseFloat( this.GetString(), 64) }
+func (this *Value) GetFloat64() (float64, error) { return strconv.ParseFloat(this.GetString(), 64) }
 
 func (this *Value) GetError() (ErrorCode int, ExtErrorCode int, ErrorMessage string, err error) {
-  ErrorCode = 0
-  ExtErrorCode = 0
-  isExt := false
-  for i, LEN, buffer := uint64(0), this.GetLength(), this.GetBuffer(); i < LEN; i++ {
-    switch c := buffer[i]; c {
-    case ':': isExt = true
-    case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-      if isExt == false { 
-        ErrorCode = ErrorCode*10 + int(c) - int('0')
-      } else {
-        ExtErrorCode = ExtErrorCode*10 + int(c) - int('0')
-      }
-    default:                                                return ErrorCode, ExtErrorCode, string(buffer[i+1:]), nil
-    }
-  }
-  return -1, 0, this.GetString(), errors.New("Invalid error format")
+	ErrorCode = 0
+	ExtErrorCode = 0
+	isExt := false
+	for i, LEN, buffer := uint64(0), this.GetLength(), this.GetBuffer(); i < LEN; i++ {
+		switch c := buffer[i]; c {
+		case ':':
+			isExt = true
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			if isExt == false {
+				ErrorCode = ErrorCode*10 + int(c) - int('0')
+			} else {
+				ExtErrorCode = ExtErrorCode*10 + int(c) - int('0')
+			}
+		default:
+			return ErrorCode, ExtErrorCode, string(buffer[i+1:]), nil
+		}
+	}
+	return -1, 0, this.GetString(), errors.New("Invalid error format")
 }
 
 // Aux Methods
 
 func (this *Value) GetSQLDateTime() (time.Time, error) {
-  for _, format := range []string{
-    "2006-01-02 15:04:05",
-    "2006-01-02",
-    "15:04:05",
-  } {
-    switch datetime, err := time.Parse(format, this.GetString()); {
-    case err != nil:                      return time.Unix(0, 0), err
-    default:                              return datetime, nil
-    }
-  }
-  return time.Unix(0, 0), errors.New("Invalid Format")
+	for _, format := range []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02",
+		"15:04:05",
+	} {
+		switch datetime, err := time.Parse(format, this.GetString()); {
+		case err != nil:
+			return time.Unix(0, 0), err
+		default:
+			return datetime, nil
+		}
+	}
+	return time.Unix(0, 0), errors.New("Invalid Format")
 }

@@ -744,28 +744,28 @@ func (this *SQCloud) readResult() (*Result, error) {
 				result.uncompressedChuckSizeSum += chunk.LEN
 
 				switch Type := chunk.GetType(); Type {
-				case '%':
+				case CMD_COMPRESSED:
 					return nil, errors.New("Nested compression")
 
 					// Values
-				case '_':
+				case CMD_NULL:
 					fallthrough // NULL
-				case ':', ',':
+				case CMD_INT, CMD_FLOAT:
 					fallthrough // INT, FLOAT
-				case '+', '!', '$', '-', '#':
+				case CMD_STRING, CMD_ZEROSTRING, CMD_BLOB, CMD_ERROR, CMD_JSON:
 					fallthrough // String, C-String, BLOB, Error-String, JSON-String
-				case '|':
+				case CMD_PUBSUB:
 					fallthrough // PSUB
-				case '^':
+				case CMD_COMMAND:
 					fallthrough // Command
-				case '@': // Reconnect
+				case CMD_RECONNECT: // Reconnect
 					result.value.Type = Type
 					switch bytesRead, err := result.value.readBufferAt(chunk, 1); {
 					case err != nil:
 						return nil, err
 					case bytesRead == 0:
 						return nil, errors.New("No Data")
-					case Type == '|':
+					case Type == CMD_PUBSUB:
 						// PSUB
 						pauth := result.GetString_()
 
@@ -855,7 +855,7 @@ func (this *SQCloud) readResult() (*Result, error) {
 					}
 
 				// Array
-				case '=':
+				case CMD_ARRAY:
 					var offset uint64 = 1 // skip the first type byte
 					var N uint64 = 0
 					var bytesRead uint64 = 0
@@ -901,7 +901,7 @@ func (this *SQCloud) readResult() (*Result, error) {
 					return &result, nil
 
 					// RowSet
-				case '/', '*':
+				case CMD_ROWSET_CHUNK, CMD_ROWSET:
 					// RowSet:          *LEN 0:VERSION ROWS COLS DATA
 					// RowSet Chunk:    /LEN IDX:VERSION ROWS COLS DATA
 
@@ -914,7 +914,7 @@ func (this *SQCloud) readResult() (*Result, error) {
 					var NCOLS uint64 = 0
 
 					// Detect end of Rowset Chunk directly without parsing...
-					if Type == '/' {
+					if Type == CMD_ROWSET_CHUNK {
 						for _, pattern := range rowsetChunkEndPatterns {
 							if chunk.RAW[offset] == pattern[0] && bytes.Equal(chunk.RAW[offset:offset+uint64(len(pattern))], pattern) {
 								return &result, nil
@@ -944,7 +944,7 @@ func (this *SQCloud) readResult() (*Result, error) {
 
 					LEN = LEN + offset // check for overreading...
 
-					if Type == '/' && NROWS == 0 && NCOLS == 0 {
+					if Type == CMD_ROWSET_CHUNK && NROWS == 0 && NCOLS == 0 {
 						return &result, nil
 					}
 
@@ -1006,16 +1006,16 @@ func (this *SQCloud) readResult() (*Result, error) {
 
 					result.rows = append(result.rows, rows...)
 
-					result.value.Type = '*'
+					result.value.Type = CMD_ROWSET
 					result.value.Buffer = nil
 
-					if Type == '*' {
+					if Type == CMD_ROWSET {
 						return &result, nil
 					} // return if it is a rowset
 					this.sendString("OK") // ask the server for the next chunk and loop (Thank's Andrea)
 
-				case '{':
-					result.value.Type = '#' // translate JSON Type to uniform '#'
+				case CMD_RAWJSON:
+					result.value.Type = CMD_JSON // translate JSON Type to uniform '#'
 					result.value.Buffer = chunk.GetData()
 					return &result, nil
 

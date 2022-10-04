@@ -135,19 +135,19 @@ func (this *Value ) readBufferAt( chunk *Chunk, offset uint64 ) ( uint64, error 
   this.Buffer = nil
 
   switch this.Type {
-  case '_': return 1, nil
+  case CMD_NULL: return 1, nil
 
-  case '+', '!', '-', ':', ',', '$', '#', '^', '@', '|':
+  case CMD_STRING, CMD_ZEROSTRING, CMD_ERROR, CMD_INT, CMD_FLOAT, CMD_BLOB, CMD_JSON, CMD_COMMAND, CMD_RECONNECT, CMD_PUBSUB:
     var TRIM  uint64 = 0  // Trims if it is a the C-String
 
     switch this.Type {
-    case ':':             // Space terminated INT
+    case CMD_INT:             // Space terminated INT
       // MaxInt64         = 18446744073709551615                                = 20 bytes
       // MinInt64         = -9223372036854775807                                = 20 bytes <- MAX LEN
       if bytesLeft > 20 { bytesLeft = 20 }
       fallthrough
 
-    case ',':             // Space terminated FLOAT
+    case CMD_FLOAT:             // Space terminated FLOAT
       // MaxFloat32       = 3.40282346638528859811704183484516925440e+38        = 44 bytes
       // SmalestFloat32   = 1.401298464324817070923729583289916131280e-45       = 45 bytes
       // FaxFloat64       = 1.79769313486231570814527423731704356798070e+308    = 48 bytes
@@ -165,7 +165,7 @@ func (this *Value ) readBufferAt( chunk *Chunk, offset uint64 ) ( uint64, error 
       if len( this.Buffer ) == 0 { return 0, errors.New( "End Of Chunk" ) }
       return bytesRead, nil
 
-    case '!':                 // Zero terminated C-String
+    case CMD_ZEROSTRING:                 // Zero terminated C-String
       TRIM = 1                // Cut one byte off the buffer / dont copy the zero byte of the C string
       fallthrough
 
@@ -181,6 +181,55 @@ func (this *Value ) readBufferAt( chunk *Chunk, offset uint64 ) ( uint64, error 
   return 0, errors.New( "Unsuported type" )
 }
 
+func protocolBufferFromValue(v interface{}) [][]byte {
+  if v == nil {
+    return protocolBufferFromNull()
+  } else {
+    switch v.(type) {
+    case int, int8, int16, int32, int64:
+      return protocolBufferFromInt(v)
+    case float32, float64:
+      return protocolBufferFromFloat(v)
+    case string:
+      return protocolBufferFromString(v.(string), true)
+    case []byte:
+      return protocolBufferFromBytes(v.([]byte))
+    default:
+        return make([][]byte, 0)
+    }
+  }
+}
+
+func protocolBufferFromNull() [][]byte {
+  return [][]byte{[]byte( fmt.Sprintf( "%c ", CMD_NULL ))}
+}
+
+func protocolBufferFromString(v string, nullterminated bool) [][]byte {
+  if nullterminated {
+    return [][]byte{[]byte( fmt.Sprintf( "%c%d %s\000", CMD_ZEROSTRING, len(v)+1, v ) )}
+  } else {
+    return [][]byte{[]byte( fmt.Sprintf( "%c%d %s", CMD_STRING, len(v), v ) )}
+  }
+}
+
+func protocolBufferFromInt(v interface{}) [][]byte {
+  return [][]byte{[]byte( fmt.Sprintf( "%c%v ", CMD_INT, v ) )}
+}
+
+func protocolBufferFromFloat(v interface{}) [][]byte {
+  return [][]byte{[]byte( fmt.Sprintf( "%c%v ", CMD_FLOAT, v ) )}
+}
+
+// func protocolBufferFromFloat(v interface{}) [][]byte {
+//   stringrep := fmt.Sprintf("%v", v)
+//   return [][]byte{[]byte( fmt.Sprintf( "%c%d %s", CMD_STRING, len(stringrep), stringrep ) )}
+// }
+
+func protocolBufferFromBytes(v []byte) [][]byte {
+  header := []byte( fmt.Sprintf( "%c%d ", CMD_BLOB, len( v )) )
+  return [][]byte{header, v}
+}
+
 func ( this *SQCloud ) sendString( data string ) ( int, error ) {
   var err         error
   var bytesSent   int
@@ -193,7 +242,7 @@ func ( this *SQCloud ) sendString( data string ) ( int, error ) {
   }
   
 
-  rawBuffer  := []byte( fmt.Sprintf( "+%d %s", len( data ), data ) )
+  rawBuffer  := protocolBufferFromString(data, false)[0]
   bytesToSend = len( rawBuffer )
 
   if bytesSent, err = (*this.sock).Write( rawBuffer )                       ; err != nil { return bytesSent, err }
@@ -213,7 +262,7 @@ func ( this *SQCloud ) sendBytes( data []byte ) ( int, error ) {
   default:  if err := ( *this.sock ).SetWriteDeadline( time.Now().Add( this.Timeout ) ); err != nil { return 0, err }
   }
   
-  header := []byte(fmt.Sprintf( "$%d ", len( data )))
+  header := []byte(fmt.Sprintf( "%c%d ", CMD_BLOB, len( data )))
   bytesToSend = len( header )
 
   if bytesSent, err = (*this.sock).Write( header )                          ; err != nil { return bytesSent, err }
@@ -230,6 +279,55 @@ func ( this *SQCloud ) sendBytes( data []byte ) ( int, error ) {
   return bytesSent, nil
 }
 
+func ( this *SQCloud ) sendArray( command string, values []interface{} ) ( int, error ) {
+  var err         error
+  var bytesSent   int
+  var bytesToSend int
+
+  // prepare the connection
+  if err := this.reconnect()                                                           ; err != nil { return 0, err }
+  switch this.Timeout {
+  case 0:   if err := ( *this.sock ).SetWriteDeadline( time.Time{} );                    err != nil { return 0, err }
+  default:  if err := ( *this.sock ).SetWriteDeadline( time.Now().Add( this.Timeout ) ); err != nil { return 0, err }
+  }
+
+  // convert values to buffers encoded with whe sqlitecloud protocol
+  buffers := [][]byte{ protocolBufferFromString(command, true)[0] }
+  for _, v := range values {
+    buffers = append(buffers, protocolBufferFromValue(v)...)
+  }
+
+  // calculate the array header
+  totsize := 0
+  for _, b := range buffers {
+    totsize += len(b)
+  }
+  // the number of the array object must include the command
+  n := len(values) + 1
+  lenarrayrep := fmt.Sprintf("%d ", n)
+  totsize += len(lenarrayrep)
+  header := []byte(fmt.Sprintf( "%c%d %s", CMD_ARRAY, totsize, lenarrayrep )) 
+
+  // send the header  
+  bytesToSend = len( header )
+  fmt.Printf("Write buffer(%d): %v\n", bytesToSend, header)
+  if bytesSent, err = (*this.sock).Write( header )                          ; err != nil { return bytesSent, err }
+  if bytesSent != bytesToSend                                                            { return bytesSent, errors.New( "Partitial data sent" ) }
+  
+  // send each buffer
+  for _, data := range buffers {
+    bytesToSend = len( data )
+    if bytesToSend > 0 {
+      fmt.Printf("Write buffer(%d): %v\n", bytesToSend, data)
+      if bytesSent, err = (*this.sock).Write( data )                            ; err != nil { return bytesSent, err }
+      if bytesSent != bytesToSend                                                            { return bytesSent, errors.New( "Partitial data sent" ) }
+    } else {
+      bytesSent = 0
+    }
+  }
+  
+  return 0, nil
+}
 
 func (this *SQCloud ) readNextRawChunk() ( *Chunk, error ) {
   // every chunk (except RAW JSON) starts with: (<type>)[data]_
