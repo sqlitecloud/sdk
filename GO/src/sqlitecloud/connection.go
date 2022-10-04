@@ -509,6 +509,34 @@ func (this *SQCloud) Select(SQL string) (*Result, error) {
 	}
 }
 
+func (this *SQCloud) SelectArray(SQL string, values []interface{}) (*Result, error) {
+	this.resetError()
+
+	if _, err := this.sendArray(SQL, values); err != nil {
+		this.ErrorCode = 100003
+		this.ErrorMessage = fmt.Sprintf("Internal Error: sendArray (%s)", err.Error())
+		return nil, errors.New(this.ErrorMessage)
+	}
+
+	switch result, err := this.readResult(); {
+	case result == nil:
+		return nil, errors.New("nil")
+
+	case result.IsError():
+		this.ErrorCode, this.ExtErrorCode, this.ErrorMessage, _ = result.GetError()
+		result.Free()
+		return nil, errors.New(this.ErrorMessage)
+
+	case err != nil:
+		this.ErrorCode, this.ExtErrorCode, this.ErrorMessage = 100000, 0, err.Error()
+		result.Free()
+		return nil, err
+
+	default:
+		return result, nil
+	}
+}
+
 func (this *SQCloud) SendBlob(data []byte) error {
 	this.resetError()
 
@@ -541,6 +569,19 @@ func (this *SQCloud) SendBlob(data []byte) error {
 // If the execution was not successful, an error describing the reason of the failure is returned.
 func (this *SQCloud) Execute(SQL string) error {
 	if result, err := this.Select(SQL); result != nil {
+		defer result.Free()
+
+		if !result.IsOK() {
+			return errors.New("ERROR: Unexpected Result (-1)")
+		}
+		return err
+	} else {
+		return err
+	}
+}
+
+func (this *SQCloud) ExecuteArray(SQL string, values []interface{}) error {
+	if result, err := this.SelectArray(SQL, values); result != nil {
 		defer result.Free()
 
 		if !result.IsOK() {

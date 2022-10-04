@@ -113,8 +113,8 @@ func (this *ResultRow ) GetMaxWidth( Column uint64 ) ( uint64, error ) { return 
 // Possible return types are: VALUE_INTEGER, VALUE_FLOAT, VALUE_TEXT, VALUE_BLOB, VALUE_NULL
 func (this *ResultRow ) GetType( Column uint64 ) ( byte, error ) { 
   switch value, err := this.GetValue( Column ); {
-  case err != nil:    return '_', err
-  case value == nil:  return '_', errors.New( "Column index out of bounds" )
+  case err != nil:    return CMD_NULL, err
+  case value == nil:  return CMD_NULL, errors.New( "Column index out of bounds" )
   default:            return value.GetType(), nil
   }
 }
@@ -256,9 +256,9 @@ func (this *ResultRow) DumpToWriter( Out io.Writer, Format int, Separator string
       val, _ := this.GetString( forThisColumn )
       switch Type, err := this.GetType( forThisColumn ); {
       case err != nil:  
-      case Type == '+': fallthrough
-      case Type == '!': fallthrough
-      case Type == '$': buffer += fmt.Sprintf( "'%s'%s", strings.Replace( val, "'", "\\'", -1 ), Separator )
+      case Type == CMD_STRING: fallthrough
+      case Type == CMD_ZEROSTRING: fallthrough
+      case Type == CMD_BLOB: buffer += fmt.Sprintf( "'%s'%s", strings.Replace( val, "'", "\\'", -1 ), Separator )
       default:          buffer += fmt.Sprintf( "%s%s", val, Separator)
       }
     }
@@ -273,9 +273,9 @@ func (this *ResultRow) DumpToWriter( Out io.Writer, Format int, Separator string
       columnName, _ := this.GetName( forThisColumn )
       switch Type, err := this.GetType( forThisColumn ); {
         case err != nil:  
-        case Type == '+': fallthrough
-        case Type == '!': fallthrough
-        case Type == '$': buffer += fmt.Sprintf( "\"%s\":\"%s\"%s", strings.Replace( columnName, "\"", "\\\"", -1 ), strings.Replace( this.renderValue( forThisColumn, "", NullValue ), "\"", "\\\"", -1 ), sep )
+        case Type == CMD_STRING: fallthrough
+        case Type == CMD_ZEROSTRING: fallthrough
+        case Type == CMD_BLOB: buffer += fmt.Sprintf( "\"%s\":\"%s\"%s", strings.Replace( columnName, "\"", "\\\"", -1 ), strings.Replace( this.renderValue( forThisColumn, "", NullValue ), "\"", "\\\"", -1 ), sep )
       default:            buffer += fmt.Sprintf( "\"%s\":%s%s", strings.Replace( columnName, "\"", "\\\"", -1 ), this.renderValue( forThisColumn, "", NullValue ), sep )
       }
     }
