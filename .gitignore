@@ -27,3 +27,4 @@ GO/src/gopkg.in/ini.v1/
 GO/src/sqliteweb/dashboard/.nova/Configuration.json
 *.plist
 *.plist
+C/test/test.xcodeproj/xcuserdata/marco.xcuserdatad/xcschemes/xcschememanagement.plist
