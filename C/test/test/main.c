@@ -11,10 +11,12 @@
 #include <unistd.h>
 #include "sqcloud.h"
 
-#define CONNECTION_STRING   "sqlitecloud://admin:admin@localhost/compression=1&root_certificate=%2FUsers%2Fmarco%2FDesktop%2FSQLiteCloud%2FPHP%2Fca.pem"
-#define BLOB_FILENAME       "/Users/marco/Desktop/test.jpg"
-#define BLOB_LEN            445922
-#define BACKUP_FILENAME     "/Users/marco/Desktop/test.sqlite"
+#define CONNECTION_STRING               "sqlitecloud://admin:admin@localhost/compression=1&root_certificate=%2FUsers%2Fmarco%2FDesktop%2FSQLiteCloud%2FPHP%2Fca.pem"
+#define CONNECTION_STRING_INSECURE      "sqlitecloud://admin:admin@localhost/compression=1&insecure=1"
+#define BLOB_FILENAME                   "/Users/marco/Desktop/test.jpg"
+#define BLOB_LEN                        445922
+#define BACKUP_FILENAME                 "/Users/marco/Desktop/test.sqlite"
+#define VERBOSE_OUTPUT                  0
 
 // MARK: -
 
@@ -290,71 +292,127 @@ static int test_array (SQCloudConnection *conn) {
 // MARK: -
 
 static int test_backup (SQCloudConnection *conn) {
-    return 0;
+    if (!do_command(conn, "USE DATABASE mediastore.sqlite;", NULL, NULL, NULL, NULL, NULL)) return -1;
     
     const char *filename = BACKUP_FILENAME;
     unlink(filename);
     FILE *f = fopen(filename, "w");
-    if (!f) {perror("Error creating file in test_backup"); return false;}
+    if (!f) {perror("Error creating file in test_backup"); return -1;}
     
     // BACKUP INIT [<dest_name>] [SOURCE <source_name>]
     SQCloudResult *result = NULL;
-    if (!do_command(conn, "BACKUP INIT", NULL, NULL, NULL, NULL, &result)) return false;
+    if (!do_command(conn, "BACKUP INIT", NULL, NULL, NULL, NULL, &result)) return -1;
     
     // sanity check
     if (SQCloudResultType(result) != RESULT_ARRAY) {
         printf("Wrong result type\n");
-        return false;
+        return -1;
     }
     
     // extract information
     int32_t index = SQCloudArrayInt32Value(result, 1);
     int32_t page_size = SQCloudArrayInt32Value(result, 2);
-    int32_t backup_pagecount = SQCloudArrayInt32Value(result, 3);
-    int32_t backup_remaining = SQCloudArrayInt32Value(result, 4);
+    
+    #if VERBOSE_OUTPUT
+    int32_t page_count = SQCloudArrayInt32Value(result, 3);
+    int counter = 0;
+    printf("Page Size: %d\n", page_size);
+    printf("Page Count: %d\n", page_count);
+    #endif
     
     SQCloudResultFree(result);
     
-    /*
-     while (1) {
-         void *data = NULL;
-         uint32_t len = 0;
-         
-         // BLOB READ <index> SIZE <size> OFFSET <offset>
-         snprintf(command, sizeof(command), "BLOB READ %d SIZE %d OFFSET %d", blob_index, blen, offset);
-         if (!do_command(conn, command, NULL, NULL, &data, &len, NULL)) return false;
-         
-         if (blen != len) {printf("BLOB read returned a wrong len %d != %d\n", blen, len); return false;}
-         
-         size_t fwrote = fwrite(data, blen, 1, f);
-         if (fwrote != 1) {perror("Error writing BLOB data"); return false;}
-         
-         offset += blen;
-         if (offset == lblob) break;
-         if (lblob - offset < blen) blen = lblob - offset;
-     }
-     */
-    
     char command[512];
-    do {
-        // BACKUP STEP <index> PAGES <npages>
-        
-        
-    } while (1);
+    int64_t current_offset = 0;
+    int npages = 40;
+    int32_t total = 0;
     
+    while (1) {
+        // BACKUP STEP <index> PAGES <npages>
+        snprintf(command, sizeof(command), "BACKUP STEP %d PAGES %d;", index, npages);
+        if (!do_command(conn, command, NULL, NULL, NULL, NULL, &result)) goto abort_backup;
+        
+        SQCloudResType rtype = SQCloudResultType(result);
+        if (rtype != RESULT_ARRAY) goto abort_backup;
+        
+        /*
+         [0] -> TYPE
+         [1] -> INDEX
+         [2] -> PAGE_TOTALE
+         [3] -> PAGE_REMAINING
+         [4] -> PAGE_COUNTER
+         [5] -> BLOB
+         */
+        
+        #if VERBOSE_OUTPUT
+        int32_t page_totals = SQCloudArrayInt32Value(result, 2);
+        #endif
+        int32_t page_remaining = SQCloudArrayInt32Value(result, 3);
+        int32_t page_counter = SQCloudArrayInt32Value(result, 4);
+        
+        #if VERBOSE_OUTPUT
+        printf("Counter: %d\n", ++counter);
+        printf("Page Total: %d\n", page_totals);
+        printf("Page Remaining: %d\n", page_remaining);
+        printf("Page Counter: %d\n", page_counter);
+        #endif
+        
+        uint32_t blen = 0;
+        char *data = SQCloudArrayValue (result, 5, &blen);
+        #if VERBOSE_OUTPUT
+        printf("Len: %d\n", blen);
+        #endif
+        
+        // sanity check
+        if (blen != ((page_size * page_counter) + (page_counter * sizeof(int64_t)))) {
+            printf("Block size error\n");
+            goto abort_backup;
+        }
+        
+        char *p = data;
+        for (int i=0; i<page_counter; ++i) {
+            uint64_t *poff = (uint64_t *)p;
+            int64_t offset = (int64_t)ntohll(*poff);
+            p += sizeof(int64_t);
+            
+            if (current_offset != offset) {
+                if (fseek(f, offset, SEEK_SET) != 0) {perror("Error seeking in the outfile file"); goto abort_backup;}
+                current_offset = offset;
+            }
+            
+            size_t fwrote = fwrite(p, page_size, 1, f);
+            if (fwrote != 1) {perror("Error writing BLOB data"); goto abort_backup;}
+            
+            total += page_size;
+            p += page_size;
+        }
+        
+        #if VERBOSE_OUTPUT
+        printf("Total: %d\n", total);
+        #endif
+        if (page_remaining == 0) break;
+    }
+     
     // extract some information
     snprintf(command, sizeof(command), "BACKUP REMAINING %d", index);
-    if (!do_command(conn, command, NULL, NULL, NULL, NULL, &result)) return false;
+    if (!do_command(conn, command, NULL, NULL, NULL, NULL, &result)) return -1;
     
     snprintf(command, sizeof(command), "BACKUP PAGECOUNT %d", index);
-    if (!do_command(conn, command, NULL, NULL, NULL, NULL, &result)) return false;
+    if (!do_command(conn, command, NULL, NULL, NULL, NULL, &result)) return -1;
     
     // close backup
     snprintf(command, sizeof(command), "BACKUP FINISH %d", index);
-    if (!do_command(conn, command, NULL, NULL, NULL, NULL, &result)) return false;
+    if (!do_command(conn, command, NULL, NULL, NULL, NULL, &result)) return -1;
     
     fclose(f);
     return 0;
+    
+abort_backup:
+    snprintf(command, sizeof(command), "BACKUP FINISH %d", index);
+    do_command(conn, command, NULL, NULL, NULL, NULL, NULL);
+    fclose(f);
+    exit(-1);
+    return -1;
 }
 
 // MARK: -
