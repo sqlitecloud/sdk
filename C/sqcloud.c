@@ -666,9 +666,7 @@ static SQCloudResult *internal_setup_pubsub (SQCloudConnection *connection, cons
     // check if pubsub was already setup
     if (connection->pubsubfd != 0) return &SQCloudResultOK;
     
-    #ifndef SQLITECLOUD_DISABLE_TSL
     if (!internal_setup_tls(connection, connection->_config, false)) return NULL;
-    #endif
     
     if (internal_connect(connection, connection->hostname, connection->port, connection->_config, false)) {
         SQCloudResult *result = internal_run_command(connection, buffer, blen, false);
@@ -1875,9 +1873,11 @@ void internal_free_config (SQCloudConfig *config) {
     if (config->username) mem_free((void *)config->username);
     if (config->password) mem_free((void *)config->password);
     if (config->database) mem_free((void *)config->database);
+    #ifndef SQLITECLOUD_DISABLE_TSL
     if (config->tls_root_certificate) mem_free((void *)config->tls_root_certificate);
     if (config->tls_certificate) mem_free((void *)config->tls_certificate);
     if (config->tls_certificate_key) mem_free((void *)config->tls_certificate_key);
+    #endif
     mem_free(config);
 }
 
@@ -2144,9 +2144,7 @@ SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig
     if (!connection) return NULL;
     connection->_config = config;
     
-    #ifndef SQLITECLOUD_DISABLE_TSL
     if (!internal_setup_tls(connection, config, true)) return connection;
-    #endif
     
     if (internal_connect(connection, hostname, port, config, true)) {
         if (config) internal_connect_apply_config(connection, config);
@@ -2804,8 +2802,10 @@ void SQCloudArrayDump (SQCloudResult *result) {
     for (uint32_t i=0; i<result->ndata; ++i) {
         uint32_t len;
         char *value = SQCloudArrayValue(result, i, &len);
+        SQCloudValueType type = SQCloudArrayValueType(result, i);
         if (!value) {value = "NULL"; len = 4;}
-        printf("[%d] %.*s\n", i, len, value);
+        if (type == VALUE_BLOB) printf("[%d] BLOB size %d\n", i, len);
+        else printf("[%d] %.*s\n", i, len, value);
     }
 }
 
