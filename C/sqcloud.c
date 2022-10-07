@@ -2285,8 +2285,8 @@ SQCloudResult *SQCloudExecArray (SQCloudConnection *connection, const char *comm
     if (n == 0) return SQCloudExec(connection, command);
     
     // compute the maximum number of required slots
-    n += 1; // add command
-    uint32_t count = n * 2;
+    uint32_t ritems = n + 1; // add command
+    uint32_t count = ritems * 2;
     SQCloudResult *result = NULL;
     
     // avoid dynamic memory allocation (if possible) with a 256 static array
@@ -2359,7 +2359,7 @@ SQCloudResult *SQCloudExecArray (SQCloudConnection *connection, const char *comm
         head += rlen[i+2] + 1;
     }
 
-    result = internal_array_exec(connection, r, rlen, n, count);
+    result = internal_array_exec(connection, r, rlen, ritems, count);
     
 cleanup:
     if (count >= ARRAY_STATIC_COUNT) {
