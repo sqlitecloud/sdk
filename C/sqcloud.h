@@ -178,6 +178,7 @@ int64_t SQCloudRowsetInt64Value (SQCloudResult *result, uint32_t row, uint32_t c
 float SQCloudRowsetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col);
 double SQCloudRowsetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t col);
 void SQCloudRowsetDump (SQCloudResult *result, uint32_t maxline, bool quiet);
+bool SQCloudRowsetCompare (SQCloudResult *result1, SQCloudResult *result2);
 
 // MARK: - Array -
 SQCloudResult *SQCloudExecArray (SQCloudConnection *connection, const char *command, const char **values, uint32_t len[], SQCloudValueType types[], uint32_t n);

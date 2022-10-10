@@ -1703,6 +1703,54 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     return true;
 }
 
+bool internal_rowset_compare(SQCloudResult *rs1, SQCloudResult *rs2) {
+    if (rs1 == NULL && rs2 == NULL) return true;
+    if (rs1 == NULL && rs2 != NULL) return false;
+    if (rs1 != NULL && rs2 == NULL) return false;
+    
+    if (rs1->nrows != rs2 ->nrows) return false;
+    if (rs1->ncols != rs2 ->ncols) return false;
+    
+    uint32_t nrows = rs1->nrows;
+    uint32_t ncols = rs1->ncols;
+    
+    // check column names
+    for (uint32_t i=0; i<ncols; ++i) {
+        uint32_t len1 = internal_buffer_maxlen(rs1, rs1->name[i]);
+        char *value1 = internal_parse_value(rs1->name[i], &len1, NULL);
+        
+        uint32_t len2 = internal_buffer_maxlen(rs2, rs2->name[i]);
+        char *value2 = internal_parse_value(rs2->name[i], &len2, NULL);
+        
+        if (len1 != len2) return false;
+        if (strncmp(value1, value2, len1) != 0) return false;
+    }
+    
+    // check types
+    for (uint32_t i=0; i<nrows; ++i) {
+        for (uint32_t j=0; j<ncols; ++j) {
+            SQCloudValueType type1 = SQCloudRowsetValueType(rs1, i, j);
+            SQCloudValueType type2 = SQCloudRowsetValueType(rs2, i, j);
+            if (type1 != type2) return false;
+        }
+    }
+    
+    // check values
+    for (uint32_t i=0; i<nrows * ncols; ++i) {
+        uint32_t len1 = internal_buffer_maxlen(rs1, rs1->data[i]);
+        char *value1 = internal_parse_value(rs1->data[i], &len1, NULL);
+        
+        uint32_t len2 = internal_buffer_maxlen(rs2, rs2->data[i]);
+        char *value2 = internal_parse_value(rs2->data[i], &len2, NULL);
+        
+        if (len1 != len2) return false;
+        if (value1 == NULL && value2 == NULL) continue;
+        if (memcmp(value1, value2, len1) != 0) return false;
+    }
+    
+    return true;
+}
+
 void internal_rowset_dump (SQCloudResult *result, uint32_t maxline, bool quiet) {
     uint32_t nrows = result->nrows;
     uint32_t ncols = result->ncols;
@@ -2722,6 +2770,10 @@ double SQCloudRowsetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t c
 
 void SQCloudRowsetDump (SQCloudResult *result, uint32_t maxline, bool quiet) {
     internal_rowset_dump(result, maxline, quiet);
+}
+
+bool SQCloudRowsetCompare (SQCloudResult *result1, SQCloudResult *result2) {
+    return internal_rowset_compare(result1, result2);
 }
 
 // MARK: -
