@@ -2083,7 +2083,7 @@ char *_reserved10 (char *buffer, uint32_t *len, uint32_t *cellsize) {
     return internal_parse_value(buffer, len, cellsize);
 }
 
-char *_reserved11 (char *buffer, uint32_t blen, uint32_t index, uint32_t *len, uint32_t *pos, int *type, INTERNAL_ERRCODE *err) {
+char *_reserved11 (char *buffer, uint32_t blen, uint32_t index, uint32_t *len, uint32_t *cellsize, uint32_t *pos, int *type, INTERNAL_ERRCODE *err) {
     if (err) *err = INTERNAL_ERRCODE_NONE;
     
     // =LEN N VALUE1 VALUE2 ... VALUEN
@@ -2100,31 +2100,32 @@ char *_reserved11 (char *buffer, uint32_t blen, uint32_t index, uint32_t *len, u
     while (buffer[0] != ' ');
     ++buffer; --blen;
     
-    uint32_t cellsize = 0;
-    uint32_t n = internal_parse_number(buffer, blen, &cellsize, NULL);
+    uint32_t tcellsize = 0;
+    uint32_t n = internal_parse_number(buffer, blen, &tcellsize, NULL);
     if (index >= n) {
         if (err) *err = INTERNAL_ERRCODE_INDEX;
         return NULL;
     }
         
-    buffer += cellsize;
-    blen -= cellsize;
+    buffer += tcellsize;
+    blen -= tcellsize;
     
     uint32_t tlen = blen;
     uint32_t csize = 0;
     for (int i=0; i<=index; ++i) {
-        cellsize = 0;
-        char *value = internal_parse_value(buffer, &tlen, &cellsize);
+        tcellsize = 0;
+        char *value = internal_parse_value(buffer, &tlen, &tcellsize);
         
         if (i == index) {
             if (type && buffer) *type = buffer[0];
             if (len) *len = tlen;
+            if (cellsize) *cellsize = tcellsize;
             if (pos) *pos = (uint32_t)(value - p);
             return value;
         }
         
-        buffer += cellsize;
-        csize += cellsize;
+        buffer += tcellsize;
+        csize += tcellsize;
         tlen = blen - csize;
     }
     
