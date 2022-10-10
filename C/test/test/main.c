@@ -83,6 +83,117 @@ static bool do_command (SQCloudConnection *conn, char *command, int32_t *int_val
 
 // MARK: -
 
+static int test_multiple_commands(SQCloudConnection *conn) {
+    char *current_sql = NULL;
+    
+    if (!do_command(conn, "USE DATABASE mediastore.sqlite;", NULL, NULL, NULL, NULL, NULL)) goto abort_test;
+    
+    // Tables
+    /*
+     --------|---------------|-------|------|----|--------|
+      schema | name          | type  | ncol | wr | strict |
+     --------|---------------|-------|------|----|--------|
+      main   | Track         | table | 9    | 0  | 0      |
+      main   | PlaylistTrack | table | 2    | 0  | 0      |
+      main   | Playlist      | table | 2    | 0  | 0      |
+      main   | Artist        | table | 2    | 0  | 0      |
+      main   | Customer      | table | 13   | 0  | 0      |
+      main   | Employee      | table | 15   | 0  | 0      |
+      main   | Genre         | table | 2    | 0  | 0      |
+      main   | Invoice       | table | 9    | 0  | 0      |
+      main   | Album         | table | 3    | 0  | 0      |
+      main   | InvoiceLine   | table | 5    | 0  | 0      |
+      main   | MediaType     | table | 2    | 0  | 0      |
+     --------|---------------|-------|------|----|--------|
+     */
+    
+    // ====================================
+    // TEST MULTIPLE READ SQLITE STATEMENTS ==> OK
+    // ====================================
+    SQCloudResult *res1 = NULL;
+    char *sql = "SELECT * FROM Artist";
+    if (!do_command(conn, sql, NULL, NULL, NULL, NULL, &res1)) goto abort_test;
+    
+    SQCloudResult *res2 = NULL;
+    current_sql = "SELECT * FROM Track; SELECT 1; SELECT * FROM Album; SELECT * FROM Artist";
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
+    
+    if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+    
+    // ======================================
+    // TEST MULTIPLE READ BUILT-IN STATEMENTS ==> OK
+    // ======================================
+    res1 = NULL;
+    sql = "LIST TABLES";
+    if (!do_command(conn, sql, NULL, NULL, NULL, NULL, &res1)) goto abort_test;
+    
+    res2 = NULL;
+    current_sql = "LIST INFO; LIST DATABASES; LIST TABLES;";
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
+    
+    if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+    
+    SQCloudResultFree(res1);
+    SQCloudResultFree(res2);
+    
+    // =============================================
+    // TEST MULTIPLE READ SQLITE/BUILT-IN STATEMENTS ==> OK
+    // =============================================
+    res1 = NULL;
+    sql = "SELECT * FROM Artist";
+    if (!do_command(conn, sql, NULL, NULL, NULL, NULL, &res1)) goto abort_test;
+    
+    res2 = NULL;
+    current_sql = "SELECT * FROM Track; SELECT 1; LIST TABLES; SELECT * FROM Artist";
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
+    
+    if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+    
+    SQCloudResultFree(res1);
+    SQCloudResultFree(res2);
+    
+    // =============================================
+    // TEST MULTIPLE READ SQLITE/BUILT-IN STATEMENTS ==> OK
+    // =============================================
+    res1 = NULL;
+    sql = "SELECT * FROM Artist";
+    if (!do_command(conn, sql, NULL, NULL, NULL, NULL, &res1)) goto abort_test;
+    
+    res2 = NULL;
+    current_sql = "LIST DATABASES; SELECT 1; LIST TABLES; SELECT * FROM Artist";
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
+    
+    if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+    
+    SQCloudResultFree(res1);
+    SQCloudResultFree(res2);
+    
+    // =============================================
+    // TEST MULTIPLE READ SQLITE/BUILT-IN STATEMENTS ==> FAILS
+    // =============================================
+    res1 = NULL;
+    sql = "SELECT * FROM Artist";
+    if (!do_command(conn, sql, NULL, NULL, NULL, NULL, &res1)) goto abort_test;
+    
+    res2 = NULL;
+    current_sql = "VM COMPILE 'SELECT 1';SELECT * FROM Artist;";
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
+    
+    if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+    
+    SQCloudResultFree(res1);
+    SQCloudResultFree(res2);
+    
+    return 0;
+    
+abort_test:
+    printf("%s FAILED!\n\n", current_sql);
+    exit(-1);
+    return -1;
+}
+
+// MARK: -
+
 static bool test_read_blob (SQCloudConnection *conn) {
     const char *filename = BLOB_FILENAME;
     unlink(filename);
@@ -501,10 +612,11 @@ int main (int argc, const char * argv[]) {
         printf("Connection to host OK...\n\n");
     }
     
-    test_blob(conn);
-    test_array(conn);
-    test_backup(conn);
-    test_database(conn);
+    test_multiple_commands(conn);
+    //test_blob(conn);
+    //test_array(conn);
+    //test_backup(conn);
+    //test_database(conn);
     
     SQCloudDisconnect(conn);
     return 0;
