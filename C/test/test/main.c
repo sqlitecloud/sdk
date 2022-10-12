@@ -169,7 +169,7 @@ static int test_multiple_commands(SQCloudConnection *conn) {
     SQCloudResultFree(res2);
     
     // =============================================
-    // TEST MULTIPLE READ SQLITE/BUILT-IN STATEMENTS ==> FAILS
+    // TEST MULTIPLE READ SQLITE/BUILT-IN STATEMENTS
     // =============================================
     res1 = NULL;
     sql = "SELECT * FROM Artist";
@@ -177,6 +177,56 @@ static int test_multiple_commands(SQCloudConnection *conn) {
     
     res2 = NULL;
     current_sql = "VM COMPILE 'SELECT 1';SELECT * FROM Artist;";
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
+    
+    if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+    
+    SQCloudResultFree(res1);
+    SQCloudResultFree(res2);
+    
+    // =============================================
+    // TEST MULTIPLE READ SQLITE/BUILT-IN STATEMENTS (VM COMPILE)
+    // =============================================
+    res1 = NULL;
+    sql = "SELECT * FROM Artist";
+    if (!do_command(conn, sql, NULL, NULL, NULL, NULL, &res1)) goto abort_test;
+    
+    res2 = NULL;
+    current_sql = "VM COMPILE 'SELECT 1';";
+    do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2);
+    current_sql = "VM STEP 0;SELECT * FROM Artist;";
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
+    
+    if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+    
+    SQCloudResultFree(res1);
+    SQCloudResultFree(res2);
+    
+    // =============================================
+    // TEST MULTIPLE READ SQLITE/BUILT-IN STATEMENTS (VM EXECUTE)
+    // =============================================
+    res1 = NULL;
+    sql = "SELECT * FROM Artist";
+    if (!do_command(conn, sql, NULL, NULL, NULL, NULL, &res1)) goto abort_test;
+    
+    res2 = NULL;
+    current_sql = "VM EXECUTE 'SELECT 1';SELECT * FROM Artist;";
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
+    
+    if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+    
+    SQCloudResultFree(res1);
+    SQCloudResultFree(res2);
+    
+    // =============================================
+    // TEST MULTIPLE SQLITE INSIDE VM EXECUTE
+    // =============================================
+    res1 = NULL;
+    sql = "SELECT * FROM Artist";
+    if (!do_command(conn, sql, NULL, NULL, NULL, NULL, &res1)) goto abort_test;
+    
+    res2 = NULL;
+    current_sql = "VM EXECUTE 'SELECT 1;SELECT * FROM Artist';";
     if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
     
     if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
