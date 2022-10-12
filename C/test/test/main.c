@@ -194,10 +194,22 @@ static int test_multiple_commands(SQCloudConnection *conn) {
     res2 = NULL;
     current_sql = "VM COMPILE 'SELECT 1';";
     do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2);
-    current_sql = "VM STEP 0;SELECT * FROM Artist;";
+    int vmid = -1;
+    if ((SQCloudResultType(res2) == RESULT_ARRAY) && SQCloudArrayValueType(res2, 1) == VALUE_INTEGER) vmid = SQCloudArrayInt32Value(res2, 1);
+    else goto abort_test;
+    SQCloudResultFree(res2);
+
+    char command[256];
+    snprintf(command, sizeof(command), "VM STEP %d;SELECT * FROM Artist;", vmid);
+    current_sql = command;
     if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
     
     if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+    
+    snprintf(command, sizeof(command), "VM FINALIZE %d;", vmid);
+    current_sql = command;
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, NULL)) goto abort_test;
+    
     
     SQCloudResultFree(res1);
     SQCloudResultFree(res2);
@@ -230,6 +242,119 @@ static int test_multiple_commands(SQCloudConnection *conn) {
     if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
     
     if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+    
+    SQCloudResultFree(res1);
+    SQCloudResultFree(res2);
+    
+    // =============================================
+    // TEST MULTIPLE READ SQLITE/BUILT-IN STATEMENTS (BLOB OPEN)
+    // =============================================
+    res1 = NULL;
+    sql = "SELECT * FROM Artist";
+    if (!do_command(conn, sql, NULL, NULL, NULL, NULL, &res1)) goto abort_test;
+    
+    res2 = NULL;
+    current_sql = "BLOB OPEN main TABLE Artist COLUMN Name ROWID 1 RWFLAG 0;SELECT * FROM Artist;";
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
+    
+    if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+    
+    SQCloudResultFree(res1);
+    SQCloudResultFree(res2);
+    
+    // =============================================
+    // TEST MULTIPLE READ SQLITE/BUILT-IN STATEMENTS (BLOB BYTES RWFLAg 0)
+    // =============================================
+    res1 = NULL;
+    sql = "SELECT * FROM Artist";
+    if (!do_command(conn, sql, NULL, NULL, NULL, NULL, &res1)) goto abort_test;
+    
+    res2 = NULL;
+    current_sql = "BLOB OPEN main TABLE Artist COLUMN Name ROWID 1 RWFLAG 0;";
+    int blobid = -1;
+    do_command(conn, current_sql, &blobid, NULL, NULL, NULL, NULL);
+    snprintf(command, sizeof(command), "BLOB BYTES %d; SELECT * FROM Artist;", blobid);
+    current_sql = command;
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
+    
+    if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+    
+    snprintf(command, sizeof(command), "BLOB CLOSE %d;", blobid);
+    current_sql = command;
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, NULL)) goto abort_test;
+    
+    SQCloudResultFree(res1);
+    SQCloudResultFree(res2);
+    
+    // =============================================
+    // TEST MULTIPLE READ SQLITE/BUILT-IN STATEMENTS (BLOB BYTES RWFLAG 1)
+    // =============================================
+    res1 = NULL;
+    sql = "SELECT * FROM Artist";
+    if (!do_command(conn, sql, NULL, NULL, NULL, NULL, &res1)) goto abort_test;
+    
+    res2 = NULL;
+    current_sql = "BLOB OPEN main TABLE Artist COLUMN Name ROWID 1 RWFLAG 1;";
+    blobid = -1;
+    do_command(conn, current_sql, &blobid, NULL, NULL, NULL, NULL);
+    snprintf(command, sizeof(command), "BLOB BYTES %d; SELECT * FROM Artist;", blobid);
+    current_sql = command;
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
+    
+    if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+
+    snprintf(command, sizeof(command), "BLOB CLOSE %d;", blobid);
+    current_sql = command;
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, NULL)) goto abort_test;
+    
+    SQCloudResultFree(res1);
+    SQCloudResultFree(res2);
+    
+    
+    // =============================================
+    // TEST MULTIPLE READ SQLITE/BUILT-IN STATEMENTS (BLOB READ RWFLAG 0)
+    // =============================================
+    res1 = NULL;
+    sql = "SELECT * FROM Artist";
+    if (!do_command(conn, sql, NULL, NULL, NULL, NULL, &res1)) goto abort_test;
+    
+    res2 = NULL;
+    current_sql = "BLOB OPEN main TABLE Artist COLUMN Name ROWID 1 RWFLAG 0;";
+    blobid = -1;
+    do_command(conn, current_sql, &blobid, NULL, NULL, NULL, NULL);
+    snprintf(command, sizeof(command), "BLOB BYTES %d; SELECT * FROM Artist;", blobid);
+    current_sql = command;
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
+    
+    if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+    
+    snprintf(command, sizeof(command), "BLOB CLOSE %d;", blobid);
+    current_sql = command;
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, NULL)) goto abort_test;
+    
+    SQCloudResultFree(res1);
+    SQCloudResultFree(res2);
+    
+    // =============================================
+    // TEST MULTIPLE READ SQLITE/BUILT-IN STATEMENTS (BLOB READ RWFLAG 1)
+    // =============================================
+    res1 = NULL;
+    sql = "SELECT * FROM Artist";
+    if (!do_command(conn, sql, NULL, NULL, NULL, NULL, &res1)) goto abort_test;
+    
+    res2 = NULL;
+    current_sql = "BLOB OPEN main TABLE Artist COLUMN Name ROWID 1 RWFLAG 1;";
+    blobid = -1;
+    do_command(conn, current_sql, &blobid, NULL, NULL, NULL, NULL);
+    snprintf(command, sizeof(command), "BLOB BYTES %d; SELECT * FROM Artist;", blobid);
+    current_sql = command;
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
+    
+    if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
+    
+    snprintf(command, sizeof(command), "BLOB CLOSE %d;", blobid);
+    current_sql = command;
+    if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, NULL)) goto abort_test;
     
     SQCloudResultFree(res1);
     SQCloudResultFree(res2);
