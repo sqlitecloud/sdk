@@ -101,7 +101,9 @@ typedef enum {
         
     ARRAY_TYPE_BACKUP_INIT = 40,            // used in BACKUP_INIT
     ARRAY_TYPE_BACKUP_STEP = 41,            // used in backupWrite (VFS)
-    ARRAY_TYPE_BACKUP_END = 42              // used in backupClose (VFS)
+    ARRAY_TYPE_BACKUP_END = 42,             // used in backupClose (VFS)
+    
+    ARRAY_TYPE_SQLITE_STATUS = 50           // used in sqlite_status
 } SQCloudArrayType;
 
 typedef enum {
