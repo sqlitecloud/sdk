@@ -39,6 +39,13 @@ func main() {
 	if err == nil {
 		defer db.Close()
 
+		// test select null string, it was causing a crash on the server
+		if res, err :=  db.Select(""); err != nil {
+			fail(err.Error())
+		} else {
+			res.DumpToScreen(0)
+		}
+
 		fmt.Printf("Checking CREATE DATABASE...")
 		if err := db.ExecuteArray("CREATE DATABASE ? PAGESIZE ? IF NOT EXISTS", []interface{}{dbname, 4096}); err != nil {
 			fail(err.Error())
