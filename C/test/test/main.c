@@ -22,7 +22,7 @@
 
 static bool do_print (SQCloudConnection *conn, SQCloudResult *res) {
     // res NULL means to read error message and error code from conn
-    SQCloudResType type = SQCloudResultType(res);
+    SQCLOUD_RESULT_TYPE type = SQCloudResultType(res);
     bool result = true;
     
     switch (type) {
@@ -218,11 +218,11 @@ static int test_multiple_commands(SQCloudConnection *conn) {
     // TEST MULTIPLE READ SQLITE/BUILT-IN STATEMENTS (VM EXECUTE)
     // =============================================
     res1 = NULL;
-    sql = "SELECT * FROM Artist";
+    sql = "VM EXECUTE 'SELECT * FROM Artist'";
     if (!do_command(conn, sql, NULL, NULL, NULL, NULL, &res1)) goto abort_test;
     
     res2 = NULL;
-    current_sql = "VM EXECUTE 'SELECT 1';SELECT * FROM Artist;";
+    current_sql = "VM EXECUTE 'SELECT 1;SELECT 2';SELECT * FROM Artist;";
     if (!do_command(conn, current_sql, NULL, NULL, NULL, NULL, &res2)) goto abort_test;
     
     if (SQCloudRowsetCompare(res1, res2) == false) goto abort_test;
@@ -375,16 +375,22 @@ static bool test_read_blob (SQCloudConnection *conn) {
     FILE *f = fopen(filename, "w");
     if (!f) {perror("Error creating file in test_read_blob"); return false;}
     
-    int32_t blob_index = 0;
+    int32_t blob_index = -1;
+    
+    int32_t rowid = 0;
+    SQCloudResult *res;
+    if (!do_command(conn, "SELECT MAX(rowid) FROM images;", &rowid, NULL, NULL, NULL, &res)) return false;
+    if ((SQCloudResultType(res) == RESULT_ROWSET) && SQCloudRowsetValueType(res, 0, 0) == VALUE_INTEGER) rowid = SQCloudRowsetInt32Value(res, 0, 0);
     
     // BLOB OPEN <database_name> TABLE <table_name> COLUMN <column_name> ROWID <rowid> RWFLAG <rwflag>
-    if (!do_command(conn, "BLOB OPEN main TABLE images COLUMN picture ROWID 2 RWFLAG 0;", &blob_index, NULL, NULL, NULL, NULL)) return false;
+    char command[256];
+    snprintf(command, sizeof(command), "BLOB OPEN main TABLE images COLUMN picture ROWID %d RWFLAG 0;", rowid);
+    if (!do_command(conn, command, &blob_index, NULL, NULL, NULL, NULL)) return false;
     
     // SELECT length(picture) FROM images WHERE rowid=2; => 445922
     int32_t len = 0, lblob = BLOB_LEN;
     
     // BLOB BYTES <index>
-    char command[256];
     snprintf(command, sizeof(command), "BLOB BYTES %d", blob_index);
     if (!do_command(conn, command, &len, NULL, NULL, NULL, NULL)) return false;
     if (len != lblob) {printf("BLOB size is wrong %d %d (test_read_blob)\n", len, lblob); return false;}
@@ -451,7 +457,7 @@ static bool test_write_blob (SQCloudConnection *conn) {
         
         const char *values[] = {buffer};
         uint32_t len[] = {(uint32_t)nbytes};
-        SQCloudValueType types[] = {VALUE_BLOB};
+        SQCLOUD_VALUE_TYPE types[] = {VALUE_BLOB};
         
         // BLOB WRITE <index> OFFSET <offset> DATA <data>
         snprintf(command, sizeof(command), "BLOB WRITE %d OFFSET %d DATA ?;", blob_index, offset);
@@ -502,7 +508,7 @@ static int test_array (SQCloudConnection *conn) {
         const char *dbname = "mediastore.sqlite";
         const char *values[] = {dbname};
         uint32_t len[] = {(uint32_t)strlen(dbname)};
-        SQCloudValueType types[] = {VALUE_TEXT};
+        SQCLOUD_VALUE_TYPE types[] = {VALUE_TEXT};
         
         const char *command = "USE DATABASE ?";
         printf("%s\n", command);
@@ -516,7 +522,7 @@ static int test_array (SQCloudConnection *conn) {
         const char *value = "100";
         const char *values[] = {value};
         uint32_t len[] = {(uint32_t)strlen(value)};
-        SQCloudValueType types[] = {VALUE_INTEGER};
+        SQCLOUD_VALUE_TYPE types[] = {VALUE_INTEGER};
         
         const char *command = "SELECT * FROM Artist WHERE ArtistId >= ?";
         printf("%s\n", command);
@@ -531,7 +537,7 @@ static int test_array (SQCloudConnection *conn) {
         const char *value2 = "200";
         const char *values[] = {value1, value2};
         uint32_t len[] = {(uint32_t)strlen(value1), (uint32_t)strlen(value2)};
-        SQCloudValueType types[] = {VALUE_INTEGER, VALUE_INTEGER};
+        SQCLOUD_VALUE_TYPE types[] = {VALUE_INTEGER, VALUE_INTEGER};
         
         const char *command = "SELECT * FROM Artist WHERE ArtistId >= ? AND ArtistId <= ?";
         printf("%s\n", command);
@@ -548,12 +554,13 @@ static int test_array (SQCloudConnection *conn) {
         const char *expiration = "2022-09-21 18:27:29";
         const char *values[] = {key, name, restriction, expiration};
         uint32_t len[] = {(uint32_t)strlen(key), (uint32_t)strlen(name), (uint32_t)strlen(restriction), (uint32_t)strlen(expiration)};
-        SQCloudValueType types[] = {VALUE_TEXT, VALUE_TEXT, VALUE_TEXT, VALUE_TEXT};
+        SQCLOUD_VALUE_TYPE types[] = {VALUE_TEXT, VALUE_TEXT, VALUE_TEXT, VALUE_TEXT};
         
         const char *command = "SET APIKEY ? NAME ? RESTRICTION ? EXPIRATION ?";
         printf("%s\n", command);
         SQCloudResult *result = SQCloudExecArray(conn, command, values, len, types, 4);
         SQCloudResultDump(conn, result);
+        SQCloudResultFree(result);
     }
     
     // VM
@@ -618,7 +625,7 @@ static int test_backup (SQCloudConnection *conn) {
         snprintf(command, sizeof(command), "BACKUP STEP %d PAGES %d;", index, npages);
         if (!do_command(conn, command, NULL, NULL, NULL, NULL, &result)) goto abort_backup;
         
-        SQCloudResType rtype = SQCloudResultType(result);
+        SQCLOUD_RESULT_TYPE rtype = SQCloudResultType(result);
         if (rtype != RESULT_ARRAY) goto abort_backup;
         
         /*
