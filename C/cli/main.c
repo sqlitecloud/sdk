@@ -130,7 +130,7 @@ static void do_print_usage (void) {
 
 bool do_print (SQCloudConnection *conn, SQCloudResult *res) {
     // res NULL means to read error message and error code from conn
-    SQCloudResType type = SQCloudResultType(res);
+    SQCLOUD_RESULT_TYPE type = SQCloudResultType(res);
     bool result = true;
     
     switch (type) {
