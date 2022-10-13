@@ -119,7 +119,7 @@ static SQCloudResult *internal_array_exec (SQCloudConnection *connection, const 
 // MARK: -
 
 struct SQCloudResult {
-    SQCloudResType  tag;                    // RESULT_OK, RESULT_ERROR, RESULT_STRING, RESULT_INTEGER, RESULT_FLOAT, RESULT_ROWSET, RESULT_NULL
+    SQCLOUD_RESULT_TYPE  tag;               // RESULT_OK, RESULT_ERROR, RESULT_STRING, RESULT_INTEGER, RESULT_FLOAT, RESULT_ROWSET, RESULT_NULL
     
     bool            ischunk;                // flag used to correctly access the union below
     union {
@@ -509,7 +509,7 @@ static bool internal_setup_tls (SQCloudConnection *connection, SQCloudConfig *co
     return true;
 }
 
-static SQCloudValueType internal_type (char *buffer) {
+static SQCLOUD_VALUE_TYPE internal_type (char *buffer) {
     // for VALUE_NULL values we don't return _ but the NULL value itself, so check for this special case
     // internal_parse_value is used both internally to set the value inside a Rowset (1)
     // and also from the public API SQCloudRowsetValue (2)
@@ -737,7 +737,7 @@ static SQCloudResult *internal_parse_array (SQCloudConnection *connection, char 
     return rowset;
 }
 
-static SQCloudResult *internal_rowset_type (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart, SQCloudResType type) {
+static SQCloudResult *internal_rowset_type (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart, SQCLOUD_RESULT_TYPE type) {
     SQCloudResult *rowset = (SQCloudResult *)mem_zeroalloc(sizeof(SQCloudResult));
     if (!rowset) {
         internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
@@ -1110,7 +1110,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             uint32_t cstart = 0;
             // parse explicit len
             uint32_t len = internal_parse_number(&buffer[1], blen-1, &cstart, NULL);
-            SQCloudResType type = (buffer[0] == CMD_JSON) ? RESULT_JSON : RESULT_STRING;
+            SQCLOUD_RESULT_TYPE type = (buffer[0] == CMD_JSON) ? RESULT_JSON : RESULT_STRING;
             if (buffer[0] == CMD_ZEROSTRING) --len;
             else if (buffer[0] == CMD_COMMAND) return internal_run_command(connection, &buffer[cstart+1], len, true);
             else if (buffer[0] == CMD_PUBSUB) return internal_setup_pubsub(connection, &buffer[cstart+1], len);
@@ -1729,8 +1729,8 @@ bool internal_rowset_compare(SQCloudResult *rs1, SQCloudResult *rs2) {
     // check types
     for (uint32_t i=0; i<nrows; ++i) {
         for (uint32_t j=0; j<ncols; ++j) {
-            SQCloudValueType type1 = SQCloudRowsetValueType(rs1, i, j);
-            SQCloudValueType type2 = SQCloudRowsetValueType(rs2, i, j);
+            SQCLOUD_VALUE_TYPE type1 = SQCloudRowsetValueType(rs1, i, j);
+            SQCLOUD_VALUE_TYPE type2 = SQCloudRowsetValueType(rs2, i, j);
             if (type1 != type2) return false;
         }
     }
@@ -2131,7 +2131,7 @@ char *_reserved10 (char *buffer, uint32_t *len, uint32_t *cellsize) {
     return internal_parse_value(buffer, len, cellsize);
 }
 
-char *_reserved11 (char *buffer, uint32_t blen, uint32_t index, uint32_t *len, uint32_t *cellsize, uint32_t *pos, int *type, INTERNAL_ERRCODE *err) {
+char *_reserved11 (char *buffer, uint32_t blen, uint32_t index, uint32_t *len, uint32_t *cellsize, uint32_t *pos, int *type, SQCLOUD_INTERNAL_ERRCODE *err) {
     if (err) *err = INTERNAL_ERRCODE_NONE;
     
     // =LEN N VALUE1 VALUE2 ... VALUEN
@@ -2329,7 +2329,7 @@ SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command) 
     return internal_run_command(connection, command, strlen(command), true);
 }
 
-SQCloudResult *SQCloudExecArray (SQCloudConnection *connection, const char *command, const char **values, uint32_t len[], SQCloudValueType types[], uint32_t n) {
+SQCloudResult *SQCloudExecArray (SQCloudConnection *connection, const char *command, const char **values, uint32_t len[], SQCLOUD_VALUE_TYPE types[], uint32_t n) {
     if (!command) return NULL;
     if (n == 0) return SQCloudExec(connection, command);
     
@@ -2529,7 +2529,7 @@ void SQCloudErrorSetMsg (SQCloudConnection *connection, const char *format, ...)
 
 // MARK: -
 
-SQCloudResType SQCloudResultType (SQCloudResult *result) {
+SQCLOUD_RESULT_TYPE SQCloudResultType (SQCloudResult *result) {
     return (result) ? result->tag : RESULT_ERROR;
 }
 
@@ -2608,7 +2608,7 @@ void SQCloudResultFree (SQCloudResult *result) {
 
 void SQCloudResultDump (SQCloudConnection *connection, SQCloudResult *result) {
     // res NULL means to read error message and error code from conn
-    SQCloudResType type = SQCloudResultType(result);
+    SQCLOUD_RESULT_TYPE type = SQCloudResultType(result);
     switch (type) {
         case RESULT_OK:
             printf("OK");
@@ -2663,7 +2663,7 @@ static bool SQCloudRowsetSanityCheck (SQCloudResult *result, uint32_t row, uint3
     return true;
 }
 
-SQCloudValueType SQCloudRowsetValueType (SQCloudResult *result, uint32_t row, uint32_t col) {
+SQCLOUD_VALUE_TYPE SQCloudRowsetValueType (SQCloudResult *result, uint32_t row, uint32_t col) {
     if (!SQCloudRowsetSanityCheck(result, row, col)) return VALUE_NULL;
     return internal_type(result->data[row*result->ncols+col]);
 }
@@ -2784,7 +2784,7 @@ static bool SQCloudArraySanityCheck (SQCloudResult *result, uint32_t index) {
     return true;
 }
 
-SQCloudValueType SQCloudArrayValueType (SQCloudResult *result, uint32_t index) {
+SQCLOUD_VALUE_TYPE SQCloudArrayValueType (SQCloudResult *result, uint32_t index) {
     if (!SQCloudArraySanityCheck(result, index)) return VALUE_NULL;
     return internal_type(result->data[index]);
 }
@@ -2855,7 +2855,7 @@ void SQCloudArrayDump (SQCloudResult *result) {
     for (uint32_t i=0; i<result->ndata; ++i) {
         uint32_t len;
         char *value = SQCloudArrayValue(result, i, &len);
-        SQCloudValueType type = SQCloudArrayValueType(result, i);
+        SQCLOUD_VALUE_TYPE type = SQCloudArrayValueType(result, i);
         if (!value) {value = "NULL"; len = 4;}
         if (type == VALUE_BLOB) printf("[%d] BLOB size %d\n", i, len);
         else printf("[%d] %.*s\n", i, len, value);
@@ -2991,7 +2991,7 @@ SQCloudVM *SQCloudVMCompile (SQCloudConnection *connection, const char *sql, int
     
     const char *r[1] = {sql};
     uint32_t rlen[1] = {len};
-    SQCloudValueType types[1] = {VALUE_TEXT};
+    SQCLOUD_VALUE_TYPE types[1] = {VALUE_TEXT};
     
     SQCloudResult *result = SQCloudExecArray(connection, "VM COMPILE ?", r, rlen, types, 1);
     if (!result) return NULL;
@@ -3056,12 +3056,12 @@ bool SQCloudVMClose (SQCloudVM *vm) {
     return rc;
 }
 
-SQCloudResType SQCloudVMStep (SQCloudVM *vm) {
+SQCLOUD_RESULT_TYPE SQCloudVMStep (SQCloudVM *vm) {
     char sql[512];
     snprintf(sql, sizeof(sql), "VM STEP %d;", vm->index);
     
     SQCloudResult *result = SQCloudExec(vm->connection, sql);
-    SQCloudResType type = SQCloudResultType(result);
+    SQCLOUD_RESULT_TYPE type = SQCloudResultType(result);
     
     if (type == RESULT_ROWSET) {
         SQCloudVMSetResult(vm, result);
@@ -3170,7 +3170,7 @@ bool SQCloudVMBindText (SQCloudVM *vm, int index, const char *value, int32_t len
     
     const char *r[1] = {value};
     uint32_t rlen[1] = {len};
-    SQCloudValueType types[1] = {VALUE_TEXT};
+    SQCLOUD_VALUE_TYPE types[1] = {VALUE_TEXT};
     
     SQCloudResult *result = SQCloudExecArray(vm->connection, sql, r, rlen, types, 1);
     if (SQCloudResultType(result) == RESULT_ERROR) {
@@ -3189,7 +3189,7 @@ bool SQCloudVMBindBlob (SQCloudVM *vm, int index, void *value, int32_t len) {
     
     const char *r[1] = {value};
     uint32_t rlen[1] = {len};
-    SQCloudValueType types[1] = {VALUE_BLOB};
+    SQCLOUD_VALUE_TYPE types[1] = {VALUE_BLOB};
     
     SQCloudResult *result = SQCloudExecArray(vm->connection, sql, r, rlen, types, 1);
     if (SQCloudResultType(result) == RESULT_ERROR) {
