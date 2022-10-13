@@ -29,7 +29,7 @@ bool SQCloudTransferDatabase (SQCloudConnection *connection, const char *dbname,
 SQCloudResult *sqcloud_parse_buffer (char *buffer, uint32_t blen, uint32_t cstart, SQCloudResult *chunk);
 uint32_t sqcloud_parse_number (char *buffer, uint32_t blen, uint32_t *cstart);
 char *sqcloud_parse_value (char *buffer, uint32_t *len, uint32_t *cellsize);
-char *sqcloud_parse_array_value(char *buffer, uint32_t blen, uint32_t index, uint32_t *len, uint32_t *cellsize, uint32_t *pos, int *type, INTERNAL_ERRCODE *errcode);
+char *sqcloud_parse_array_value(char *buffer, uint32_t blen, uint32_t index, uint32_t *len, uint32_t *cellsize, uint32_t *pos, int *type, SQCLOUD_INTERNAL_ERRCODE *errcode);
 int32_t sqcloud_parse_array_count(char *buffer, uint32_t blen);
 bool sqcloud_result_is_chunk (SQCloudResult *res);
 int sqcloud_parse_type (char *buffer);

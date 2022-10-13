@@ -79,7 +79,7 @@ typedef enum {
     RESULT_NULL,
     RESULT_JSON,
     RESULT_BLOB
-} SQCloudResType;
+} SQCLOUD_RESULT_TYPE;
 
 typedef enum {
     VALUE_INTEGER = 1,
@@ -87,7 +87,7 @@ typedef enum {
     VALUE_TEXT = 3,
     VALUE_BLOB = 4,
     VALUE_NULL = 5
-} SQCloudValueType;
+} SQCLOUD_VALUE_TYPE;
 
 typedef enum {
     ARRAY_TYPE_SQLITE_EXEC = 10,            // used in SQLITE_MODE only when a write statement is executed (instead of the OK reply)
@@ -104,7 +104,7 @@ typedef enum {
     ARRAY_TYPE_BACKUP_END = 42,             // used in backupClose (VFS)
     
     ARRAY_TYPE_SQLITE_STATUS = 50           // used in sqlite_status
-} SQCloudArrayType;
+} SQCLOUD_ARRAY_TYPE;
 
 typedef enum {
     INTERNAL_ERRCODE_NONE = 0,
@@ -116,7 +116,7 @@ typedef enum {
     INTERNAL_ERRCODE_NETWORK = 100005,
     INTERNAL_ERRCODE_FORMAT = 100006,
     INTERNAL_ERRCODE_INDEX = 100007
-} INTERNAL_ERRCODE;
+} SQCLOUD_INTERNAL_ERRCODE;
 
 // from SQLiteCloud
 typedef enum {
@@ -127,7 +127,7 @@ typedef enum {
     CLOUD_ERRCODE_AUTH = 10004,
     CLOUD_ERRCODE_GENERIC = 10005,
     CLOUD_ERRCODE_RAFT = 10006
-} CLOUD_ERRCODE;
+} SQCLOUD_CLOUD_ERRCODE;
 
 // MARK: - General -
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
@@ -151,7 +151,7 @@ void SQCloudErrorSetCode (SQCloudConnection *connection, int errcode);
 void SQCloudErrorSetMsg (SQCloudConnection *connection, const char *format, ...);
 
 // MARK: - Result -
-SQCloudResType SQCloudResultType (SQCloudResult *result);
+SQCLOUD_RESULT_TYPE SQCloudResultType (SQCloudResult *result);
 uint32_t SQCloudResultLen (SQCloudResult *result);
 char *SQCloudResultBuffer (SQCloudResult *result);
 int32_t SQCloudResultInt32 (SQCloudResult *result);
@@ -163,7 +163,7 @@ bool SQCloudResultIsError (SQCloudResult *result);
 void SQCloudResultDump (SQCloudConnection *connection, SQCloudResult *result);
 
 // MARK: - Rowset -
-SQCloudValueType SQCloudRowsetValueType (SQCloudResult *result, uint32_t row, uint32_t col);
+SQCLOUD_VALUE_TYPE SQCloudRowsetValueType (SQCloudResult *result, uint32_t row, uint32_t col);
 uint32_t SQCloudRowsetRowsMaxColumnLength (SQCloudResult *result, uint32_t col);
 char *SQCloudRowsetColumnName (SQCloudResult *result, uint32_t col, uint32_t *len);
 char *SQCloudRowsetColumnDeclType (SQCloudResult *result, uint32_t col, uint32_t *len);
@@ -183,8 +183,8 @@ void SQCloudRowsetDump (SQCloudResult *result, uint32_t maxline, bool quiet);
 bool SQCloudRowsetCompare (SQCloudResult *result1, SQCloudResult *result2);
 
 // MARK: - Array -
-SQCloudResult *SQCloudExecArray (SQCloudConnection *connection, const char *command, const char **values, uint32_t len[], SQCloudValueType types[], uint32_t n);
-SQCloudValueType SQCloudArrayValueType (SQCloudResult *result, uint32_t index);
+SQCloudResult *SQCloudExecArray (SQCloudConnection *connection, const char *command, const char **values, uint32_t len[], SQCLOUD_VALUE_TYPE types[], uint32_t n);
+SQCLOUD_VALUE_TYPE SQCloudArrayValueType (SQCloudResult *result, uint32_t index);
 uint32_t SQCloudArrayCount (SQCloudResult *result);
 char *SQCloudArrayValue (SQCloudResult *result, uint32_t index, uint32_t *len);
 int32_t SQCloudArrayInt32Value (SQCloudResult *result, uint32_t index);
@@ -200,7 +200,7 @@ bool SQCloudUploadDatabase (SQCloudConnection *connection, const char *dbname, c
 
 // MARK: - VM -
 SQCloudVM *SQCloudVMCompile (SQCloudConnection *connection, const char *sql, int32_t len, const char **tail);
-SQCloudResType SQCloudVMStep (SQCloudVM *vm);
+SQCLOUD_RESULT_TYPE SQCloudVMStep (SQCloudVM *vm);
 SQCloudResult *SQCloudVMResult (SQCloudVM *vm);
 bool SQCloudVMClose (SQCloudVM *vm);
 const char *SQCloudVMErrorMsg (SQCloudVM *vm);
