@@ -71,4 +71,4 @@ DROP DATABASE {{.dbname}}
 --// execute a command on the follower node
 LIST CONNECTIONS NODE 2
 -- --dump
---match rows 1
+--match rows 0
