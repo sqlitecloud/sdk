@@ -427,6 +427,10 @@ func (this *ConnectionManager) ReleaseConnection(project string, connection *Con
 }
 
 func (this *ConnectionManager) ExecuteSQL(project string, query string) (*sqlitecloud.Result, error, int, int) {
+	return this.ExecuteSQLArray(project, query, nil)
+}
+
+func (this *ConnectionManager) ExecuteSQLArray(project string, query string, args *[]interface{}) (*sqlitecloud.Result, error, int, int) {
 	var connection *Connection = nil
 	var res *sqlitecloud.Result = nil
 	var err error = nil
@@ -454,7 +458,13 @@ func (this *ConnectionManager) ExecuteSQL(project string, query string) (*sqlite
 			start := time.Now()
 			errCode := int(0)
 			extErrCode := int(0)
-			if res, err = connection.connection.Select(query); res == nil && err == nil {
+			if args != nil {
+				res, err = connection.connection.SelectArray(query, *args)
+			} else {
+				res, err = connection.connection.Select(query)
+			}
+
+			if res == nil && err == nil {
 				continue
 			} else if connection.connection.ErrorCode >= 100000 {
 				// internal error (the SDK cannot write to or read from the connection)
