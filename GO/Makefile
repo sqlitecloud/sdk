@@ -94,6 +94,9 @@ ifeq ($(wildcard src/github.com/Shopify/go-lua),)
 endif
 
 # Test Programs
+bin/test-selectarray:	sdk src/test-selectarray
+	go build -o bin/test-selectarray src/Test/test-selectarray.go
+
 bin/tls-test1:	sdk src/Test/tls-test1.go
 	go build -o bin/tls-test1 src/Test/tls-test1.go
 
@@ -118,7 +121,7 @@ bin/tls-literals:	sdk src/Test/tls-literals.go
 bin/tls-pubsub:	sdk src/Test/tls-pubsub.go
 	go build -o bin/tls-pubsub src/Test/tls-pubsub.go
 
-test:	bin/tls-test1 bin/tls-server bin/tls-dump1 bin/tls-dump2 bin/tls-dump3 bin/tls-compress bin/tls-literals bin/tls-pubsub
+test:	bin/test-selectarray bin/tls-test1 bin/tls-server bin/tls-dump1 bin/tls-dump2 bin/tls-dump3 bin/tls-compress bin/tls-literals bin/tls-pubsub
 
 # GO SDK
 sdk:	install-prerequirements src/sqlitecloud/*.go
