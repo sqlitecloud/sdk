@@ -56,7 +56,7 @@ else
     local r = fresult[ i ]
     local username = r.username
     r.username = nil
-    print("username: " .. username)
+    -- print("username: " .. username)
     local userapikeys = hierarchyresult[username]
 
     if not userapikeys then 
