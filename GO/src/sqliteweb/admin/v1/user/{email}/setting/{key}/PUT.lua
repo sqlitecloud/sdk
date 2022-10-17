@@ -27,8 +27,8 @@ local key,       err, msg = checkParameter( key, 1 )                     if err 
 
 local value,     err, msg = getBodyValue( "value", 0 )                   if err ~= 0 then return error( err, msg )                            end
 
-query  = string.format( "SELECT id FROM USER WHERE email = '%s';", enquoteSQL( email ) )
-userID = executeSQL( "auth", query )
+query  = "SELECT id FROM USER WHERE email = ?;"
+userID = executeSQL( "auth", query, {email} )
 if not userID                                                                        then return error( 504, "Gateway Timeout" )              end
 if userID.ErrorNumber     ~= 0                                                       then return error( 502, "Bad Gateway" )                  end
 if userID.NumberOfColumns ~= 1                                                       then return error( 502, "Bad Gateway" )                  end
@@ -37,8 +37,8 @@ if userID.NumberOfRows    ~= 1                                                  
 userID = userID.Rows[ 1 ].id
 
 
-query  = string.format( "UPDATE OR FAIL UserSettings SET value = '%s' WHERE user_id = %d AND key = '%s';", enquoteSQL( value ), userID, enquoteSQL( key ) )
-result = executeSQL( "auth", query )
+query  = "UPDATE OR FAIL UserSettings SET value = ? WHERE user_id = ? AND key = ?;"
+result = executeSQL( "auth", query, {value, userID, key} )
 
 if not result                                                                        then return error( 504, "Gateway Timeout" )              end
 if result.ErrorNumber     ~= 0                                                       then return error( 502, "Bad Gateway" )                  end

@@ -25,8 +25,8 @@ SetHeader( "Content-Encoding", "utf-8" )
 
 local email,       err, msg = checkParameter( email, 3 )                     if err ~= 0 then return error( err, string.format( msg, "email" ) )  end
 
-query    = string.format( "SELECT key, value FROM User JOIN UserSettings ON USER.id = UserSettings.user_id WHERE User.email = '%s';", enquoteSQL( email ) )
-settings = executeSQL( "auth", query )
+query    = "SELECT key, value FROM User JOIN UserSettings ON USER.id = UserSettings.user_id WHERE User.email = ?;"
+settings = executeSQL( "auth", query, {email} )
 
 if not settings                                                                          then return error( 504, "Gateway Timeout" )              end
 if settings.ErrorNumber       ~= 0                                                       then return error( 502, "Bad Gateway" )                  end

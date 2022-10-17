@@ -32,7 +32,7 @@ Response = {
   value             = {}             -- Array with key value pairs
 }
 
-backups = executeSQL( projectID, string.format( "LIST BACKUPS DATABASE '%s';", enquoteSQL( databaseName ) ) )
+backups = executeSQL( projectID, "LIST BACKUPS DATABASE ?;", {databaseName} )
 if not backups                                                                        then return error( 504, "Gateway Timeout" )            end
 if backups.ErrorNumber     ~= 0                                                       then return error( 502, backups.ErrorMessage )          end
 if backups.NumberOfColumns ~= 7                                                       then return error( 502, "Bad Gateway" )                end

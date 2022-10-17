@@ -30,8 +30,8 @@ local timeStamp,    err, msg = checkParameter( timeStamp, 20 )              if e
 
 local projectID,    err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                                   end
 
-query  = string.format( "RESTORE BACKUP DATABASE '%s' TIMESTAMP '%s';", enquoteSQL( databaseName ), enquoteSQL( timeStamp ) )
-result = executeSQL( projectID, query )
+query  = "RESTORE BACKUP DATABASE ? TIMESTAMP ?;"
+result = executeSQL( projectID, query, {databaseName, timeStamp} )
 
 if not result                                                                           then return error( 504, "Gateway Timeout" )                     end
 if result.ErrorMessage ~= ""                                                            then return error( 502, result.ErrorMessage )                   end

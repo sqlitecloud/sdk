@@ -25,8 +25,8 @@ SetHeader( "Content-Encoding", "utf-8" )
 local email,     err, msg = checkParameter( email, 3 )                   if err ~= 0  then return error( err, string.format( msg, "email" ) )   end
 local key,       err, msg = checkParameter( key, 1 )                     if err ~= 0  then return error( err, string.format( msg, "key" ) )     end
 
-query  = string.format( "SELECT id FROM USER WHERE email = '%s';", enquoteSQL( email ) )
-userID = executeSQL( "auth", query )
+query  = "SELECT id FROM USER WHERE email = ?;"
+userID = executeSQL( "auth", query, {email} )
 if not userID                                                                         then return error( 504, "Gateway Timeout" )               end
 if userID.ErrorNumber     ~= 0                                                        then return error( 502, "Bad Gateway" )                   end
 if userID.NumberOfColumns ~= 1                                                        then return error( 502, "Bad Gateway" )                   end
@@ -34,8 +34,8 @@ if userID.NumberOfRows    ~= 1                                                  
 
 userID = userID.Rows[ 1 ].id        
 
-query  = string.format( "DELETE FROM UserSettings WHERE user_id = %d AND key = '%s';", userID, enquoteSQL( key ) )       
-result = executeSQL( "auth", query )        
+query  = "DELETE FROM UserSettings WHERE user_id = ? AND key = ?;"       
+result = executeSQL( "auth", query, {userID, key} )        
 
 if not result                                                                         then return error( 504, "Gateway Timeout" )               end
 if result.ErrorNumber     ~= 0                                                        then return error( 502, "Bad Gateway" )                   end

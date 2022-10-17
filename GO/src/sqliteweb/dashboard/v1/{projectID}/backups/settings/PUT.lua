@@ -45,6 +45,7 @@ else
 --   print("values:" .. #values)
 
   local c = ""
+  local args = {}
   for i = 1, #values do
     local value = values[ i ]
     local name = value[ "name" ]
@@ -56,13 +57,18 @@ else
       if type(enabled) == "string" then 
         enabled,     err, msg = checkNumber( enabled, 0, 1 )           if err ~= 0 then return error( err, string.format( msg, "enabled" ) ) end
       end
-      c = c .. "SET DATABASE '" .. enquoteSQL(name) .. "' KEY backup TO '" .. enabled .. "';"
-      
+      c = c .. "SET DATABASE ? KEY backup TO ?;"
+      args[#args+1] = name
+      args[#args+1] = enabled
+
       local retention = value["backup_retention"]
       if retention and string.len(retention) then 
-        c = c .. " SET DATABASE '" .. enquoteSQL(name) .. "' KEY backup_retention TO '" .. enquoteSQL(retention) .. "';"
+        c = c .. " SET DATABASE ? KEY backup_retention TO ?;"
+        args[#args+1] = name
+        args[#args+1] = retention
       else 
-        c = c .. " DROP DATABASE '" .. enquoteSQL(name) .. "' KEY backup_retention; "
+        c = c .. " DROP DATABASE ? KEY backup_retention; "
+        args[#args+1] = name
       end 
     end
   end
@@ -70,7 +76,7 @@ else
   if #values > 0 then
     c = c .. " APPLY BACKUP SETTINGS;"
     -- print("command: ".. c)
-    result = executeSQL( projectID, c )
+    result = executeSQL( projectID, c, args )
     if not result                                   then return error( 504, "Gateway Timeout" )            end
     if result.ErrorNumber ~= 0                      then return error( 502, result.ErrorMessage )          end
   end

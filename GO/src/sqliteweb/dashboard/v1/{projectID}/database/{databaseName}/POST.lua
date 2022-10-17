@@ -28,16 +28,26 @@ local dbName,    err, msg = checkParameter( databaseName, 1 )            if err 
 local key,       err, msg = getBodyValue( "key", 0 )                     if err ~= 0 then return error( err, msg )                                    end
 local encoding,  err, msg = getBodyValue( "encoding", 0 )                if err ~= 0 then return error( err, msg )                                    end
 
-local                                   query = string.format( "CREATE DATABASE '%s'", enquoteSQL( dbName ) )
-if string.len( key )      > 0      then query = string.format( "%s KEY '%s'",          query, enquoteSQL( key      ) ) end
-if string.len( encoding ) > 0      then query = string.format( "%s ENCODING '%s'",     query, enquoteSQL( encoding ) ) end
-                                        query = string.format( "%s IF NOT EXISTS;",    query )
+local query = "CREATE DATABASE ?"
+local queryargs = {dbName}
+
+if string.len( key )      > 0 then 
+  query = string.format( "%s KEY ?", query ) 
+  queryargs[#queryargs+1] = key
+end
+
+if string.len( encoding ) > 0 then 
+  query = string.format( "%s ENCODING ?", query ) 
+  queryargs[#queryargs+1] = encoding
+end
+
+query = string.format( "%s IF NOT EXISTS;", query )
 
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
 else
-  check_access = string.format( "SELECT COUNT( User.id ) AS granted FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled = 1 AND Company.enabled = 1 AND User.id = %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
-  check_access = executeSQL( "auth", check_access )
+  check_access = "SELECT COUNT( User.id ) AS granted FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled = 1 AND Company.enabled = 1 AND User.id = ? AND uuid = ?;"
+  check_access = executeSQL( "auth", check_access, {userID, projectID} )
 
   if not check_access                     then return error( 504, "Gateway Timeout" )     end
   if check_access.ErrorNumber       ~= 0  then return error( 502, "Bad Gateway" )         end
@@ -46,7 +56,7 @@ else
   if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
 end
 
-result = executeSQL( projectID, query )
+result = executeSQL( projectID, query, queryargs )
 if not result                             then return error( 404, "ProjectID not found" ) end
 if result.ErrorNumber       ~= 0          then return error( 502, result.ErrorMessage )   end
 if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end

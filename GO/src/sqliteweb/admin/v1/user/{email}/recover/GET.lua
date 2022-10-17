@@ -31,8 +31,8 @@ template_data = {
   Password = "secret",
 }
 
-query = string.format( "SELECT password FROM USER WHERE email = '%s';", enquoteSQL( email ) )
-result = executeSQL( "auth", query )
+query = "SELECT password FROM USER WHERE email = ?;"
+result = executeSQL( "auth", query, {email} )
 
 if not result                                                                       then return error( 504, "Gateway Timeout" )              end
 if result.ErrorMessage      ~= ""                                                   then return error( 502, result.ErrorMessage )            end

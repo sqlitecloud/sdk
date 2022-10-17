@@ -310,7 +310,7 @@ func ( this *SQCloud ) sendArray( command string, values []interface{} ) ( int, 
 
   // send the header  
   bytesToSend = len( header )
-  fmt.Printf("Write buffer(%d): %v\n", bytesToSend, header)
+  // fmt.Printf("Write buffer(%d): %v\n", bytesToSend, header)
   if bytesSent, err = (*this.sock).Write( header )                          ; err != nil { return bytesSent, err }
   if bytesSent != bytesToSend                                                            { return bytesSent, errors.New( "Partitial data sent" ) }
   
@@ -318,7 +318,7 @@ func ( this *SQCloud ) sendArray( command string, values []interface{} ) ( int, 
   for _, data := range buffers {
     bytesToSend = len( data )
     if bytesToSend > 0 {
-      fmt.Printf("Write buffer(%d): %v\n", bytesToSend, data)
+      // fmt.Printf("Write buffer(%d): %v\n", bytesToSend, data)
       if bytesSent, err = (*this.sock).Write( data )                            ; err != nil { return bytesSent, err }
       if bytesSent != bytesToSend                                                            { return bytesSent, errors.New( "Partitial data sent" ) }
     } else {

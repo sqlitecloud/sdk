@@ -31,8 +31,8 @@ if userID == 0 then
 else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                     end
   
-  local query  = string.format( "SELECT NODE.id AS nodeID FROM Node JOIN Project ON Project.uuid = Node.project_uuid JOIN Company ON Company.id = Project.company_id JOIN User ON User.company_id = Company.id WHERE USER.enabled = 1 AND USER.id = %d AND PROJECT.uuid = '%s';", userID, enquoteSQL( projectID ) )
-  local result = executeSQL( "auth", query ) 
+  local query  = "SELECT NODE.id AS nodeID FROM Node JOIN Project ON Project.uuid = Node.project_uuid JOIN Company ON Company.id = Project.company_id JOIN User ON User.company_id = Company.id WHERE USER.enabled = 1 AND USER.id = ? AND PROJECT.uuid = ?;"
+  local result = executeSQL( "auth", query, {userID, projectID} ) 
 
   if not result                                                                       then return -1, 503, "Service Unavailable"       end
   if result.ErrorNumber       ~= 0                                                    then return -1, 502, "Bad Gateway"               end
@@ -43,9 +43,9 @@ else
     nodeID = result.Rows[ i ].nodeID
     query  = string.format( "%s DELETE FROM NodeSettings WHERE node_id = %d; DELETE FROM Node WHERE id = %d;", query, nodeID, nodeID )
   end  
-  query = string.format( "%s DELETE FROM Project WHERE uuid = '%s'; END TRANSACTION;", query, enquoteSQL( projectID ) )
+  query = string.format( "%s DELETE FROM Project WHERE uuid = ?; END TRANSACTION;", query )
   
-  result = executeSQL( "auth", query )
+  result = executeSQL( "auth", query, {projectID} )
   if not result                                                                      then return error( 504, "Gateway Timeout" )            end
   if result.ErrorMessage ~= ""                                                       then return error( 502, result.ErrorMessage )          end
   if result.ErrorNumber  ~= 0                                                        then return error( 502, "Bad Gateway" )                end

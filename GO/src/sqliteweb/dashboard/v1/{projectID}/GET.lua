@@ -43,7 +43,7 @@ if userID == 0 then
 else 
   local projectID, err, msg  = verifyProjectID( userID, projectID )      if err ~= 0  then return error( err, msg )                     end
 
-  project = executeSQL( "auth", string.format( "SELECT uuid AS id, Project.name, description, admin_username FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled = 1 AND user.id = %d AND Project.uuid = '%s';", userID, enquoteSQL( projectID ) ) )
+  project = executeSQL( "auth", "SELECT uuid AS id, Project.name, description, admin_username FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled = 1 AND user.id = ? AND Project.uuid = ?;", {userID, projectID} )
 
   if not project                                                                      then return error( 404, "User not found" )        end
   if project.ErrorMessage               ~= ""                                         then return error( 502, project.ErrorMessage )    end

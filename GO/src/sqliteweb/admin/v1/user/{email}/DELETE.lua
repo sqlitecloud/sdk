@@ -32,8 +32,7 @@ SetHeader( "Content-Encoding", "utf-8" )
 
 local email,    err, msg = checkParameter( email, 3 )                    if err ~= 0 then return error( err, string.format( msg, "email" ) )  end
 
-query  = string.format( "SELECT id || '' AS id FROM USER WHERE email = '%s';", enquoteSQL( email ) )
-userID = executeSQL( "auth", query )
+userID = executeSQL( "auth", "SELECT id || '' AS id FROM USER WHERE email = ?;", { email } )
 if not userID                                                                        then return error( 504, "Gateway Timeout" )              end
 if userID.ErrorMessage    ~= ""                                                      then return error( 502, userID.ErrorMessage )            end
 if userID.ErrorNumber     ~= 0                                                       then return error( 502, "Bad Gateway" )                  end

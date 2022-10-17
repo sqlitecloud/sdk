@@ -55,9 +55,9 @@ else
     Project.name        = name
     Project.description = description
 
-    query = string.format( "INSERT INTO Project VALUES( '%s', %d, '%s', '%s', '%s', '%s' ); SELECT changes() AS success;", enquoteSQL( Project.id ), companyID, enquoteSQL( name ), enquoteSQL( description ), enquoteSQL( adminUsername ), enquoteSQL( adminPassword ) )
+    query = "INSERT INTO Project VALUES( ?, ?, ?, ?, ?, ? ); SELECT changes() AS success;"
+    result = executeSQL( "auth", query, {Project.id, companyID, name, description, adminUsername, adminPassword} )
 
-    result = executeSQL( "auth", query )
     if not result                     then goto continue end
     if result.ErrorMessage      ~= "" then goto continue end
     if result.ErrorNumber       ~= 0  then goto continue end

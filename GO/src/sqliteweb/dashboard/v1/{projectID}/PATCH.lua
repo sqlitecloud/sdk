@@ -37,32 +37,38 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                                end
 
   query = string.format( "UPDATE Project SET ")
+  queryargs = {}
   local separator = ""
   
   if name and string.len(name)>0 then   
-    query = string.format( "%s%s name = '%s'", query, separator, enquoteSQL( name ))
+    query = string.format( "%s%s name = ?", query, separator)
+    queryargs[#queryargs+1] = name
     separator = ","
   end
   
   if description and string.len(description)>0 then   
-    query = string.format( "%s%s description = '%s'", query, separator, enquoteSQL( description ))
+    query = string.format( "%s%s description = ?", query, separator)
+    queryargs[#queryargs+1] = description
     separator = ","
   end
 
   if adminUsername and string.len(adminUsername)>0 then   
-    query = string.format( "%s%s admin_username = '%s'", query, separator, enquoteSQL( adminUsername ))
+    query = string.format( "%s%s admin_username = ?", query, separator)
+    queryargs[#queryargs+1] = adminUsername
     separator = ","
   end
 
   if adminPassword and string.len(adminPassword)>0 then   
-    query = string.format( "%s%s admin_password = '%s'", query, separator, enquoteSQL( adminPassword ))
+    query = string.format( "%s%s admin_password = ?", query, separator)
+    queryargs[#queryargs+1] = adminPassword
     separator = ","
   end
 
   -- only if there are any changes
-  if separator == "," then
-    query = string.format( "%s WHERE uuid = '%s'; SELECT changes() AS success;", query, projectID )
-    result = executeSQL( "auth", query )
+  if #queryargs > 0 then
+    query = string.format( "%s WHERE uuid = ?; SELECT changes() AS success;", query )
+    queryargs[#queryargs+1] = projectID
+    result = executeSQL( "auth", query, queryargs )
     if not result                                                                      then return error( 504, "Gateway Timeout" )                  end
     if result.ErrorMessage      ~= ""                                                  then return error( 502, result.ErrorMessage )                end
     if result.ErrorNumber       ~= 0                                                   then return error( 502, "Bad Gateway" )                      end

@@ -32,15 +32,15 @@ local enabled,    err, msg = getBodyValue( "enabled", 1 )               if err ~
 
 enabled = bool( enabled )
 
-query  = string.format( "INSERT INTO Company (name) VALUES( '%s'); SELECT last_insert_rowid() as id;", enquoteSQL( company ))
-result = executeSQL( "auth", query )     
+query  = "INSERT INTO Company (name) VALUES( ? ); SELECT last_insert_rowid() as id;"
+result = executeSQL( "auth", query, {company} )     
 if not result                                                                   then return error( 504, "Gateway Timeout" )              end
 if result.ErrorNumber     ~= 0                                                  then return error( 403, "Could not create company" )     end
 if result.NumberOfRows    == 0                                                  then return error( 403, "Could not create company" )     end                
 companyID = result.Rows[1].id
 
-query  = string.format( "INSERT OR FAIL INTO User (first_name,last_name,company_id,email,password,creation_date,enabled) VALUES( '%s','%s',%s,'%s','%s','%s',%s);", enquoteSQL( firstName ), enquoteSQL( lastName ), companyID, enquoteSQL( email ), enquoteSQL( password ), now, enabled )
-result = executeSQL( "auth", query )
+query  = string.format( "INSERT OR FAIL INTO User (first_name,last_name,company_id,email,password,creation_date,enabled) VALUES( ?, ?, ?, ?, ?, '%s', %s);", now, enabled )
+result = executeSQL( "auth", query, {firstName, lastName, companyID, email, password} )
 if not result                                                                       then return error( 504, "Gateway Timeout" )              end
 if result.ErrorNumber     ~= 0                                                      then return error( 403, "Could not create user" )        end
 if result.Value           ~= "OK"                                                   then return error( 500, "Internal Server Error" )        end
