@@ -74,6 +74,7 @@ static bool do_command (SQCloudConnection *conn, char *command, int32_t *int_val
     else if ((string_value) && SQCloudResultType(res) == RESULT_STRING) *string_value = SQCloudResultBuffer(res);
     else if ((blob_value) && SQCloudResultType(res) == RESULT_BLOB) *blob_value = SQCloudResultBuffer(res);
     else if (result_value) *result_value = res;
+
     if (len) *len = SQCloudResultLen(res);
     
     bool result = do_print(conn, res);
@@ -491,7 +492,6 @@ static int test_blob (SQCloudConnection *conn) {
     if (!do_command(conn, "USE DATABASE images.sqlite;", NULL, NULL, NULL, NULL, NULL)) goto abort_test;
     if (!test_read_blob(conn)) goto abort_test;
     if (!test_write_blob(conn)) goto abort_test;
-    
     return 0;
     
 abort_test:
@@ -500,6 +500,200 @@ abort_test:
 }
 
 // MARK: -
+
+static int test_array_create_apikey (SQCloudConnection *conn) {
+    char *current_sql = NULL;
+    const char *val1 = "apiusertest123";
+    const char *val2 = "newkey123";
+
+    SQCloudResult *res1 = SQCloudExec(conn, "LIST APIKEYS");
+    SQCloudResultDump(conn, res1);
+    
+    const char *values[] = {val1, val1, val2};
+    uint32_t len[] = {(uint32_t)strlen(val1), (uint32_t)strlen(val1), (uint32_t)strlen(val2)};
+    SQCLOUD_VALUE_TYPE types[] = {VALUE_TEXT, VALUE_TEXT, VALUE_TEXT};
+    current_sql = "CREATE USER ? PASSWORD 123456; CREATE APIKEY USER ? NAME ?";
+    SQCloudResult *res = SQCloudExecArray(conn, current_sql, values, len, types, 3);
+    SQCloudResultDump(conn, res);
+    if (SQCloudResultType(res) != RESULT_STRING) goto abort_test;
+    SQCloudResultFree(res);
+    
+    SQCloudResult *res2 = SQCloudExec(conn, "LIST APIKEYS");
+    SQCloudResultDump(conn, res2);
+    if (SQCloudRowsetCompare(res1, res2) == true) goto abort_test;
+    
+    current_sql = "DROP USER ?;";
+    res = SQCloudExecArray(conn, current_sql, values, len, types, 1);
+    if (SQCloudResultType(res) != RESULT_OK) goto abort_test;
+    SQCloudResultFree(res);
+    
+    SQCloudResult *res3 = SQCloudExec(conn, "LIST APIKEYS");
+    SQCloudResultDump(conn, res3);
+    if (SQCloudRowsetCompare(res1, res3) == false) goto abort_test;
+
+    SQCloudResultFree(res1);
+    SQCloudResultFree(res2);
+    SQCloudResultFree(res3);
+    
+    return 0;
+    
+abort_test:
+    printf("%s FAILED! (test_array_create_apikey)\n\n", current_sql);
+    exit(-1);
+    return -1;
+}
+
+static int test_array_create_db (SQCloudConnection *conn) {
+    char *current_sql = NULL;
+    const char *val1 = "newdbtest1.sqlite";
+
+    SQCloudResult *res1 = SQCloudExec(conn, "LIST DATABASES");
+    SQCloudResultDump(conn, res1);
+
+    const char *values[] = {val1};
+    uint32_t len[] = {(uint32_t)strlen(val1)};
+    SQCLOUD_VALUE_TYPE types[] = {VALUE_TEXT};
+    current_sql = "CREATE DATABASE ? IF NOT EXISTS;";
+    SQCloudResult *res = SQCloudExecArray(conn, current_sql, values, len, types, 1);
+    if (SQCloudResultType(res) != RESULT_OK) goto abort_test;
+    SQCloudResultFree(res);
+
+    SQCloudResult *res2 = SQCloudExec(conn, "LIST DATABASES");
+    SQCloudResultDump(conn, res2);
+    if (SQCloudRowsetCompare(res1, res2) == true) goto abort_test;
+    
+    current_sql = "DROP DATABASE ?;";
+    res = SQCloudExecArray(conn, current_sql, values, len, types, 1);
+    if (SQCloudResultType(res) != RESULT_OK) goto abort_test;
+    SQCloudResultFree(res);
+    
+    SQCloudResult *res3 = SQCloudExec(conn, "LIST DATABASES");
+    SQCloudResultDump(conn, res3);
+    if (SQCloudRowsetCompare(res1, res3) == false) goto abort_test;
+
+    SQCloudResultFree(res1);
+    SQCloudResultFree(res2);
+    SQCloudResultFree(res3);
+
+    return 0;
+    
+abort_test:
+    printf("%s FAILED! (test_array_create_db)\n\n", current_sql);
+    exit(-1);
+    return -1;
+}
+
+static int test_array_multicommands_db (SQCloudConnection *conn) {
+    char *current_sql = NULL;
+    
+    {
+        const char *val1 = "newdbtest1.sqlite";
+        const char *val2 = "newdbtest2.sqlite";
+        const char *val3 = "newdbtest2.sqlite";
+        const char *val4 = "abc";
+        const char *val5 = "def";
+
+        SQCloudResult *res1 = SQCloudExec(conn, "LIST DATABASES");
+        SQCloudResultDump(conn, res1);
+
+        const char *values[] = {val1, val2, val3, val4, val5};
+        uint32_t len[] = {(uint32_t)strlen(val1), (uint32_t)strlen(val2), (uint32_t)strlen(val3), (uint32_t)strlen(val4), (uint32_t)strlen(val5)};
+        SQCLOUD_VALUE_TYPE types[] = {VALUE_TEXT, VALUE_TEXT, VALUE_TEXT, VALUE_TEXT, VALUE_TEXT};
+        current_sql = "CREATE DATABASE ? IF NOT EXISTS; CREATE DATABASE ? IF NOT EXISTS; USE DATABASE ?; CREATE TABLE IF NOT EXISTS t1 (a INTEGER PRIMARY KEY, b); INSERT INTO t1 (b) VALUES (?); INSERT INTO t1 (b) VALUES (?)";
+        SQCloudResult *res = SQCloudExecArray(conn, current_sql, values, len, types, 5);
+        SQCloudResultDump(conn, res);
+        if (SQCloudResultType(res) != RESULT_OK) goto abort_test;
+        SQCloudResultFree(res);
+
+        SQCloudResult *res2 = SQCloudExec(conn, "LIST DATABASES");
+        SQCloudResultDump(conn, res2);
+        if (SQCloudRowsetCompare(res1, res2) == true) goto abort_test;
+
+        current_sql = "UNUSE DATABASE; DROP DATABASE ?; DROP DATABASE ?";
+        res = SQCloudExecArray(conn, current_sql, values, len, types, 2);
+        if (SQCloudResultType(res) != RESULT_OK) goto abort_test;
+        SQCloudResultFree(res);
+
+        SQCloudResult *res3 = SQCloudExec(conn, "LIST DATABASES");
+        SQCloudResultDump(conn, res3);
+        if (SQCloudRowsetCompare(res1, res3) == false) goto abort_test;
+
+        SQCloudResultFree(res1);
+        SQCloudResultFree(res2);
+        SQCloudResultFree(res3);
+    }
+    
+    {
+        const char *val1 = "newdbtest3.sqlite";
+        
+        SQCloudResult *res1 = SQCloudExec(conn, "LIST DATABASES");
+        SQCloudResultDump(conn, res1);
+        
+        const char *values[] = {val1};
+        uint32_t len[] = {(uint32_t)strlen(val1)};
+        SQCLOUD_VALUE_TYPE types[] = {VALUE_TEXT};
+        current_sql = "CREATE DATABASE ? IF NOT EXISTS";
+        SQCloudResult *res = SQCloudExecArray(conn, current_sql, values, len, types, 1);
+        SQCloudResultDump(conn, res);
+        if (SQCloudResultType(res) != RESULT_OK) goto abort_test;
+        SQCloudResultFree(res);
+        
+        SQCloudResult *res2 = SQCloudExec(conn, "LIST DATABASES");
+        SQCloudResultDump(conn, res2);
+        if (SQCloudRowsetCompare(res1, res2) == true) goto abort_test;
+        
+        current_sql = "USE DATABASE ?;";
+        res = SQCloudExecArray(conn, current_sql, values, len, types, 1);
+        if (SQCloudResultType(res) != RESULT_OK) goto abort_test;
+        SQCloudResultFree(res);
+        
+        current_sql = "CREATE TABLE t1 (a INTEGER PRIMARY KEY, b)";
+        res = SQCloudExec(conn, current_sql);
+        if (SQCloudResultType(res) != RESULT_OK) goto abort_test;
+        SQCloudResultFree(res);
+        
+        current_sql = "LIST TABLES";
+        res = SQCloudExec(conn, current_sql);
+        SQCloudResultDump(conn, res);
+        if (SQCloudResultType(res) != RESULT_ROWSET || SQCloudRowsetRows(res) != 1) goto abort_test;
+        SQCloudResultFree(res);
+        
+        current_sql = "UNUSE DATABASE; DROP DATABASE ?";
+        res = SQCloudExecArray(conn, current_sql, values, len, types, 1);
+        if (SQCloudResultType(res) != RESULT_OK) goto abort_test;
+        SQCloudResultFree(res);
+        
+        SQCloudResult *res3 = SQCloudExec(conn, "LIST DATABASES");
+        SQCloudResultDump(conn, res3);
+        if (SQCloudRowsetCompare(res1, res3) == false) goto abort_test;
+        
+        SQCloudResultFree(res1);
+        SQCloudResultFree(res2);
+        SQCloudResultFree(res3);
+    }
+    
+    return 0;
+    
+abort_test:
+    printf("%s FAILED! (test_array_multicommands_db)\n\n", current_sql);
+    exit(-1);
+    return -1;
+}
+
+static int test_array_multicommand (SQCloudConnection *conn) {
+    SQCloudResult *result = SQCloudExec(conn, "USE OR CREATE DATABASE testdb1.sqlite; CREATE TABLE t1 (a INTEGER PRIMARY KEY, b);");
+    SQCloudResultDump(conn, result);
+
+    const char *val = "aaa";
+    const char *values[] = {val};
+    uint32_t len[] = {(uint32_t)strlen(val)};
+    SQCLOUD_VALUE_TYPE types[] = {VALUE_TEXT};
+    
+    result = SQCloudExecArray(conn, "SELECT * FROM t1; INSERT INTO t1 (b) VALUES (?)", values, len, types, 1);
+    SQCloudResultDump(conn, result);
+    
+    return 0;
+}
 
 static int test_array (SQCloudConnection *conn) {
     // built-in with 1 binding
@@ -528,6 +722,13 @@ static int test_array (SQCloudConnection *conn) {
         printf("%s\n", command);
         SQCloudResult *result = SQCloudExecArray(conn, command, values, len, types, 1);
         SQCloudResultDump(conn, result);
+        
+        int rc = 0;
+        if (SQCloudResultType(result) != RESULT_ROWSET || SQCloudRowsetRows(result) != 176) rc = -1;
+       
+        SQCloudResultFree(result);
+        
+        if (rc != 0) return rc;
     }
     
     // SQLite with 2 bindings
@@ -543,6 +744,13 @@ static int test_array (SQCloudConnection *conn) {
         printf("%s\n", command);
         SQCloudResult *result = SQCloudExecArray(conn, command, values, len, types, 2);
         SQCloudResultDump(conn, result);
+        
+        int rc = 0;
+        if (SQCloudResultType(result) != RESULT_ROWSET || SQCloudRowsetRows(result) != 101) rc = -1;
+       
+        SQCloudResultFree(result);
+        
+        if (rc != 0) return rc;
     }
     
     // built-in with 4 bindings
@@ -575,8 +783,13 @@ static int test_array (SQCloudConnection *conn) {
         /*SQCloudResType type = */SQCloudVMStep(vm);
         SQCloudResult *r = SQCloudVMResult(vm);
         SQCloudResultDump(conn, r);
-        
+       
+        int rc = 0;
+        if (SQCloudResultType(r) != RESULT_ROWSET || SQCloudRowsetRows(r) != 6) rc = -1;
+    
         SQCloudVMClose(vm);
+        
+        if (rc != 0) return rc;
     }
     
     return 0;
@@ -794,11 +1007,16 @@ int main (int argc, const char * argv[]) {
         printf("Connection to host OK...\n\n");
     }
     
-    test_multiple_commands(conn);
-    //test_blob(conn);
-    //test_array(conn);
-    //test_backup(conn);
-    //test_database(conn);
+    int rc = 0;
+    rc = test_array_create_apikey(conn); if (rc != 0) return rc;
+    rc = test_multiple_commands(conn); if (rc != 0) return rc;
+    rc = test_array_create_db(conn); if (rc != 0) return rc;
+    rc = test_array_multicommands_db(conn); if (rc != 0) return rc;
+    rc = test_blob(conn); if (rc != 0) return rc;
+    rc = test_array_multicommand(conn); if (rc != 0) return rc;
+    rc = test_array(conn); if (rc != 0) return rc;
+    rc = test_backup(conn); if (rc != 0) return rc;
+    rc = test_database(conn); if (rc != 0) return rc;
     
     SQCloudDisconnect(conn);
     return 0;
