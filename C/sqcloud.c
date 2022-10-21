@@ -2082,6 +2082,20 @@ static int url_extract_keyvalue (const char *s, char b1[512], char b2[512]) {
 
 // MARK: - RESERVED -
 
+SQCloudResult *_reserved0 (SQCloudConnection *connection, const char *buffer, size_t blen, bool compute_header) {
+    internal_clear_error(connection);
+    
+    if (!buffer || blen < CMD_MINLEN) return NULL;
+    
+    TIME_GET(tstart);
+    if (!internal_socket_write(connection, buffer, blen, true, compute_header)) return NULL;
+    SQCloudResult *result = internal_socket_read(connection, true);
+    TIME_GET(tend);
+    if (result) result->time = TIME_VAL(tstart, tend);
+    return result;
+}
+
+
 bool _reserved1 (SQCloudConnection *connection, const char *command, size_t len, bool compute_header, bool (*forward_cb) (char *buffer, size_t blen, void *xdata, void *xdata2), void *xdata, void *xdata2) {
     if (!forward_cb) return false;
     if (!internal_socket_write(connection, command, len, true, compute_header)) return false;

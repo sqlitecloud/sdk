@@ -11,6 +11,7 @@
 
 #include "sqcloud.h"
 
+#define SQCloudExecBuffer               _reserved0
 #define SQCloudForwardExec              _reserved1
 #define SQCloudSetClientUUID            _reserved2
 #define sqcloud_parse_buffer            _reserved3
@@ -22,6 +23,7 @@
 #define sqcloud_parse_array_value       _reserved11
 #define sqcloud_parse_array_count       _reserved12
 
+SQCloudResult *SQCloudExecBuffer (SQCloudConnection *connection, const char *buffer, size_t blen, bool compute_header);
 bool SQCloudForwardExec(SQCloudConnection *connection, const char *command, size_t len, bool compute_header, bool (*forward_cb) (char *buffer, size_t blen, void *xdata, void *xdata2), void *xdata, void *xdata2);
 SQCloudResult *SQCloudSetClientUUID (SQCloudConnection *connection, const char *UUID);
 bool SQCloudTransferDatabase (SQCloudConnection *connection, const char *dbname, const char *key, uint64_t snapshotid, bool isinternaldb, void *xdata, int64_t dbsize, int (*xCallback)(void *xdata, void *buffer, uint32_t *blen, int64_t ntot, int64_t nprogress));
