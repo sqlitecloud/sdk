@@ -47,6 +47,7 @@ typedef struct SQCloudConfigStruct {
     bool            zero_text;              // flag to tell the server to zero-terminate strings
     bool            password_hashed;        // private flag
     bool            nonlinearizable;        // flag to request for immediate responses from the server node without waiting for linerizability guarantees
+    bool            db_memory;              // flag to force the database to be in-memory
     bool            no_blob;                // flag to tell the server to not send BLOB columns
     bool            db_create;              // flag to force the creation of the database (if it does not exist)
     int             max_data;               // value to tell the server to not send columns with more than max_data bytes
@@ -131,7 +132,7 @@ typedef enum {
 
 // MARK: - General -
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
-SQCloudConnection *SQCloudConnectWithString (const char *s);
+SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *config);
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command);
 SQCloudResult *SQCloudRead (SQCloudConnection *connection);
 char *SQCloudUUID (SQCloudConnection *connection);
