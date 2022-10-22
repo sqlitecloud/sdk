@@ -2216,7 +2216,7 @@ SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig
     return connection;
 }
 
-SQCloudConnection *SQCloudConnectWithString (const char *s) {
+SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *pconfig) {
     // URL STRING FORMAT
     // sqlitecloud://user:pass@host.com:port/dbname?timeout=10&key2=value2&key3=value3
     
@@ -2326,6 +2326,25 @@ SQCloudConnection *SQCloudConnectWithString (const char *s) {
             config->max_rowset = (int)strtol(value, NULL, 0);
         }
         n += rc;
+    }
+    
+    // config parameter is used to force some configuration flags
+    if (pconfig) {
+        if (pconfig->timeout) config->timeout = pconfig->timeout;
+        if (pconfig->compression) config->compression = pconfig->compression;
+        if (pconfig->sqlite_mode) config->sqlite_mode = pconfig->sqlite_mode;
+        if (pconfig->zero_text) config->zero_text = pconfig->zero_text;
+        if (pconfig->nonlinearizable) config->nonlinearizable = pconfig->nonlinearizable;
+        if (pconfig->no_blob) config->no_blob = pconfig->no_blob;
+        if (pconfig->db_create) config->db_create = pconfig->db_create;
+        if (pconfig->max_data) config->max_data = pconfig->max_data;
+        if (pconfig->max_rows) config->max_rows = pconfig->max_rows;
+        if (pconfig->max_rowset) config->max_rowset = pconfig->max_rowset;
+        if (pconfig->insecure) config->insecure = pconfig->insecure;
+        if (pconfig->db_memory) {
+            if (config->database) mem_free((void *)config->database);
+            config->database = mem_string_dup(":memory:");
+        }
     }
     
     SQCloudConnection *connection = SQCloudConnect(hostname, port, config);
