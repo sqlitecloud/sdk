@@ -89,9 +89,9 @@ bool path_combine (char path[MAXPATH], const char dirpath[MAXPATH], const char n
     #if CLI_WINDOWS
     return (PathCombineA(path, dirpath, name) != NULL);
     #else
-    size_t len = strlen(dirpath) - 1;
+    size_t len = strlen(dirpath);
     int n;
-    if ((len) && (dirpath[len] != '/')) {
+    if ((len) && (dirpath[len-1] != '/')) {
         n = snprintf(path, MAXPATH, "%s%s%s", dirpath, "/", name);
     } else {
         n = snprintf(path, MAXPATH, "%s%s", dirpath, name);
