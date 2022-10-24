@@ -39,7 +39,6 @@ if string.len( restriction ) > 0   then
 end
 if string.len( expiration )  > 0   then 
     query = query .. " EXPIRATION ?"  
-    expiration, err, msg = checkNumber( expiration, 0, 1 )                if err ~= 0 then return error( err, string.format( msg, "expiration" ) )    end
     queryargs[#queryargs+1] = expiration     
 end
 
