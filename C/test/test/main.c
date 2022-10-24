@@ -504,7 +504,7 @@ abort_test:
 static int test_array_create_apikey (SQCloudConnection *conn) {
     char *current_sql = NULL;
     const char *val1 = "apiusertest123";
-    const char *val2 = "newkey123";
+    const char *val2 = "newkey1";
 
     SQCloudResult *res1 = SQCloudExec(conn, "LIST APIKEYS");
     SQCloudResultDump(conn, res1);
@@ -522,19 +522,36 @@ static int test_array_create_apikey (SQCloudConnection *conn) {
     SQCloudResultDump(conn, res2);
     if (SQCloudRowsetCompare(res1, res2) == true) goto abort_test;
     
+    const char *val3 = "newkey2";
+    const char *val4 = "0";
+    const char *val5 = "2022-12-31 23:59:59";
+    const char *values1[] = {val1, val3, val4, val5};
+    uint32_t len1[] = {(uint32_t)strlen(val1), (uint32_t)strlen(val3), (uint32_t)strlen(val4), (uint32_t)strlen(val5)};
+    SQCLOUD_VALUE_TYPE types1[] = {VALUE_TEXT, VALUE_TEXT, VALUE_INTEGER, VALUE_TEXT};
+    current_sql = "CREATE APIKEY USER ? NAME ? RESTRICTION ? EXPIRATION ?";
+    res = SQCloudExecArray(conn, current_sql, values1, len1, types1, 4);
+    SQCloudResultDump(conn, res);
+    if (SQCloudResultType(res) != RESULT_STRING) goto abort_test;
+    SQCloudResultFree(res);
+    
+    SQCloudResult *res3 = SQCloudExec(conn, "LIST APIKEYS");
+    SQCloudResultDump(conn, res3);
+    if (SQCloudRowsetCompare(res2, res3) == true) goto abort_test;
+    
     current_sql = "DROP USER ?;";
     res = SQCloudExecArray(conn, current_sql, values, len, types, 1);
     if (SQCloudResultType(res) != RESULT_OK) goto abort_test;
     SQCloudResultFree(res);
     
-    SQCloudResult *res3 = SQCloudExec(conn, "LIST APIKEYS");
+    SQCloudResult *res4 = SQCloudExec(conn, "LIST APIKEYS");
     SQCloudResultDump(conn, res3);
-    if (SQCloudRowsetCompare(res1, res3) == false) goto abort_test;
+    if (SQCloudRowsetCompare(res1, res4) == false) goto abort_test;
 
     SQCloudResultFree(res1);
     SQCloudResultFree(res2);
     SQCloudResultFree(res3);
-    
+    SQCloudResultFree(res4);
+
     return 0;
     
 abort_test:
@@ -999,7 +1016,7 @@ abort_test:
 // MARK: -
 
 int main (int argc, const char * argv[]) {
-    SQCloudConnection *conn = SQCloudConnectWithString(CONNECTION_STRING);
+    SQCloudConnection *conn = SQCloudConnectWithString(CONNECTION_STRING, NULL);
     if (SQCloudIsError(conn)) {
         printf("ERROR connecting: %s (%d)\n", SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
         return -1;
