@@ -189,6 +189,8 @@ bool do_command_without_ok_reply (SQCloudConnection *conn, char *command) {
     return result;
 }
 
+bool do_internal_command (SQCloudConnection *conn, char *command);
+
 bool do_process_file (SQCloudConnection *conn, const char *filename) {
     // should continue flag set to false by default
     bool should_continue = false;
@@ -204,7 +206,7 @@ bool do_process_file (SQCloudConnection *conn, const char *filename) {
         line[strcspn(line, "\n")] = 0;
         if (strcasecmp(line, ".PROMPT")==0) {should_continue = true; break;}
         printf(">> %s\n", line);
-        do_command(conn, line);
+        (line[0] == '.') ? do_internal_command(conn, line) : do_command(conn, line);
     }
     
     fclose(file);
