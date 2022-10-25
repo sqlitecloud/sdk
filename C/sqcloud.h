@@ -93,6 +93,7 @@ typedef enum {
 typedef enum {
     ARRAY_TYPE_SQLITE_EXEC = 10,            // used in SQLITE_MODE only when a write statement is executed (instead of the OK reply)
     ARRAY_TYPE_DB_STATUS = 11,
+    ARRAY_TYPE_METADATA = 12,
     
     ARRAY_TYPE_VM_STEP = 20,                // used in VM_STEP (when SQLITE_DONE is returned)
     ARRAY_TYPE_VM_COMPILE = 21,             // used in VM_PREPARE
