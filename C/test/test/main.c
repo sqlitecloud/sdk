@@ -698,18 +698,88 @@ abort_test:
 }
 
 static int test_array_multicommand (SQCloudConnection *conn) {
-    SQCloudResult *result = SQCloudExec(conn, "USE OR CREATE DATABASE testdb1.sqlite; CREATE TABLE t1 (a INTEGER PRIMARY KEY, b);");
-    SQCloudResultDump(conn, result);
+    char *current_sql = NULL;
 
-    const char *val = "aaa";
-    const char *values[] = {val};
-    uint32_t len[] = {(uint32_t)strlen(val)};
-    SQCLOUD_VALUE_TYPE types[] = {VALUE_TEXT};
+    const char *val1 = "testdb1.sqlite";
+    const char *values1[] = {val1, val1};
+    uint32_t len1[] = {(uint32_t)strlen(val1), (uint32_t)strlen(val1)};
+    SQCLOUD_VALUE_TYPE types1[] = {VALUE_TEXT, VALUE_TEXT};
     
-    result = SQCloudExecArray(conn, "SELECT * FROM t1; INSERT INTO t1 (b) VALUES (?)", values, len, types, 1);
-    SQCloudResultDump(conn, result);
+    current_sql = "CREATE DATABASE ?; USE DATABASE ?; CREATE TABLE t1 (a INTEGER PRIMARY KEY, b);";
+    SQCloudResult *result = SQCloudExecArray(conn, current_sql, values1, len1, types1, 2);
+    if (SQCloudResultType(result) != RESULT_OK) {
+        SQCloudResultDump(conn, result);
+        goto abort_test;
+    }
+    SQCloudResultFree(result);
+
+    const char *val2 = "aaa";
+    const char *values2[] = {val2};
+    uint32_t len2[] = {(uint32_t)strlen(val2)};
+    SQCLOUD_VALUE_TYPE types2[] = {VALUE_TEXT};
+    
+    current_sql = "SELECT * FROM t1; INSERT INTO t1 (b) VALUES (?)";
+    result = SQCloudExecArray(conn, current_sql, values2, len2, types2, 1);
+    if (SQCloudResultType(result) != RESULT_OK) {
+        SQCloudResultDump(conn, result);
+        goto abort_test;
+    }
+    SQCloudResultFree(result);
+
+    result = SQCloudExec(conn, "UNUSE DATABASE");
+    if (SQCloudResultType(result) != RESULT_OK) {
+        SQCloudResultDump(conn, result);
+        goto abort_test;
+    }
+    SQCloudResultFree(result);
+
+    const char *val3 = "bbb";
+    const char *values3[] = {val1, val3};
+    uint32_t len3[] = {(uint32_t)strlen(val1), (uint32_t)strlen(val3)};
+    SQCLOUD_VALUE_TYPE types3[] = {VALUE_TEXT, VALUE_TEXT};
+    
+    current_sql = "SWITCH DATABASE ?; INSERT INTO t1 (b) VALUES (?)";
+    result = SQCloudExecArray(conn, current_sql, values3, len3, types3, 2);
+    if (SQCloudResultType(result) != RESULT_OK) {
+        SQCloudResultDump(conn, result);
+        goto abort_test;
+    }
+    SQCloudResultFree(result);
+    
+    current_sql = "SELECT * FROM t1;";
+    result = SQCloudExec(conn, current_sql);
+    if (SQCloudResultType(result) == RESULT_OK) {
+        SQCloudResultDump(conn, result);
+        goto abort_test;
+    }
+    SQCloudResultFree(result);
+    
+    const char *val4 = "ccc";
+    const char *values4[] = {val1, val4};
+    uint32_t len4[] = {(uint32_t)strlen(val1), (uint32_t)strlen(val4)};
+    SQCLOUD_VALUE_TYPE types4[] = {VALUE_TEXT, VALUE_TEXT};
+    current_sql = "SWITCH DATABASE ?; INSERT INTO t1 (b) VALUES (?)";
+    result = SQCloudExecArray(conn, current_sql, values4, len4, types4, 2);
+    if (SQCloudResultType(result) != RESULT_OK) {
+        SQCloudResultDump(conn, result);
+        goto abort_test;
+    }
+    SQCloudResultFree(result);
+    
+    current_sql = "DROP DATABASE ?;";
+    result = SQCloudExecArray(conn, current_sql, values3, len3, types3, 1);
+    if (SQCloudResultType(result) != RESULT_OK) {
+        SQCloudResultDump(conn, result);
+        goto abort_test;
+    }
+    SQCloudResultFree(result);
     
     return 0;
+    
+abort_test:
+    printf("%s FAILED! (test_array_multicommand)\n\n", current_sql);
+    exit(-1);
+    return -1;
 }
 
 static int test_array (SQCloudConnection *conn) {
