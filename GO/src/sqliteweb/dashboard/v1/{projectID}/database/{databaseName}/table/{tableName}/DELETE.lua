@@ -33,9 +33,9 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                                   end
 end
 
-local command = string.format( "SWITCH DATABASE '%s'; DROP TABLE '%s'", enquoteSQL( dbName ), tableName )
+local command = string.format( "SWITCH DATABASE ?; DROP TABLE '%s'", tableName )
 
-result = executeSQL( projectID, command )
+result = executeSQL( projectID, command, {dbName} )
 if not result                             then return error( 504, "Gateway Timeout" )       end
 if result.ErrorNumber ~= 0                then return error( 502, result.ErrorMessage )     end
 if result.Value ~= "OK"                   then return error( 502, "Bad Gateway" )           end

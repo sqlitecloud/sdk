@@ -35,25 +35,30 @@ local size,      err, msg = getBodyValue( "size", 1 )                    if err 
 local address,   err, msg = getBodyValue( "address", 1 )                 if err ~= 0 then return error( err, msg )                          end -- 64.227.11.116
 local port,      err, msg = getBodyValue( "port", 1 )                    if err ~= 0 then return error( err, msg )                          end -- 9960
 
-query = string.format( "UPDATE Node SET name='%s', type='%s', provider='%s', image='%s', region='%s', size='%s',", enquoteSQL( name ), enquoteSQL( type ), enquoteSQL( provider ), enquoteSQL( image ), enquoteSQL( region ), enquoteSQL( size ) )
+query = "UPDATE Node SET name=?, type=?, provider=?, image=?, region=?, size=?,"
+queryargs = {name, type, provider, image, region, size}
 
 if contains( address, ":" ) then
-  query = string.format( "%s addr6='%s',", query, enquoteSQL( address ) )
+  query = query .. " addr6=?,"
+  queryargs[#queryargs+1] = address
 else
-  query = string.format( "%s addr4='%s',", query, enquoteSQL( address ) )
+  query = query .. " addr4=?,"
+  queryargs[#queryargs+1] = address
 end
 
-query = string.format( "%s port=%d WHERE project_uuid='%s' AND id=%d;", query, port, enquoteSQL( projectID ), nodeID )
+query = query .. " port=? WHERE project_uuid = ? AND id=?;"
+queryargs[#queryargs+1] = port
+queryargs[#queryargs+1] = projectID
+queryargs[#queryargs+1] = nodeID
 
 if userID == 0 then         
-  if not getINIBoolean( projectID, "enabled", false )                                then return error( 401, "Project Disabled" )           end
-                                                                                          return error( 501, "Not Implemented" )   
-
+  if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Project Disabled" )           end
+  return error( 501, "Not Implemented" )   
 else      
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                          end
   local machineNodeID, err, msg = verifyNodeID( userID, projectID, nodeID )  if err ~= 0 then return error( err, msg )                      end                                                                                         
 
-  result = executeSQL( "auth", query )
+  result = executeSQL( "auth", query, queryargs )
   if not result                                                                      then return error( 504, "Gateway Timeout" )            end
   if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )          end
 

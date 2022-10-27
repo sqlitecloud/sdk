@@ -79,7 +79,7 @@ func (this *Server) dashboardWebsocketDownload(writer http.ResponseWriter, reque
 	defer c.Close()
 	// SQLiteWeb.Logger.Debug("dashboardWebsocketDownload: upgrade")
 
-	query := fmt.Sprintf("DOWNLOAD DATABASE '%s'", enquoteString(v["databaseName"]))
+	query := "DOWNLOAD DATABASE ?" // , enquoteString(v["databaseName"]))
 	connection, err = cm.GetConnection(projectID, false)
 	switch {
 	case err != nil:
@@ -91,7 +91,7 @@ func (this *Server) dashboardWebsocketDownload(writer http.ResponseWriter, reque
 		return
 	}
 
-	if res, err = connection.connection.Select(query); err != nil && connection.connection.ErrorCode >= 100000 {
+	if res, err = connection.connection.SelectArray(query, []interface{}{v["databaseName"]}); err != nil && connection.connection.ErrorCode >= 100000 {
 		// internal error (the SDK cannot write to or read from the connection)
 		// so remove the current failed connection and retry with a new one
 		// for example:
@@ -202,9 +202,11 @@ func (this *Server) dashboardWebsocketUpload(writer http.ResponseWriter, request
 
 	// SQLiteWeb.Logger.Debugf("dashboardWebsocketUpload: header %v", request.Header["Cookie"])
 
-	query := fmt.Sprintf("UPLOAD DATABASE '%s'", enquoteString(v["databaseName"]))
+	query := "UPLOAD DATABASE ?" // , enquoteString(v["databaseName"]))
+	args := []interface{}{v["databaseName"]}
 	if keys, ok := request.URL.Query()["key"]; ok && len(keys[0]) > 0 {
-		query = fmt.Sprintf("%s key '%s'", query, enquoteString(keys[0]))
+		query = fmt.Sprintf("%s key ?", query) // enquoteString(keys[0])
+		args = append(args, keys[0])
 	}
 
 	connection, err = cm.GetConnection(projectID, false)
@@ -219,7 +221,7 @@ func (this *Server) dashboardWebsocketUpload(writer http.ResponseWriter, request
 		return
 	}
 
-	if res, err = connection.connection.Select(query); err != nil && connection.connection.ErrorCode >= 100000 {
+	if res, err = connection.connection.SelectArray(query, args); err != nil && connection.connection.ErrorCode >= 100000 {
 		// internal error (the SDK cannot write to or read from the connection)
 		// so remove the current failed connection and retry with a new one
 		// for example:
@@ -331,8 +333,9 @@ func enquoteString(s string) string {
 }
 
 func verifyProjectID(userID int, projectUUID string) (string, int, error) {
-	query := fmt.Sprintf("SELECT uuid FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled=1 AND Company.enabled = 1 AND User.id=%d AND Project.uuid = '%s';", userID, enquoteString(projectUUID))
-	res, err, errCode, _ := cm.ExecuteSQL("auth", query)
+	query := "SELECT uuid FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled=1 AND Company.enabled = 1 AND User.id=? AND Project.uuid = ?;"
+	args := []interface{}{userID, projectUUID}
+	res, err, errCode, _ := cm.ExecuteSQLArray("auth", query, &args)
 
 	if res == nil {
 		return "", 503, fmt.Errorf("Service Unavailable")

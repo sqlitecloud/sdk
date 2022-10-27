@@ -145,10 +145,11 @@ func (this *ConnectionManager) getServerList(project string) ([]string, error) {
 	// search for uuid in auth database
 	default:
 		if project != "auth" {
-			query := fmt.Sprintf("SELECT 'sqlitecloud://' || admin_username || ':' || admin_password || '@' || IIF( addr6, addr6, addr4 ) || IIF( port, ':' || port, '' ) AS Node FROM Project JOIN Node ON uuid == project_uuid WHERE uuid = '%s';", sqlitecloud.SQCloudEnquoteString(project))
-			SQLiteWeb.Logger.Debugf("query %s\n", query)
+			query := "SELECT 'sqlitecloud://' || admin_username || ':' || admin_password || '@' || IIF( addr6, addr6, addr4 ) || IIF( port, ':' || port, '' ) AS Node FROM Project JOIN Node ON uuid == project_uuid WHERE uuid = ?;"
+			args := []interface{}{project}
+			SQLiteWeb.Logger.Debugf("query %s %v\n", query, args)
 
-			if result, err, _, _ := this.ExecuteSQL("auth", query); result == nil || result.GetNumberOfRows() == 0 {
+			if result, err, _, _ := this.ExecuteSQLArray("auth", query, &args); result == nil || result.GetNumberOfRows() == 0 {
 				return []string{}, errors.New("ERROR: Query returned no result (-1)")
 			} else {
 				defer result.Free()

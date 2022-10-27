@@ -38,11 +38,15 @@ else
 
   local settingID, err, msg = getNodeSettingsID( userID, projectID, nodeID, key ) 
 
-  query  = err ~= 0 
-  and      string.format( "INSERT OR REPLACE INTO NodeSettings ( node_id, key, value ) VALUES( %d, '%s', '%s' )", nodeID, enquoteSQL( key ), enquoteSQL( value ) ) 
-  or       string.format( "UPDATE OR REPLACE NodeSettings SET value = '%s' WHERE id = %d;", enquoteSQL( body.value ), settingID )
+  if err ~= 0 then
+    query = "INSERT OR REPLACE INTO NodeSettings ( node_id, key, value ) VALUES( ?, ?, ? )"
+    queryargs = {nodeID, key, value} 
+  else 
+    query = "UPDATE OR REPLACE NodeSettings SET value = ? WHERE id = ?;"
+    queryargs = {body.value, settingID}
+  end
 
-  result = executeSQL( "auth", query )
+  result = executeSQL( "auth", query, queryargs )
   if not result                                                                      then return error( 504, "Gateway Timeout" )            end
   if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )          end
 end

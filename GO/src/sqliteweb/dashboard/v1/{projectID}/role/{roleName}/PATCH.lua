@@ -46,8 +46,8 @@ end
 
 -- update name, if needed
 if string.len(name) > 0 then
-  query  = string.format( "RENAME ROLE '%s' TO '%s'; ", enquoteSQL( roleName ), enquoteSQL( name ) )
-  result = executeSQL( projectID, query )
+  query  = "RENAME ROLE ? TO ?;"
+  result = executeSQL( projectID, query, {roleName, name} )
   if not result                             then return error( 404, "ProjectID not found" ) end
   if result.ErrorNumber       ~= 0          then return error( 404, result.ErrorMessage )  end
   if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end
@@ -61,12 +61,18 @@ end
 if privilege then
   if string.len(privilege) == 0             then return error( 404, string.format( "Invalid privilege", value ))                  end
   
-  query = string.format( "SET PRIVILEGE '%s' ROLE '%s'", enquoteSQL( privilege ), enquoteSQL( roleName ) )
-  if string.len( database )   > 0    then query = string.format( "%s DATABASE '%s'",             query, enquoteSQL( database  ) ) end
-  if string.len( table )      > 0    then query = string.format( "%s TABLE '%s'",                query, enquoteSQL( table     ) ) end
-                                          query = string.format( "%s;",                          query )
+  query = "SET PRIVILEGE ? ROLE ?"
+  queryargs = {privilege, roleName}
+  if string.len( database )   > 0    then 
+    query = query .. " DATABASE ?"
+    queryargs[#queryargs+1] = database
+  end
+  if string.len( table )      > 0    then 
+    query = query .. " TABLE ?"
+    queryargs[#queryargs+1] = table
+  end
 
-  result = executeSQL( projectID, query )
+  result = executeSQL( projectID, query, queryargs )
   if not result                             then return error( 404, "ProjectID not found" ) end
   if result.ErrorNumber       ~= 0          then return error( 404, result.ErrorMessage )  end
   if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end

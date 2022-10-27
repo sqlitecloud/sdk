@@ -28,25 +28,20 @@ local dbName,    err, msg = checkParameter( databaseName, 1 )            if err 
 local key,       err, msg = getBodyValue( "key", 0 )                     if err ~= 0 then return error( err, msg )                                    end
 
 if key == "" then
-  query       = string.format( "DECRYPT DATABASE '%s';"              , enquoteSQL( dbName ) )
+  query       = "DECRYPT DATABASE ?;"
+  queryargs   = {dbName}
 else
-  query       = string.format( "ENCRYPT DATABASE '%s' WITH KEY '%s';", enquoteSQL( dbName ), enquoteSQL( key ) )
+  query       = "ENCRYPT DATABASE ? WITH KEY ?;"
+  queryargs   = {dbName, key}
 end
 
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
 else
-  check_access = string.format( "SELECT COUNT( User.id ) AS granted FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled = 1 AND Company.enabled = 1 AND User.id= %d AND uuid = '%s';", userID, enquoteSQL( projectID ) )
-  check_access = executeSQL( "auth", check_access )
-
-  if not check_access                     then return error( 504, "Gateway Timeout" )     end
-  if check_access.ErrorNumber       ~= 0  then return error( 502, "Bad Gateway" )         end
-  if check_access.NumberOfColumns   ~= 1  then return error( 502, "Bad Gateway" )         end 
-  if check_access.NumberOfRows      ~= 1  then return error( 502, "Bad Gateway" )         end
-  if check_access.Rows[ 1 ].granted ~= 1  then return error( 401, "Unauthorized" )        end
+  local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                                   end
 end
 
-result = executeSQL( projectID, query )
+result = executeSQL( projectID, query, queryargs )
 if not result                             then return error( 404, "ProjectID not found" ) end
 if result.ErrorNumber       ~= 0          then return error( 404, "Database not found" )  end
 if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end

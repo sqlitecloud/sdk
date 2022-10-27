@@ -38,7 +38,7 @@ else
   local settingID, err, msg = getNodeSettingsID( userID, projectID, nodeID, key )       
         
   if err == 0 then      
-    result = executeSQL( "auth", string.format( "DELETE FROM NodeSettings WHERE id = %d;", settingID ) )     
+    result = executeSQL( "auth", "DELETE FROM NodeSettings WHERE id = ?;", {settingID} )     
     if not result                                                                    then return error( 504, "Gateway Timeout" )            end
     if result.ErrorNumber ~= 0                                                       then return error( 502, result.ErrorMessage )          end
   end

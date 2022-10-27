@@ -31,7 +31,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                     end
   local machineNodeID, err, msg = verifyNodeID( userID, projectID, nodeID )  if err ~= 0 then return error( err, msg )                     end
 
-  result = executeSQL( projectID, string.format( "CLOSE CONNECTION %d NODE %d", connectionID, machineNodeID ) )
+  result = executeSQL( projectID, "CLOSE CONNECTION ? NODE ?", {connectionID, machineNodeID} )
   if not result                                                                      then return error( 504, "Gateway Timeout" )       end
   if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )     end
   if result.Value ~= "OK"                                                            then return error( 502, "Bad Gateway" )           end

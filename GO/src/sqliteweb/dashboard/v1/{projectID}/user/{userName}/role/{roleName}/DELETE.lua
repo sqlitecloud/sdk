@@ -28,10 +28,18 @@ local roleName,  err, msg = checkParameter( roleName, 3 )                if err 
 local database,  err, msg = getBodyValue( "database", 0 )                if err ~= 0 then return error( err, msg )                              end
 local table,     err, msg = getBodyValue( "table", 0 )                   if err ~= 0 then return error( err, msg )                              end
 
-                                          query = string.format( "REVOKE ROLE '%s' USER '%s'" , enquoteSQL( roleName ), enquoteSQL( userName ) )
-if string.len( database )  > 0       then query = string.format( "%s DATABASE '%s'"          , query, enquoteSQL( database  ) ) end
-if string.len( table )     > 0       then query = string.format( "%s TABLE '%s'"             , query, enquoteSQL( table     ) ) end
-                                          query = string.format( "%s;"                       , query )
+query = "REVOKE ROLE ? USER ?" 
+queryargs = {roleName, userName}
+
+if string.len( database )  > 0       then 
+  query = query .. " DATABASE ?"
+  queryargs[#queryargs+1] = database
+end
+if string.len( table )     > 0       then 
+  query = query .. " TABLE ?"
+  queryargs[#queryargs+1] = table 
+end
+
 result = nil
 
 if userID == 0 then
@@ -40,7 +48,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                              end
 end                                          
                                
-result = executeSQL( projectID, query )                                          
+result = executeSQL( projectID, query, queryargs )                                          
 if not result                                                                        then return error( 404, "ProjectID not found" ) end
 if result.ErrorNumber               ~= 0                                             then return error( 502, result.ErrorMessage )   end
 if result.NumberOfColumns           ~= 0                                             then return error( 502, "Bad Gateway" )         end

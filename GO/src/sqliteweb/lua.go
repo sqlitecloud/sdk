@@ -415,7 +415,7 @@ func lua_executeSQL(L *lua.State) int {
 				}
 			}
 		}
-		// fmt.Printf("lua_executeSQL '%s', args: %v\n", query, pargs)
+		// SQLiteWeb.Logger.Debugf("lua_executeSQL '%s', args: %v\n", query, pargs)
 
 		res, err, errCode, extErrCode := cm.ExecuteSQLArray(uuid, query, pargs)
 

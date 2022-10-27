@@ -31,12 +31,14 @@ local enabled,    err, msg = getBodyValue( "enabled", 0 )                 if err
 local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                          end
 
 if not enabled or enabled == "" or enabled == 0 or enabled == "0" or enabled == "false" then  
-    query  = string.format( "DISABLE PLUGIN '%s'", enquoteSQL( pluginName ) ) 
+    query  = "DISABLE PLUGIN ?"
+    queryargs = {pluginName} 
 else  
-    query  = string.format( "ENABLE PLUGIN '%s'", enquoteSQL( pluginName ) )  
+    query  = "ENABLE PLUGIN ?"
+    queryargs = {pluginName} 
 end 
    
-result = executeSQL( projectID, query )
+result = executeSQL( projectID, query, queryargs )
 if not result                                                                      then return error( 504, "Gateway Timeout" )            end
 if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )          end
 

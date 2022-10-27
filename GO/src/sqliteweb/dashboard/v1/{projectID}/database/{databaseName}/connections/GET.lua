@@ -27,11 +27,11 @@ local projectID, err, msg = checkProjectID( projectID )                  if err 
 local databaseName,  err, msg = checkParameter( databaseName, 1 )        if err ~= 0 then return error( err, string.format( msg, "databaseName" ) )  end
 local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                                   end
 
-connections = executeSQL( projectID, string.format( "LIST DATABASE CONNECTIONS '%s';", enquoteSQL( databaseName ) ) )
+connections = executeSQL( projectID, "LIST DATABASE CONNECTIONS ?;", {databaseName} )
 
 if not connections                                                                   then return error( 504, "Gateway Timeout" )                     end
 if connections.ErrorNumber     ~= 0                                                  then return error( 502, result.ErrorMessage )                   end
-if connections.NumberOfColumns ~= 6                                                  then return error( 502, "Bad Gateway" )                         end
+-- if connections.NumberOfColumns ~= 6                                                  then return error( 502, "Bad Gateway" )                         end
 
 fcon = nil
 if connections.NumberOfRows > 0 then

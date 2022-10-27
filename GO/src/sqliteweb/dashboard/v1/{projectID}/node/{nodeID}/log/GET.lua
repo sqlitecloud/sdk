@@ -47,50 +47,65 @@ if not query.cursor   then query.cursor = ""     end
 if not query.from     then query.from   = ""     end
 if not query.to       then query.to     = ""     end
 
-local slevel = ""
-local stype  = ""
-if string.len( query.level ) > 0 then
-  local level,     err, msg = checkNumber( query.level, 0, 5 )           if err ~= 0 then return error( err, string.format( msg, "level" ) ) end
-  slevel = string.format( "LEVEL %d", level )
-end
-if string.len( query.type ) > 0 then
-  local type,      err, msg = checkNumber( query.type, 1, 8 )            if err ~= 0 then return error( err, string.format( msg, "type" ) )  end
-  stype = string.format( "TYPE %d", type )
-end
+local sql = ""
+local sqlargs = {}
 
-local order = "ORDER DESC"
 
-local sfrom = ""
-local sto = ""
 if string.len( query.from ) > 0 then  
   local from,    err, msg = checkDateTime( query.from )                  if err ~= 0 then return error( err, string.format( msg, "from" ) ) end
-  sfrom = string.format( "FROM '%s'", from)
+  sql = sql .. " FROM ?"
+  sqlargs[#sqlargs+1] = from
 end
 if string.len( query.to ) > 0 then  
   local to,      err, msg = checkDateTime( query.to )                    if err ~= 0 then return error( err, string.format( msg, "to" ) )   end
-  sto = string.format( "TO '%s'", to)
+  sql = sql .. " TO ?"
+  sqlargs[#sqlargs+1] = to
 end
 
-local slimit = ""
-local scursor = ""
-if string.len( query.limit ) > 0 then
-  local limit,     err, msg = checkNumber( query.limit, 0, 1000 )          if err ~= 0 then return error( err, string.format( msg, "limit" ) ) end
-  slimit = string.format( "LIMIT %d", limit )
+if string.len( query.level ) > 0 then
+  local level,     err, msg = checkNumber( query.level, 0, 5 )           if err ~= 0 then return error( err, string.format( msg, "level" ) ) end
+  sql = sql .. " LEVEL ?"
+  sqlargs[#sqlargs+1] = level
+end
+if string.len( query.type ) > 0 then
+  local type,      err, msg = checkNumber( query.type, 1, 8 )            if err ~= 0 then return error( err, string.format( msg, "type" ) )  end
+  sql = sql .. " TYPE ?"
+  sqlargs[#sqlargs+1] = type
+end
 
+sql = sql .. " ID"
+sql = sql .. " ORDER DESC"
+
+local haslimit = false
+if string.len( query.limit ) > 0 then
   if string.len( query.cursor ) > 0 then
+    local limit,     err, msg = checkNumber( query.limit, 0, 1000 )          if err ~= 0 then return error( err, string.format( msg, "limit" ) ) end
+    sql = sql .. " LIMIT ?"
+    sqlargs[#sqlargs+1] = limit
+    haslimit = true
+
     local cursor,     err, msg = checkNumber( query.cursor, 0, 18446744073709551615 )      if err ~= 0 then return error( err, string.format( msg, "cursor" ) ) end
-    scursor = string.format( "CURSOR %d", cursor )
+    sql = sql .. " CURSOR ?"
+    sqlargs[#sqlargs+1] = cursor
   else 
     -- get the total COUNT
-    sql = string.format( "COUNT LOG %s %s %s %s ID %s NODE %d;", sfrom, sto, slevel, stype, order, machineNodeID ) 
-    countlog = executeSQL( projectID, sql )
+    sqlargs[#sqlargs+1] = machineNodeID
+    countlog = executeSQL( projectID, "COUNT LOG" .. sql .. " NODE ?" , sqlargs )
+    table.remove(sqlargs, #sqlargs)
+
     if not countlog                                           then return error( 504, "Gateway Timeout" )            end
     if countlog.ErrorNumber ~= 0                              then return error( 502, countlog.ErrorMessage )        end
     if countlog.NumberOfColumns ~= 2                          then return error( 502, "Bad Gateway" )                end
 
     Response.value.count = countlog.Rows[1].count
     if Response.value.count > 0 and countlog.Rows[1].next_cursor then 
-      scursor = string.format( "CURSOR %d", countlog.Rows[1].next_cursor )
+      local limit,     err, msg = checkNumber( query.limit, 0, 1000 )          if err ~= 0 then return error( err, string.format( msg, "limit" ) ) end
+      sql = sql .. " LIMIT ?"
+      sqlargs[#sqlargs+1] = limit
+      haslimit = true
+
+      sql = sql .. " CURSOR ?"
+      sqlargs[#sqlargs+1] = countlog.Rows[1].next_cursor
     else 
       SetStatus( 200 )
       Write( jsonEncode( Response ) )
@@ -99,9 +114,7 @@ if string.len( query.limit ) > 0 then
   end
 end
 
-sql = string.format( "LIST LOG %s %s %s %s ID %s %s %s NODE %d;", sfrom, sto, slevel, stype, order, slimit, scursor, machineNodeID ) 
-
-log = executeSQL( projectID, sql )
+log = executeSQL( projectID, "LIST LOG" .. sql, sqlargs )
 if not log                                                                           then return error( 504, "Gateway Timeout" )            end
 if log.ErrorNumber ~= 0                                                              then return error( 502, log.ErrorMessage )             end
 
@@ -118,7 +131,7 @@ if log.NumberOfRows > 0 then
                            } )
 
   -- get the next cursor 
-  if string.len(slimit) > 0  then   Response.value.next_cursor = log.Rows[log.NumberOfRows].id - 1     end
+  if haslimit then   Response.value.next_cursor = log.Rows[log.NumberOfRows].id - 1     end
   Response.value.logs = flog                      
 else
   Response.value = nil

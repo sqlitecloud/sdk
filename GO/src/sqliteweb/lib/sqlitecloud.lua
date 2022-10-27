@@ -86,7 +86,7 @@ end
 ------
 
 function verifyUserID( userID )
-  local result = executeSQL( "auth", string.format( "SELECT User.enabled AND Company.enabled AS enabled, User.company_id FROM User JOIN Company ON User.company_id = Company.id WHERE User.id = %d;", userID ) )
+  local result = executeSQL( "auth", "SELECT User.enabled AND Company.enabled AS enabled, User.company_id FROM User JOIN Company ON User.company_id = Company.id WHERE User.id = ?;", {userID} )
 
   if not result                     then return -1, -1, 503, "Service Unavailable"  end
   if result.ErrorNumber       ~= 0  then return -1, -1, 502, "Bad Gateway"          end
@@ -98,8 +98,8 @@ end
 
 
 function verifyLogin( username, password )
-  local query  = string.format( "SELECT id, enabled FROM USER WHERE email='%s' AND password='%s';", enquoteSQL( username ), enquoteSQL( password ) )
-  local result = executeSQL( "auth", query )
+  local query  = "SELECT id, enabled FROM USER WHERE email=? AND password=?;"
+  local result = executeSQL( "auth", query, {username, password} )
 
   if not result                     then return -1, 503, "Service Unavailable"  end
   if result.ErrorNumber       ~= 0  then return -1, 502, "Bad Gateway"          end
@@ -110,9 +110,9 @@ function verifyLogin( username, password )
 end
 
 function verifyProjectID( userID, projectUUID ) 
-  local query  = string.format( "SELECT uuid FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled=1 AND Company.enabled = 1 AND User.id=%d AND Project.uuid = '%s';", userID, enquoteSQL( projectUUID ) )
+  local query  = "SELECT uuid FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled=1 AND Company.enabled = 1 AND User.id=? AND Project.uuid = ?;"
   --print( query )
-  local result = executeSQL( "auth", query )
+  local result = executeSQL( "auth", query, {userID, projectUUID} )
 
   if not result                     then return nil, 503, "Service Unavailable" end
   if result.ErrorNumber       ~= 0  then return nil, 502, "Bad Gateway"         end
@@ -123,9 +123,9 @@ function verifyProjectID( userID, projectUUID )
 end
 
 function verifyNodeID( userID, projectUUID, nodeID ) 
-  local query  = string.format( "SELECT NODE.id, NODE.node_id FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid WHERE User.enabled = 1 AND User.id=%d AND Project.uuid = '%s' AND Node.id = %d;", userID, enquoteSQL( projectUUID ), nodeID )
+  local query  = "SELECT NODE.id, NODE.node_id FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid WHERE User.enabled = 1 AND User.id = ? AND Project.uuid = ? AND Node.id = ?;"
   --print( query )
-  local result = executeSQL( "auth", query )
+  local result = executeSQL( "auth", query, {userID, projectUUID, nodeID} )
   
   if not result                     then return nil, 503, "Service Unavailable" end
   if result.ErrorNumber       ~= 0  then return nil, 502, "Bad Gateway"         end
@@ -136,9 +136,9 @@ function verifyNodeID( userID, projectUUID, nodeID )
 end
 
 function getNodeSettingsID( userID, projectUUID, nodeID, key ) 
-  local query  = string.format( "SELECT NodeSettings.id FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid JOIN NodeSettings ON Node.id = NodeSettings.node_id WHERE User.enabled = 1 AND User.id=%d AND Project.uuid = '%s' AND Node.id = %d AND NodeSettings.key='%s';", userID, enquoteSQL( projectUUID ), nodeID, enquoteSQL( key ) )
+  local query  = "SELECT NodeSettings.id FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid JOIN NodeSettings ON Node.id = NodeSettings.node_id WHERE User.enabled = 1 AND User.id = ? AND Project.uuid = ? AND Node.id = ? AND NodeSettings.key = ?;"
   --print( query )
-  local result = executeSQL( "auth", query )
+  local result = executeSQL( "auth", query, {userID, projectUUID, nodeID, key} )
 
   if not result                     then return nil, 503, "Service Unavailable" end
   if result.ErrorNumber       ~= 0  then return nil, 502, "Bad Gateway"         end
@@ -153,16 +153,6 @@ end
 -- local nodeID,     errorCode, errorMessage  = verifyNodeID( userID, uuid, 1 )                        if errorCode ~= 0 then return error( errorCode, errorMessage ) end
 -- local settingID,  errorCode, errorMessage  = getNodeSettingsID( userID, uuid, 1, "testkeyvalz"  )  if errorCode ~= 0 then return error( errorCode, errorMessage ) end
 
-
-
-function getNumberOfConnections( projectID, databaseName )
-  local query = string.format( "LIST DATABASE CONNECTIONS '%s'; ", enquoteSQL( databaseName) )
-
-  if not query                            then  return 0 end
-  if query.ErrorNumber ~= 0               then  return 0 end
-  if query.NumberOfColumns ~= 2           then  return 0 end
-                                                return query.NumberOfRows
-end
 
 function error( code, message )
   local result = {

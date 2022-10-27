@@ -26,8 +26,16 @@ local userID,    err, msg = checkUserID( userid )                        if err 
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                          end
 
 query = "LIST USERS WITH ROLES"
-if query.database       then query = query .. string.format( " DATABASE '%s'", query.database )     end
-if query.table          then query = query .. string.format( " TABLE '%s'", query.table )           end
+queryargs = {}
+
+if query.database       then 
+  query = query .. " DATABASE ?"
+  queryargs[#queryargs+1] = query.database
+end
+if query.table          then 
+  query = query .. " TABLE ?"
+  queryargs[#queryargs+1] = query.table
+end
 
 users = nil
 
@@ -37,7 +45,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg ) end  
 end
 
-users = executeSQL( projectID, query )
+users = executeSQL( projectID, query, queryargs )
 if not users                                then return error( 404, "ProjectID not found" ) end
 if users.ErrorNumber                  ~= 0  then return error( 502, "Bad Gateway" )         end
 if users.NumberOfColumns              ~= 5  then return error( 502, "Bad Gateway" )         end

@@ -27,21 +27,26 @@ local projectID, err, msg = checkProjectID( projectID ) if err ~= 0 then return 
 
 if not query.role then role = "" else role = query.role user = ""               end
 if not query.user then user = "" else role = ""         user = query.user       end
-if role ~= ""     then role = string.format( "ROLE '%s'", enquoteSQL( role ) )  end
-if user ~= ""     then user = string.format( "USER '%s'", enquoteSQL( user ) )  end
 
-query = string.format( "LIST ALLOWED IP %s %s;", role, user )
+query = "LIST ALLOWED IP "
+
+if role ~= "" then 
+  query = query .. " ROLE ?" 
+  queryargs = {role}
+elseif user ~= "" then 
+  query = query .. " USER ?"
+  queryargs = {user}
+end
+
 ips   = nil
 
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
-
-  ips = executeSQL( projectID, query )
 else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg ) end
-
-  ips = executeSQL( projectID, query )
 end
+
+ips = executeSQL( projectID, query, queryargs )
 
 if not ips                                then return error( 404, "ProjectID not found" ) end
 if ips.ErrorNumber                  ~= 0  then return error( 502, "Bad Gateway" )         end

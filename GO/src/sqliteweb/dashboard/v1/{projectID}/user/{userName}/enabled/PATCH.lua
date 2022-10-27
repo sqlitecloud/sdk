@@ -30,9 +30,11 @@ local enabled,   err, msg = getBodyValue( "enabled", 0 )                 if err 
 if not enabled then enabled = true end
 
 if bool( enabled ) then  
-  query = string.format( "ENABLE USER '%s';", enquoteSQL( userName ) )
+  query = "ENABLE USER ?;"
+  queryargs = {userName}
 else
-  query = string.format( "DISABLE USER '%s';", enquoteSQL( userName ) )
+  query = "DISABLE USER ?;"
+  queryargs = {userName}
 end
 result  = nil
 
@@ -42,7 +44,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                              end
 end
 
-result = executeSQL( projectID, query )
+result = executeSQL( projectID, query, queryargs )
 if not result                                                                        then return error( 404, "ProjectID not found" )            end
 if result.ErrorNumber       ~= 0                                                     then return error( 404, result.ErrorMessage )              end
 if result.NumberOfColumns   ~= 0                                                     then return error( 502, "Bad Gateway" )                    end

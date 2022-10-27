@@ -38,7 +38,7 @@ else
   local projectID,     err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                                    end  
 end
 
-tables = executeSQL( projectID, string.format( "SWITCH DATABASE '%s'; LIST TABLES;", enquoteSQL( databaseName ) ) )
+tables = executeSQL( projectID, "SWITCH DATABASE ?; LIST TABLES;", {databaseName} )
 if not tables                                 then return error( 404, "ProjectID not found" ) end
 if tables.ErrorMessage                  ~= "" then return error( 502, tables.ErrorMessage )   end
 if tables.ErrorNumber                   ~= 0  then return error( 502, "Bad Gateway" )         end

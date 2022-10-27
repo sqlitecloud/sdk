@@ -42,7 +42,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )         end
 
   local nodeID = 0
-  result = executeSQL( "auth", string.format( "SELECT MAX(node_id) AS max_node_id FROM Node WHERE project_uuid = '%s'", enquoteSQL(projectID) ))
+  result = executeSQL( "auth", "SELECT MAX(node_id) AS max_node_id FROM Node WHERE project_uuid = ?", {projectID} )
   if not result                                                          then return error( 504, "Gateway Timeout" )       end
   if result.NumberOfColumns  ~= 1                                        then return error( 502, "Bad Gateway" )           end
   if result.NumberOfRows     == 1 and result.Rows[ 1 ].max_node_id       then nodeID = result.Rows[ 1 ].max_node_id + 1    end
@@ -56,7 +56,7 @@ else
     local longitude = "-74.0241"
 
     -- TODO: Remove the virtual machine if the INSERT query returned an error
-    result = executeSQL( "auth", string.format( "INSERT INTO Node (project_uuid, node_id, name, type, provider, image, region, size, addr4, port, latitude, longitude) VALUES ('%s', %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s', '%s')", enquoteSQL(projectID), nodeID, enquoteSQL(name), enquoteSQL(type), enquoteSQL(provider), enquoteSQL(hardware), enquoteSQL(region), enquoteSQL(size), enquoteSQL(addr4), port, enquoteSQL(latitude), enquoteSQL(longitude) ))
+    result = executeSQL( "auth", "INSERT INTO Node (project_uuid, node_id, name, type, provider, image, region, size, addr4, port, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", {projectID, nodeID, name, type, provider, hardware, region, size, addr4, port, latitude, longitude} )
     if not result                                                        then return error( 504, "Gateway Timeout" )       end
     if result.ErrorNumber     ~= 0                                       then return error( 502, result.ErrorMessage )     end
     if result.ErrorNumber ~= 0                                           then return error( 502, result.ErrorMessage )     end

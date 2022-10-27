@@ -27,7 +27,8 @@ local projectID, err, msg = checkProjectID( projectID )                  if err 
 local userName,  err, msg = checkParameter( userName, 3 )                if err ~= 0 then return error( err, string.format( msg, "userName" ) ) end
 local password,  err, msg = getBodyValue( "password", 0 )                if err ~= 0 then return error( err, msg )                              end
 
-query  = string.format( "SET PASSWORD '%s' USER '%s';", enquoteSQL( password ), enquoteSQL( userName ) )
+query  = "SET PASSWORD ? USER ?;"
+queryargs = {password, userName}
 result = nil
 
 if userID == 0 then
@@ -36,7 +37,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                              end
 end
 
-result = executeSQL( projectID, query )
+result = executeSQL( projectID, query, queryargs )
 if not result                                                                        then return error( 404, "ProjectID not found" )            end
 if result.ErrorNumber       ~= 0                                                     then return error( 404, result.ErrorMessage )              end
 if result.NumberOfColumns   ~= 0                                                     then return error( 502, "Bad Gateway" )                    end

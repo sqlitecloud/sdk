@@ -94,12 +94,10 @@ func (this *AuthServer) lookupUserID(Login string, Password string) (int64, stri
 		return 0, "", ""
 	}
 
-	Login = sqlitecloud.SQCloudEnquoteString(Login)
-	Password = sqlitecloud.SQCloudEnquoteString(Password)
+	query := "SELECT id, first_name, last_name FROM User WHERE email = ? AND ( password = ? OR password = ? ) AND enabled = 1 LIMIT 1;"
+	args := []interface{}{Login, Password, MD5(Password)}
 
-	query := fmt.Sprintf("SELECT id, first_name, last_name FROM User WHERE email = '%s' AND ( password = '%s' OR password = '%s' ) AND enabled = 1 LIMIT 1;", Login, Password, MD5(Password))
-
-	if res, err, _, _ := cm.ExecuteSQL("auth", query); res != nil {
+	if res, err, _, _ := cm.ExecuteSQLArray("auth", query, &args); res != nil {
 		defer res.Free()
 		switch {
 		case err != nil:

@@ -53,12 +53,12 @@ if userID == 0 then
   Response.value.last_recovery_request = getINIString( "dashboard", "modified", "1970-01-01 00:00:00" )
   
 else
-  data = executeSQL( "auth", string.format( "SELECT User.id, User.enabled, first_name, last_name, Company.name as company, email, creation_date, last_recovery_request FROM User JOIN Company ON User.company_id = Company.id WHERE User.id = %d ;", userID ) )
+  data = executeSQL( "auth", "SELECT User.id, User.enabled, first_name, last_name, Company.name as company, email, creation_date, last_recovery_request FROM User JOIN Company ON User.company_id = Company.id WHERE User.id = ?;", {userID} )
   if data.ErrorNumber == 0 and data.NumberOfRows == 1 then
     Response.value = data.Rows[ 1 ]
     Response.value.enabled = bool( Response.value.enabled )
 
-    data = executeSQL( "auth", string.format( "SELECT key, value FROM UserSettings WHERE user_id = %d ;", userID ) )
+    data = executeSQL( "auth", "SELECT key, value FROM UserSettings WHERE user_id = ?;", {userID} )
     if data.ErrorNumber == 0 and data.NumberOfRows > 0 then
       Response.value.settings = data.Rows
     end
