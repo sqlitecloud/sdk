@@ -318,15 +318,23 @@ func (this *SQCloud) reconnect() error {
 	}
 
 	commands := ""
+	args := []interface{}{}
 
 	if strings.TrimSpace(this.Username) != "" {
-		commands += authCommand(this.Username, this.Password)
+		c, a := authCommand(this.Username, this.Password)
+		commands += c
+		args = append(args, a...)
+
 	} else if strings.TrimSpace(this.ApiKey) != "" {
-		commands += authWithKeyCommand(this.ApiKey)
+		c, a := authWithKeyCommand(this.ApiKey)
+		commands += c
+		args = append(args, a...)
 	}
 
 	if strings.TrimSpace(this.Database) != "" {
-		commands += useDatabaseCommand(this.Database)
+		c, a := useDatabaseCommand(this.Database)
+		commands += c
+		args = append(args, a...)
 	}
 
 	if this.NoBlob {
@@ -346,8 +354,14 @@ func (this *SQCloud) reconnect() error {
 	}
 	
 	if commands != "" {
-		if err := this.Execute(commands); err != nil {
-			return err
+		if len(args) > 0 {
+			if err := this.ExecuteArray(commands, args); err != nil {
+				return err
+			}
+		} else {
+			if err := this.Execute(commands); err != nil {
+				return err
+			}
 		}
 	}
 
