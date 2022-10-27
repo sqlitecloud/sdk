@@ -46,8 +46,6 @@
 
 package sqlitecloud
 
-import "fmt"
-
 // GetUUID returns the UUID as string
 func (this *SQCloud) GetUUID() string {
 	return this.uuid // this.CGetCloudUUID()
@@ -67,22 +65,22 @@ func (this *SQCloud) psubClose() error {
 
 // Listen subscribes this connection to the specified Channel.
 func (this *SQCloud) Listen(Channel string) error { // add a call back function...
-	return this.Execute(fmt.Sprintf("LISTEN %s", SQCloudEnquoteString2(Channel)))
+	return this.ExecuteArray("LISTEN ?", []interface{}{Channel})
 }
 
 // Notify sends a wakeup call to the channel Channel
 func (this *SQCloud) Notify(Channel string) error {
-	return this.Execute(fmt.Sprintf("NOTIFY %s", SQCloudEnquoteString2(Channel)))
+	return this.ExecuteArray("NOTIFY ?", []interface{}{Channel})
 }
 
 // SendNotificationMessage sends the message Message to the channel Channel
 func (this *SQCloud) SendNotificationMessage(Channel string, Message string) error {
-	return this.Execute(fmt.Sprintf("NOTIFY %s %s", SQCloudEnquoteString2(Channel), SQCloudEnquoteString2(Message)))
+	return this.ExecuteArray("NOTIFY ? ?", []interface{}{Channel, Message})
 }
 
 // Unlisten unsubsribs this connection from the specified Channel.
 func (this *SQCloud) Unlisten(Channel string) error {
-	return this.Execute(fmt.Sprintf("UNLISTEN %s", SQCloudEnquoteString2(Channel)))
+	return this.ExecuteArray("UNLISTEN ?", []interface{}{Channel})
 }
 
 // PAuth returns the auth details for pubsub

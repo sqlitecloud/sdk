@@ -67,13 +67,13 @@ func (this *SQCloud) AddNode(Node string, Address string, Cluster string, Snapsh
 	if Learner {
 		sql += " LEARNER"
 	}
-	sql += fmt.Sprintf(" NODE %s ADDRESS %s CLUSTER %s SNAPSHOT %s", SQCloudEnquoteString(Node), SQCloudEnquoteString(Address), SQCloudEnquoteString(Cluster), SQCloudEnquoteString(Snapshot))
-	return this.Execute(sql)
+	sql += " NODE ? ADDRESS ? CLUSTER ? SNAPSHOT ?"
+	return this.ExecuteArray(sql, []interface{}{Node, Address, Cluster, Snapshot} )
 }
 
 // RemoveNode - INTERNAL SERVER COMMAND: Removes a node to the SQLite Cloud Database Cluster.
 func (this *SQCloud) RemoveNode(Node string) error {
-	return this.Execute(fmt.Sprintf("REMOVE NODE %s", SQCloudEnquoteString(Node)))
+	return this.ExecuteArray("REMOVE NODE ?", []interface{}{Node})
 }
 
 // RemoveNode - INTERNAL SERVER COMMAND: Lists all nodes of this SQLite Cloud Database Cluster.
@@ -85,7 +85,7 @@ func (this *SQCloud) ListNodes() ([]string, error) {
 
 // CloseConnection - INTERNAL SERVER COMMAND: Closes the specified connection.
 func (this *SQCloud) CloseConnection(ConnectionID string) error {
-	return this.Execute(fmt.Sprintf("CLOSE CONNECTION %s", SQCloudEnquoteString(ConnectionID)))
+	return this.ExecuteArray("CLOSE CONNECTION ?", []interface{}{ConnectionID})
 }
 
 // ListConnections - INTERNAL SERVER COMMAND: Lists all connections of this SQLite Cloud Database Cluster.
@@ -118,7 +118,7 @@ func (this *SQCloud) ListConnections() ([]SQCloudConnection, error) {
 // ListDatabaseConnections - INTERNAL SERVER COMMAND: Lists all connections that use the specified Database on this SQLite Cloud Database Cluster.
 func (this *SQCloud) ListDatabaseConnections(Database string) ([]SQCloudConnection, error) {
 	connectionList := []SQCloudConnection{}
-	result, err := this.Select(fmt.Sprintf("LIST DATABASE CONNECTIONS %s", SQCloudEnquoteString(Database)))
+	result, err := this.SelectArray("LIST DATABASE CONNECTIONS ?", []interface{}{Database})
 	if err == nil {
 		if result != nil {
 			if result.GetNumberOfColumns() == 2 {
@@ -174,22 +174,22 @@ func (this *SQCloud) ListDatabaseClientConnectionIds(DatabaseID uint64) ([]SQClo
 
 // Auth Functions
 
-func authCommand(Username string, Password string) string {
-	return fmt.Sprintf("AUTH USER %s PASSWORD %s;", SQCloudEnquoteString(Username), SQCloudEnquoteString(Password))
+func authCommand(Username string, Password string) (string, []interface{}) {
+	return "AUTH USER ? PASSWORD ?;", []interface{}{Username, Password}
 }
 
 // Auth - INTERNAL SERVER COMMAND: Authenticates User with the given credentials.
 func (this *SQCloud) Auth(Username string, Password string) error {
-	return this.Execute(authCommand(Username, Password))
+	return this.ExecuteArray(authCommand(Username, Password))
 }
 
-func authWithKeyCommand(Key string) string {
-	return fmt.Sprintf("AUTH APIKEY %s;", SQCloudEnquoteString(Key))
+func authWithKeyCommand(Key string) (string, []interface{}) {
+	return "AUTH APIKEY ?;", []interface{}{Key}
 }
 
 // Auth - INTERNAL SERVER COMMAND: Authenticates User with the given API KEY.
 func (this *SQCloud) AuthWithKey(Key string) error {
-	return this.Execute(authWithKeyCommand(Key))
+	return this.ExecuteArray(authWithKeyCommand(Key))
 }
 
 // Database funcitons
@@ -198,18 +198,21 @@ func (this *SQCloud) AuthWithKey(Key string) error {
 // If the Database already exists on this Database Server, an error is returned except the NoError flag is set.
 // Encoding specifies the character set Encoding that should be used for the new Database - for example "UFT-8".
 func (this *SQCloud) CreateDatabase(Database string, Key string, Encoding string, NoError bool) error {
-	sql := fmt.Sprintf("CREATE DATABASE %s", SQCloudEnquoteString(Database))
+	sql := "CREATE DATABASE ?"
+	args := []interface{}{Database}
 	if strings.TrimSpace(Key) != "" {
-		sql += fmt.Sprintf(" KEY %s", SQCloudEnquoteString(Key))
+		sql += " KEY ?"
+		args = append(args, Key)
 	}
 	if strings.TrimSpace(Encoding) != "" {
-		sql += fmt.Sprintf(" ENCODING %s", SQCloudEnquoteString(Encoding))
+		sql += " ENCODING ?"
+		args = append(args, Encoding)
 	}
 	if NoError {
 		sql += " IF NOT EXISTS"
 	}
 	// println( sql )
-	return this.Execute(sql)
+	return this.ExecuteArray(sql, args)
 }
 
 // DropDatabase - INTERNAL SERVER COMMAND: Deletes the specified Database on this SQLite Cloud Database Cluster.
@@ -217,11 +220,11 @@ func (this *SQCloud) CreateDatabase(Database string, Key string, Encoding string
 // an error describing the problem will be returned.
 // If the NoError flag is set, no error will be reported if the database does not exist.
 func (this *SQCloud) DropDatabase(Database string, NoError bool) error {
-	sql := fmt.Sprintf("DROP DATABASE %s", SQCloudEnquoteString(Database))
+	sql := "DROP DATABASE ?"
 	if NoError {
 		sql += " IF EXISTS"
 	}
-	return this.Execute(sql)
+	return this.ExecuteArray(sql, []interface{}{Database} )
 }
 
 // ListDatabases - INTERNAL SERVER COMMAND: Lists all Databases that are present on this SQLite Cloud Database Cluster and returns the Names of the databases in an array of strings.
@@ -258,8 +261,8 @@ func (this *SQCloud) GetDatabaseID() (uint64, error) {
 	return 0, err
 }
 
-func useDatabaseCommand(Database string) string {
-	return fmt.Sprintf("USE DATABASE %s;", SQCloudEnquoteString(Database))
+func useDatabaseCommand(Database string) (string, []interface{}) {
+	return "USE DATABASE ?;", []interface{}{Database}
 }
 
 // UseDatabase - INTERNAL SERVER COMMAND: Selects the specified Database for usage.
@@ -267,7 +270,7 @@ func useDatabaseCommand(Database string) string {
 // An error is returned if the specified Database was not found or the user has not the necessary access rights to work with this Database.
 func (this *SQCloud) UseDatabase(Database string) error {
 	this.Database = Database
-	return this.Execute(useDatabaseCommand(Database))
+	return this.ExecuteArray(useDatabaseCommand(Database))
 }
 
 // UseDatabase - INTERNAL SERVER COMMAND: Releases the actual Database.
@@ -281,12 +284,12 @@ func (this *SQCloud) UnuseDatabase() error {
 
 // EnablePlugin enables the SQLite Plugin on the SQlite Cloud Database server.
 func (this *SQCloud) EnablePlugin(Plugin string) error {
-	return this.Execute(fmt.Sprintf("ENABLED PLUGIN %s", SQCloudEnquoteString(Plugin)))
+	return this.ExecuteArray("ENABLED PLUGIN ?", []interface{}{Plugin})
 }
 
 // DisablePlugin disables the SQLite Plugin on the SQlite Cloud Database server.
 func (this *SQCloud) DisablePlugin(Plugin string) error {
-	return this.Execute(fmt.Sprintf("DISABLE PLUGIN %s", SQCloudEnquoteString(Plugin)))
+	return this.ExecuteArray("DISABLE PLUGIN ?", []interface{}{Plugin})
 }
 
 // ListPlugins list all available Plugins at the SQlite Cloud Database server and returns an array of SQCloudPlugin.
@@ -321,16 +324,15 @@ func (this *SQCloud) ListPlugins() ([]SQCloudPlugin, error) {
 // Key / Value Pair functions
 
 // SetKey set the provided key value pair with the key Key to the string value Value.
-// The Key and the Value are enquoted if necessary (see: SQCloudEnquoteString()).
 func (this *SQCloud) SetKey(Key string, Value string) error {
-	return this.Execute(fmt.Sprintf("SET KEY %s TO %s", SQCloudEnquoteString(Key), SQCloudEnquoteString(Value)))
+	return this.ExecuteArray("SET KEY ? TO ?", []interface{}{Key, Value})
 }
 
 // GetKey gets the Value of the key Key and returns it as a string value.
 // If the Key was not found an error is returned.
 // BUG(andreas): If key is not set, DB returns NULL -> does not work with current implementation
 func (this *SQCloud) GetKey(Key string) (string, error) {
-	result, err := this.Select(fmt.Sprintf("GET KEY %s", Key))
+	result, err := this.SelectArray("GET KEY ?", []interface{}{Key})
 	if result != nil {
 		defer result.Free()
 		if err != nil {
@@ -344,7 +346,7 @@ func (this *SQCloud) GetKey(Key string) (string, error) {
 // DropKey deletes the key value pair referenced with Key.
 // If the Key does not exists, no error is returned.
 func (this *SQCloud) DropKey(Key string) error {
-	return this.Execute(fmt.Sprintf("DROP KEY %s", SQCloudEnquoteString(Key)))
+	return this.ExecuteArray("DROP KEY ?", []interface{}{Key})
 }
 
 // ListKeys lists all key value pairs on the server and returns an array of SQCloudKeyValues.
