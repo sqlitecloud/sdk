@@ -1482,7 +1482,8 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
     }
     
     if (config->database && strlen(config->database)) {
-        len += snprintf(&buffer[len], sizeof(buffer) - len, "USE %sDATABASE %s;", config->db_create ? "OR CREATE " : "", config->database);
+        if (config->db_create) len += snprintf(&buffer[len], sizeof(buffer) - len, "CREATE DATABASE %s IF NOT EXISTS;", config->database);
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "USE DATABASE %s;", config->database);
     }
     
     if (config->sqlite_mode) {
