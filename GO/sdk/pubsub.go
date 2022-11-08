@@ -63,6 +63,19 @@ func (this *SQCloud) psubClose() error {
 	return err
 }
 
+// Creates the specified Channel.
+func (this *SQCloud) CreateChannel(Channel string, NoError bool) error {
+	command := "CREATE CHANNEL ?"
+	if NoError {
+		command += " IF NOT EXISTS"
+	}
+	return this.ExecuteArray(command, []interface{}{Channel})
+}
+
+func (this *SQCloud) ListChannels() ([]string, error) {
+	return this.SelectStringList("LIST CHANNELS")
+}
+
 // Listen subscribes this connection to the specified Channel.
 func (this *SQCloud) Listen(Channel string) error { // add a call back function...
 	return this.ExecuteArray("LISTEN ?", []interface{}{Channel})
@@ -81,6 +94,11 @@ func (this *SQCloud) SendNotificationMessage(Channel string, Message string) err
 // Unlisten unsubsribs this connection from the specified Channel.
 func (this *SQCloud) Unlisten(Channel string) error {
 	return this.ExecuteArray("UNLISTEN ?", []interface{}{Channel})
+}
+
+// Deletes the specified Channel.
+func (this *SQCloud) DropChannel(Channel string) error {
+	return this.ExecuteArray("DROP CHANNEL ?", []interface{}{Channel})
 }
 
 // PAuth returns the auth details for pubsub

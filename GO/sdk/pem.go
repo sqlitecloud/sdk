@@ -1,20 +1,19 @@
 //
 //                    ////              SQLite Cloud
-//        ////////////  ///             
+//        ////////////  ///
 //      ///             ///  ///        Product     : SQLite Cloud GO SDK
 //     ///             ///  ///         Version     : 1.0.0
 //     //             ///   ///  ///    Date        : 2021/09/02
 //    ///             ///   ///  ///    Author      : Andreas Pfeil
-//   ///             ///   ///  ///     
+//   ///             ///   ///  ///
 //   ///     //////////   ///  ///      Description : Default client certificate.
 //   ////                ///  ///                     This is a public key.
-//     ////     //////////   ///                      
-//        ////            ////                        
-//          ////     /////              
+//     ////     //////////   ///
+//        ////            ////
+//          ////     /////
 //             ///                      Copyright   : 2021 by SQLite Cloud Inc.
 //
 // -----------------------------------------------------------------------TAB=2
-
 
 package sqlitecloud
 
@@ -43,7 +42,7 @@ otHL5/wB1MaAmCIcQjIxEshj8pSYTecthitmrneimikFf4KFK0YMvGgKrCLmJsg=
 -----END CERTIFICATE-----`
 
 /*
-openssl x509 -text -noout -in ../SSL/CA.pem 
+openssl x509 -text -noout -in ../SSL/CA.pem
 
 Certificate:
     Data:
@@ -80,9 +79,9 @@ Certificate:
                     42:9d
                 Exponent: 65537 (0x10001)
         X509v3 extensions:
-            X509v3 Subject Key Identifier: 
+            X509v3 Subject Key Identifier:
                 F1:91:93:C2:27:19:78:62:81:F9:B8:B5:E0:8B:0E:D6:12:1A:EE:D7
-            X509v3 Authority Key Identifier: 
+            X509v3 Authority Key Identifier:
                 keyid:F1:91:93:C2:27:19:78:62:81:F9:B8:B5:E0:8B:0E:D6:12:1A:EE:D7
 
             X509v3 Basic Constraints: critical

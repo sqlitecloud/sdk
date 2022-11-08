@@ -15,18 +15,13 @@ Password: <access-token or password>
 
 ### Setting up the development environment
 ```console
-go env -w GO111MODULE=off
-cd sdk/GO
-export GOPATH=`pwd`
+go env -w GO111MODULE=on
+export GOPATH=
 echo $GOPATH
-
 ```
 
-### Install and compile the pre-requirements
-First, you will have to install all the pre-requirements on your machine: `make install-prerequirements`. This will also patch the source code of the linenoise package...
-
-### Building the test programs
-If you want to build the Test programs: `make test`
+### Run the test for the SDK
+If you want to run the Test programs: `make test`
 
 ### Building the CLI App
 To build the CLI App (Warning: not fully functional, this is officially Step 1), you have to enter: `make cli`

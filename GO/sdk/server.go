@@ -34,6 +34,34 @@ type SQCloudConnection struct {
 	LastActivity   time.Time
 }
 
+type SQCloudNodeStatus int64
+
+const (
+	Leader SQCloudNodeStatus = iota
+	Follower
+	Candidate
+	Learner
+)
+
+type SQCloudNodeProgress int64
+
+const (
+	Probe SQCloudNodeProgress = iota
+	Replicate
+	Snapshot
+	Unknown
+)
+
+type SQCloudNode struct {
+	NodeID           int64
+	NodeInterface    string
+	ClusterInterface string
+	Status           SQCloudNodeStatus
+	Progress         SQCloudNodeProgress
+	Match            int64
+	LastActivity     time.Time
+}
+
 type SQCloudInfo struct {
 	SQLiteVersion    string
 	SQCloudVersion   string
@@ -48,12 +76,28 @@ type SQCloudInfo struct {
 	ServicePID         int
 	ServiceStart       time.Time
 	ServicePort        int
+	ServiceNocluster   int
+	ServiceNodeID      int
 	SericeMultiplexAPI string
+
+	TLS                   string
+	TLSConnVersion        string
+	TLSConnCipher         string
+	TLSConnCipherStrength int
+	TLSConnAlpnSelected   string
+	TLSConnServername     string
+	TLSPeerCertProvided   int
+	TLSPeerCertSubject    string
+	TLSPeerCertIssuer     string
+	TLSPeerCertHash       string
+	TLSPeerCertNotBefore  time.Time
+	TLSPeerCertNotAfter   time.Time
 }
 
 type SQCloudPlugin struct {
 	Name        string
 	Type        string
+	Enabled     bool
 	Version     string
 	Copyright   string
 	Description string
@@ -68,7 +112,7 @@ func (this *SQCloud) AddNode(Node string, Address string, Cluster string, Snapsh
 		sql += " LEARNER"
 	}
 	sql += " NODE ? ADDRESS ? CLUSTER ? SNAPSHOT ?"
-	return this.ExecuteArray(sql, []interface{}{Node, Address, Cluster, Snapshot} )
+	return this.ExecuteArray(sql, []interface{}{Node, Address, Cluster, Snapshot})
 }
 
 // RemoveNode - INTERNAL SERVER COMMAND: Removes a node to the SQLite Cloud Database Cluster.
@@ -76,9 +120,62 @@ func (this *SQCloud) RemoveNode(Node string) error {
 	return this.ExecuteArray("REMOVE NODE ?", []interface{}{Node})
 }
 
+func stringToSQCloudNodeStatus(s string) (SQCloudNodeStatus, error) {
+	switch strings.ToLower(s) {
+	case "leader":
+		return Leader, nil
+	case "follower":
+		return Follower, nil
+	case "candidate":
+		return Candidate, nil
+	case "learner":
+		return Learner, nil
+	default:
+		return -1, fmt.Errorf("Cannot convert '%s' to SQCloudNodeStatus", s)
+	}
+}
+
+func stringToSQCloudNodeProgress(s string) (SQCloudNodeProgress, error) {
+	switch strings.ToLower(s) {
+	case "probe":
+		return Probe, nil
+	case "replicate":
+		return Replicate, nil
+	case "candidate":
+		return Snapshot, nil
+	case "unknown":
+		return Unknown, nil
+	default:
+		return -1, fmt.Errorf("Cannot convert '%s' to SQCloudNodeProgress", s)
+	}
+}
+
 // RemoveNode - INTERNAL SERVER COMMAND: Lists all nodes of this SQLite Cloud Database Cluster.
-func (this *SQCloud) ListNodes() ([]string, error) {
-	return this.SelectStringList("LIST NODES")
+func (this *SQCloud) ListNodes() ([]SQCloudNode, error) {
+	list := []SQCloudNode{}
+	result, err := this.Select("LIST NODES")
+	if err == nil {
+		if result != nil {
+			defer result.Free()
+			if result.GetNumberOfColumns() == 7 {
+				for row, rows := uint64(0), result.GetNumberOfRows(); row < rows; row++ {
+					node := SQCloudNode{}
+					node.NodeID, _ = result.GetInt64Value(row, 0)
+					node.NodeInterface, _ = result.GetStringValue(row, 1)
+					node.ClusterInterface, _ = result.GetStringValue(row, 2)
+					node.Status, _ = stringToSQCloudNodeStatus(result.GetStringValue_(row, 3))
+					node.Progress, _ = stringToSQCloudNodeProgress(result.GetStringValue_(row, 4))
+					node.Match, _ = result.GetInt64Value(row, 5)
+					node.LastActivity, _ = result.GetSQLDateTime(row, 6)
+					list = append(list, node)
+				}
+				return list, nil
+			}
+			return []SQCloudNode{}, errors.New("ERROR: Query returned not 7 Columns (-1)")
+		}
+		return []SQCloudNode{}, nil
+	}
+	return []SQCloudNode{}, err
 }
 
 // Connection Functions
@@ -98,78 +195,53 @@ func (this *SQCloud) ListConnections() ([]SQCloudConnection, error) {
 			if result.GetNumberOfColumns() == 6 {
 				for row, rows := uint64(0), result.GetNumberOfRows(); row < rows; row++ {
 					connection := SQCloudConnection{}
-					connection.ClientID, _ = result.GetInt64Value(row, 1)
-					connection.Address, _ = result.GetStringValue(row, 2)
-					connection.Username, _ = result.GetStringValue(row, 3)
-					connection.Database, _ = result.GetStringValue(row, 4)
+					connection.ClientID, _ = result.GetInt64Value(row, 0)
+					connection.Address, _ = result.GetStringValue(row, 1)
+					connection.Username, _ = result.GetStringValue(row, 2)
+					connection.Database, _ = result.GetStringValue(row, 3)
 					connection.ConnectionDate, _ = result.GetSQLDateTime(row, 4)
-					connection.LastActivity, _ = result.GetSQLDateTime(row, 6)
+					connection.LastActivity, _ = result.GetSQLDateTime(row, 5)
 					connectionList = append(connectionList, connection)
 				}
 				return connectionList, nil
 			}
 			return []SQCloudConnection{}, errors.New("ERROR: Query returned not 6 Columns (-1)")
 		}
-		return []SQCloudConnection{}, errors.New("ERROR: Query returned no result (-1)")
+		return []SQCloudConnection{}, nil
+	}
+	return []SQCloudConnection{}, err
+}
+
+func resultToConnectionList(result *Result, err error) ([]SQCloudConnection, error) {
+	connectionList := []SQCloudConnection{}
+	if err == nil {
+		if result != nil {
+			if result.GetNumberOfColumns() == 6 {
+				for row, rows := uint64(0), result.GetNumberOfRows(); row < rows; row++ {
+					connection := SQCloudConnection{}
+					connection.ClientID = result.GetInt64Value_(row, 0)
+					connection.Address = result.GetStringValue_(row, 1)
+					connection.Username = result.GetStringValue_(row, 2)
+					connection.Database = result.GetStringValue_(row, 3)
+					connection.ConnectionDate = result.GetSQLDateTime_(row, 4)
+					connection.LastActivity = result.GetSQLDateTime_(row, 5)
+					connectionList = append(connectionList, connection)
+				}
+				result.Free()
+				return connectionList, nil
+			}
+			result.Free()
+			return []SQCloudConnection{}, errors.New("ERROR: Query returned not 6 Columns (-1)")
+		}
+		return []SQCloudConnection{}, nil
 	}
 	return []SQCloudConnection{}, err
 }
 
 // ListDatabaseConnections - INTERNAL SERVER COMMAND: Lists all connections that use the specified Database on this SQLite Cloud Database Cluster.
 func (this *SQCloud) ListDatabaseConnections(Database string) ([]SQCloudConnection, error) {
-	connectionList := []SQCloudConnection{}
 	result, err := this.SelectArray("LIST DATABASE CONNECTIONS ?", []interface{}{Database})
-	if err == nil {
-		if result != nil {
-			if result.GetNumberOfColumns() == 2 {
-				for row, rows := uint64(0), result.GetNumberOfRows(); row < rows; row++ {
-					connection := SQCloudConnection{}
-					connection.ClientID, _ = result.GetInt64Value(row, 1)
-					connection.Address = ""
-					connection.Username = ""
-					connection.Database = Database
-					connection.ConnectionDate = time.Unix(0, 0)
-					connection.LastActivity, _ = result.GetSQLDateTime(row, 2)
-					connectionList = append(connectionList, connection)
-				}
-				result.Free()
-				return connectionList, nil
-			}
-			result.Free()
-			return []SQCloudConnection{}, errors.New("ERROR: Query returned not 2 Columns (-1)")
-		}
-		return []SQCloudConnection{}, errors.New("ERROR: Query returned no result (-1)")
-	}
-	return []SQCloudConnection{}, err
-}
-
-// ListDatabaseClientConnectionIds - INTERNAL SERVER COMMAND: Lists all connections with the specified DatabaseId on this SQLite Cloud Database Cluster.
-// GUB(andreas) Start index = 1
-func (this *SQCloud) ListDatabaseClientConnectionIds(DatabaseID uint64) ([]SQCloudConnection, error) {
-	connectionList := []SQCloudConnection{}
-	result, err := this.Select(fmt.Sprintf("LIST DATABASE CONNECTIONS ID %d", DatabaseID))
-	if err == nil {
-		if result != nil {
-			if result.GetNumberOfColumns() == 2 {
-				for row, rows := uint64(1), result.GetNumberOfRows(); row < rows; row++ {
-					connection := SQCloudConnection{}
-					connection.ClientID, _ = result.GetInt64Value(row, 1)
-					connection.Address = ""
-					connection.Username = ""
-					connection.Database = ""
-					connection.ConnectionDate = time.Unix(0, 0)
-					connection.LastActivity, _ = result.GetSQLDateTime(row, 2)
-					connectionList = append(connectionList, connection)
-				}
-				result.Free()
-				return connectionList, nil
-			}
-			result.Free()
-			return []SQCloudConnection{}, errors.New("ERROR: Query returned not 2 Columns (-1)")
-		}
-		return []SQCloudConnection{}, errors.New("ERROR: Query returned no result (-1)")
-	}
-	return []SQCloudConnection{}, err
+	return resultToConnectionList(result, err)
 }
 
 // Auth Functions
@@ -224,7 +296,7 @@ func (this *SQCloud) DropDatabase(Database string, NoError bool) error {
 	if NoError {
 		sql += " IF EXISTS"
 	}
-	return this.ExecuteArray(sql, []interface{}{Database} )
+	return this.ExecuteArray(sql, []interface{}{Database})
 }
 
 // ListDatabases - INTERNAL SERVER COMMAND: Lists all Databases that are present on this SQLite Cloud Database Cluster and returns the Names of the databases in an array of strings.
@@ -244,21 +316,6 @@ func (this *SQCloud) GetDatabase() (string, error) {
 		return result.GetString()
 	}
 	return "", err
-}
-
-// GetDatabaseID - INTERNAL SERVER COMMAND: Gets the ID of the previously selected Database as uint64. (see: *SQCloud.UseDatabase())
-// If no database was selected, an error describing the problem is returned.
-func (this *SQCloud) GetDatabaseID() (uint64, error) {
-	result, err := this.Select("GET DATABASE ID")
-	if result != nil {
-		defer result.Free()
-		if err != nil {
-			return 0, err
-		}
-		val, err := result.GetInt64()
-		return uint64(val), err
-	}
-	return 0, err
 }
 
 func useDatabaseCommand(Database string) (string, []interface{}) {
@@ -299,13 +356,14 @@ func (this *SQCloud) ListPlugins() ([]SQCloudPlugin, error) {
 	if err == nil {
 		if result != nil {
 			for row, rows := uint64(1), result.GetNumberOfRows(); row < rows; row++ {
-				if result.GetNumberOfColumns() == 5 {
+				if result.GetNumberOfColumns() == 6 {
 					plugin := SQCloudPlugin{}
 					plugin.Name, _ = result.GetStringValue(row, 0)
 					plugin.Type, _ = result.GetStringValue(row, 1)
-					plugin.Version, _ = result.GetStringValue(row, 2)
-					plugin.Copyright, _ = result.GetStringValue(row, 3)
-					plugin.Description, _ = result.GetStringValue(row, 4)
+					plugin.Enabled = result.GetInt32Value_(row, 2) != 0
+					plugin.Version, _ = result.GetStringValue(row, 3)
+					plugin.Copyright, _ = result.GetStringValue(row, 4)
+					plugin.Description, _ = result.GetStringValue(row, 5)
 					pluginList = append(pluginList, plugin)
 
 				} else {
@@ -350,18 +408,18 @@ func (this *SQCloud) DropKey(Key string) error {
 }
 
 // ListKeys lists all key value pairs on the server and returns an array of SQCloudKeyValues.
-func (this *SQCloud) ListKeys() ([]SQCloudKeyValues, error) {
+func (this *SQCloud) ListKeys() (map[string]string, error) {
 	return this.SelectKeyValues("LIST KEYS")
 }
 
 // ListClientKeys lists all client/connection specific keys and values and returns the data in an array of type SQCloudKeyValues.
-func (this *SQCloud) ListClientKeys() ([]SQCloudKeyValues, error) {
+func (this *SQCloud) ListClientKeys() (map[string]string, error) {
 	return this.SelectKeyValues("LIST CLIENT KEYS")
 }
 
 // ListDatabaseKeys lists all server specific keys and values and returns an array of type SQCloudKeyValues.
-func (this *SQCloud) ListDatabaseKeys() ([]SQCloudKeyValues, error) {
-	return this.SelectKeyValues("LIST DATABASE KEYS")
+func (this *SQCloud) ListDatabaseKeys(Database string) (map[string]string, error) {
+	return this.SelectArrayKeyValues("LIST DATABASE ? KEYS", []interface{}{Database})
 }
 
 /// Misc functions
@@ -411,33 +469,62 @@ func (this *SQCloud) GetInfo() (SQCloudInfo, error) {
 	}
 
 	result, err := this.SelectKeyValues("LIST INFO")
+	//fmt.Printf("Result %v", result)
 	if err == nil {
-		for _, pair := range result {
-			switch pair.Key {
+		for k, v := range result {
+			switch k {
 			case "sqlitecloud_version":
-				info.SQCloudVersion = pair.Value
+				info.SQCloudVersion = v
 			case "sqlite_version":
-				info.SQLiteVersion = pair.Value
+				info.SQLiteVersion = v
 			case "sqlitecloud_build_date":
-				info.SQCloudBuildDate, _ = time.Parse("Jan 2 2006", pair.Value)
+				info.SQCloudBuildDate, _ = time.Parse("Jan 2 2006", v)
 			case "sqlitecloud_git_hash":
-				info.SQCloudGitHash = pair.Value
+				info.SQCloudGitHash = v
 			case "os":
-				info.ServerOS = pair.Value
+				info.ServerOS = v
 			case "arch_bits":
-				info.ServerArchitecture = pair.Value
+				info.ServerArchitecture = v
 			case "multiplexing_api":
-				info.SericeMultiplexAPI = pair.Value
-			case "tcp_port":
-				info.ServicePort, _ = strconv.Atoi(pair.Value)
+				info.SericeMultiplexAPI = v
+			case "listening_port":
+				info.ServicePort, _ = strconv.Atoi(v)
 			case "process_id":
-				info.ServicePID, _ = strconv.Atoi(pair.Value)
+				info.ServicePID, _ = strconv.Atoi(v)
 			case "num_processors":
-				info.ServerCPUs, _ = strconv.Atoi(pair.Value)
+				info.ServerCPUs, _ = strconv.Atoi(v)
 			case "startup_datetime":
-				info.ServiceStart, _ = time.Parse("2006-01-02 15:04:05", pair.Value)
+				info.ServiceStart, _ = time.Parse("2006-01-02 15:04:05", v)
 			case "current_datetime":
-				info.ServerTime, _ = time.Parse("2006-01-02 15:04:05", pair.Value)
+				info.ServerTime, _ = time.Parse("2006-01-02 15:04:05", v)
+			case "nocluster":
+				info.ServiceNocluster, _ = strconv.Atoi(v)
+			case "nodeid":
+				info.ServiceNodeID, _ = strconv.Atoi(v)
+			case "tls":
+				info.TLS = v
+			case "tls_conn_version":
+				info.TLSConnVersion = v
+			case "tls_conn_cipher":
+				info.TLSConnCipher = v
+			case "tls_conn_cipher_strength":
+				info.TLSConnCipherStrength, _ = strconv.Atoi(v)
+			case "tls_conn_alpn_selected":
+				info.TLSConnAlpnSelected = v
+			case "tls_conn_servername":
+				info.TLSConnServername = v
+			case "tls_peer_cert_provided":
+				info.TLSConnCipherStrength, _ = strconv.Atoi(v)
+			case "tls_peer_cert_subject":
+				info.TLSPeerCertSubject = v
+			case "tls_peer_cert_issuer":
+				info.TLSPeerCertIssuer = v
+			case "tls_peer_cert_hash":
+				info.TLSPeerCertHash = v
+			case "tls_peer_cert_notbefore":
+				info.TLSPeerCertNotBefore, _ = time.Parse("2006-01-02 15:04:05", v)
+			case "tls_peer_cert_notafter":
+				info.TLSPeerCertNotAfter, _ = time.Parse("2006-01-02 15:04:05", v)
 			default:
 			}
 		}
@@ -448,5 +535,5 @@ func (this *SQCloud) GetInfo() (SQCloudInfo, error) {
 // ListTables lists all tables in the selected database and returns them in an array of strings.
 // If no database was selected with SQCloud.UseDatabase(), an error is returned.
 func (this *SQCloud) ListTables() ([]string, error) {
-	return this.SelectStringList("LIST TABLES")
+	return this.SelectStringListWithCol("LIST TABLES", 1)
 }

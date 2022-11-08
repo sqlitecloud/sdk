@@ -66,6 +66,8 @@ type SQCloud struct {
 	ErrorMessage string
 }
 
+const internalPEM = "<USE INTERNAL PEM>"
+
 func New(config SQCloudConfig) *SQCloud {
 	return &SQCloud{SQCloudConfig: config}
 }
@@ -100,7 +102,7 @@ func ParseConnectionString(ConnectionString string) (config *SQCloudConfig, err 
 		config.Database = strings.TrimPrefix(u.Path, "/")
 		config.Timeout = 0
 		config.CompressMode = "NO"
-		config.Pem = "INTERN"
+		config.Pem = internalPEM
 		config.ApiKey = ""
 		config.NoBlob = false
 		config.MaxData = 0
@@ -159,8 +161,8 @@ func parsePEMString(Pem string) string {
 	switch strings.ToUpper(strings.TrimSpace(Pem)) {
 	case "", "0", "N", "NO", "FALSE", "OFF", "DISABLE", "DISABLED":
 		return ""
-	case "1", "Y", "YES", "TRUE", "ON", "ENABLE", "ENABLED", "INTERN", "<USE INTERNAL PEM>":
-		return "<USE INTERNAL PEM>"
+	case "1", "Y", "YES", "TRUE", "ON", "ENABLE", "ENABLED", "INTERN", internalPEM:
+		return internalPEM
 	default:
 		return strings.TrimSpace(Pem)
 	}
@@ -193,12 +195,12 @@ func (this *SQCloud) CheckConnectionParameter() error {
 		return errors.New(fmt.Sprintf("Invalid Port (%d)", this.Port))
 	}
 
-	if this.Timeout == 0 {
-		this.Timeout = 10 * time.Second
-	}
+	// if this.Timeout == 0 {
+	// 	this.Timeout = 10 * time.Second
+	// }
 	if this.Timeout < 0 {
-		return errors.New(fmt.Sprintf("Invalid Timeout (%s)", this.Timeout.String))
-	} 
+		return errors.New(fmt.Sprintf("Invalid Timeout (%s)", this.Timeout.String()))
+	}
 
 	switch strings.ToUpper(this.CompressMode) {
 	case "NO", "LZ4":
@@ -209,7 +211,7 @@ func (this *SQCloud) CheckConnectionParameter() error {
 	switch trimmed := parsePEMString(this.Pem); trimmed {
 	case "":
 		break // unencrypted connection
-	case "<USE INTERNAL PEM>":
+	case internalPEM:
 		this.Pem = PEM // use internal Certificate
 	default:
 		switch pem, err := ioutil.ReadFile(trimmed); {
@@ -228,7 +230,8 @@ func (this *SQCloud) CheckConnectionParameter() error {
 
 		this.cert = &tls.Config{
 			RootCAs:            pool,
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: false,
+			MinVersion:         tls.VersionTLS12,
 		}
 	}
 
@@ -239,7 +242,7 @@ func (this *SQCloud) CheckConnectionParameter() error {
 
 // reset resets all Connection attributes.
 func (this *SQCloud) reset() {
-	this.Close()
+	_ = this.Close()
 	this.uuid = ""
 	this.secret = ""
 	this.resetError()
@@ -259,11 +262,11 @@ func Connect(ConnectionString string) (*SQCloud, error) {
 	connection := &SQCloud{SQCloudConfig: *config}
 
 	if err = connection.Connect(); err != nil {
-		connection.Close()
+		_ = connection.Close()
 		return nil, err
 	} else {
-		connection.Compress(connection.CompressMode)
-		return connection, nil
+		err = connection.Compress(connection.CompressMode)
+		return connection, err
 	}
 }
 
@@ -352,7 +355,7 @@ func (this *SQCloud) reconnect() error {
 	if this.MaxRowset > 0 {
 		commands += maxrowsetCommand(this.MaxRowset)
 	}
-	
+
 	if commands != "" {
 		if len(args) > 0 {
 			if err := this.ExecuteArray(commands, args); err != nil {

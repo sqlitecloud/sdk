@@ -110,7 +110,7 @@ func (this *Result) Dump() {
 // BUG(andreas): The Result.ToJSON method is not implemented yet.
 func (this *Result) ToJSON() string {
 	buf := new(bytes.Buffer)
-	this.DumpToWriter(bufio.NewWriter(buf), OUTFORMAT_JSON, false, "<AUTO>", "NULL", "", 0, false)
+	_, _ = this.DumpToWriter(bufio.NewWriter(buf), OUTFORMAT_JSON, false, "<AUTO>", "NULL", "", 0, false)
 	return buf.String()
 }
 
@@ -350,7 +350,7 @@ func (this *Result) GetName_(Column uint64) string {
 // DumpToScreen outputs this query result to the screen.
 // The output is truncated at a maximum line width of MaxLineLength runes (compare: Result.Dump())
 func (this *Result) DumpToScreen(MaxLineLength uint) {
-	this.DumpToWriter(bufio.NewWriter(os.Stdout), OUTFORMAT_BOX, false, "│", "NULL", "\r\n", MaxLineLength, false)
+	_, _ = this.DumpToWriter(bufio.NewWriter(os.Stdout), OUTFORMAT_BOX, false, "│", "NULL", "\r\n", MaxLineLength, false)
 }
 
 ////// Row Methods (100% GO)
@@ -652,7 +652,9 @@ func (this *Result) DumpToWriter(Out *bufio.Writer, Format int, NoHeader bool, S
 			}
 		}
 
-		Out.Flush()
+		if err := Out.Flush(); err != nil {
+			return totalOutputLength, err
+		}
 		return totalOutputLength, nil
 
 	default:
@@ -795,13 +797,13 @@ func (this *SQCloud) readResult() (*Result, error) {
 							}
 
 							if err := this.psub.reconnect(); err != nil {
-								this.psub.Close()
+								_ = this.psub.Close()
 								this.psub = nil
 								return nil, err
 							}
 
 							if _, err := this.psub.sendString(pauth); err != nil {
-								this.psub.Close()
+								_ = this.psub.Close()
 								this.psub = nil
 								return nil, err
 							}
@@ -809,13 +811,13 @@ func (this *SQCloud) readResult() (*Result, error) {
 								defer result2.Free()
 
 								if err2 != nil {
-									this.psub.Close()
+									_ = this.psub.Close()
 									this.psub = nil
 									return nil, err2
 								}
 
 								if !result2.IsString() || result2.GetString_() != "OK" {
-									this.psub.Close()
+									_ = this.psub.Close()
 									this.psub = nil
 									return nil, errors.New("unexpected result")
 								}
@@ -1012,7 +1014,9 @@ func (this *SQCloud) readResult() (*Result, error) {
 					if Type == CMD_ROWSET {
 						return &result, nil
 					} // return if it is a rowset
-					this.sendString("OK") // ask the server for the next chunk and loop (Thank's Andrea)
+					if _, err := this.sendString("OK"); err != nil { // ask the server for the next chunk and loop (Thank's Andrea)
+						return nil, err
+					}
 
 				case CMD_RAWJSON:
 					result.value.Type = CMD_JSON // translate JSON Type to uniform '#'
