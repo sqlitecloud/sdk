@@ -2,7 +2,6 @@ C/cli/sqlitecloud-cli.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChe
 C/cli/sqlitecloud-cli.xcodeproj/xcuserdata/marco.xcuserdatad/xcschemes/xcschememanagement.plist
 C/sqlitecloud-cli
 bin
-cli
 pkg
 *.db
 .DS_Store

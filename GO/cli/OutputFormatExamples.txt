@@ -1,0 +1,237 @@
+SQLite3
+
+ sqlite3 -list test.db
+SQLite version 3.35.4 2021-04-02 15:20:15
+Enter ".help" for usage hints.
+sqlite> SELECT * FROM Dummy;
+Andreas|Langholzstraße |91099
+Werner|Raiffeisenstr. 4|96145
+                    
+#
+
+sqlite3 -csv test.db
+SQLite version 3.35.4 2021-04-02 15:20:15
+Enter ".help" for usage hints.
+sqlite> SELECT * FROM Dummy;
+Andreas,"Langholzstraße ",91099
+Werner,"Raiffeisenstr. 4",96145
+
+#
+
+ sqlite3 -quote test.db
+SQLite version 3.35.4 2021-04-02 15:20:15
+Enter ".help" for usage hints.
+sqlite> SELECT * FROM Dummy;
+'Andreas','Langholzstraße ',91099
+'Werner','Raiffeisenstr. 4',96145
+
+#
+
+ sqlite3 -tabs test.db
+SQLite version 3.35.4 2021-04-02 15:20:15
+Enter ".help" for usage hints.
+sqlite> SELECT * FROM Dummy;
+Andreas	Langholzstraße 	91099
+Werner	Raiffeisenstr. 4	96145
+
+#
+
+ sqlite3 -line test.db
+SQLite version 3.35.4 2021-04-02 15:20:15
+Enter ".help" for usage hints.
+sqlite> SELECT * FROM Dummy;
+  Names = Andreas
+Address = Langholzstraße 
+    ZIP = 91099
+
+  Names = Werner
+Address = Raiffeisenstr. 4
+    ZIP = 96145
+
+#
+
+ sqlite3 -json test.db
+SQLite version 3.35.4 2021-04-02 15:20:15
+Enter ".help" for usage hints.
+sqlite> SELECT * FROM Dummy;
+[{"Names":"Andreas","Address":"Langholzstraße ","ZIP":91099},
+{"Names":"Werner","Address":"Raiffeisenstr. 4","ZIP":96145}]
+
+#
+
+ sqlite3 -html test.db
+SQLite version 3.35.4 2021-04-02 15:20:15
+Enter ".help" for usage hints.
+sqlite> SELECT * FROM Dummy;
+<TR><TD>Andreas</TD>
+<TD>Langholzstraße </TD>
+<TD>91099</TD>
+</TR>
+<TR><TD>Werner</TD>
+<TD>Raiffeisenstr. 4</TD>
+<TD>96145</TD>
+</TR>
+
+#
+
+sqlite3 -markdown test.db
+SQLite version 3.35.4 2021-04-02 15:20:15
+Enter ".help" for usage hints.
+sqlite> SELECT * FROM Dummy;
+|  Names  |     Address      |  ZIP  |
+|---------|------------------|-------|
+| Andreas | Langholzstraße   | 91099 |
+| Werner  | Raiffeisenstr. 4 | 96145 |
+
+#
+
+sqlite3 -table test.db
+SQLite version 3.35.4 2021-04-02 15:20:15
+Enter ".help" for usage hints.
+sqlite> SELECT * FROM Dummy;
++---------+------------------+-------+
+|  Names  |     Address      |  ZIP  |
++---------+------------------+-------+
+| Andreas | Langholzstraße   | 91099 |
+| Werner  | Raiffeisenstr. 4 | 96145 |
++---------+------------------+-------+
+
+#
+
+ sqlite3 -box test.db
+SQLite version 3.35.4 2021-04-02 15:20:15
+Enter ".help" for usage hints.
+sqlite> SELECT * FROM Dummy;
+┌─────────┬──────────────────┬───────┐
+│  Names  │     Address      │  ZIP  │
+├─────────┼──────────────────┼───────┤
+│ Andreas │ Langholzstraße   │ 91099 │
+│ Werner  │ Raiffeisenstr. 4 │ 96145 │
+└─────────┴──────────────────┴───────┘
+ 
+#
+
+sqlite3 -column test.db
+SQLite version 3.35.4 2021-04-02 15:20:15
+Enter ".help" for usage hints.
+sqlite> SELECT * FROM Dummy;
+Andreas  Langholzstraße    91099
+Werner   Raiffeisenstr. 4  96145
+
+
+mysql --xml
+<?xml version="1.0"?>
+<resultset statement="SELECT * FROM orders" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <row>
+    <field name="emp_id">129</field>
+    <field name="cust_id">107</field>
+    <field name="region">Eastern</field>
+  </row>
+</resultset>
+
+
+
+
+
+
+res.DumpToWriter( out, sqlitecloud.OUTFORMAT_LIST, "|", 0, false )
+109|Some|One|96450|Coburg|Mohrenstrasse 1
+110|Someone|Else|96145|Sesslach|Raiffeisenstrasse 6
+111|One|More|91099|Poxdorf|Langholzstr. 4
+
+res.DumpToWriter( out, sqlitecloud.OUTFORMAT_CSV, "|", 0, false )
+109,Some,One,96450,Coburg,"Mohrenstrasse 1"
+110,Someone,Else,96145,Sesslach,"Raiffeisenstrasse 6"
+111,One,More,91099,Poxdorf,"Langholzstr. 4"
+
+res.DumpToWriter( out, sqlitecloud.OUTFORMAT_QUOTE, "|", 0, false )
+109,'Some','One',96450,'Coburg','Mohrenstrasse 1'
+110,'Someone','Else',96145,'Sesslach','Raiffeisenstrasse 6'
+111,'One','More',91099,'Poxdorf','Langholzstr. 4'
+
+res.DumpToWriter( out, sqlitecloud.OUTFORMAT_TABS, "|", 0, false )
+109	Some	One	96450	Coburg	Mohrenstrasse 1
+110	Someone	Else	96145	Sesslach	Raiffeisenstrasse 6
+111	One	More	91099	Poxdorf	Langholzstr. 4
+
+res.DumpToWriter( out, sqlitecloud.OUTFORMAT_LINE, "|", 0, false )
+       ID = 112
+FirstName = Some
+ LastName = One
+      ZIP = 96450
+     City = Coburg
+  Address = Mohrenstrasse 1
+
+       ID = 113
+FirstName = Someone
+ LastName = Else
+      ZIP = 96145
+     City = Sesslach
+  Address = Raiffeisenstrasse 6
+
+       ID = 114
+FirstName = One
+ LastName = More
+      ZIP = 91099
+     City = Poxdorf
+  Address = Langholzstr. 4
+
+res.DumpToWriter( out, sqlitecloud.OUTFORMAT_JSON, "|", 0, false )
+[
+  {"ID":"115","FirstName":"Some","LastName":"One","ZIP":"96450","City":"Coburg","Address":"Mohrenstrasse 1"},
+  {"ID":"116","FirstName":"Someone","LastName":"Else","ZIP":"96145","City":"Sesslach","Address":"Raiffeisenstrasse 6"},
+  {"ID":"117","FirstName":"One","LastName":"More","ZIP":"91099","City":"Poxdorf","Address":"Langholzstr. 4"},
+]
+
+res.DumpToWriter( out, sqlitecloud.OUTFORMAT_HTML, "|", 0, false )
+<TR>
+  <TD>115</TD>
+  <TD>Some</TD>
+  <TD>One</TD>
+  <TD>96450</TD>
+  <TD>Coburg</TD>
+  <TD>Mohrenstrasse 1</TD>
+</TR>
+<TR>
+  <TD>116</TD>
+  <TD>Someone</TD>
+  <TD>Else</TD>
+  <TD>96145</TD>
+  <TD>Sesslach</TD>
+  <TD>Raiffeisenstrasse 6</TD>
+</TR>
+<TR>
+  <TD>117</TD>
+  <TD>One</TD>
+  <TD>More</TD>
+  <TD>91099</TD>
+  <TD>Poxdorf</TD>
+  <TD>Langholzstr. 4</TD>
+</TR>
+
+res.DumpToWriter( out, sqlitecloud.OUTFORMAT_MARKDOWN, "|", 0, false )
+| ID  | FirstName | LastName |  ZIP  |   City   |       Address       |
+|-----|-----------|----------|-------|----------|---------------------|
+| 115 | Some      | One      | 96450 | Coburg   | Mohrenstrasse 1     |
+| 116 | Someone   | Else     | 96145 | Sesslach | Raiffeisenstrasse 6 |
+| 117 | One       | More     | 91099 | Poxdorf  | Langholzstr. 4      |
+
+res.DumpToWriter( out, sqlitecloud.OUTFORMAT_TABLE, "|", 0, false )
++-----+-----------+----------+-------+----------+---------------------+
+| ID  | FirstName | LastName |  ZIP  |   City   |       Address       |
++-----+-----------+----------+-------+----------+---------------------+
+| 115 | Some      | One      | 96450 | Coburg   | Mohrenstrasse 1     |
+| 116 | Someone   | Else     | 96145 | Sesslach | Raiffeisenstrasse 6 |
+| 117 | One       | More     | 91099 | Poxdorf  | Langholzstr. 4      |
++-----+-----------+----------+-------+----------+---------------------+
+
+res.DumpToWriter( out, sqlitecloud.OUTFORMAT_BOX, "|", 0, false )
+┌─────┬───────────┬──────────┬───────┬──────────┬─────────────────────┐
+│ ID  │ FirstName │ LastName │  ZIP  │   City   │       Address       │
+├─────┼───────────┼──────────┼───────┼──────────┼─────────────────────┤
+│ 115 │ Some      │ One      │ 96450 │ Coburg   │ Mohrenstrasse 1     │
+│ 116 │ Someone   │ Else     │ 96145 │ Sesslach │ Raiffeisenstrasse 6 │
+│ 117 │ One       │ More     │ 91099 │ Poxdorf  │ Langholzstr. 4      │
+└─────┴───────────┴──────────┴───────┴──────────┴─────────────────────┘
+
+res.DumpToWriter( out, sqlitecloud.OUTFORMAT_XML, "|", 0, false )

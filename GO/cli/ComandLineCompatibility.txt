@@ -1,0 +1,225 @@
+✅ = Implemented, directly or indrectly available
+🤔 = Not Implemented / Maybe later?
+👎 = Decided agains implementation, not usefull
+❌ = Does not apply / will never be implemented
+
+SQLite3
+
+🤔   -A ARGS...           run ".archive ARGS" and exit
+❌   -append              append the database to the end of the file
+👎   -ascii               set output mode to 'ascii'
+✅   -bail                stop after hitting an error
+🤔   -batch               force batch I/O
+✅   -box                 set output mode to 'box'
+✅   -column              set output mode to 'column'
+✅   -cmd COMMAND         run "COMMAND" before reading stdin
+✅   -csv                 set output mode to 'csv'
+❌   -deserialize         open the database using sqlite3_deserialize()
+✅   -echo                print commands before execution
+✅   -init FILENAME       read/process named file
+✅   -[no]header          turn headers on or off
+✅   -help                show this message
+✅   -html                set output mode to HTML
+👎   -interactive         force interactive I/O
+✅   -json                set output mode to 'json'
+✅   -line                set output mode to 'line'
+✅   -list                set output mode to 'list'
+❌   -lookaside SIZE N    use N entries of SZ bytes for lookaside memory
+✅   -markdown            set output mode to 'markdown'
+❌   -maxsize N           maximum size for a --deserialize database
+❌   -memtrace            trace all memory allocations and deallocations
+❌   -mmap N              default mmap size set to N
+✅   -newline SEP         set output row separator. Default: '\n'
+❌   -nofollow            refuse to open symbolic links to database files
+✅   -nullvalue TEXT      set text string for NULL values. Default ''
+❌   -pagecache SIZE N    use N slots of SZ bytes each for page cache memory
+✅   -quote               set output mode to 'quote'
+❌   -readonly            open the database read-only
+✅   -separator SEP       set output column separator. Default: '|'
+👎   -stats               print memory stats before each finalize
+✅   -table               set output mode to 'table'
+✅   -tabs                set output mode to 'tabs'
+✅   -version             show SQLite version
+❌   -vfs NAME            use NAME as the default VFS
+❌   -zip                 open the file as a ZIP Archive
+
+
+PostgreSQL
+
+✅  -c, --command=COMMAND    run only single command (SQL or internal) and exit
+✅  -d, --dbname=DBNAME      database name to connect to (default: "ubuntu")
+✅ -f, --file=FILENAME      execute commands from file, then exit
+✅  -l, --list               list available databases, then exit
+🤔  -v, --set=, --variable=NAME=VALUE
+🤔                           set psql variable NAME to VALUE
+🤔                           (e.g., -v ON_ERROR_STOP=1)
+✅  -V, --version            output version information, then exit
+👎  -X, --no-psqlrc          do not read startup file (~/.psqlrc)
+👎  -1 ("one"), --single-transaction
+👎                           execute as a single transaction (if non-interactive)
+✅  -?, --help[=options]     show this help, then exit
+👎      --help=commands      list backslash commands, then exit
+👎      --help=variables     list special variables, then exit
+
+Input and output options:
+👎  -a, --echo-all           echo all input from script
+👎  -b, --echo-errors        echo failed commands
+✅  -e, --echo-queries       echo commands sent to server
+👎  -E, --echo-hidden        display queries that internal commands generate
+🤔  -L, --log-file=FILENAME  send session log to file
+🤔  -E, --echo-hidden        display queries that internal commands generate
+🤔  -n, --no-readline        disable enhanced command line editing (readline)
+✅  -o, --output=FILENAME    send query results to file (or |pipe)
+✅  -q, --quiet              run quietly (no messages, only query output)
+🤔  -s, --single-step        single-step mode (confirm each query)
+❌  -S, --single-line        single-line mode (end of line terminates SQL command)
+
+Output format options:
+🤔  -A, --no-align           unaligned table output mode
+✅  -F, --field-separator=STRING
+✅                           field separator for unaligned output (default: "|")
+✅  -H, --html               HTML table output mode
+🤔  -P, --pset=VAR[=ARG]     set printing option VAR to ARG (see \pset command)
+✅  -R, --record-separator=STRING
+✅                           record separator for unaligned output (default: newline)
+✅  -t, --tuples-only        print rows only
+🤔  -T, --table-attr=TEXT    set HTML table tag attributes (e.g., width, border)
+🤔  -x, --expanded           turn on expanded table output
+👎  -z, --field-separator-zero
+👎                           set field separator for unaligned output to zero byte
+👎  -0, --record-separator-zero
+👎                           set record separator for unaligned output to zero byte
+
+Connection options:
+✅  -h, --host=HOSTNAME      database server host or socket directory (default: "/var/run/postgresql")
+✅  -p, --port=PORT          database server port (default: "5432")
+✅  -U, --username=USERNAME  database user name (default: "ubuntu")
+🤔  -w, --no-password        never prompt for password
+✅  -W, --password           force password prompt (should happen automatically)
+
+
+mysql
+
+Usage: mysql [OPTIONS] [database]
+✅  -?, --help          Display this help and exit.
+👎  -I, --help          Synonym for -?
+✅  --auto-rehash       Enable automatic rehashing. One doesn't need to use
+✅                      'rehash' to get table and field completion, but startup
+✅                      and reconnecting may take a longer time. Disable with
+✅                      --disable-auto-rehash.
+🤔  -A, --no-auto-rehash
+🤔                      No automatic rehashing. One has to use 'rehash' to get
+🤔                      table and field completion. This gives a quicker start of
+🤔                      mysql and disables rehashing on reconnect. WARNING:
+🤔                      options deprecated; use --disable-auto-rehash instead.
+✅  -B, --batch         Don't use history file. Disable interactive behavior.
+✅                      (Enables --silent)
+👎  --character-sets-dir=name
+👎                      Directory where character sets are.
+👎  --default-character-set=name
+👎                      Set the default character set.
+✅  -C, --compress      Use compression in server/client protocol.
+🤔  -#, --debug[=#]     This is a non-debug version. Catch this and exit
+✅  -D, --database=name Database to use.
+✅  --delimiter=name    Delimiter to be used.
+✅  -e, --execute=name  Execute command and quit. (Disables --force and history
+✅                      file)
+✅  -E, --vertical      Print the output of a query (rows) vertically.
+🤔  -f, --force         Continue even if we get an sql error.
+✅  -G, --named-commands
+✅                      Enable named commands. Named commands mean this program's
+✅                      internal commands; see mysql> help . When enabled, the
+✅                      named commands can be used from any line of the query,
+✅                      otherwise only from the first line, before an enter.
+✅                      Disable with --disable-named-commands. This option is
+✅                      disabled by default.
+👎  -g, --no-named-commands
+👎                      Named commands are disabled. Use \* form only, or use
+👎                      named commands only in the beginning of a line ending
+👎                      with a semicolon (;) Since version 10.9 the client now
+👎                      starts with this option ENABLED by default! Disable with
+👎                      '-G'. Long format commands still work from the first
+👎                      line. WARNING: option deprecated; use
+👎                      --disable-named-commands instead.
+👎  -i, --ignore-spaces Ignore space after function names.
+👎  --local-infile      Enable/disable LOAD DATA LOCAL INFILE.
+👎  -b, --no-beep       Turn off beep on error.
+✅  -h, --host=name     Connect to host.
+✅  -H, --html          Produce HTML output.
+✅  -X, --xml           Produce XML output
+❌  --line-numbers      Write line numbers for errors.
+❌  -L, --skip-line-numbers
+❌                      Don't write line number for errors. WARNING: -L is
+❌                      deprecated, use long version of this option instead.
+✅  -n, --unbuffered    Flush buffer after each query.
+✅  --column-names      Write column names in results.
+✅  -N, --skip-column-names
+✅                      Don't write column names in results. WARNING: -N is
+✅                      deprecated, use long version of this options instead.
+🤔  -O, --set-variable=name
+🤔                      Change the value of a variable. Please note that this
+🤔                      option is deprecated; you can set variables directly with
+🤔                      --variable-name=value.
+👎  --sigint-ignore     Ignore SIGINT (CTRL-C)
+❌  -o, --one-database  Only update the default database. This is useful for
+❌                      skipping updates to other database in the update log.
+👎  --pager[=name]      Pager to use to display results. If you don't supply an
+👎                      option the default pager is taken from your ENV variable
+👎                      PAGER. Valid pagers are less, more, cat [> filename],
+👎                      etc. See interactive help (\h) also. This option does not
+👎                      work in batch mode. Disable with --disable-pager. This
+👎                      option is disabled by default.
+👎  --no-pager          Disable pager and print to stdout. See interactive help
+👎                      (\h) also. WARNING: option deprecated; use
+👎                      --disable-pager instead.
+✅  -p, --password[=name]
+✅                      Password to use when connecting to server. If password is
+✅                      not given it's asked from the tty.
+✅  -P, --port=#        Port number to use for connection.
+🤔  --prompt=name       Set the mysql prompt to this value.
+❌  --protocol=name     The protocol of connection (tcp,socket,pipe,memory).
+🤔  -q, --quick         Don't cache result, print it row by row. This may slow
+🤔                      down the server if the output is suspended. Doesn't use
+🤔                      history file.
+🤔  -r, --raw           Write fields without conversion. Used with --batch.
+🤔  --reconnect         Reconnect if the connection is lost. Disable with
+🤔                      --disable-reconnect. This option is enabled by default.
+✅  -s, --silent        Be more silent. Print results with a tab as separator,
+✅                      each row on new line.
+❌  -S, --socket=name   Socket file to use for connection.
+🤔  --ssl               Enable SSL for connection (automatically enabled with
+🤔                      other flags). Disable with --skip-ssl.
+🤔  --ssl-ca=name       CA file in PEM format (check OpenSSL docs, implies
+🤔                      --ssl).
+🤔  --ssl-capath=name   CA directory (check OpenSSL docs, implies --ssl).
+🤔  --ssl-cert=name     X509 cert in PEM format (implies --ssl).
+🤔  --ssl-cipher=name   SSL cipher to use (implies --ssl).
+🤔  --ssl-key=name      X509 key in PEM format (implies --ssl).
+🤔  --ssl-verify-server-cert
+🤔                      Verify server's "Common Name" in its cert against
+🤔                      hostname used when connecting. This option is disabled by
+🤔                      default.
+✅  -t, --table         Output in table format.
+👎  -T, --debug-info    Print some debug info at exit.
+👎  --tee=name          Append everything into outfile. See interactive help (\h)
+👎                      also. Does not work in batch mode. Disable with
+👎                      --disable-tee. This option is disabled by default.
+👎  --no-tee            Disable outfile. See interactive help (\h) also. WARNING:
+👎                      option deprecated; use --disable-tee instead
+✅  -u, --user=name     User for login if not current user.
+❌  -U, --safe-updates  Only allow UPDATE and DELETE that uses keys.
+👎  -U, --i-am-a-dummy  Synonym for option --safe-updates, -U.
+🤔  -v, --verbose       Write more. (-v -v -v gives the table output format).
+✅  -V, --version       Output version information and exit.
+🤔  -w, --wait          Wait and retry if connection is down.
+✅  --connect_timeout=# Number of seconds before connection timeout.
+🤔  --max_allowed_packet=#
+🤔                      Max packet length to send to, or receive from server
+🤔  --net_buffer_length=#
+🤔                      Buffer for TCP/IP and socket communication
+🤔  --select_limit=#    Automatic limit for SELECT when using --safe-updates
+❌  --max_join_size=#   Automatic limit for rows in a join when using
+❌                      --safe-updates
+❌  --secure-auth       Refuse client connecting to server if it uses old
+❌                      (pre-4.1.1) protocol
+🤔  --show-warnings     Show warnings after every statement.
