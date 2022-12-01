@@ -36,39 +36,39 @@ if userID == 0 then
 else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                                end
 
-  query = string.format( "UPDATE Project SET ")
-  queryargs = {}
+  command = string.format( "UPDATE Project SET ")
+  commandargs = {}
   local separator = ""
   
   if name and string.len(name)>0 then   
-    query = string.format( "%s%s name = ?", query, separator)
-    queryargs[#queryargs+1] = name
+    command = string.format( "%s%s name = ?", command, separator)
+    commandargs[#commandargs+1] = name
     separator = ","
   end
   
   if description and string.len(description)>0 then   
-    query = string.format( "%s%s description = ?", query, separator)
-    queryargs[#queryargs+1] = description
+    command = string.format( "%s%s description = ?", command, separator)
+    commandargs[#commandargs+1] = description
     separator = ","
   end
 
   if adminUsername and string.len(adminUsername)>0 then   
-    query = string.format( "%s%s admin_username = ?", query, separator)
-    queryargs[#queryargs+1] = adminUsername
+    command = string.format( "%s%s admin_username = ?", command, separator)
+    commandargs[#commandargs+1] = adminUsername
     separator = ","
   end
 
   if adminPassword and string.len(adminPassword)>0 then   
-    query = string.format( "%s%s admin_password = ?", query, separator)
-    queryargs[#queryargs+1] = adminPassword
+    command = string.format( "%s%s admin_password = ?", command, separator)
+    commandargs[#commandargs+1] = adminPassword
     separator = ","
   end
 
   -- only if there are any changes
-  if #queryargs > 0 then
-    query = string.format( "%s WHERE uuid = ?; SELECT changes() AS success;", query )
-    queryargs[#queryargs+1] = projectID
-    result = executeSQL( "auth", query, queryargs )
+  if #commandargs > 0 then
+    command = string.format( "%s WHERE uuid = ?; SELECT changes() AS success;", command )
+    commandargs[#commandargs+1] = projectID
+    result = executeSQL( "auth", command, commandargs )
     if not result                                                                      then return error( 504, "Gateway Timeout" )                  end
     if result.ErrorMessage      ~= ""                                                  then return error( 502, result.ErrorMessage )                end
     if result.ErrorNumber       ~= 0                                                   then return error( 502, "Bad Gateway" )                      end

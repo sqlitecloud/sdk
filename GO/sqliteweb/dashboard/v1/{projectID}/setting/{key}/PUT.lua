@@ -30,9 +30,9 @@ local value,     err, msg = getBodyValue( "value", 0 )                   if err 
     
 local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                          end
 
-query  = string.format( "SET KEY ? TO ?"
+command  = string.format( "SET KEY ? TO ?"
 
-result = executeSQL( projectID, query, {key, value} )
+result = executeSQL( projectID, command, {key, value} )
 if not result                                                                      then return error( 504, "Gateway Timeout" )            end
 if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )          end
 

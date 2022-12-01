@@ -28,11 +28,11 @@ local dbName,    err, msg = checkParameter( databaseName, 1 )            if err 
 local key,       err, msg = getBodyValue( "key", 0 )                     if err ~= 0 then return error( err, msg )                                    end
 
 if key == "" then
-  query       = "DECRYPT DATABASE ?;"
-  queryargs   = {dbName}
+  command       = "DECRYPT DATABASE ?;"
+  commandargs   = {dbName}
 else
-  query       = "ENCRYPT DATABASE ? WITH KEY ?;"
-  queryargs   = {dbName, key}
+  command       = "ENCRYPT DATABASE ? WITH KEY ?;"
+  commandargs   = {dbName, key}
 end
 
 if userID == 0 then
@@ -41,7 +41,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                                   end
 end
 
-result = executeSQL( projectID, query, queryargs )
+result = executeSQL( projectID, command, commandargs )
 if not result                             then return error( 404, "ProjectID not found" ) end
 if result.ErrorNumber       ~= 0          then return error( 404, "Database not found" )  end
 if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end

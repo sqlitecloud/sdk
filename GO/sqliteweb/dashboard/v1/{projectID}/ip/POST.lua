@@ -30,15 +30,15 @@ local user,      err, msg = getBodyValue( "user", 0 )                    if err 
 
 if string.len( role ) < 1 and string.len( user ) < 1                                 then return error( 400, "Missing role or user" )           end
 
-query = "ADD ALLOWED IP ?"
-queryargs = {ip}
+command = "ADD ALLOWED IP ?"
+commandargs = {ip}
 if string.len(role) > 0 then 
-  query = query .. " ROLE ?"
-  queryargs[#queryargs+1] = role
+  command = command .. " ROLE ?"
+  commandargs[#commandargs+1] = role
 end
 if string.len(user) > 0 then 
-  query = query .. " USER ?"
-  queryargs[#queryargs+1] = user
+  command = command .. " USER ?"
+  commandargs[#commandargs+1] = user
 end
 
 result    = nil
@@ -49,7 +49,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg ) end  
 end
 
-result = executeSQL( projectID, query, queryargs )
+result = executeSQL( projectID, command, commandargs )
 if not result                             then return error( 404, "ProjectID not found" ) end
 if result.ErrorNumber       ~= 0          then return error( 404, result.ErrorMessage )   end
 if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end

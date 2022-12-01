@@ -28,20 +28,20 @@ local dbName,    err, msg = checkParameter( databaseName, 1 )            if err 
 local key,       err, msg = getBodyValue( "key", 0 )                     if err ~= 0 then return error( err, msg )                                    end
 local encoding,  err, msg = getBodyValue( "encoding", 0 )                if err ~= 0 then return error( err, msg )                                    end
 
-local query = "CREATE DATABASE ?"
-local queryargs = {dbName}
+local command = "CREATE DATABASE ?"
+local commandargs = {dbName}
 
 if string.len( key )      > 0 then 
-  query = string.format( "%s KEY ?", query ) 
-  queryargs[#queryargs+1] = key
+  command = string.format( "%s KEY ?", command ) 
+  commandargs[#commandargs+1] = key
 end
 
 if string.len( encoding ) > 0 then 
-  query = string.format( "%s ENCODING ?", query ) 
-  queryargs[#queryargs+1] = encoding
+  command = string.format( "%s ENCODING ?", command ) 
+  commandargs[#commandargs+1] = encoding
 end
 
-query = string.format( "%s IF NOT EXISTS;", query )
+command = string.format( "%s IF NOT EXISTS;", command )
 
 if userID == 0 then
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Disabled project" ) end
@@ -49,7 +49,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg ) end  
 end
 
-result = executeSQL( projectID, query, queryargs )
+result = executeSQL( projectID, command, commandargs )
 if not result                             then return error( 404, "ProjectID not found" ) end
 if result.ErrorNumber       ~= 0          then return error( 502, result.ErrorMessage )   end
 if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end

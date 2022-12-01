@@ -27,9 +27,9 @@ local key,       err, msg = checkParameter( key, 1 )                      if err
  
 local value,     err, msg = getBodyValue( "value", 0 )                    if err ~= 0 then return error( err, msg )                           end
 
-query  = "INSERT OR REPLACE INTO UserSettings ( user_id, key, value ) SELECT id, ?, ? FROM User WHERE email = ?;"
--- print( query )
-result = executeSQL( "auth", query, {key, value, email} )
+command  = "INSERT OR REPLACE INTO UserSettings ( user_id, key, value ) SELECT id, ?, ? FROM User WHERE email = ?;"
+-- print( command )
+result = executeSQL( "auth", command, {key, value, email} )
 
 if not result                                                                         then return error( 504, "Gateway Timeout" )             end
 if result.ErrorNumber     ~= 0                                                        then return error( 502, "Bad Gateway" )                 end

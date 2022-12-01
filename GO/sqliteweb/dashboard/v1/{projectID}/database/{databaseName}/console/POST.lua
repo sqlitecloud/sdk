@@ -44,9 +44,9 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                                   end
 end
 
-local query = string.format( "SWITCH DATABASE ?; %s", command )
+local command = string.format( "SWITCH DATABASE ?; %s", command )
 
-result = executeSQL( projectID, query, {dbName} )
+result = executeSQL( projectID, command, {dbName} )
 if not result                             then return error( 504, "Gateway Timeout" )     end
 
 -- print("executeSQL err:" .. result.ErrorMessage .. " Rows:" .. result.NumberOfRows )

@@ -31,18 +31,18 @@ local expiration,  err, msg = getBodyValue( "expiration", 0 )              if er
 
 local projectID, err, msg = verifyProjectID( userID, projectID )           if err ~= 0 then return error( err, msg )                                    end
 
-query = "CREATE APIKEY USER ? NAME ?"
-queryargs = {username, name}
+command = "CREATE APIKEY USER ? NAME ?"
+commandargs = {username, name}
 if string.len( restriction ) > 0   then 
-    query = query .. " RESTRICTION ?"       
-    queryargs[#queryargs+1] = restriction
+    command = command .. " RESTRICTION ?"       
+    commandargs[#commandargs+1] = restriction
 end
 if string.len( expiration )  > 0   then 
-    query = query .. " EXPIRATION ?"  
-    queryargs[#queryargs+1] = expiration     
+    command = command .. " EXPIRATION ?"  
+    commandargs[#commandargs+1] = expiration     
 end
 
-result = executeSQL( projectID, query, queryargs)
+result = executeSQL( projectID, command, commandargs)
 
 if not result                                                                        then return error( 404, "ProjectID not found" )                  end
 if result.ErrorNumber       ~= 0                                                     then return error( 404, result.ErrorMessage )                    end

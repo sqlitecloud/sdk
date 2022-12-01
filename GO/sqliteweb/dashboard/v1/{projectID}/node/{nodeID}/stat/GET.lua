@@ -56,9 +56,9 @@ for i = 1, status.NumberOfRows do
   end
 end
 
-query = "GET INFO LOAD,NUM_CLIENTS,DISK_USAGE_PERC NODE ?;" -- server_load, num_clients, cpu_time, mem_current, mem_max
-load = executeSQL( projectID, query, {machineNodeID} )
--- print("query:", query)
+command = "GET INFO LOAD,NUM_CLIENTS,DISK_USAGE_PERC NODE ?;" -- server_load, num_clients, cpu_time, mem_current, mem_max
+load = executeSQL( projectID, command, {machineNodeID} )
+-- print("command:", command)
 if not load                                   then return error( 504, "Gateway Timeout" )       end
 if load.ErrorNumber        ~= 0               then return error( 502, "Bad Gateway" )           end
 if load.NumberOfRows       ~= 3               then return error( 502, "Bad Gateway" )           end
@@ -69,8 +69,8 @@ Response.value.load = {
   load.Rows[ 3 ].ARRAY  -- disk_usage_perc
 }
 
-query = "LIST STATS NODE ?;"
-stats = executeSQL( projectID, query, {machineNodeID} )
+command = "LIST STATS NODE ?;"
+stats = executeSQL( projectID, command, {machineNodeID} )
 
 if not stats                                  then return error( 504, "Gateway Timeout" )       end
 if stats.ErrorNumber        ~= 0              then return error( 502, "Bad Gateway" )           end

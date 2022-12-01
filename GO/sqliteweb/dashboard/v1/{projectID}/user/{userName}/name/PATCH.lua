@@ -27,8 +27,8 @@ local projectID, err, msg = checkProjectID( projectID )                  if err 
 local userName,  err, msg = checkParameter( userName, 3 )                if err ~= 0 then return error( err, string.format( msg, "userName" ) ) end
 local name,      err, msg = getBodyValue( "name", 0 )                    if err ~= 0 then return error( err, msg )                              end
 
-query = "RENAME USER ? TO ?;"
-queryargs = {userName, name}
+command = "RENAME USER ? TO ?;"
+commandargs = {userName, name}
 
 result = nil
 
@@ -38,7 +38,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                              end
 end
 
-result = executeSQL( projectID, query, queryargs )
+result = executeSQL( projectID, command, commandargs )
 if not result                                                                        then return error( 404, "ProjectID not found" )            end
 if result.ErrorNumber       ~= 0                                                     then return error( 404, result.ErrorMessage )              end
 if result.NumberOfColumns   ~= 0                                                     then return error( 502, "Bad Gateway" )                    end

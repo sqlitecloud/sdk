@@ -46,8 +46,8 @@ end
 
 -- update name, if needed
 if string.len(name) > 0 then
-  query  = "RENAME ROLE ? TO ?;"
-  result = executeSQL( projectID, query, {roleName, name} )
+  command  = "RENAME ROLE ? TO ?;"
+  result = executeSQL( projectID, command, {roleName, name} )
   if not result                             then return error( 404, "ProjectID not found" ) end
   if result.ErrorNumber       ~= 0          then return error( 404, result.ErrorMessage )  end
   if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end
@@ -61,18 +61,18 @@ end
 if privilege then
   if string.len(privilege) == 0             then return error( 404, string.format( "Invalid privilege", value ))                  end
   
-  query = "SET PRIVILEGE ? ROLE ?"
-  queryargs = {privilege, roleName}
+  command = "SET PRIVILEGE ? ROLE ?"
+  commandargs = {privilege, roleName}
   if string.len( database )   > 0    then 
-    query = query .. " DATABASE ?"
-    queryargs[#queryargs+1] = database
+    command = command .. " DATABASE ?"
+    commandargs[#commandargs+1] = database
   end
   if string.len( table )      > 0    then 
-    query = query .. " TABLE ?"
-    queryargs[#queryargs+1] = table
+    command = command .. " TABLE ?"
+    commandargs[#commandargs+1] = table
   end
 
-  result = executeSQL( projectID, query, queryargs )
+  result = executeSQL( projectID, command, commandargs )
   if not result                             then return error( 404, "ProjectID not found" ) end
   if result.ErrorNumber       ~= 0          then return error( 404, result.ErrorMessage )  end
   if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end

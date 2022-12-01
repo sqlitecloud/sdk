@@ -31,8 +31,8 @@ template_data = {
   Password = "secret",
 }
 
-query = "SELECT password FROM USER WHERE email = ?;"
-result = executeSQL( "auth", query, {email} )
+command = "SELECT password FROM USER WHERE email = ?;"
+result = executeSQL( "auth", command, {email} )
 
 if not result                                                                       then return error( 504, "Gateway Timeout" )              end
 if result.ErrorMessage      ~= ""                                                   then return error( 502, result.ErrorMessage )            end

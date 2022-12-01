@@ -38,8 +38,8 @@ Response = {
 
 local projectID, err, msg = verifyProjectID( userID, projectID )                if err ~= 0 then return error( err, msg )                     end
 
-query = "LIST KEYS DETAILED"
-settings = executeSQL( projectID, query )
+command = "LIST KEYS DETAILED"
+settings = executeSQL( projectID, command )
 
 if not settings                          then return error( 404, "ProjectID OR NodeID not found" ) end
 if settings.ErrorNumber            ~= 0  then return error( 502, "Bad Gateway" )                   end

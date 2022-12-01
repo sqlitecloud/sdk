@@ -25,16 +25,16 @@ SetHeader( "Content-Encoding", "utf-8" )
 local userID,    err, msg = checkUserID( userid )                        if err ~= 0 then return error( err, msg )                          end
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                          end
 
-query = "LIST USERS WITH ROLES"
-queryargs = {}
+command = "LIST USERS WITH ROLES"
+commandargs = {}
 
 if query.database       then 
-  query = query .. " DATABASE ?"
-  queryargs[#queryargs+1] = query.database
+  command = command .. " DATABASE ?"
+  commandargs[#commandargs+1] = query.database
 end
 if query.table          then 
-  query = query .. " TABLE ?"
-  queryargs[#queryargs+1] = query.table
+  command = command .. " TABLE ?"
+  commandargs[#commandargs+1] = query.table
 end
 
 users = nil
@@ -45,7 +45,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg ) end  
 end
 
-users = executeSQL( projectID, query, queryargs )
+users = executeSQL( projectID, command, commandargs )
 if not users                                then return error( 404, "ProjectID not found" ) end
 if users.ErrorNumber                  ~= 0  then return error( 502, "Bad Gateway" )         end
 if users.NumberOfColumns              ~= 5  then return error( 502, "Bad Gateway" )         end

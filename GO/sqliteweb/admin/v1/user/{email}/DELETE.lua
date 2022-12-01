@@ -45,8 +45,8 @@ local userID,    err, msg = checkUserID( userID.Rows[ 1 ].id  )          if err 
 --       we cannot delete projects and nodes here with the following code because other users can still 
 --       exist for the same Company
 
--- query = string.format( "SELECT NODE.id AS nodeID FROM Node JOIN Project ON Project.uuid = Node.project_uuid JOIN Company ON Company.id = Project.company_id JOIN User ON User.company_id = Company.id WHERE User.id ='%d';", userID )
--- nodes = executeSQL( "auth", query )
+-- command = string.format( "SELECT NODE.id AS nodeID FROM Node JOIN Project ON Project.uuid = Node.project_uuid JOIN Company ON Company.id = Project.company_id JOIN User ON User.company_id = Company.id WHERE User.id ='%d';", userID )
+-- nodes = executeSQL( "auth", command )
 
 -- if not nodes                                                                         then return error( 504, "Gateway Timeout" )              end
 -- if nodes.ErrorMessage    ~= ""                                                       then return error( 502, userID.ErrorMessage )            end

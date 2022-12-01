@@ -31,21 +31,21 @@ if userID == 0 then
 else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                     end
   
-  local query  = "SELECT NODE.id AS nodeID FROM Node JOIN Project ON Project.uuid = Node.project_uuid JOIN Company ON Company.id = Project.company_id JOIN User ON User.company_id = Company.id WHERE USER.enabled = 1 AND USER.id = ? AND PROJECT.uuid = ?;"
-  local result = executeSQL( "auth", query, {userID, projectID} ) 
+  local command  = "SELECT NODE.id AS nodeID FROM Node JOIN Project ON Project.uuid = Node.project_uuid JOIN Company ON Company.id = Project.company_id JOIN User ON User.company_id = Company.id WHERE USER.enabled = 1 AND USER.id = ? AND PROJECT.uuid = ?;"
+  local result = executeSQL( "auth", command, {userID, projectID} ) 
 
   if not result                                                                       then return -1, 503, "Service Unavailable"       end
   if result.ErrorNumber       ~= 0                                                    then return -1, 502, "Bad Gateway"               end
   if result.NumberOfColumns   ~= 1                                                    then return -1, 502, "Bad Gateway"               end 
 
-  query = "BEGIN TRANSACTION;"
+  command = "BEGIN TRANSACTION;"
   for i = 1, result.NumberOfRows do
     nodeID = result.Rows[ i ].nodeID
-    query  = string.format( "%s DELETE FROM NodeSettings WHERE node_id = %d; DELETE FROM Node WHERE id = %d;", query, nodeID, nodeID )
+    command  = string.format( "%s DELETE FROM NodeSettings WHERE node_id = %d; DELETE FROM Node WHERE id = %d;", query, nodeID, nodeID )
   end  
-  query = string.format( "%s DELETE FROM Project WHERE uuid = ?; END TRANSACTION;", query )
+  command = string.format( "%s DELETE FROM Project WHERE uuid = ?; END TRANSACTION;", query )
   
-  result = executeSQL( "auth", query, {projectID} )
+  result = executeSQL( "auth", command, {projectID} )
   if not result                                                                      then return error( 504, "Gateway Timeout" )            end
   if result.ErrorMessage ~= ""                                                       then return error( 502, result.ErrorMessage )          end
   if result.ErrorNumber  ~= 0                                                        then return error( 502, "Bad Gateway" )                end

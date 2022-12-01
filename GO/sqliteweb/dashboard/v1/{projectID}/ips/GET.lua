@@ -28,14 +28,14 @@ local projectID, err, msg = checkProjectID( projectID ) if err ~= 0 then return 
 if not query.role then role = "" else role = query.role user = ""               end
 if not query.user then user = "" else role = ""         user = query.user       end
 
-query = "LIST ALLOWED IP "
+command = "LIST ALLOWED IP "
 
 if role ~= "" then 
-  query = query .. " ROLE ?" 
-  queryargs = {role}
+  command = command .. " ROLE ?" 
+  commandargs = {role}
 elseif user ~= "" then 
-  query = query .. " USER ?"
-  queryargs = {user}
+  command = command .. " USER ?"
+  commandargs = {user}
 end
 
 ips   = nil
@@ -46,7 +46,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg ) end
 end
 
-ips = executeSQL( projectID, query, queryargs )
+ips = executeSQL( projectID, command, commandargs )
 
 if not ips                                then return error( 404, "ProjectID not found" ) end
 if ips.ErrorNumber                  ~= 0  then return error( 502, "Bad Gateway" )         end

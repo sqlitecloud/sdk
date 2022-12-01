@@ -35,21 +35,21 @@ local size,      err, msg = getBodyValue( "size", 1 )                    if err 
 local address,   err, msg = getBodyValue( "address", 1 )                 if err ~= 0 then return error( err, msg )                          end -- 64.227.11.116
 local port,      err, msg = getBodyValue( "port", 1 )                    if err ~= 0 then return error( err, msg )                          end -- 9960
 
-query = "UPDATE Node SET name=?, type=?, provider=?, image=?, region=?, size=?,"
-queryargs = {name, type, provider, image, region, size}
+command = "UPDATE Node SET name=?, type=?, provider=?, image=?, region=?, size=?,"
+commandargs = {name, type, provider, image, region, size}
 
 if contains( address, ":" ) then
-  query = query .. " addr6=?,"
-  queryargs[#queryargs+1] = address
+  command = command .. " addr6=?,"
+  commandargs[#commandargs+1] = address
 else
-  query = query .. " addr4=?,"
-  queryargs[#queryargs+1] = address
+  command = command .. " addr4=?,"
+  commandargs[#commandargs+1] = address
 end
 
-query = query .. " port=? WHERE project_uuid = ? AND id=?;"
-queryargs[#queryargs+1] = port
-queryargs[#queryargs+1] = projectID
-queryargs[#queryargs+1] = nodeID
+command = command .. " port=? WHERE project_uuid = ? AND id=?;"
+commandargs[#commandargs+1] = port
+commandargs[#commandargs+1] = projectID
+commandargs[#commandargs+1] = nodeID
 
 if userID == 0 then         
   if not getINIBoolean( projectID, "enabled", false ) then return error( 401, "Project Disabled" )           end
@@ -58,7 +58,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                          end
   local machineNodeID, err, msg = verifyNodeID( userID, projectID, nodeID )  if err ~= 0 then return error( err, msg )                      end                                                                                         
 
-  result = executeSQL( "auth", query, queryargs )
+  result = executeSQL( "auth", command, commandargs )
   if not result                                                                      then return error( 504, "Gateway Timeout" )            end
   if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )          end
 

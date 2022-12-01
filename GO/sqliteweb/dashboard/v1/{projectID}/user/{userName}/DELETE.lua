@@ -26,7 +26,7 @@ local userID,    err, msg = checkUserID( userid )                        if err 
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                              end
 local userName,  err, msg = checkParameter( userName, 3 )                if err ~= 0 then return error( err, string.format( msg, "userName" ) ) end
 
-query  = "DROP USER ?;"                           
+command  = "DROP USER ?;"                           
 result = nil
 
 if userID == 0 then
@@ -35,7 +35,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                              end
 end           
             
-result = executeSQL( projectID, query, {userName} )           
+result = executeSQL( projectID, command, {userName} )           
 
 if not result                                                                       then return error( 404, "ProjectID not found" )             end
 if result.ErrorNumber       ~= 0                                                    then return error( 404, result.ErrorMessage )               end

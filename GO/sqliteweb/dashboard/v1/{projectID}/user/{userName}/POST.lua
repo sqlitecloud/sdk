@@ -33,22 +33,22 @@ local table,     err, msg = getBodyValue( "table", 0 )                   if err 
 
 local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                                    end
 
-query = "CREATE USER ? PASSWORD ?"
-queryargs = {userName, password}
+command = "CREATE USER ? PASSWORD ?"
+commandargs = {userName, password}
 if string.len( rolename )  > 0     then 
-    query = query .. " ROLE ?"
-    queryargs[#queryargs+1] = rolename  
+    command = command .. " ROLE ?"
+    commandargs[#commandargs+1] = rolename  
 end
 if string.len( database )  > 0     then 
-    query = query .. " DATABASE ?"
-    queryargs[#queryargs+1] = database
+    command = command .. " DATABASE ?"
+    commandargs[#commandargs+1] = database
 end
 if string.len( table )     > 0     then 
-    query = query .. " TABLE ?"
-    queryargs[#queryargs+1] = table                            
+    command = command .. " TABLE ?"
+    commandargs[#commandargs+1] = table                            
 end
 
-result = executeSQL( projectID, query, queryargs )
+result = executeSQL( projectID, command, commandargs )
 
 if not result                                                                        then return error( 404, "ProjectID not found" )                  end
 if result.ErrorNumber       ~= 0                                                     then return error( 404, "Database not found" )                   end

@@ -28,16 +28,16 @@ local roleName,  err, msg = checkParameter( roleName, 3 )                if err 
 local database,  err, msg = getBodyValue( "database", 0 )                if err ~= 0 then return error( err, msg )                              end
 local table,     err, msg = getBodyValue( "table", 0 )                   if err ~= 0 then return error( err, msg )                              end
 
-query = "GRANT ROLE ? USER ?"
-queryargs = {roleName, userName}
+command = "GRANT ROLE ? USER ?"
+commandargs = {roleName, userName}
 
 if string.len( database )  > 0       then 
-  query = query .. " DATABASE ?"
-  queryargs[#queryargs+1] = database
+  command = command .. " DATABASE ?"
+  commandargs[#commandargs+1] = database
 end
 if string.len( table )     > 0       then 
-  query = query .. " TABLE ?" 
-  queryargs[#queryargs+1] = table                 
+  command = command .. " TABLE ?" 
+  commandargs[#commandargs+1] = table                 
 end
 
 result = nil
@@ -48,7 +48,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                              end
 end
 
-result = executeSQL( projectID, query, queryargs )
+result = executeSQL( projectID, command, commandargs )
 if not result                                         then return error( 404, "ProjectID not found" ) end
 if result.ErrorNumber               ~= 0              then return error( 502, result.ErrorMessage )   end
 if result.NumberOfColumns           ~= 0              then return error( 502, "Bad Gateway" )         end

@@ -31,8 +31,8 @@ if userID == 0 then
 else
   local uID, companyID, err, msg = verifyUserID( userID )                     if err ~= 0 then return error( err, msg )                          end
 
-  query  = "UPDATE UserSettings SET value = ? WHERE user_id = ? AND key = ?; SELECT changes() AS success;"
-  result = executeSQL( "auth", query, {value, userID, key} )
+  command  = "UPDATE UserSettings SET value = ? WHERE user_id = ? AND key = ?; SELECT changes() AS success;"
+  result = executeSQL( "auth", command, {value, userID, key} )
   if not result                                                                      then return error( 504, "Gateway Timeout" )            end
   if result.ErrorMessage ~= ""                                                       then return error( 502, result.ErrorMessage )          end
   if result.ErrorNumber  ~= 0                                                        then return error( 502, "Bad Gateway" )                end
