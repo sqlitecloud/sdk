@@ -114,6 +114,9 @@ if string.len( query.limit ) > 0 then
   end
 end
 
+sql = sql .. " NODE ?"
+sqlargs[#sqlargs+1] = machineNodeID
+
 log = executeSQL( projectID, "LIST LOG" .. sql, sqlargs )
 if not log                                                                           then return error( 504, "Gateway Timeout" )            end
 if log.ErrorNumber ~= 0                                                              then return error( 502, log.ErrorMessage )             end
