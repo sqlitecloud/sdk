@@ -1,18 +1,16 @@
 # API Documentation
 
-Delete node
-
-TODO / MISSING. Kill the virtual machine...
+Delete the query analizer's records for the group (database, normalized_sql) specified by the queryID parameter 
 
 ## Requests
 
 ```sh
-curl -X "DELETE" "https://web1.sqlitecloud.io:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/node/10" \
+curl -X "DELETE" "https://web1.sqlitecloud.io:8443/dashboard/v1/f9cdd1d5-7d16-454b-8cc0-548dc1712c26/node/6/analyzer/group/10" \
      -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTI5OTUsImp0aSI6IjEiLCJpYXQiOjE2NDc1MjI5OTUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyOTk1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.SaOn2-XJbf6_irYDvhTGEkDHNHJobiNeEO7CPQVHUi8' \
      -H 'Content-Type: application/json; charset=utf-8'
 ```
 
-### **DELETE** - /dashboard/v1/{projectID}/node/{nodeID}
+### **DELETE** - /dashboard/v1/dashboard/v1/{projectID}/node/{nodeID}/analyzer/group/{queryID}
 
 ### Request object
 
@@ -34,13 +32,15 @@ none
 ### Example Request:
 
 ```http
-DELETE /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/node/10 HTTP/1.1
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTI5OTUsImp0aSI6IjEiLCJpYXQiOjE2NDc1MjI5OTUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyOTk1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.SaOn2-XJbf6_irYDvhTGEkDHNHJobiNeEO7CPQVHUi8
+DELETE /dashboard/v1/f9cdd1d5-7d16-454b-8cc0-548dc1712c26/node/6/analyzer/group/10 HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmaXJzdF9uYW1lIjoiQW5kcmVhIiwibGFzdF9uYW1lIjoiRG9uZXR0aSIsImlwYSI6IjEyNy4wLjAuMSIsImlzcyI6IndlYi5zcWxpdGVjbG91ZC5pbyIsInN1YiI6IjIiLCJhdWQiOlsid2ViLnNxbGl0ZWNsb3VkLmlvIl0sImV4cCI6MTY3MDAyNzgxOSwibmJmIjoxNjY5OTk3ODE5LCJpYXQiOjE2Njk5OTc4MTl9.MwdQlyGP8YAvoEJ2EayJR7vrD3D0KCxNqiZY7fyzQhw
 Content-Type: application/json; charset=utf-8
-Host: web1.sqlitecloud.io:8443
+Host: localhost:8443
 Connection: close
-User-Agent: Paw/3.3.6 (Macintosh; OS X/10.14.6) GCDHTTPRequest
-Content-Length: 0
+User-Agent: RapidAPI/4.0.0 (Macintosh; OS X/13.0.0) GCDHTTPRequest
+Content-Length: 2
+
+{}
 ```
 
 ### Example Response (user is in the auth database):
@@ -52,12 +52,12 @@ Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE
 Access-Control-Allow-Origin: *
 Content-Encoding: utf-8
 Content-Type: application/json
-Date: Thu, 17 Mar 2022 17:44:54 GMT
+Date: Fri, 02 Dec 2022 07:59:45 GMT
 Content-Length: 29
 Connection: close
 
 {
-  "message": "OK",
-  "status": 200
+  "message":"OK",
+  "status":200
 }
 ```
