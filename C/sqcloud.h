@@ -15,8 +15,8 @@
 extern "C" {
 #endif
 
-#define SQCLOUD_SDK_VERSION         "0.7.0"
-#define SQCLOUD_SDK_VERSION_NUM     0x000700
+#define SQCLOUD_SDK_VERSION         "0.8.0"
+#define SQCLOUD_SDK_VERSION_NUM     0x000800
 #define SQCLOUD_DEFAULT_PORT        8860
 #define SQCLOUD_DEFAULT_TIMEOUT     12
 #define SQCLOUD_DEFAULT_UPLOAD_SIZE 512*1024
@@ -25,6 +25,10 @@ extern "C" {
 #define SQCLOUD_IPv4                2
 #define SQCLOUD_IPv6                30
 
+#ifndef BITCHECK
+#define BITCHECK(byte,nbit)         ((byte) &   (1<<(nbit)))
+#endif
+
 // MARK: -
 
 // opaque datatypes
@@ -32,6 +36,7 @@ typedef struct SQCloudConnection    SQCloudConnection;
 typedef struct SQCloudResult        SQCloudResult;
 typedef struct SQCloudVM            SQCloudVM;
 typedef struct SQCloudBlob          SQCloudBlob;
+typedef struct SQCloudBackup        SQCloudBackup;
 typedef void (*SQCloudPubSubCB)     (SQCloudConnection *connection, SQCloudResult *result, void *data);
 typedef int (*config_cb)            (char *buffer, int len, void *data);
 
@@ -91,6 +96,14 @@ typedef enum {
 } SQCLOUD_VALUE_TYPE;
 
 typedef enum {
+    SQCLOUD_ROWSET_FLAG_STANDARD = 0,            // rowset contains standard header and data
+    SQCLOUD_ROWSET_FLAG_METACOLS = 1,            // rowset contains additional columns metadata
+    SQCLOUD_ROWSET_FLAG_HEADONLY = 2,            // rowset is header only
+    SQCLOUD_ROWSET_FLAG_DATAONLY = 3,            // rowset is data only
+    SQCLOUD_ROWSET_FLAG_METAVM = 4               // rowset contains VM metadata info
+} SQCLOUD_ROWSET_FLAG;
+
+typedef enum {
     ARRAY_TYPE_SQLITE_EXEC = 10,            // used in SQLITE_MODE only when a write statement is executed (instead of the OK reply)
     ARRAY_TYPE_DB_STATUS = 11,
     ARRAY_TYPE_METADATA = 12,
@@ -100,6 +113,7 @@ typedef enum {
     ARRAY_TYPE_VM_STEP_ONE = 22,            // unused in this version (will be used to step in a server-side rowset)
     ARRAY_TYPE_VM_SQL = 23,
     ARRAY_TYPE_VM_STATUS = 24,
+    ARRAY_TYPE_VM_LIST = 25,
         
     ARRAY_TYPE_BACKUP_INIT = 40,            // used in BACKUP_INIT
     ARRAY_TYPE_BACKUP_STEP = 41,            // used in backupWrite (VFS)
@@ -207,8 +221,12 @@ SQCloudResult *SQCloudVMResult (SQCloudVM *vm);
 bool SQCloudVMClose (SQCloudVM *vm);
 const char *SQCloudVMErrorMsg (SQCloudVM *vm);
 int SQCloudVMErrorCode (SQCloudVM *vm);
+int SQCloudVMIndex (SQCloudVM *vm);
 bool SQCloudVMIsReadOnly (SQCloudVM *vm);
 bool SQCloudVMIsExplain (SQCloudVM *vm);
+bool SQCloudVMIsFinalized (SQCloudVM *vm);
+int SQCloudVMBindParameterCount (SQCloudVM *vm);
+int SQCloudVMColumnCount (SQCloudVM *vm);
 bool SQCloudVMBindDouble (SQCloudVM *vm, int index, double value);
 bool SQCloudVMBindInt (SQCloudVM *vm, int index, int value);
 bool SQCloudVMBindInt64 (SQCloudVM *vm, int index, int64_t value);
@@ -222,10 +240,15 @@ double SQCloudVMColumnDouble (SQCloudVM *vm, int index);
 int SQCloudVMColumnInt32 (SQCloudVM *vm, int index);
 int64_t SQCloudVMColumnInt64 (SQCloudVM *vm, int index);
 int64_t SQCloudVMColumnLen (SQCloudVM *vm, int index);
+SQCLOUD_VALUE_TYPE SQCloudVMColumnType (SQCloudVM *vm, int index);
 
 // MARK: - BLOB -
 SQCloudBlob *SQCloudBlobOpen (SQCloudConnection *connection, const char *dbname, const char *tablename, const char *colname, int64_t rowid, bool wrflag);
-
+bool SQCloudBlobReOpen (SQCloudBlob *blob, int64_t rowid);
+bool SQCloudBlobClose (SQCloudBlob *blob);
+int SQCloudBlobBytes (SQCloudBlob *blob);
+int SQCloudBlobRead (SQCloudBlob *blob, void *buffer, int blen, int offset);
+int SQCloudBlobWrite (SQCloudBlob *blob, const void *buffer, int blen, int offset);
 
 #ifdef __cplusplus
 }
