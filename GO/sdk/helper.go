@@ -36,7 +36,7 @@ func escapeString(s, quote string) string {
 // SQCloudEnquoteString enquotes the given string if necessary and returns the result as a news created string.
 // If the given string contains a '"', the '"' is properly escaped.
 // If the given string contains one or more spaces, the whole string is enquoted with '"'
-func SQCloudEnquoteString2(s string) string {
+func SQCloudEnquoteString(s string) string {
 	s = strings.TrimSpace(s)
 
 	singlequote := "'"
@@ -71,6 +71,7 @@ func SQCloudEnquoteString2(s string) string {
 	return singlequote + escapeString(s, singlequote) + singlequote
 }
 
+/*
 // SQCloudEnquoteString enquotes the given string if necessary and returns the result as a news created string.
 // If the given string contains a '"', the '"' is properly escaped.
 // If the given string contains one or more spaces, the whole string is enquoted with '"'
@@ -82,6 +83,7 @@ func SQCloudEnquoteString(Token string) string {
 	}
 	return Token
 }
+*/
 
 // parseBool parses the given string value and tries to interpret the value as a bool.
 // true is returned if the value is "TRUE", "ENABLED" or 1.
