@@ -78,6 +78,7 @@ func init() {
  * return -4 = Internal error: could not connect to auth server
  * return -5 = Internal error: could not send auth query
  * return -6 = Internal error: invalid response from db
+ * return -7 = Internal error: invalid response from db
  */
 func (this *AuthServer) lookupUserID(Login string, Password string) (int64, string, string) {
 	Login = strings.TrimSpace(Login)
@@ -109,7 +110,10 @@ func (this *AuthServer) lookupUserID(Login string, Password string) (int64, stri
 		default:
 			return res.GetInt64Value_(0, 0), res.GetStringValue_(0, 1), res.GetStringValue_(0, 2)
 		}
+	} else if err != nil {
+		return -5, "", ""
 	}
+
 	return -7, "", ""
 }
 
@@ -329,7 +333,7 @@ func (this *AuthServer) authorize(writer http.ResponseWriter, request *http.Requ
 		response.Message = "Wrong Credentials"
 		writer.WriteHeader(http.StatusUnauthorized)
 
-	case userID == -3 || userID == -4 || userID == -5:
+	case userID == -3 || userID == -4 || userID == -5 || userID == -6 || userID == -7:
 		writer.WriteHeader(http.StatusInternalServerError)
 
 	default:
