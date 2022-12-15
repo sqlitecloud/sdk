@@ -297,28 +297,30 @@ func (this *Result) GetFloat64_() float64 {
 	return value
 }
 
-func (this *Result) GetError() (int, int, string, error) {
+// GetError returns the ErrorCode, ExtErrorCode, ErrorOffset, ErrorMessage
+// and the error object of the receiver
+func (this *Result) GetError() (int, int, int, string, error) {
 	switch {
 	case !this.IsError():
-		return 0, 0, "", errors.New("Not an error")
+		return 0, NO_EXTCODE, NO_OFFCODE, "", errors.New("Not an error")
 	default:
 		return this.value.GetError()
 	}
 }
 func (this *Result) GetError_() (int, string) {
-	code, _, message, _ := this.GetError()
+	code, _, _, message, _ := this.GetError()
 	return code, message
 }
 
 func (this *Result) GetErrorAsString() string {
-	switch code, extcode, message, err := this.GetError(); {
+	switch code, extcode, offset, message, err := this.GetError(); {
 	case err != nil:
 		return fmt.Sprintf("INTERNAL ERROR: %s", err.Error())
 	default:
-		if extcode == 0 {
+		if extcode == NO_EXTCODE && offset == NO_OFFCODE {
 			return fmt.Sprintf("ERROR: %s (%d)", message, code)
 		} else {
-			return fmt.Sprintf("ERROR: %s (%d:%d)", message, code, extcode)
+			return fmt.Sprintf("ERROR: %s (%d:%d:%d)", message, code, extcode, offset)
 		}
 	}
 }

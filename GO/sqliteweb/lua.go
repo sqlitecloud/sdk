@@ -18,8 +18,6 @@
 package main
 
 import (
-	"github.com/sqlitecloud/sdk"
-
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -32,6 +30,7 @@ import (
 	"time"
 
 	"github.com/Shopify/go-lua"
+	sqlitecloud "github.com/sqlitecloud/sdk"
 	//"github.com/gorilla/mux"
 )
 
@@ -423,12 +422,15 @@ func lua_executeSQL(L *lua.State) int {
 			if err == nil {
 				L.NewTable()
 
-				errorNumber, extErrorCode, errorMessage, _ := res.GetError()
+				errorNumber, extErrorCode, errorOffset, errorMessage, _ := res.GetError()
 				L.PushString("ErrorNumber")
 				L.PushInteger(errorNumber)
 				L.SetTable(-3)
 				L.PushString("ExtendedErrorNumber")
 				L.PushInteger(extErrorCode)
+				L.SetTable(-3)
+				L.PushString("ErrorOffset")
+				L.PushInteger(errorOffset)
 				L.SetTable(-3)
 				L.PushString("ErrorMessage")
 				L.PushString(errorMessage)
