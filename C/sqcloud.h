@@ -15,8 +15,8 @@
 extern "C" {
 #endif
 
-#define SQCLOUD_SDK_VERSION         "0.8.0"
-#define SQCLOUD_SDK_VERSION_NUM     0x000800
+#define SQCLOUD_SDK_VERSION         "0.9.0"
+#define SQCLOUD_SDK_VERSION_NUM     0x000900
 #define SQCLOUD_DEFAULT_PORT        8860
 #define SQCLOUD_DEFAULT_TIMEOUT     12
 #define SQCLOUD_DEFAULT_UPLOAD_SIZE 512*1024
@@ -28,6 +28,25 @@ extern "C" {
 #ifndef BITCHECK
 #define BITCHECK(byte,nbit)         ((byte) &   (1<<(nbit)))
 #endif
+
+// defined in https://github.com/sqlitecloud/sdk/blob/master/PROTOCOL.md
+// was int const but apparently gcc doesn't like them in case statements
+#define CMD_STRING                  '+'
+#define CMD_ZEROSTRING              '!'
+#define CMD_ERROR                   '-'
+#define CMD_INT                     ':'
+#define CMD_FLOAT                   ','
+#define CMD_ROWSET                  '*'
+#define CMD_ROWSET_CHUNK            '/'
+#define CMD_JSON                    '#'
+#define CMD_RAWJSON                 '{'
+#define CMD_NULL                    '_'
+#define CMD_BLOB                    '$'
+#define CMD_COMPRESSED              '%'
+#define CMD_PUBSUB                  '|'
+#define CMD_COMMAND                 '^'
+#define CMD_RECONNECT               '@'
+#define CMD_ARRAY                   '='
 
 // MARK: -
 
@@ -161,6 +180,7 @@ bool SQCloudIsError (SQCloudConnection *connection);
 bool SQCloudIsSQLiteError (SQCloudConnection *connection);
 int SQCloudErrorCode (SQCloudConnection *connection);
 int SQCloudExtendedErrorCode (SQCloudConnection *connection);
+int SQCloudOffsetErrorCode (SQCloudConnection *connection);
 const char *SQCloudErrorMsg (SQCloudConnection *connection);
 void SQCloudErrorReset (SQCloudConnection *connection);
 void SQCloudErrorSetCode (SQCloudConnection *connection, int errcode);
@@ -234,12 +254,15 @@ bool SQCloudVMBindNull (SQCloudVM *vm, int index);
 bool SQCloudVMBindText (SQCloudVM *vm, int index, const char *value, int32_t len);
 bool SQCloudVMBindBlob (SQCloudVM *vm, int index, void *value, int32_t len);
 bool SQCloudVMBindZeroBlob (SQCloudVM *vm, int index, int64_t len);
-const void *SQCloudVMColumnBlob (SQCloudVM *vm, int index);
-const char *SQCloudVMColumnText (SQCloudVM *vm, int index);
+const void *SQCloudVMColumnBlob (SQCloudVM *vm, int index, uint32_t *len);
+const char *SQCloudVMColumnText (SQCloudVM *vm, int index, uint32_t *len);
 double SQCloudVMColumnDouble (SQCloudVM *vm, int index);
 int SQCloudVMColumnInt32 (SQCloudVM *vm, int index);
 int64_t SQCloudVMColumnInt64 (SQCloudVM *vm, int index);
 int64_t SQCloudVMColumnLen (SQCloudVM *vm, int index);
+int64_t SQCloudVMLastRowID (SQCloudVM *vm);
+int64_t SQCloudVMChanges (SQCloudVM *vm);
+int64_t SQCloudVMTotalChanges (SQCloudVM *vm);
 SQCLOUD_VALUE_TYPE SQCloudVMColumnType (SQCloudVM *vm, int index);
 
 // MARK: - BLOB -
