@@ -78,23 +78,6 @@
 #define TIME_GET(_t1)                       struct timeval _t1; gettimeofday(&_t1, NULL)
 #define TIME_VAL(_t1, _t2)                  ((double)(_t2.tv_sec - _t1.tv_sec) + (double)((_t2.tv_usec - _t1.tv_usec)*1e-6))
 
-int const CMD_STRING        = '+';
-int const CMD_ZEROSTRING    = '!';
-int const CMD_ERROR         = '-';
-int const CMD_INT           = ':';
-int const CMD_FLOAT         = ',';
-int const CMD_ROWSET        = '*';
-int const CMD_ROWSET_CHUNK  = '/';
-int const CMD_JSON          = '#';
-int const CMD_RAWJSON       = '{';
-int const CMD_NULL          = '_';
-int const CMD_BLOB          = '$';
-int const CMD_COMPRESSED    = '%';
-int const CMD_PUBSUB        = '|';
-int const CMD_COMMAND       = '^';
-int const CMD_RECONNECT     = '@';
-int const CMD_ARRAY         = '=';
-
 #define CMD_MINLEN                          2
 
 #define CONNSTRING_KEYVALUE_SEPARATOR       '='
@@ -110,7 +93,7 @@ int const CMD_ARRAY         = '=';
 
 static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool mainfd);
 static bool internal_socket_write (SQCloudConnection *connection, const char *buffer, size_t len, bool mainfd, bool compute_header);
-static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cstart, uint32_t *extcode);
+static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cstart);
 static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t cstart, bool isstatic, bool externalbuffer);
 static bool internal_connect (SQCloudConnection *connection, const char *hostname, int port, SQCloudConfig *config, bool mainfd);
 static bool internal_set_error (SQCloudConnection *connection, int errcode, const char *format, ...);
@@ -171,7 +154,8 @@ struct SQCloudConnection {
     int             fd;
     char            errmsg[1024];
     int             errcode;                // error code
-    int             xerrcode;               // extended error code
+    int             extcode;                // extended error code
+    int             offcode;                // offset error code
     SQCloudResult   *_chunk;
     SQCloudConfig   *_config;
     bool            isblob;
@@ -373,7 +357,7 @@ static void *pubsub_thread (void *arg) {
         buffer += nread;
         
         uint32_t cstart = 0;
-        uint32_t clen = internal_parse_number (&original[1], tread-1, &cstart, NULL);
+        uint32_t clen = internal_parse_number (&original[1], tread-1, &cstart);
         if (clen == 0) continue;
         
         // check if read is complete
@@ -471,7 +455,8 @@ static void internal_parse_uuid (SQCloudConnection *connection, const char *buff
 
 static void internal_clear_error (SQCloudConnection *connection) {
     connection->errcode = 0;
-    connection->xerrcode = 0;
+    connection->extcode = 0;
+    connection->offcode = -1;   // If the most recent error does not reference a specific token in the input SQL, then the sqlite3_error_offset() function returns -1.
     connection->errmsg[0] = 0;
 }
 
@@ -583,17 +568,20 @@ static uint32_t internal_buffer_maxlen (SQCloudResult *result, char *value) {
     return (uint32_t)(result->blen - (uint32_t)(value - result->rawbuffer) + result->nheader);
 }
 
-static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cstart, uint32_t *extcode) {
+static uint32_t internal_parse_number_extended (char *buffer, uint32_t blen, uint32_t *cstart, uint32_t *extcode, int32_t *offcode) {
     uint32_t value = 0;
     uint32_t extvalue = 0;
+    int32_t offvalue = -1;
     bool isext = false;
+    bool isoff = false;
     
     for (uint32_t i=0; i<blen; ++i) {
         int c = buffer[i];
         
-        // check for optional extended error code (ERRCODE:EXTERRCODE)
+        // check for optional extended error code (ERRCODE[:EXTCODE:OFFCODE])
         if (c == ':') {
-            isext = true;
+            if (isext == false) isext = true;
+            else {isext = false; isoff = true; offvalue = 0;}
             continue;
         }
         
@@ -601,15 +589,21 @@ static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cs
         if (c == ' ') {
             if (cstart) *cstart = i+1;
             if (extcode) *extcode = extvalue;
+            if (offcode) *offcode = offvalue;
             return value;
         }
         
         // compute numeric value
         if (isext) extvalue = (extvalue * 10) + (buffer[i] - '0');
+        else if (isoff) offvalue = (offvalue * 10) + (buffer[i] - '0');
         else value = (value * 10) + (buffer[i] - '0');
     }
     
     return 0;
+}
+
+static uint32_t internal_parse_number (char *buffer, uint32_t blen, uint32_t *cstart) {
+    return internal_parse_number_extended(buffer, blen, cstart, NULL, NULL);
 }
 
 static int internal_parse_type (char *buffer) {
@@ -630,7 +624,7 @@ static char *internal_parse_value (char *buffer, uint32_t *len, uint32_t *cellsi
     // blen originally was hard coded to 24 because the max 64bit value is 20 characters long
     uint32_t cstart = 0;
     uint32_t blen = *len;   
-    blen = internal_parse_number(&buffer[1], blen, &cstart, NULL);
+    blen = internal_parse_number(&buffer[1], blen, &cstart);
     
     // handle decimal/float cases
     if ((buffer[0] == CMD_INT) || (buffer[0] == CMD_FLOAT)) {
@@ -715,7 +709,7 @@ static int32_t internal_array_count (char *buffer, uint32_t blen) {
     ++buffer; --blen;
     
     uint32_t size = 0;
-    return internal_parse_number(buffer, blen, &size, NULL);
+    return internal_parse_number(buffer, blen, &size);
 }
 
 static SQCloudResult *internal_parse_array (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart) {
@@ -732,7 +726,7 @@ static SQCloudResult *internal_parse_array (SQCloudConnection *connection, char 
     
     // =LEN N VALUE1 VALUE2 ... VALUEN
     uint32_t start1 = 0;
-    uint32_t n = internal_parse_number(&buffer[bstart], blen-1, &start1, NULL);
+    uint32_t n = internal_parse_number(&buffer[bstart], blen-1, &start1);
     
     rowset->ndata = n;
     rowset->data = (char **) mem_alloc(rowset->ndata * sizeof(char *));
@@ -792,23 +786,23 @@ static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer,
         
         // bind parameter count
         buffer += 1; blen -= 1;
-        uint32_t n1 = internal_parse_number(buffer, blen, &cstart1, NULL);
+        uint32_t n1 = internal_parse_number(buffer, blen, &cstart1);
         
         // vm is readonly
         buffer += cstart1; blen -= cstart1;
-        uint32_t n2 = internal_parse_number(buffer, blen, &cstart2, NULL);
+        uint32_t n2 = internal_parse_number(buffer, blen, &cstart2);
         
         // column count
         buffer += cstart2; blen -= cstart2;
-        uint32_t n3 = internal_parse_number(buffer, blen, &cstart3, NULL);
+        uint32_t n3 = internal_parse_number(buffer, blen, &cstart3);
         
         // vm is explain
         buffer += cstart3; blen -= cstart3;
-        uint32_t n4 = internal_parse_number(buffer, blen, &cstart4, NULL);
+        uint32_t n4 = internal_parse_number(buffer, blen, &cstart4);
         
         // tail len
         buffer += cstart4; blen -= cstart4;
-        uint32_t n5 = internal_parse_number(buffer, blen, &cstart5, NULL);
+        uint32_t n5 = internal_parse_number(buffer, blen, &cstart5);
          
         buffer += cstart5; blen -= cstart5;
         
@@ -822,7 +816,7 @@ static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer,
     // header is guarantee to contains column names (1st)
     for (uint32_t i=0; i<ncols; ++i) {
         uint32_t cstart = 0;
-        uint32_t len = internal_parse_number(&buffer[1], blen, &cstart, NULL);
+        uint32_t len = internal_parse_number(&buffer[1], blen, &cstart);
         rowset->name[i] = buffer;
         buffer += cstart + len + 1;
         blen -= cstart + len + 1;
@@ -843,7 +837,7 @@ static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer,
         // in sqlite mode header contains column declared types (2nd)
         for (uint32_t i=0; i<ncols; ++i) {
             uint32_t cstart = 0;
-            uint32_t len = internal_parse_number(&buffer[1], blen, &cstart, NULL);
+            uint32_t len = internal_parse_number(&buffer[1], blen, &cstart);
             rowset->decltype[i] = buffer;
             buffer += cstart + len + 1;
             blen -= cstart + len + 1;
@@ -852,7 +846,7 @@ static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer,
         // in sqlite mode header contains column database names (3rd)
         for (uint32_t i=0; i<ncols; ++i) {
             uint32_t cstart = 0;
-            uint32_t len = internal_parse_number(&buffer[1], blen, &cstart, NULL);
+            uint32_t len = internal_parse_number(&buffer[1], blen, &cstart);
             rowset->dbname[i] = buffer;
             buffer += cstart + len + 1;
             blen -= cstart + len + 1;
@@ -861,7 +855,7 @@ static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer,
         // in sqlite mode header contains column table names (4th)
         for (uint32_t i=0; i<ncols; ++i) {
             uint32_t cstart = 0;
-            uint32_t len = internal_parse_number(&buffer[1], blen, &cstart, NULL);
+            uint32_t len = internal_parse_number(&buffer[1], blen, &cstart);
             rowset->tblname[i] = buffer;
             buffer += cstart + len + 1;
             blen -= cstart + len + 1;
@@ -870,7 +864,7 @@ static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer,
         // in sqlite mode header contains column origin names (5th)
         for (uint32_t i=0; i<ncols; ++i) {
             uint32_t cstart = 0;
-            uint32_t len = internal_parse_number(&buffer[1], blen, &cstart, NULL);
+            uint32_t len = internal_parse_number(&buffer[1], blen, &cstart);
             rowset->origname[i] = buffer;
             buffer += cstart + len + 1;
             blen -= cstart + len + 1;
@@ -1108,9 +1102,9 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         uint32_t cstart1 = 0;
         uint32_t cstart2 = 0;
         uint32_t cstart3 = 0;
-        uint32_t tlen = internal_parse_number(&buffer[1], blen-1, &cstart1, NULL);
-        uint32_t clen = internal_parse_number(&buffer[cstart1 + 1], blen-(cstart1 + 1), &cstart2, NULL);
-        uint32_t ulen = internal_parse_number(&buffer[cstart1 + cstart2 + 1], blen-(cstart1 + cstart2 + 1), &cstart3, NULL);
+        uint32_t tlen = internal_parse_number(&buffer[1], blen-1, &cstart1);
+        uint32_t clen = internal_parse_number(&buffer[cstart1 + 1], blen-(cstart1 + 1), &cstart2);
+        uint32_t ulen = internal_parse_number(&buffer[cstart1 + cstart2 + 1], blen-(cstart1 + cstart2 + 1), &cstart3);
         
         // start of compressed buffer
         zdata = &buffer[tlen - clen + cstart1 + 1];
@@ -1163,7 +1157,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             // +LEN string
             uint32_t cstart = 0;
             // parse explicit len
-            uint32_t len = internal_parse_number(&buffer[1], blen-1, &cstart, NULL);
+            uint32_t len = internal_parse_number(&buffer[1], blen-1, &cstart);
             SQCLOUD_RESULT_TYPE type = (buffer[0] == CMD_JSON) ? RESULT_JSON : RESULT_STRING;
             if (buffer[0] == CMD_ZEROSTRING) --len;
             else if (buffer[0] == CMD_COMMAND) return internal_run_command(connection, &buffer[cstart+1], len, true);
@@ -1177,14 +1171,16 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         }
             
         case CMD_ERROR: {
-            // -LEN ERRCODE:EXTCODE ERRMSG
+            // -LEN ERRCODE[:EXTCODE:OFFCODE] ERRMSG
             uint32_t cstart = 0, cstart2 = 0;
-            uint32_t len = internal_parse_number(&buffer[1], blen-1, &cstart, NULL);
+            uint32_t len = internal_parse_number(&buffer[1], blen-1, &cstart);
             
-            uint32_t excode = 0;
-            uint32_t errcode = internal_parse_number(&buffer[cstart + 1], blen-1, &cstart2, &excode);
+            int32_t offcode = -1;
+            uint32_t extcode = 0;
+            uint32_t errcode = internal_parse_number_extended(&buffer[cstart + 1], blen-1, &cstart2, &extcode, &offcode);
             connection->errcode = (int)errcode;
-            connection->xerrcode = (int)excode;
+            connection->extcode = (int)extcode;
+            connection->offcode = (int)offcode;
             
             len -= cstart2;
             memcpy(connection->errmsg, &buffer[cstart + cstart2 + 1], MIN(len, sizeof(connection->errmsg)));
@@ -1202,10 +1198,10 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             uint32_t cstart1 = 0, cstart2 = 0, cstart3 = 0, cstart4 = 0;
             uint32_t flags = 0;
             
-            internal_parse_number(&buffer[1], blen-1, &cstart1, NULL); // parse len (already parsed in blen parameter)
-            uint32_t idx = internal_parse_number(&buffer[cstart1 + 1], blen-(cstart1+1), &cstart2, &flags);
-            uint32_t nrows = internal_parse_number(&buffer[cstart1 + cstart2 + 1], blen-(cstart1 + cstart2 + 1), &cstart3, NULL);
-            uint32_t ncols = internal_parse_number(&buffer[cstart1 + cstart2 + + cstart3 + 1], blen-(cstart1 + cstart2 + + cstart3 + 1), &cstart4, NULL);
+            internal_parse_number(&buffer[1], blen-1, &cstart1); // parse len (already parsed in blen parameter)
+            uint32_t idx = internal_parse_number_extended(&buffer[cstart1 + 1], blen-(cstart1+1), &cstart2, &flags, NULL);
+            uint32_t nrows = internal_parse_number(&buffer[cstart1 + cstart2 + 1], blen-(cstart1 + cstart2 + 1), &cstart3);
+            uint32_t ncols = internal_parse_number(&buffer[cstart1 + cstart2 + + cstart3 + 1], blen-(cstart1 + cstart2 + + cstart3 + 1), &cstart4);
             
             // idx is always 0 if (buffer[0] == CMD_ROWSET)
             
@@ -1301,7 +1297,7 @@ static bool internal_socket_forward_read (SQCloudConnection *connection, bool (*
         
         // determine command length
         if (clen == 0) {
-            clen = internal_parse_number (&original[1], tread-1, &cstart, NULL);
+            clen = internal_parse_number (&original[1], tread-1, &cstart);
             
             // handle special cases
             if ((original[0] == CMD_INT) || (original[0] == CMD_FLOAT) || (original[0] == CMD_NULL)) clen = 0;
@@ -1368,7 +1364,7 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool 
         
         if (internal_has_commandlen(original[0])) {
             // parse buffer looking for command length
-            if (clen == 0) clen = internal_parse_number (&original[1], tread-1, &cstart, NULL);
+            if (clen == 0) clen = internal_parse_number (&original[1], tread-1, &cstart);
             
             // check special zero-length value
             if (clen == 0) {
@@ -2172,7 +2168,7 @@ SQCloudResult *_reserved3 (char *buffer, uint32_t blen, uint32_t cstart, SQCloud
 }
 
 uint32_t _reserved4 (char *buffer, uint32_t blen, uint32_t *cstart) {
-    return internal_parse_number(buffer, blen, cstart, NULL);
+    return internal_parse_number(buffer, blen, cstart);
 }
 
 bool _reserved5 (SQCloudResult *res) {
@@ -2218,7 +2214,7 @@ char *_reserved11 (char *buffer, uint32_t blen, uint32_t index, uint32_t *len, u
     ++buffer; --blen;
     
     uint32_t tcellsize = 0;
-    uint32_t n = internal_parse_number(buffer, blen, &tcellsize, NULL);
+    uint32_t n = internal_parse_number(buffer, blen, &tcellsize);
     if (index >= n) {
         if (err) *err = INTERNAL_ERRCODE_INDEX;
         return NULL;
@@ -2593,7 +2589,11 @@ int SQCloudErrorCode (SQCloudConnection *connection) {
 }
 
 int SQCloudExtendedErrorCode (SQCloudConnection *connection) {
-    return (connection) ? connection->xerrcode : 0;
+    return (connection) ? connection->extcode : 0;
+}
+
+int SQCloudOffsetErrorCode (SQCloudConnection *connection) {
+    return (connection) ? connection->offcode : -1;
 }
 
 const char *SQCloudErrorMsg (SQCloudConnection *connection) {
@@ -2817,6 +2817,7 @@ int32_t SQCloudRowsetInt32Value (SQCloudResult *result, uint32_t row, uint32_t c
     char *data = result->data[row*result->ncols+col];
     uint32_t len = internal_buffer_maxlen(result, data);
     char *value = internal_parse_value(data, &len, NULL);
+    if (!value || len == 0) return 0;
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
@@ -2828,6 +2829,7 @@ int64_t SQCloudRowsetInt64Value (SQCloudResult *result, uint32_t row, uint32_t c
     char *data = result->data[row*result->ncols+col];
     uint32_t len = internal_buffer_maxlen(result, data);
     char *value = internal_parse_value(data, &len, NULL);
+    if (!value || len == 0) return 0;
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
@@ -2839,6 +2841,7 @@ float SQCloudRowsetFloatValue (SQCloudResult *result, uint32_t row, uint32_t col
     char *data = result->data[row*result->ncols+col];
     uint32_t len = internal_buffer_maxlen(result, data);
     char *value = internal_parse_value(data, &len, NULL);
+    if (!value || len == 0) return 0.0;
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
@@ -2850,6 +2853,7 @@ double SQCloudRowsetDoubleValue (SQCloudResult *result, uint32_t row, uint32_t c
     char *data = result->data[row*result->ncols+col];
     uint32_t len = internal_buffer_maxlen(result, data);
     char *value = internal_parse_value(data, &len, NULL);
+    if (!value || len == 0) return 0.0;
     
     char buffer[256];
     snprintf(buffer, sizeof(buffer), "%.*s", len, value);
@@ -3050,7 +3054,7 @@ int32_t SQCloudArrayResultDecode (SQCloudVM *vm, SQCloudResult *result) {
         vm->changes = SQCloudArrayInt64Value(result, 3);
         vm->totalchanges = SQCloudArrayInt64Value(result, 4);
         vm->finalized = (int)SQCloudArrayInt32Value(result, 5);
-
+        
         return 0;
     }
     
@@ -3196,6 +3200,18 @@ SQCLOUD_RESULT_TYPE SQCloudVMStep (SQCloudVM *vm) {
     return RESULT_NULL;
 }
 
+int64_t SQCloudVMLastRowID (SQCloudVM *vm) {
+    return vm->lastrowid;
+}
+
+int64_t SQCloudVMChanges (SQCloudVM *vm) {
+    return vm->changes;
+}
+
+int64_t SQCloudVMTotalChanges (SQCloudVM *vm) {
+    return vm->totalchanges;
+}
+
 const char *SQCloudVMErrorMsg (SQCloudVM *vm) {
     return vm->errmsg;
 }
@@ -3293,7 +3309,7 @@ bool SQCloudVMBindText (SQCloudVM *vm, int index, const char *value, int32_t len
     char sql[512];
     snprintf(sql, sizeof(sql), "VM BIND %d TYPE TEXT COLUMN %d VALUE ?;", vm->index, index);
     
-    if (len == -1) len = (int32_t)strlen(sql);
+    if (len == -1) len = (int32_t)strlen(value);
     
     const char *r[1] = {value};
     uint32_t rlen[1] = {len};
@@ -3343,14 +3359,12 @@ bool SQCloudVMBindZeroBlob (SQCloudVM *vm, int index, int64_t len) {
     return true;
 }
 
-const void *SQCloudVMColumnBlob (SQCloudVM *vm, int index) {
-    uint32_t len = 0;
-    return (const void *)SQCloudRowsetValue(vm->result, vm->rowindex, index, &len);
+const void *SQCloudVMColumnBlob (SQCloudVM *vm, int index, uint32_t *len) {
+    return (const void *)SQCloudRowsetValue(vm->result, vm->rowindex, index, len);
 }
 
-const char *SQCloudVMColumnText (SQCloudVM *vm, int index) {
-    uint32_t len = 0;
-    return (const char *)SQCloudRowsetValue(vm->result, vm->rowindex, index, &len);
+const char *SQCloudVMColumnText (SQCloudVM *vm, int index, uint32_t *len) {
+    return (const char *)SQCloudRowsetValue(vm->result, vm->rowindex, index, len);
 }
 
 double SQCloudVMColumnDouble (SQCloudVM *vm, int index) {
