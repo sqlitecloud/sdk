@@ -42,6 +42,11 @@ const (
 	CMD_ARRAY        = '='
 )
 
+const (
+	NO_EXTCODE = 0
+	NO_OFFCODE = -1
+)
+
 type Value struct {
 	Type   byte // _ + # : , $ ^ @ -   /// Types that are not in this Buffer: ROWSET, PUBSUB
 	Buffer []byte
@@ -112,25 +117,35 @@ func (this *Value) GetFloat32() (float32, error) {
 }
 func (this *Value) GetFloat64() (float64, error) { return strconv.ParseFloat(this.GetString(), 64) }
 
-func (this *Value) GetError() (ErrorCode int, ExtErrorCode int, ErrorMessage string, err error) {
-	ErrorCode = 0
-	ExtErrorCode = 0
-	isExt := false
+// GetError returns the ErrorCode, ExtErrorCode, ErrorOffset, ErrorMessage
+// and the error object of the receiver
+func (this *Value) GetError() (int, int, int, string, error) {
+	ErrorCode := 0
+	ExtErrorCode := NO_EXTCODE
+	ErrorOffset := NO_OFFCODE
+	nColons := 0
 	for i, LEN, buffer := uint64(0), this.GetLength(), this.GetBuffer(); i < LEN; i++ {
 		switch c := buffer[i]; c {
 		case ':':
-			isExt = true
+			nColons++
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-			if isExt == false {
+			switch nColons {
+			case 0:
 				ErrorCode = ErrorCode*10 + int(c) - int('0')
-			} else {
+			case 1:
 				ExtErrorCode = ExtErrorCode*10 + int(c) - int('0')
+			case 2:
+				if ErrorOffset == NO_OFFCODE {
+					ErrorOffset = 0
+				}
+				ErrorOffset = ErrorOffset*10 + int(c) - int('0')
 			}
+
 		default:
-			return ErrorCode, ExtErrorCode, string(buffer[i+1:]), nil
+			return ErrorCode, ExtErrorCode, ErrorOffset, string(buffer[i+1:]), nil
 		}
 	}
-	return -1, 0, this.GetString(), errors.New("Invalid error format")
+	return -1, NO_EXTCODE, NO_OFFCODE, this.GetString(), errors.New("Invalid error format")
 }
 
 // Aux Methods
