@@ -180,7 +180,7 @@ bool SQCloudIsError (SQCloudConnection *connection);
 bool SQCloudIsSQLiteError (SQCloudConnection *connection);
 int SQCloudErrorCode (SQCloudConnection *connection);
 int SQCloudExtendedErrorCode (SQCloudConnection *connection);
-int SQCloudOffsetErrorCode (SQCloudConnection *connection);
+int SQCloudErrorOffset (SQCloudConnection *connection);
 const char *SQCloudErrorMsg (SQCloudConnection *connection);
 void SQCloudErrorReset (SQCloudConnection *connection);
 void SQCloudErrorSetCode (SQCloudConnection *connection, int errcode);
