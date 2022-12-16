@@ -3399,7 +3399,7 @@ SQCloudBlob *SQCloudBlobOpen (SQCloudConnection *connection, const char *dbname,
     uint32_t rlen[3] = {(uint32_t)strlen(dbname), (uint32_t)strlen(tablename), (uint32_t)strlen(colname)};
     SQCLOUD_VALUE_TYPE types[3] = {VALUE_TEXT, VALUE_TEXT, VALUE_TEXT};
     
-    SQCloudResult *result = SQCloudExecArray(connection, sql, r, rlen, types, 1);
+    SQCloudResult *result = SQCloudExecArray(connection, sql, r, rlen, types, 3);
     if (SQCloudResultIsError(result)) {
         SQCloudResultFree(result);
         return NULL;
