@@ -2592,7 +2592,7 @@ int SQCloudExtendedErrorCode (SQCloudConnection *connection) {
     return (connection) ? connection->extcode : 0;
 }
 
-int SQCloudOffsetErrorCode (SQCloudConnection *connection) {
+int SQCloudErrorOffset (SQCloudConnection *connection) {
     return (connection) ? connection->offcode : -1;
 }
 

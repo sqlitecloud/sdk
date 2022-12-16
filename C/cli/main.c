@@ -140,7 +140,7 @@ bool do_print (SQCloudConnection *conn, SQCloudResult *res) {
             break;
             
         case RESULT_ERROR:
-            printf("ERROR: %s (%d)", SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
+            printf("ERROR: %s (%d - %d)", SQCloudErrorMsg(conn), SQCloudErrorCode(conn), SQCloudErrorOffset(conn));
             result = false;
             break;
             
