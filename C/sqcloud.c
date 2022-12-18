@@ -213,6 +213,7 @@ struct SQCloudBackup {
     int                 page_remaining;
     int                 counter;
     int                 size;
+    void                *data;
 } _SQCloudBackup;
 
 static SQCloudResult SQCloudResultOK = {RESULT_OK, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0};
@@ -3532,27 +3533,33 @@ SQCloudBackup *SQCloudBackupInit (SQCloudConnection *connection, const char *des
     if ((SQCloudResultType(result) == RESULT_ARRAY) && (SQCloudArrayInt32Value(result, 0) == ARRAY_TYPE_BACKUP_INIT)) {
         backup = (SQCloudBackup *)mem_zeroalloc(sizeof(_SQCloudBackup));
         backup->connection = connection;
-        backup->page_size = (int)SQCloudArrayInt32Value(result, 1);
-        backup->page_total = (int)SQCloudArrayInt32Value(result, 2);
+        backup->page_size = (int)SQCloudArrayInt32Value(result, 2);
+        backup->page_total = (int)SQCloudArrayInt32Value(result, 3);
     }
     
     SQCloudResultFree(result);
     return backup;
 }
 
-bool SQCloudBackupStep (SQCloudBackup *backup, int n) {
+int SQCloudBackupStep (SQCloudBackup *backup, int n, SQCloudBackupOnDataCB on_data) {
+    if (n <= 0) n = 0;
+    
     // BACKUP STEP <index> PAGES <npages>
     char sql[512];
     snprintf(sql, sizeof(sql), "BACKUP STEP %d PAGES %d;", backup->index, n);
     
-    bool rc = false;
+    int rc = -1;
     SQCloudResult *result = SQCloudExec(backup->connection, sql);
     if ((SQCloudResultType(result) == RESULT_ARRAY) && (SQCloudArrayInt32Value(result, 0) == ARRAY_TYPE_BACKUP_STEP)) {
-        backup->page_total = (int)SQCloudArrayInt32Value(result, 1);
-        backup->page_remaining = (int)SQCloudArrayInt32Value(result, 2);
-        backup->counter = (int)SQCloudArrayInt32Value(result, 3);
-        backup->size = (int)SQCloudArrayInt32Value(result, 4);
-        rc = true;
+        rc = (int)SQCloudArrayInt32Value(result, 2);
+        backup->page_total = (int)SQCloudArrayInt32Value(result, 3);
+        backup->page_remaining = (int)SQCloudArrayInt32Value(result, 4);
+        backup->counter = (int)SQCloudArrayInt32Value(result, 5);
+        
+        // retrieve BLOB
+        uint32_t blen = 0;
+        char *buffer = SQCloudArrayValue(result, 6, &blen);
+        if (on_data) on_data(backup, buffer, blen, backup->page_size, backup->counter);
     }
     
     SQCloudResultFree(result);
@@ -3560,14 +3567,18 @@ bool SQCloudBackupStep (SQCloudBackup *backup, int n) {
 }
 
 bool SQCloudBackupFinish (SQCloudBackup *backup) {
-    // BACKUP FINISH <index>
-    char sql[512];
-    snprintf(sql, sizeof(sql), "BACKUP FINISH %d;", backup->index);
-    
-    SQCloudResult *result = SQCloudExec(backup->connection, sql);
-    bool rc = (SQCloudResultIsOK(result));
-    
-    SQCloudResultFree(result);
+    bool rc = true;
+    if (backup->connection) {
+        // BACKUP FINISH <index>
+        char sql[512];
+        snprintf(sql, sizeof(sql), "BACKUP FINISH %d;", backup->index);
+        
+        SQCloudResult *result = SQCloudExec(backup->connection, sql);
+        rc = (SQCloudResultIsOK(result));
+        
+        SQCloudResultFree(result);
+    }
+    mem_free(backup);
     return rc;
 }
 
@@ -3576,7 +3587,21 @@ int SQCloudBackupPageRemaining (SQCloudBackup *backup) {
     return backup->page_remaining;
 }
 
-int SQCloudBackupInitPageCount (SQCloudBackup *backup) {
+int SQCloudBackupPageCount (SQCloudBackup *backup) {
     // BACKUP PAGECOUNT <index>
     return backup->page_total;
+}
+
+void *SQCloudBackupSetData (SQCloudBackup *backup, void *data) {
+    void *rc = backup->data;
+    backup->data = data;
+    return rc;
+}
+
+void *SQCloudBackupData (SQCloudBackup *backup) {
+    return backup->data;
+}
+
+SQCloudConnection *SQCloudBackupConnection (SQCloudBackup *backup) {
+    return backup->connection;
 }
