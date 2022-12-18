@@ -51,13 +51,14 @@ extern "C" {
 // MARK: -
 
 // opaque datatypes
-typedef struct SQCloudConnection    SQCloudConnection;
-typedef struct SQCloudResult        SQCloudResult;
-typedef struct SQCloudVM            SQCloudVM;
-typedef struct SQCloudBlob          SQCloudBlob;
-typedef struct SQCloudBackup        SQCloudBackup;
-typedef void (*SQCloudPubSubCB)     (SQCloudConnection *connection, SQCloudResult *result, void *data);
-typedef int (*config_cb)            (char *buffer, int len, void *data);
+typedef struct SQCloudConnection            SQCloudConnection;
+typedef struct SQCloudResult                SQCloudResult;
+typedef struct SQCloudVM                    SQCloudVM;
+typedef struct SQCloudBlob                  SQCloudBlob;
+typedef struct SQCloudBackup                SQCloudBackup;
+typedef void (*SQCloudPubSubCB)             (SQCloudConnection *connection, SQCloudResult *result, void *data);
+typedef int (*config_cb)                    (char *buffer, int len, void *data);
+typedef int64_t (*SQCloudBackupOnDataCB)    (SQCloudBackup *backup, const char *data, uint32_t len, int page_size, int page_counter);
 
 // configuration struct to be passed to the connect function (currently unused)
 typedef struct SQCloudConfigStruct {
@@ -272,6 +273,16 @@ bool SQCloudBlobClose (SQCloudBlob *blob);
 int SQCloudBlobBytes (SQCloudBlob *blob);
 int SQCloudBlobRead (SQCloudBlob *blob, void *buffer, int blen, int offset);
 int SQCloudBlobWrite (SQCloudBlob *blob, const void *buffer, int blen, int offset);
+
+// MARK: - Backup -
+SQCloudBackup *SQCloudBackupInit (SQCloudConnection *connection, const char *dest_name, const char *source_name);
+int SQCloudBackupStep (SQCloudBackup *backup, int n, SQCloudBackupOnDataCB on_data);
+bool SQCloudBackupFinish (SQCloudBackup *backup);
+int SQCloudBackupPageRemaining (SQCloudBackup *backup);
+int SQCloudBackupPageCount (SQCloudBackup *backup);
+void *SQCloudBackupSetData (SQCloudBackup *backup, void *data);
+void *SQCloudBackupData (SQCloudBackup *backup);
+SQCloudConnection *SQCloudBackupConnection (SQCloudBackup *backup);
 
 #ifdef __cplusplus
 }
