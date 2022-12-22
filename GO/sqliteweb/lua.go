@@ -382,7 +382,7 @@ func lua_enquoteSQL(L *lua.State) int {
 func lua_reloadNodes(L *lua.State) int {
 	if L.TypeOf(1) == lua.TypeString {
 		uuid := lua.CheckString(L, 1)
-		_, _ = cm.getNextServer(uuid, true)
+		_, _ = dashboardcm.getNextServer(uuid, true)
 		return 1
 	}
 
@@ -414,7 +414,7 @@ func lua_executeSQL(L *lua.State) int {
 		}
 		// SQLiteWeb.Logger.Debugf("lua_executeSQL '%s', args: %v\n", query, pargs)
 
-		res, err, errCode, extErrCode := cm.ExecuteSQLArray(uuid, query, pargs)
+		res, err, errCode, extErrCode, errorOffset := dashboardcm.ExecuteSQLArray(uuid, query, pargs)
 
 		if res != nil {
 			defer res.Free()
@@ -511,6 +511,10 @@ func lua_executeSQL(L *lua.State) int {
 
 			L.PushString("ExtendedErrorNumber")
 			L.PushInteger(extErrCode)
+			L.SetTable(-3)
+
+			L.PushString("ErrorOffset")
+			L.PushInteger(errorOffset)
 			L.SetTable(-3)
 
 			L.PushString("ErrorMessage")

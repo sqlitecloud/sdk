@@ -26,8 +26,11 @@ import (
 	// _ "net/http/pprof"
 )
 
+var dashboardcm *ConnectionManager = nil
+
 func init() {
 	initializeSQLiteWeb()
+	dashboardcm, _ = NewConnectionManager()
 }
 
 func initDashboard() {

@@ -81,7 +81,7 @@ func (this *Server) dashboardWebsocketDownload(writer http.ResponseWriter, reque
 	// SQLiteWeb.Logger.Debug("dashboardWebsocketDownload: upgrade")
 
 	query := "DOWNLOAD DATABASE ?" // , enquoteString(v["databaseName"]))
-	connection, err = cm.GetConnection(projectID, false)
+	connection, err = dashboardcm.GetConnection(projectID, false)
 	switch {
 	case err != nil:
 		fallthrough
@@ -98,7 +98,7 @@ func (this *Server) dashboardWebsocketDownload(writer http.ResponseWriter, reque
 		// for example:
 		// - 100001 Internal Error: SQCloud.readNextRawChunk (%s)
 		// - 100003 Internal Error: sendString (%s)
-		cm.closeAndRemoveLockedConnection(projectID, connection)
+		dashboardcm.closeAndRemoveLockedConnection(projectID, connection)
 		SQLiteWeb.Logger.Debug("dashboardWebsocketDownload: Connection Error ", err)
 		c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 		return
@@ -108,9 +108,9 @@ func (this *Server) dashboardWebsocketDownload(writer http.ResponseWriter, reque
 		// try to abort the current download operation
 		if err1 := connection.connection.Execute("DOWNLOAD ABORT"); err1 != nil {
 			SQLiteWeb.Logger.Errorf("dashboardWebsocketDownload: DOWNLOAD ABORT error (%s) closing conn: %v", err1, connection)
-			cm.closeAndRemoveLockedConnection(projectID, connection)
+			dashboardcm.closeAndRemoveLockedConnection(projectID, connection)
 		} else {
-			cm.ReleaseConnection(projectID, connection)
+			dashboardcm.ReleaseConnection(projectID, connection)
 		}
 
 		// prepare the error message
@@ -128,7 +128,7 @@ func (this *Server) dashboardWebsocketDownload(writer http.ResponseWriter, reque
 		return
 	}
 
-	defer cm.ReleaseConnection(projectID, connection)
+	defer dashboardcm.ReleaseConnection(projectID, connection)
 
 	dbSize, _ := res.GetInt64Value(0, 0)
 	progressSize := int64(0)
@@ -147,7 +147,7 @@ func (this *Server) dashboardWebsocketDownload(writer http.ResponseWriter, reque
 				SQLiteWeb.Logger.Error("dashboardWebsocketDownload: error on STEP writeMessage: ", err)
 				if err1 := connection.connection.Execute("DOWNLOAD ABORT"); err1 != nil {
 					SQLiteWeb.Logger.Errorf("dashboardWebsocketDownload: DOWNLOAD ABORT error (%s) closing conn: %v", err1, connection)
-					cm.closeAndRemoveLockedConnection(projectID, connection)
+					dashboardcm.closeAndRemoveLockedConnection(projectID, connection)
 				}
 				c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 				return
@@ -161,7 +161,7 @@ func (this *Server) dashboardWebsocketDownload(writer http.ResponseWriter, reque
 			SQLiteWeb.Logger.Error("dashboardWebsocketDownload: error while executing download step ", err)
 			if err1 := connection.connection.Execute("DOWNLOAD ABORT"); err1 != nil {
 				SQLiteWeb.Logger.Errorf("dashboardWebsocketDownload: DOWNLOAD ABORT error (%s) closing conn: %v", err1, connection)
-				cm.closeAndRemoveLockedConnection(projectID, connection)
+				dashboardcm.closeAndRemoveLockedConnection(projectID, connection)
 			}
 			c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, "error while executing download step"), time.Now().Add(1*time.Second))
 			return
@@ -210,7 +210,7 @@ func (this *Server) dashboardWebsocketUpload(writer http.ResponseWriter, request
 		args = append(args, keys[0])
 	}
 
-	connection, err = cm.GetConnection(projectID, false)
+	connection, err = dashboardcm.GetConnection(projectID, false)
 	switch {
 	case err != nil:
 		fallthrough
@@ -228,7 +228,7 @@ func (this *Server) dashboardWebsocketUpload(writer http.ResponseWriter, request
 		// for example:
 		// - 100001 Internal Error: SQCloud.readNextRawChunk (%s)
 		// - 100003 Internal Error: sendString (%s)
-		cm.closeAndRemoveLockedConnection(projectID, connection)
+		dashboardcm.closeAndRemoveLockedConnection(projectID, connection)
 		SQLiteWeb.Logger.Error("dashboardWebsocketUpload: Connection Error ", err)
 		c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 		return
@@ -238,10 +238,10 @@ func (this *Server) dashboardWebsocketUpload(writer http.ResponseWriter, request
 		// try to abort the current download operation
 		if err1 := connection.connection.Execute("UPLOAD ABORT"); err1 != nil {
 			SQLiteWeb.Logger.Errorf("dashboardWebsocketUpload: UPLOAD ABORT error (%s) closing conn: %v", err1, connection)
-			cm.closeAndRemoveLockedConnection(projectID, connection)
+			dashboardcm.closeAndRemoveLockedConnection(projectID, connection)
 		} else {
 			// SQLiteWeb.Logger.Debugf("dashboardWebsocketUpload: ReleaseConnection %v", connection)
-			cm.ReleaseConnection(projectID, connection)
+			dashboardcm.ReleaseConnection(projectID, connection)
 		}
 
 		// prepare the error message
@@ -259,7 +259,7 @@ func (this *Server) dashboardWebsocketUpload(writer http.ResponseWriter, request
 		return
 	}
 
-	defer cm.ReleaseConnection(projectID, connection)
+	defer dashboardcm.ReleaseConnection(projectID, connection)
 
 	// temporarily increase the timeout, otherwise the SendBlob function would probably
 	// give an "SQCloud.readNextRawChunk (Timeout)" error, expecially while waiting for
@@ -282,7 +282,7 @@ func (this *Server) dashboardWebsocketUpload(writer http.ResponseWriter, request
 			SQLiteWeb.Logger.Debug("dashboardWebsocketUpload: read error: ", err)
 			if err1 := connection.connection.Execute("UPLOAD ABORT"); err1 != nil {
 				SQLiteWeb.Logger.Errorf("dashboardWebsocketUpload: UPLOAD ABORT error (%s) closing conn: %v", err1, connection)
-				cm.closeAndRemoveLockedConnection(projectID, connection)
+				dashboardcm.closeAndRemoveLockedConnection(projectID, connection)
 			}
 			c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 			break
@@ -294,7 +294,7 @@ func (this *Server) dashboardWebsocketUpload(writer http.ResponseWriter, request
 			SQLiteWeb.Logger.Error("dashboardWebsocketUpload: SendBytes error: ", err)
 			if err1 := connection.connection.Execute("UPLOAD ABORT"); err1 != nil {
 				SQLiteWeb.Logger.Errorf("dashboardWebsocketUpload: UPLOAD ABORT error (%s) closing conn: %v", err1, connection)
-				cm.closeAndRemoveLockedConnection(projectID, connection)
+				dashboardcm.closeAndRemoveLockedConnection(projectID, connection)
 			}
 			c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 			break
@@ -313,7 +313,7 @@ func (this *Server) dashboardWebsocketUpload(writer http.ResponseWriter, request
 			if err = c.WriteMessage(websocket.TextMessage, []byte("OK")); err != nil {
 				if err1 := connection.connection.Execute("UPLOAD ABORT"); err1 != nil {
 					SQLiteWeb.Logger.Errorf("dashboardWebsocketUpload: UPLOAD ABORT error (%s) closing conn: %v", err1, connection)
-					cm.closeAndRemoveLockedConnection(projectID, connection)
+					dashboardcm.closeAndRemoveLockedConnection(projectID, connection)
 				}
 				c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()), time.Now().Add(1*time.Second))
 			}
@@ -336,7 +336,7 @@ func enquoteString(s string) string {
 func verifyProjectID(userID int, projectUUID string) (string, int, error) {
 	query := "SELECT uuid FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled=1 AND Company.enabled = 1 AND User.id=? AND Project.uuid = ?;"
 	args := []interface{}{userID, projectUUID}
-	res, err, errCode, _ := cm.ExecuteSQLArray("auth", query, &args)
+	res, err, errCode, _, _ := dashboardcm.ExecuteSQLArray("auth", query, &args)
 
 	if res == nil {
 		return "", 503, fmt.Errorf("Service Unavailable")
