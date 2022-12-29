@@ -3,11 +3,11 @@ LIST TABLES with REST API settings
 ## Requests
 
 ```sh
-curl "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/database/db1.sqlite/settings/rest" \
+curl "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64/database/db1.sqlite/api/rest" \
      -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMjcuMC4wLjEiLCJleHAiOjE2NTEwOTM4MzUsImp0aSI6IjEiLCJpYXQiOjE2NTEwNjM4MzUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjUxMDYzODM1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.6oTRZEBprnPjHoPpxd89RDfHifXn38MQmvureXl2XbY'
 ```
 
-### **GET** - /dashboard/v1/{projectID}/database/{databaseName}/settings/rest
+### **GET** - /dashboard/v1/{projectID}/database/{databaseName}/api/rest
 
 ### Request object
 
@@ -43,7 +43,7 @@ none
 ### Example Request:
 
 ```http
-GET /dashboard/v1/f9cdd1d5-7d16-454b-8cc0-548dc1712c26/database/chinook.sqlite/settings/rest HTTP/1.1
+GET /dashboard/v1/f9cdd1d5-7d16-454b-8cc0-548dc1712c26/database/chinook.sqlite/api/rest HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmaXJzdF9uYW1lIjoiQW5kcmVhIiwibGFzdF9uYW1lIjoiRG9uZXR0aSIsImlwYSI6IjEyNy4wLjAuMSIsImlzcyI6IndlYi5zcWxpdGVjbG91ZC5pbyIsInN1YiI6IjIiLCJhdWQiOlsid2ViLnNxbGl0ZWNsb3VkLmlvIl0sImV4cCI6MTY3MTY3NDUyMywibmJmIjoxNjcxNjQ0NTIzLCJpYXQiOjE2NzE2NDQ1MjN9.E6YZBZCxcZPNJNuGdIThtv82XfVvZH342t4VyQXahIA
 Host: localhost:8443
 Connection: close

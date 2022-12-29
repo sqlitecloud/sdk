@@ -15,7 +15,7 @@
 --
 -- -----------------------------------------------------------------------TAB=2
 
--- https://localhost:8443/dashboard/v1/{projectID}/{databaseName}/settings/rest
+-- https://localhost:8443/dashboard/v1/{projectID}/{databaseName}/api/rest
 
 require "sqlitecloud"
 
@@ -40,7 +40,7 @@ end
 
 tables = executeSQL( projectID, "SWITCH DATABASE ?; LIST TABLES;", {databaseName} )
 if not tables                                 then return error( 404, "ProjectID not found" ) end
-if tables.ErrorMessage                  ~= "" then return error( 502, tables.ErrorMessage )   end
+if tables.ErrorMessage                  ~= "" then return error( 500, tables.ErrorMessage )   end
 if tables.ErrorNumber                   ~= 0  then return error( 502, "Bad Gateway" )         end
 if tables.NumberOfColumns               ~= 6  then return error( 502, "Bad Gateway" )         end
 
@@ -67,7 +67,7 @@ if #settings == 0 then
 else
     restsettings = executeSQL( "auth", "SELECT * FROM RestApiSettings WHERE database_name = ?", {databaseName} )
     if not restsettings                                 then return error( 404, "Settings not found" )  end
-    if restsettings.ErrorMessage                  ~= "" then return error( 502, tables.ErrorMessage )   end
+    if restsettings.ErrorMessage                  ~= "" then return error( 500, tables.ErrorMessage )   end
     if restsettings.ErrorNumber                   ~= 0  then return error( 502, "Bad Gateway" )         end
     if restsettings.NumberOfColumns               ~= 5  then return error( 502, "Bad Gateway" )         end
 

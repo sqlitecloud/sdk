@@ -15,7 +15,7 @@
 --
 -- -----------------------------------------------------------------------TAB=2
 
--- https://localhost:8443/dashboard/v1/{projectID}/{databaseName}/settings/rest
+-- https://localhost:8443/dashboard/v1/{projectID}/{databaseName}/api/rest
 
 require "sqlitecloud"
 
