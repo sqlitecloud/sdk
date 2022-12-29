@@ -38,13 +38,17 @@ if string.len( name ) > 0   then
     command = command .. " NAME ?"       
     commandargs[#commandargs+1] = name
 end
-if string.len( name ) > 0   then 
+if string.len( restriction ) > 0   then 
     command = command .. " RESTRICTION ?"       
     commandargs[#commandargs+1] = restriction
+else 
+    command = command .. " RESTRICTION 0"
 end
-if string.len( name ) > 0   then 
+if string.len( expiration ) > 0   then 
     command = command .. " EXPIRATION ?"       
     commandargs[#commandargs+1] = expiration
+else 
+    command = command .. " EXPIRATION NULL" 
 end
 
 result = executeSQL( projectID, command, commandargs )
