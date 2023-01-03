@@ -19,7 +19,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
@@ -51,7 +50,7 @@ func ResultToObj(result *sqlitecloud.Result) (interface{}, error) {
 
 	case result.IsError():
 		_, _, _, errMsg, _ := result.GetError()
-		return nil, fmt.Errorf(errMsg)
+		return nil, errors.New(errMsg)
 
 	case result.IsString(), result.IsJSON():
 		return result.GetString()

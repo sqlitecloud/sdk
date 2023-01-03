@@ -19,13 +19,21 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/swaggest/openapi-go/openapi3"
+	"golang.org/x/exp/maps"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	// "github.com/gorilla/schema"
 	// "github.com/gookit/validate"
 	// "github.com/go-swagger/go-swagger"
@@ -34,6 +42,16 @@ import (
 )
 
 const ApiKeyHeaderKey string = "X-SQLiteCloud-Api-Key"
+const rootTableName string = ""
+
+type tableColumnMetadata struct {
+	Name       string
+	DataType   string
+	ColSeq     string
+	NotNull    bool
+	PrimaryKey bool
+	AutoInc    bool
+}
 
 type methodMask int
 
@@ -45,12 +63,13 @@ const (
 )
 
 var (
-	methodsMap map[string]methodMask = map[string]methodMask{
+	methodBitmask map[string]methodMask = map[string]methodMask{
 		http.MethodGet:    GET_BITMASK,
 		http.MethodPost:   POST_BITMASK,
 		http.MethodPatch:  PATCH_BITMASK,
 		http.MethodDelete: DELETE_BITMASK,
 	}
+
 	localconn *sqlitecloud.SQCloud = nil
 )
 
@@ -61,7 +80,6 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 		writeError(writer, http.StatusUnauthorized, err.Error(), "")
 		return
 	}
-	// fmt.Printf("ApiRest apikey: %s", apikey)
 
 	// get project, database, table, id
 	vars := mux.Vars(request)
@@ -110,36 +128,20 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	// Convert sqlitecloud.Result to map with ResultToObj
-	resobj, err := ResultToObj(res)
+	jsonbytes, err := responseValueFromResult(request, projectID, databaseName, tableName, res)
 	if err != nil {
 		writeError(writer, http.StatusInternalServerError, err.Error(), "")
 		return
 	}
 
-	// Parse the result object
-	var value interface{}
-	switch resobj.(type) {
-	case map[string]interface{}:
-		// Extract only the "rows" part of the rowset
-		resmap, _ := resobj.(map[string]interface{})
-		value = resmap["rows"]
-
-	default:
-		value = resobj
-	}
-
-	// reply with a JSON using the map result, in case of Insert maybe fetch the ID or the full new object
+	// reply with a JSON representation response value, in case of Insert maybe fetch the ID or the full new object
 	// how can I get the last inserted ID? with DATABASE GET ROWID?
-	statusCode = http.StatusOK
-	writer.WriteHeader(statusCode)
-	response := map[string]interface{}{"status": statusCode, "message": "OK", "value": value}
-	bresponse, err := json.Marshal(response)
+	writer.WriteHeader(http.StatusOK)
 	if err != nil {
 		writeError(writer, http.StatusInternalServerError, err.Error(), "")
 	}
 
-	writer.Write(bresponse)
+	writer.Write(jsonbytes)
 }
 
 func prependInterface(slice []interface{}, value interface{}) []interface{} {
@@ -169,13 +171,13 @@ func writeError(writer http.ResponseWriter, statusCode int, message string, allo
 }
 
 func isApiRestEnabled(method string, projectID string, databaseName string, tableName string) bool {
-	methodBitmask, found := methodsMap[strings.ToUpper(method)]
+	methodBitmask, found := methodBitmask[strings.ToUpper(method)]
 	if !found {
 		return false
 	}
 
 	query := fmt.Sprintf("SELECT methods_mask FROM RestApiSettings WHERE project_uuid=? AND database_name=? AND table_name=? AND methods_mask & %d = %d", methodBitmask, methodBitmask)
-	queryargs := []interface{}{projectID, databaseName, tableName, methodBitmask, methodBitmask}
+	queryargs := []interface{}{projectID, databaseName, tableName}
 	res, err, _, _, _ := apicm.ExecuteSQLArray("auth", query, &queryargs)
 
 	if err != nil || res.GetNumberOfRows() == 0 {
@@ -197,8 +199,8 @@ func apiRestQuery(request *http.Request, projectID string, databaseName string, 
 
 	switch request.Method {
 	case http.MethodGet:
-		if len(tableName) == 0 {
-			query = "SWITCH DATABASE ?; LIST TABLES"
+		if tableName == rootTableName {
+			query = "SWITCH DATABASE ?; LIST METADATA"
 			queryargs = append(queryargs, databaseName)
 
 		} else {
@@ -211,7 +213,7 @@ func apiRestQuery(request *http.Request, projectID string, databaseName string, 
 		}
 
 	case http.MethodPost:
-		if len(tableName) == 0 {
+		if tableName == rootTableName {
 			return "", []interface{}{}, http.StatusMethodNotAllowed, fmt.Errorf("Not Allowed"), http.MethodGet
 		} else {
 			query = fmt.Sprintf("SWITCH DATABASE ?; INSERT INTO %s", tableName)
@@ -248,11 +250,11 @@ func apiRestQuery(request *http.Request, projectID string, databaseName string, 
 			}
 
 			// add the command to return the last inserted row
-			query += "; DATABASE GET ROWID;"
+			query += fmt.Sprintf("; SELECT * FROM %s ORDER BY _rowid_ DESC LIMIT 1", tableName)
 		}
 
 	case http.MethodPatch:
-		if len(tableName) == 0 {
+		if tableName == rootTableName {
 			return "", []interface{}{}, http.StatusMethodNotAllowed, fmt.Errorf("Not Allowed"), http.MethodGet
 		} else {
 			query = fmt.Sprintf("SWITCH DATABASE ?; UPDATE %s SET ", tableName)
@@ -290,10 +292,14 @@ func apiRestQuery(request *http.Request, projectID string, databaseName string, 
 			} else {
 				return "", []interface{}{}, http.StatusBadRequest, fmt.Errorf("Full table update without filters is not allowed"), ""
 			}
+
+			// add the command to return the modified row
+			query += fmt.Sprintf("; SELECT * FROM %s WHERE _rowid_=?", tableName)
+			queryargs = append(queryargs, id)
 		}
 
 	case http.MethodDelete:
-		if len(tableName) == 0 {
+		if tableName == rootTableName {
 			return "", []interface{}{}, http.StatusMethodNotAllowed, fmt.Errorf("Not Allowed"), http.MethodGet
 		} else {
 			query = fmt.Sprintf("SWITCH DATABASE ?; DELETE FROM %s", tableName)
@@ -309,4 +315,318 @@ func apiRestQuery(request *http.Request, projectID string, databaseName string, 
 	}
 
 	return query, queryargs, http.StatusOK, nil, ""
+}
+
+func responseValueFromResult(request *http.Request, projectID string, databaseName string, tableName string, result *sqlitecloud.Result) ([]byte, error) {
+	if tableName == rootTableName {
+		// returns a full OpenAPI description on the root path
+		return openapiDocumentation(request, projectID, databaseName, result)
+	}
+
+	// Convert sqlitecloud.Result to map with ResultToObj
+	resobj, err := ResultToObj(result)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse the result object
+	var value interface{}
+	switch resobj.(type) {
+	case map[string]interface{}:
+		// Extract only the "rows" part of the rowset
+		resmap, _ := resobj.(map[string]interface{})
+		value = resmap["rows"]
+
+	default:
+		value = resobj
+	}
+
+	jsonbytes, err := json.Marshal(value)
+	return jsonbytes, err
+}
+
+// OpenAPI functions
+
+type idPathRequest struct {
+	ID string `path:"rowid"`
+}
+
+type defaultTableBody struct {
+	Column string `json:"{column}"`
+}
+
+type errorResponse struct {
+	Status  uint   `json:"status"`
+	Message string `json:"message"`
+}
+
+type operation struct {
+	path string
+	op   openapi3.Operation
+}
+
+// openapiSetExposedMethods creates a map with all the possible ope.
+// The returned string uses Go escape sequences (\t, \n, \xFF, \u0100)
+// for control characters and non-printable characters as defined by IsPrint.
+func openapiSetExposedMethods(reflector *openapi3.Reflector) (methodPaths map[string][]operation) {
+	summaryGetAllRows := "Get all rows"
+	summaryGetOneRow := "Get one row"
+	summaryAddOneRow := "Add one row"
+	summaryUpdateOneRow := "Update one row"
+	summaryDeleteOneRow := "Delete one row"
+
+	getAllOp := openapi3.Operation{Summary: &summaryGetAllRows}
+	reflector.SetJSONResponse(&getAllOp, new([]defaultTableBody), http.StatusOK)
+	reflector.SetJSONResponse(&getAllOp, new(errorResponse), http.StatusUnauthorized)
+	reflector.SetJSONResponse(&getAllOp, new(errorResponse), http.StatusMethodNotAllowed)
+	reflector.SetJSONResponse(&getAllOp, new(errorResponse), http.StatusInternalServerError)
+
+	getOneOp := openapi3.Operation{Summary: &summaryGetOneRow}
+	reflector.SetRequest(&getOneOp, new(idPathRequest), http.MethodGet)
+	reflector.SetJSONResponse(&getOneOp, new([]defaultTableBody), http.StatusOK)
+	reflector.SetJSONResponse(&getOneOp, new(errorResponse), http.StatusUnauthorized)
+	reflector.SetJSONResponse(&getOneOp, new(errorResponse), http.StatusMethodNotAllowed)
+	reflector.SetJSONResponse(&getOneOp, new(errorResponse), http.StatusInternalServerError)
+	reflector.SetJSONResponse(&getOneOp, new(errorResponse), http.StatusUnprocessableEntity)
+
+	postOp := openapi3.Operation{Summary: &summaryAddOneRow}
+	reflector.SetRequest(&postOp, new(defaultTableBody), http.MethodPost)
+	reflector.SetJSONResponse(&postOp, new([]defaultTableBody), http.StatusOK)
+	reflector.SetJSONResponse(&postOp, new(errorResponse), http.StatusUnauthorized)
+	reflector.SetJSONResponse(&postOp, new(errorResponse), http.StatusMethodNotAllowed)
+	reflector.SetJSONResponse(&postOp, new(errorResponse), http.StatusInternalServerError)
+	reflector.SetJSONResponse(&postOp, new(errorResponse), http.StatusBadRequest)
+
+	patchOp := openapi3.Operation{Summary: &summaryUpdateOneRow}
+	reflector.SetRequest(&patchOp, new(idPathRequest), http.MethodPatch)
+	reflector.SetRequest(&patchOp, new(defaultTableBody), http.MethodPatch)
+	reflector.SetJSONResponse(&patchOp, new([]defaultTableBody), http.StatusOK)
+	reflector.SetJSONResponse(&patchOp, new(errorResponse), http.StatusUnauthorized)
+	reflector.SetJSONResponse(&patchOp, new(errorResponse), http.StatusMethodNotAllowed)
+	reflector.SetJSONResponse(&patchOp, new(errorResponse), http.StatusInternalServerError)
+	reflector.SetJSONResponse(&patchOp, new(errorResponse), http.StatusUnprocessableEntity)
+	reflector.SetJSONResponse(&patchOp, new(errorResponse), http.StatusBadRequest)
+
+	deleteOp := openapi3.Operation{Summary: &summaryDeleteOneRow}
+	reflector.SetRequest(&deleteOp, new(idPathRequest), http.MethodDelete)
+	reflector.SetJSONResponse(&deleteOp, new(errorResponse), http.StatusUnauthorized)
+	reflector.SetJSONResponse(&deleteOp, new(errorResponse), http.StatusMethodNotAllowed)
+	reflector.SetJSONResponse(&deleteOp, new(errorResponse), http.StatusInternalServerError)
+	reflector.SetJSONResponse(&deleteOp, new(errorResponse), http.StatusUnprocessableEntity)
+	reflector.SetJSONResponse(&deleteOp, new(errorResponse), http.StatusBadRequest)
+
+	// methodPaths cannot be a global var initializated once because I can't use a single
+	// reflector object to create this map and a different reflector for each request,
+	// otherwise the components schemas section would not be generated
+	methodPaths = map[string][]operation{
+		http.MethodGet: {
+			{path: "", op: getAllOp},
+			{path: "/{rowid}", op: getOneOp},
+		},
+		http.MethodPost: {
+			{path: "", op: postOp},
+		},
+		http.MethodPatch: {
+			{path: "/{rowid}", op: patchOp},
+		},
+		http.MethodDelete: {
+			{path: "/{rowid}", op: deleteOp},
+		},
+	}
+
+	return methodPaths
+}
+
+func dataTypeToType(dataType string) (t openapi3.SchemaType, err error) {
+	t = openapi3.SchemaType("")
+	uDataType := strings.ToUpper(dataType)
+	switch uDataType {
+	case "INT", "INTEGER", "TINYINT", "SMALLINT", "MEDIUMINT", "BIGINT", "UNSIGNED BIG INT", "INT2", "INT8":
+		t = openapi3.SchemaTypeInteger
+	case "BLOB":
+		t = openapi3.SchemaTypeString
+	case "REAL", "DOUBLE", "DOUBLE PRECISION", "FLOAT":
+		t = openapi3.SchemaTypeNumber
+	case "NUMERIC", "BOOLEAN", "DATE", "DATETIME":
+		t = openapi3.SchemaTypeNumber
+	default:
+		switch {
+		case strings.HasPrefix(uDataType, "CHARACTER"), strings.HasPrefix(uDataType, "VARYING CHARACTER"), strings.HasPrefix(uDataType, "NCHAR"), strings.HasPrefix(uDataType, "NATIVE CHARACTER"), strings.HasPrefix(uDataType, "NVARCHAR"), strings.HasPrefix(uDataType, "TEXT"), strings.HasPrefix(uDataType, "CLOB"):
+			t = openapi3.SchemaTypeString
+		case strings.HasPrefix(uDataType, "DECIMAL"):
+			t = openapi3.SchemaTypeNumber
+		default:
+			t = openapi3.SchemaTypeObject
+		}
+	}
+
+	return
+}
+
+func openapiServerURL(request *http.Request) string {
+	url := *request.URL
+	if url.Host == "" {
+		url.Host = request.Host
+	}
+	if url.Scheme == "" {
+		url.Scheme = "https"
+	}
+	return url.String()
+}
+
+func openapiDocumentation(request *http.Request, projectID string, databaseName string, metadataResult *sqlitecloud.Result) ([]byte, error) {
+	// configure the openapi3 reflector
+	reflector := openapi3.Reflector{}
+	reflector.Spec = &openapi3.Spec{Openapi: "3.0.3"}
+	reflector.Spec.Info.
+		WithTitle(fmt.Sprintf("REST API for SQLiteCloud db %s", databaseName)).
+		WithVersion("1.0.0")
+		// .WithDescription("")
+	reflector.Spec.WithServers(openapi3.Server{URL: openapiServerURL(request)})
+
+	// Add security requirement
+	securityName := "api_key"
+
+	// Declare security scheme.
+	reflector.SpecEns().ComponentsEns().SecuritySchemesEns().WithMapOfSecuritySchemeOrRefValuesItem(
+		securityName,
+		openapi3.SecuritySchemeOrRef{
+			SecurityScheme: &openapi3.SecurityScheme{
+				APIKeySecurityScheme: (&openapi3.APIKeySecurityScheme{}).
+					WithName(ApiKeyHeaderKey).
+					WithIn("header").
+					WithDescription("API Access"),
+			},
+		},
+	)
+	reflector.Spec.WithSecurity(map[string][]string{securityName: {}})
+
+	// prepare an operation for each exposed method/table
+	methodPaths := openapiSetExposedMethods(&reflector)
+	tags := map[string]openapi3.Tag{}
+
+	// get methods_mask for every table
+	query := "SELECT table_name, methods_mask FROM RestApiSettings WHERE project_uuid=? AND database_name=?"
+	queryargs := []interface{}{projectID, databaseName}
+	resmethods, err, _, _, _ := apicm.ExecuteSQLArray("auth", query, &queryargs)
+	if err != nil {
+		return nil, err // errors.New("Cannot get REST API settings")
+	}
+	tablemethodsmasks := map[string]int32{}
+	for r := uint64(0); r < resmethods.GetNumberOfRows(); r++ {
+		tablename := resmethods.GetStringValue_(r, 0)
+		methodsmask := resmethods.GetInt32Value_(r, 1)
+		if tablename != "" {
+			tablemethodsmasks[tablename] = methodsmask
+		}
+	}
+
+	switch {
+	case metadataResult.IsRowSet():
+	default:
+		return nil, errors.New("Unknown response format")
+	}
+
+	metadata := make(map[string][]tableColumnMetadata)
+	for r := uint64(0); r < metadataResult.GetNumberOfRows(); r++ {
+		tablename := metadataResult.GetStringValue_(r, 6)
+		columnsMetadata := metadata[tablename]
+		if columnsMetadata == nil {
+			columnsMetadata = make([]tableColumnMetadata, 0, 5)
+		}
+
+		colMetadata := tableColumnMetadata{
+			Name:       metadataResult.GetStringValue_(r, 0),
+			DataType:   metadataResult.GetStringValue_(r, 1),
+			ColSeq:     metadataResult.GetStringValue_(r, 2),
+			NotNull:    metadataResult.GetInt32Value_(r, 3) == 1,
+			PrimaryKey: metadataResult.GetInt32Value_(r, 4) == 1,
+			AutoInc:    metadataResult.GetInt32Value_(r, 5) == 1,
+		}
+
+		columnsMetadata = append(columnsMetadata, colMetadata)
+		metadata[tablename] = columnsMetadata
+	}
+
+	titlecaser := cases.Title(language.AmericanEnglish, cases.NoLower)
+	defaultTableBodySchemaName := titlecaser.String(reflect.TypeOf(defaultTableBody{}).Name())
+	defaultTableBodySchemaOrRef := reflector.Spec.Components.Schemas.MapOfSchemaOrRefValues[defaultTableBodySchemaName]
+
+	for tablename, columnsMetadata := range metadata {
+		mask := tablemethodsmasks[tablename]
+
+		// customize the request and responses for each enabled operation with data from columnsMetadata
+		for verb, bitmask := range methodBitmask {
+			if mask&int32(bitmask) == int32(bitmask) {
+				// the method is enabled
+				schemaName := fmt.Sprintf("%sRow", titlecaser.String(tablename))
+				schemaNameOrRef := reflector.Spec.Components.Schemas.MapOfSchemaOrRefValues[schemaName]
+				if defaultTableBodySchemaOrRef.Schema != nil && schemaNameOrRef.Schema == nil {
+					// create a new schema for the operation's request
+					// copy the schema from the default one (and remove the placeholder "{column}")
+					newSchema := *(defaultTableBodySchemaOrRef.Schema)
+					reflector.Spec.Components.Schemas.MapOfSchemaOrRefValues[schemaName] = openapi3.SchemaOrRef{Schema: &newSchema}
+					delete(newSchema.Properties, "{column}")
+
+					// add a field for each tables' column
+					for _, colMetadata := range columnsMetadata {
+						// fmt.Printf("colMetadata: %v\n", colMetadata)
+						t, _ := dataTypeToType(colMetadata.DataType)
+						t1 := colMetadata.DataType
+						nullable := !colMetadata.NotNull
+						schema := openapi3.Schema{
+							Type:     &t,
+							Nullable: &nullable,
+							Format:   &t1,
+						}
+						newSchema.Properties[colMetadata.Name] = openapi3.SchemaOrRef{Schema: &schema}
+					}
+				}
+
+				// replace the default schema name for each operation with the custom schema name
+				for _, operation := range methodPaths[verb] {
+					// customize the operation
+					operation.op.Tags = []string{tablename}
+					if _, found := tags[tablename]; !found {
+						tdesc := fmt.Sprintf("Table %s", tablename)
+						tags[tablename] = openapi3.Tag{Name: tablename, Description: &tdesc}
+					}
+					if operation.op.RequestBody != nil &&
+						operation.op.RequestBody.RequestBody != nil {
+						s, found := operation.op.RequestBody.RequestBody.Content["application/json"]
+						if found && s.Schema != nil && s.Schema.SchemaReference != nil {
+							s.Schema.SchemaReference.WithRef(filepath.Join("#/components/schemas", schemaName))
+						}
+					}
+					if m := operation.op.Responses.MapOfResponseOrRefValues; m != nil {
+						res, found := m["200"]
+						if found && res.Response != nil {
+							mt, found := res.Response.Content["application/json"]
+							if found && mt.Schema != nil && mt.Schema.Schema != nil && mt.Schema.Schema.Items != nil && mt.Schema.Schema.Items.SchemaReference != nil {
+								mt.Schema.Schema.Items.SchemaReference.WithRef(filepath.Join("#/components/schemas", schemaName))
+							}
+						}
+					}
+
+					// add the customized operation to the reflector's Spec
+					path := filepath.Join("/", tablename, operation.path)
+					err := reflector.Spec.AddOperation(verb, path, operation.op)
+					if err != nil {
+						return nil, err
+					}
+				}
+
+			}
+		}
+	}
+
+	// Add computed tags to Spec, one for each exposed table
+	reflector.Spec.WithTags(maps.Values(tags)...)
+
+	// remove the defaultTableBody schema
+	delete(reflector.Spec.Components.Schemas.MapOfSchemaOrRefValues, defaultTableBodySchemaName)
+	defaultTableBodySchemaOrRef.Schema = nil
+
+	jsonbytes, err := reflector.Spec.MarshalJSON()
+	return jsonbytes, nil
 }

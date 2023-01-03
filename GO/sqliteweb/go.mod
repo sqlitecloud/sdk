@@ -18,15 +18,20 @@ require (
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
-	github.com/stretchr/testify v1.8.1 // indirect
+	github.com/swaggest/jsonschema-go v0.3.42 // indirect
+	github.com/swaggest/refl v1.1.0 // indirect
 	github.com/xo/dburl v0.12.4 // indirect
 	golang.org/x/sys v0.1.0 // indirect
 	golang.org/x/term v0.1.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 require (
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/sqlitecloud/sdk v0.0.0
+	github.com/swaggest/openapi-go v0.2.26
+	golang.org/x/exp v0.0.0-20221230185412-738e83a70c30
+	golang.org/x/text v0.3.7
 )
 
 replace github.com/sqlitecloud/sdk v0.0.0 => ../sdk

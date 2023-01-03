@@ -3,19 +3,19 @@
 --        ////////////  ///
 --      ///             ///  ///        Product     : SQLite Cloud Web Server
 --     ///             ///  ///         Version     : 1.0.0
---     //             ///   ///  ///    Date        : 2022/12/21
+--     //             ///   ///  ///    Date        : 2022/12/21f
 --    ///             ///   ///  ///    Author      : Andrea Donetti
 --   ///             ///   ///  ///
---   ///     //////////   ///  ///      Description : LIST TABLES with REST API settings
+--   ///     //////////   ///  ///      Description : LIST TABLES with REST API configuration
 --   ////                ///  ///                     
 --     ////     //////////   ///        Requires    : Authentication
---        ////            ////          Output      : Tables REST API settings
+--        ////            ////          Output      : Database Infos
 --          ////     /////              
 --             ///                      Copyright   : 2022 by SQLite Cloud Inc.
 --
 -- -----------------------------------------------------------------------TAB=2
 
--- https://localhost:8443/dashboard/v1/{projectID}/{databaseName}/api/rest
+-- https://localhost:8443/dashboard/v1/{projectID}/{databaseName}/tables
 
 require "sqlitecloud"
 
@@ -40,61 +40,19 @@ end
 
 tables = executeSQL( projectID, "SWITCH DATABASE ?; LIST TABLES;", {databaseName} )
 if not tables                                 then return error( 404, "ProjectID not found" ) end
-if tables.ErrorMessage                  ~= "" then return error( 500, tables.ErrorMessage )   end
+if tables.ErrorMessage                  ~= "" then return error( 502, tables.ErrorMessage )   end
 if tables.ErrorNumber                   ~= 0  then return error( 502, "Bad Gateway" )         end
 if tables.NumberOfColumns               ~= 6  then return error( 502, "Bad Gateway" )         end
 
-settings = {}
-settingsmap = {}
-for i = 0, tables.NumberOfRows do 
-  tsettings                     = {}
-
-  -- i == 0 is used for the root path that exposes the openapi document
-  if i == 0 then  tsettings.tableName  = "/"  
-            else  tsettings.tableName  = tables.Rows[ i ].name  end 
-
-  tsettings.GET                 = false
-
-  if tsettings.tableName ~= "" then
-  tsettings.POST                = false
-  tsettings.PATCH               = false
-  tsettings.DELETE              = false
-  end
-
-  settings[ #settings + 1 ]     = tsettings
-  settingsmap[ tsettings.tableName ] = tsettings
+if tables.NumberOfRows                  > 0   then 
+  Response.value = filter( tables.Rows,  { [ "name"   ] = "name", 
+                                           [ "schema" ] = "schema", 
+                                           [ "type"   ] = "type", 
+                                           [ "ncol"   ] = "columns", 
+                                           [ "strict" ] = "strict",
+                                           [ "wr"     ] = "wr",  
+                                           } )
 end
-
-local GET_BIT    = bit(1)
-local POST_BIT   = bit(2)
-local PATCH_BIT  = bit(3)
-local DELETE_BIT = bit(4)
-
-if #settings == 0 then 
-    settings = nil 
-else
-    restsettings = executeSQL( "auth", "SELECT * FROM RestApiSettings WHERE database_name = ?", {databaseName} )
-    if not restsettings                                 then return error( 404, "Settings not found" )  end
-    if restsettings.ErrorMessage                  ~= "" then return error( 500, tables.ErrorMessage )   end
-    if restsettings.ErrorNumber                   ~= 0  then return error( 502, "Bad Gateway" )         end
-    if restsettings.NumberOfColumns               ~= 5  then return error( 502, "Bad Gateway" )         end
-
-    for i = 1, restsettings.NumberOfRows do 
-        row = restsettings.Rows[ i ]
-        tsettings = settingsmap[row.table_name]
-        if tsettings then
-            tsettings.GET = hasbit(row.methods_mask, GET_BIT)
-
-            if row.table_name ~= "" then
-            tsettings.POST = hasbit(row.methods_mask, POST_BIT)
-            tsettings.PATCH = hasbit(row.methods_mask, PATCH_BIT)
-            tsettings.DELETE = hasbit(row.methods_mask, DELETE_BIT)
-            end
-        end
-    end
-end
-
-Response.value = settings
 
 SetStatus( 200 )
 Write( jsonEncode( Response ) )

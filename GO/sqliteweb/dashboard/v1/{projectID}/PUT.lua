@@ -36,8 +36,8 @@ if userID == 0 then
 else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                                end
 
-  query = "UPDATE Project SET name = ?, description = ?, admin_username = ?, admin_password = ? WHERE uuid = ?; SELECT changes() AS success;"
-  result = executeSQL( "auth", query, {name, description, adminUsername, adminPassword, projectID} )
+  command = "UPDATE Project SET name = ?, description = ?, admin_username = ?, admin_password = ? WHERE uuid = ?; SELECT changes() AS success;"
+  result = executeSQL( "auth", command, {name, description, adminUsername, adminPassword, projectID} )
 
   if not result                                                                      then return error( 504, "Gateway Timeout" )                  end
   if result.ErrorMessage      ~= ""                                                  then return error( 502, result.ErrorMessage )                end

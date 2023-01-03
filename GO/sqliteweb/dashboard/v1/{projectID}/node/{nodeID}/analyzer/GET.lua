@@ -14,7 +14,7 @@
 --
 -- -----------------------------------------------------------------------TAB=2
 
--- https://localhost:8443/dashboard/v1/{projectID}/node/6/analyzer
+-- https://localhost:8443/dashboard/v1/{projectID}/node/{nodeID}/analyzer
 
 require "sqlitecloud"
 
