@@ -575,9 +575,9 @@ func openapiDocumentation(request *http.Request, projectID string, databaseName 
 						t1 := colMetadata.DataType
 						nullable := !colMetadata.NotNull
 						schema := openapi3.Schema{
-							Type:     &t,
-							Nullable: &nullable,
-							Format:   &t1,
+							Type:        &t,
+							Nullable:    &nullable,
+							Description: &t1,
 						}
 						newSchema.Properties[colMetadata.Name] = openapi3.SchemaOrRef{Schema: &schema}
 					}

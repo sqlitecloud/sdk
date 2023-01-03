@@ -50,7 +50,7 @@ for i = 0, tables.NumberOfRows do
   tsettings                     = {}
 
   -- i == 0 is used for the root path that exposes the openapi document
-  if i == 0 then  tsettings.tableName  = "/"  
+  if i == 0 then  tsettings.tableName  = ""  
             else  tsettings.tableName  = tables.Rows[ i ].name  end 
 
   tsettings.GET                 = false
