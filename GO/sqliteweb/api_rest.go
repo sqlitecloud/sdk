@@ -27,6 +27,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/swaggest/openapi-go/openapi3"
@@ -74,10 +75,34 @@ var (
 )
 
 func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Request) {
-	// get apikey.
-	apikey, err := getApiKeyFromHeader(request)
+	// this.Auth.cors(writer, request)
+
+	start := time.Now()
+	apikey := ""
+	useridjwt := int64(-1)
+	status := http.StatusOK
+	var err error = nil
+
+	defer func() {
+		t := time.Since(start)
+		errstring := ""
+		if err != nil {
+			errstring = err.Error()
+		}
+		user := ""
+		if apikey != "" {
+			user = hiddenApiKey(apikey)
+		} else if useridjwt != -1 {
+			user = fmt.Sprintf("%d", useridjwt)
+		}
+		SQLiteWeb.Logger.Infof("REST API: \"%s %s\" addr:%s user:%s exec_time:%s status:%d err:%s", request.Method, request.URL, request.RemoteAddr, user, t, status, errstring)
+	}()
+
+	// get auth (apikey or userid from jwt token)
+	apikey, useridjwt, err = apiRestAuth(request)
 	if err != nil {
-		writeError(writer, http.StatusUnauthorized, err.Error(), "")
+		status = http.StatusUnauthorized
+		writeError(writer, status, err.Error(), "")
 		return
 	}
 
@@ -88,12 +113,22 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 	tableName := sqlitecloud.SQCloudEnquoteString(vars["tableName"])
 	idstr, idfound := vars["id"]
 
+	if useridjwt != -1 {
+		projectID, _, err = verifyProjectID(useridjwt, projectID, apicm)
+		if err != nil {
+			status = http.StatusUnauthorized
+			writeError(writer, status, err.Error(), "")
+			return
+		}
+	}
+
 	// extract int value for the id
 	id := 0
 	if idfound {
 		id, err = strconv.Atoi(idstr)
 		if err != nil {
-			writeError(writer, http.StatusUnprocessableEntity, err.Error(), "")
+			status = http.StatusUnprocessableEntity
+			writeError(writer, status, err.Error(), "")
 			return
 		}
 	}
@@ -105,32 +140,39 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 	if !isApiRestEnabled(request.Method, projectID, databaseName, tableName) {
 		// TODO: The origin server MUST generate an Allow header field in a 405 response containing a list of the target resource's currently supported methods.
 		// writer.Header()["Access-Control-Allow-Methods"] = ""
-		writeError(writer, http.StatusMethodNotAllowed, "Not Allowed", "")
+		status = http.StatusMethodNotAllowed
+		err = errors.New("Not Allowed")
+		writeError(writer, status, err.Error(), "")
 		return
 	}
 
 	// prepare the SQL query
 	query, queryargs, statusCode, err, allowedMethods := apiRestQuery(request, projectID, databaseName, tableName, id)
 	if err != nil {
+		status = statusCode
 		writeError(writer, statusCode, err.Error(), allowedMethods)
 		return
 	}
 
 	// prepare the full command: "SWITCH APIKEY ?; <SQL>"
-	query = "SWITCH APIKEY ?; " + query
-	queryargs = prependInterface(queryargs, apikey)
+	if apikey != "" {
+		query = "SWITCH APIKEY ?; " + query
+		queryargs = prependInterface(queryargs, apikey)
+	}
 
 	// call pool's ExecuteSQLArray
 	// fmt.Printf("query:%s, args:%v\n", query, queryargs)
 	res, err, _, _, _ := apicm.ExecuteSQLArray(projectID, query, &queryargs)
 	if err != nil {
-		writeError(writer, http.StatusInternalServerError, err.Error(), "")
+		status = http.StatusInternalServerError
+		writeError(writer, status, err.Error(), "")
 		return
 	}
 
 	jsonbytes, err := responseValueFromResult(request, projectID, databaseName, tableName, res)
 	if err != nil {
-		writeError(writer, http.StatusInternalServerError, err.Error(), "")
+		status = http.StatusInternalServerError
+		writeError(writer, status, err.Error(), "")
 		return
 	}
 
@@ -138,10 +180,39 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 	// how can I get the last inserted ID? with DATABASE GET ROWID?
 	writer.WriteHeader(http.StatusOK)
 	if err != nil {
-		writeError(writer, http.StatusInternalServerError, err.Error(), "")
+		status = http.StatusInternalServerError
+		writeError(writer, status, err.Error(), "")
 	}
 
 	writer.Write(jsonbytes)
+}
+
+func apiRestAuth(request *http.Request) (apikey string, useridjwt int64, err error) {
+	apikey = ""
+	useridjwt = -1
+	err = nil
+
+	apikey, err = getApiKeyFromHeader(request)
+	if err != nil {
+		if SQLiteWeb != nil {
+			var jwterr error
+			useridjwt, jwterr = SQLiteWeb.Auth.GetUserID(SQLiteWeb.Auth.getTokenFromAuthorization, request)
+			if jwterr != nil {
+				err = fmt.Errorf("%s, %s", err.Error(), jwterr.Error())
+			} else {
+				err = nil
+			}
+		}
+	}
+
+	return
+}
+
+func hiddenApiKey(k string) string {
+	if len(k) <= 3 {
+		return ""
+	}
+	return fmt.Sprintf("•••%s", k[len(k)-3:])
 }
 
 func prependInterface(slice []interface{}, value interface{}) []interface{} {
@@ -485,21 +556,32 @@ func openapiDocumentation(request *http.Request, projectID string, databaseName 
 	reflector.Spec.WithServers(openapi3.Server{URL: openapiServerURL(request)})
 
 	// Add security requirement
-	securityName := "api_key"
+	securityApiKeyName := "api_key"
+	securityJWTName := "bearer_token"
 
 	// Declare security scheme.
 	reflector.SpecEns().ComponentsEns().SecuritySchemesEns().WithMapOfSecuritySchemeOrRefValuesItem(
-		securityName,
+		securityApiKeyName,
 		openapi3.SecuritySchemeOrRef{
 			SecurityScheme: &openapi3.SecurityScheme{
 				APIKeySecurityScheme: (&openapi3.APIKeySecurityScheme{}).
 					WithName(ApiKeyHeaderKey).
 					WithIn("header").
-					WithDescription("API Access"),
+					WithDescription("API KEY Access"),
+			},
+		},
+	).WithMapOfSecuritySchemeOrRefValuesItem(
+		securityJWTName,
+		openapi3.SecuritySchemeOrRef{
+			SecurityScheme: &openapi3.SecurityScheme{
+				HTTPSecurityScheme: (&openapi3.HTTPSecurityScheme{}).
+					WithScheme("bearer").
+					WithBearerFormat("JWT").
+					WithDescription("JWT Access"),
 			},
 		},
 	)
-	reflector.Spec.WithSecurity(map[string][]string{securityName: {}})
+	reflector.Spec.WithSecurity(map[string][]string{securityApiKeyName: {}, securityJWTName: {}})
 
 	// prepare an operation for each exposed method/table
 	methodPaths := openapiSetExposedMethods(&reflector)

@@ -175,7 +175,7 @@ func getSQCloudConnection(request *http.Request) (*sqlitecloud.SQCloud, error) {
 	}
 	apikey := apikeys[0]
 
-	SQLiteWeb.Logger.Debugf("serveWebsocket: project %s apikey %s", projectID, apikey)
+	// SQLiteWeb.Logger.Debugf("serveWebsocket: project %s apikey %s", projectID, apikey)
 
 	// don't use the pool, create a new connection only for this websocket
 	// first get a connection url for one of the servers of the specified projectID

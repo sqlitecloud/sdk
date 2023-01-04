@@ -64,7 +64,7 @@ func (this *Server) dashboardWebsocketDownload(writer http.ResponseWriter, reque
 	v := mux.Vars(request)
 	projectID := v["projectID"]
 
-	projectID, _, err = verifyProjectID(int(id), v["projectID"])
+	projectID, _, err = verifyProjectID(id, v["projectID"], dashboardcm)
 	if err != nil {
 		SQLiteWeb.Logger.Error("dashboardWebsocketDownload: unauthorized: ", err)
 		return
@@ -188,7 +188,7 @@ func (this *Server) dashboardWebsocketUpload(writer http.ResponseWriter, request
 	projectID := v["projectID"]
 
 	// check authorization for projectID
-	projectID, _, err = verifyProjectID(int(id), v["projectID"])
+	projectID, _, err = verifyProjectID(id, v["projectID"], dashboardcm)
 	if err != nil {
 		SQLiteWeb.Logger.Error("dashboardWebsocketUpload: unauthorized: ", err)
 		return
@@ -331,33 +331,6 @@ func enquoteString(s string) string {
 		enquoted = enquoted[1 : len(enquoted)-1]
 	}
 	return enquoted
-}
-
-func verifyProjectID(userID int, projectUUID string) (string, int, error) {
-	query := "SELECT uuid FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled=1 AND Company.enabled = 1 AND User.id=? AND Project.uuid = ?;"
-	args := []interface{}{userID, projectUUID}
-	res, err, errCode, _, _ := dashboardcm.ExecuteSQLArray("auth", query, &args)
-
-	if res == nil {
-		return "", 503, fmt.Errorf("Service Unavailable")
-	}
-	if err != nil || errCode != 0 {
-		SQLiteWeb.Logger.Debug("verifyProjectID: error ", err)
-		return "", 502, fmt.Errorf("Bad Gateway")
-	}
-	if res.GetNumberOfColumns() != 1 {
-		SQLiteWeb.Logger.Debug("verifyProjectID: error on number of columns")
-		return "", 502, fmt.Errorf("Bad Gateway")
-	}
-	if res.GetNumberOfRows() < 1 {
-		return "", 404, fmt.Errorf("Project Not Found")
-	}
-	if res.GetNumberOfRows() > 1 {
-		SQLiteWeb.Logger.Debug("verifyProjectID: error on number of rows")
-		return "", 502, fmt.Errorf("Bad Gateway")
-	}
-
-	return res.GetStringValue_(0, 0), 0, nil
 }
 
 func dwsTestClient(w http.ResponseWriter, r *http.Request) {

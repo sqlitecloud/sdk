@@ -64,5 +64,5 @@ func (this *Server) executeLuaDashboardServer(writer http.ResponseWriter, reques
 	this.executeLua(path, endpoint, id, writer, request)
 
 	t := time.Since(start)
-	SQLiteWeb.Logger.Debugf("Endpoint \"%s %s\" addr:%s user:%d exec_time:%s", request.Method, request.URL, request.RemoteAddr, id, t)
+	SQLiteWeb.Logger.Infof("Dashboard: \"%s %s\" addr:%s user:%d exec_time:%s", request.Method, request.URL, request.RemoteAddr, id, t)
 }

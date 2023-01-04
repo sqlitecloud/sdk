@@ -502,3 +502,30 @@ func (this *ConnectionManager) ExecuteSQLArray(project string, query string, arg
 	}
 	return nil, nil, 0, sqlitecloud.NO_EXTCODE, sqlitecloud.NO_OFFCODE
 }
+
+func verifyProjectID(userID int64, projectUUID string, cm *ConnectionManager) (string, int, error) {
+	query := "SELECT uuid FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id WHERE User.enabled=1 AND Company.enabled = 1 AND User.id=? AND Project.uuid = ?;"
+	args := []interface{}{userID, projectUUID}
+	res, err, errCode, _, _ := cm.ExecuteSQLArray("auth", query, &args)
+
+	if res == nil {
+		return "", 503, fmt.Errorf("Service Unavailable")
+	}
+	if err != nil || errCode != 0 {
+		SQLiteWeb.Logger.Debug("verifyProjectID: error ", err)
+		return "", 502, fmt.Errorf("Bad Gateway")
+	}
+	if res.GetNumberOfColumns() != 1 {
+		SQLiteWeb.Logger.Debug("verifyProjectID: error on number of columns")
+		return "", 502, fmt.Errorf("Bad Gateway")
+	}
+	if res.GetNumberOfRows() < 1 {
+		return "", 404, fmt.Errorf("Project Not Found")
+	}
+	if res.GetNumberOfRows() > 1 {
+		SQLiteWeb.Logger.Debug("verifyProjectID: error on number of rows")
+		return "", 502, fmt.Errorf("Bad Gateway")
+	}
+
+	return res.GetStringValue_(0, 0), 0, nil
+}
