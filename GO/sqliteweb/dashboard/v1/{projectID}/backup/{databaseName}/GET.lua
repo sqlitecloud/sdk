@@ -37,7 +37,7 @@ if not backups                                                                  
 if backups.ErrorNumber     ~= 0                                                       then return error( 502, backups.ErrorMessage )          end
 if backups.NumberOfColumns ~= 7                                                       then return error( 502, "Bad Gateway" )                end
 
-if #backups.Rows > 0 then
+if backups.NumberOfRows > 0 then
   Response.value = filter( backups.Rows, {
     type    = "type",
     replica = "replica",
