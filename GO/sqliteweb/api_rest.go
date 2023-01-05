@@ -105,6 +105,7 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 	tableName := sqlitecloud.SQCloudEnquoteString(vars["tableName"])
 	idstr, idfound := vars["id"]
 
+	// OPTIONS method is used by preflight request (without auth)
 	if request.Method == http.MethodOptions {
 		methods := ""
 		methods, err = optionsAllowedMethods(writer, request, projectID, databaseName, tableName)
