@@ -64,7 +64,7 @@ const (
 )
 
 var (
-	methodBitmask map[string]methodMask = map[string]methodMask{
+	methodBitmaskMap map[string]methodMask = map[string]methodMask{
 		http.MethodGet:    GET_BITMASK,
 		http.MethodPost:   POST_BITMASK,
 		http.MethodPatch:  PATCH_BITMASK,
@@ -75,7 +75,7 @@ var (
 )
 
 func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Request) {
-	// this.Auth.cors(writer, request)
+	this.Auth.cors(writer, request)
 
 	start := time.Now()
 	apikey := ""
@@ -98,6 +98,30 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 		SQLiteWeb.Logger.Infof("REST API: \"%s %s\" addr:%s user:%s exec_time:%s status:%d err:%s", request.Method, request.URL, request.RemoteAddr, user, t, status, errstring)
 	}()
 
+	// get project, database, table, id
+	vars := mux.Vars(request)
+	projectID := sqlitecloud.SQCloudEnquoteString(vars["projectID"])
+	databaseName := sqlitecloud.SQCloudEnquoteString(vars["databaseName"])
+	tableName := sqlitecloud.SQCloudEnquoteString(vars["tableName"])
+	idstr, idfound := vars["id"]
+
+	if request.Method == http.MethodOptions {
+		methods := ""
+		methods, err = optionsAllowedMethods(writer, request, projectID, databaseName, tableName)
+		if err != nil {
+			status = http.StatusInternalServerError
+			writeError(writer, status, err.Error(), "")
+			return
+		}
+
+		writer.Header().Set("Access-Control-Allow-Methods", methods)
+		writer.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		writer.Header().Set("Pragma", "no-cache")
+		writer.Header().Set("Expires", "0")
+		writer.WriteHeader(status)
+		return
+	}
+
 	// get auth (apikey or userid from jwt token)
 	apikey, useridjwt, err = apiRestAuth(request)
 	if err != nil {
@@ -105,13 +129,6 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 		writeError(writer, status, err.Error(), "")
 		return
 	}
-
-	// get project, database, table, id
-	vars := mux.Vars(request)
-	projectID := sqlitecloud.SQCloudEnquoteString(vars["projectID"])
-	databaseName := sqlitecloud.SQCloudEnquoteString(vars["databaseName"])
-	tableName := sqlitecloud.SQCloudEnquoteString(vars["tableName"])
-	idstr, idfound := vars["id"]
 
 	if useridjwt != -1 {
 		projectID, _, err = verifyProjectID(useridjwt, projectID, apicm)
@@ -178,6 +195,8 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 
 	// reply with a JSON representation response value, in case of Insert maybe fetch the ID or the full new object
 	// how can I get the last inserted ID? with DATABASE GET ROWID?
+	writer.Header().Set("Content-Type", "application/json")
+	writer.Header().Set("Content-Encoding", "utf-8")
 	writer.WriteHeader(http.StatusOK)
 	if err != nil {
 		status = http.StatusInternalServerError
@@ -237,12 +256,37 @@ func writeError(writer http.ResponseWriter, statusCode int, message string, allo
 		writer.Header().Set("Pragma", "no-cache")
 		writer.Header().Set("Expires", "0")
 	}
+	writer.Header().Set("Content-Type", "application/json")
+	writer.Header().Set("Content-Encoding", "utf-8")
 	writer.WriteHeader(statusCode)
 	writer.Write([]byte(fmt.Sprintf("{\"status\":%d,\"message\":\"%s\"}", statusCode, message)))
 }
 
+func optionsAllowedMethods(writer http.ResponseWriter, request *http.Request, projectID string, databaseName string, tableName string) (string, error) {
+	query := fmt.Sprintf("SELECT methods_mask FROM RestApiSettings WHERE project_uuid=? AND database_name=? AND table_name=?")
+	queryargs := []interface{}{projectID, databaseName, tableName}
+	res, err, _, _, _ := apicm.ExecuteSQLArray("auth", query, &queryargs)
+	if err != nil {
+		return "", err
+	}
+
+	methodsmask := methodMask(0)
+	if res.GetNumberOfRows() > 0 {
+		methodsmask = methodMask(res.GetInt32Value_(0, 0))
+	}
+
+	methods := make([]string, 0)
+	for verb, bitmask := range methodBitmaskMap {
+		if methodsmask&bitmask == bitmask {
+			methods = append(methods, verb)
+		}
+	}
+
+	return strings.Join(methods, ", "), nil
+}
+
 func isApiRestEnabled(method string, projectID string, databaseName string, tableName string) bool {
-	methodBitmask, found := methodBitmask[strings.ToUpper(method)]
+	methodBitmask, found := methodBitmaskMap[strings.ToUpper(method)]
 	if !found {
 		return false
 	}
@@ -638,7 +682,7 @@ func openapiDocumentation(request *http.Request, projectID string, databaseName 
 		mask := tablemethodsmasks[tablename]
 
 		// customize the request and responses for each enabled operation with data from columnsMetadata
-		for verb, bitmask := range methodBitmask {
+		for verb, bitmask := range methodBitmaskMap {
 			if mask&int32(bitmask) == int32(bitmask) {
 				// the method is enabled
 				schemaName := fmt.Sprintf("%sRow", titlecaser.String(tablename))

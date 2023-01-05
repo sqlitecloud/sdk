@@ -18,23 +18,22 @@
 package main
 
 import (
-  "net/http"
+	"net/http"
 )
 
 func init() {
-  initializeSQLiteWeb()
+	initializeSQLiteWeb()
 
-  SQLiteWeb.router.HandleFunc( "/dashboard/v1/{path:.*}", func(writer http.ResponseWriter, request *http.Request) {
-    SQLiteWeb.Auth.cors(writer, request)
-  }).Methods("OPTIONS")
+	SQLiteWeb.router.HandleFunc("/dashboard/v1/{path:.*}", func(writer http.ResponseWriter, request *http.Request) {
+		SQLiteWeb.Auth.cors(writer, request)
+	}).Methods("OPTIONS")
 }
 
+func (this *AuthServer) cors(writer http.ResponseWriter, request *http.Request) {
+	// only for debuging Mauros front end
+	// dont forget to remove it!!!
 
-func (this *AuthServer) cors( writer http.ResponseWriter, request *http.Request ) {
-  // only for debuging Mauros front end
-  // dont forget to remove it!!!
-  
-  writer.Header().Set( "Access-Control-Allow-Origin", "*" )
-  writer.Header().Set( "Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE" )
-  writer.Header().Set( "Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization" )
+	writer.Header().Set("Access-Control-Allow-Origin", "*")
+	writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	writer.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, origin, x-requested-with, X-SQLiteCloud-Api-Key")
 }
