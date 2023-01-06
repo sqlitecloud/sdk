@@ -1235,6 +1235,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         }
             
         case CMD_RAWJSON: {
+            // SHOULD NEVER REACH THIS POINT
             // handle JSON here
             // a JSON parser must process raw buffer
             return &SQCloudResultNULL;
@@ -1796,7 +1797,8 @@ bool internal_rowset_compare(SQCloudResult *rs1, SQCloudResult *rs2) {
         char *value2 = internal_parse_value(rs2->data[i], &len2, NULL);
         
         if (len1 != len2) return false;
-        if (value1 == NULL && value2 == NULL) continue;
+        if (value1 == NULL && value2 == NULL) return true;
+        if (value1 == NULL || value2 == NULL) return false;
         if (memcmp(value1, value2, len1) != 0) return false;
     }
     
