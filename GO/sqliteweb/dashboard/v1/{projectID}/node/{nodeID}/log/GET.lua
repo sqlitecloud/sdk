@@ -15,8 +15,8 @@
 --
 -- -----------------------------------------------------------------------TAB=2
 
--- LIST LOG [FROM <start_date>] [TO <end_date>] [LEVEL <log_level>] [TYPE <log_type>] [ID] [ORDER DESC] [LIMIT <count>] [CURSOR <cursorid>] [NODE <nodeid>]", PRIVILEGE_HOSTADMIN, command_list_log_date, true, false, false, BITMASK(COMMAND_FLAG_READ)},
--- COUNT LOG [FROM <start_date>] [TO <end_date>] [LEVEL <log_level>] [TYPE <log_type>] [ID] [ORDER DESC] [NODE <nodeid>]  
+-- LIST LOG [FROM <start_date>] [TO <end_date>] [LEVEL <log_level>] [TYPE <log_type>] [ID] [LIMIT <count>] [CURSOR <cursorid>] [NODE <nodeid>]", PRIVILEGE_HOSTADMIN, command_list_log_date, true, false, false, BITMASK(COMMAND_FLAG_READ)},
+-- COUNT LOG [FROM <start_date>] [TO <end_date>] [LEVEL <log_level>] [TYPE <log_type>] [ID] [NODE <nodeid>]  
 
 require "sqlitecloud"
 
@@ -74,7 +74,7 @@ if string.len( query.type ) > 0 then
 end
 
 sql = sql .. " ID"
-sql = sql .. " ORDER DESC"
+-- sql = sql .. " ORDER DESC"
 
 local haslimit = false
 if string.len( query.limit ) > 0 then

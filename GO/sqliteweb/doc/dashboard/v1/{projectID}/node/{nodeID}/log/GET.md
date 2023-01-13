@@ -53,7 +53,7 @@ none
 {
  address        = "5.100.32.221",
  date           = "2022-04-26 16:58:59",
- description    = "LIST LOG FROM '2022-04-02 17:53:04' TO '2022-04-26 18:53:04' LEVEL 4 TYPE 4 ORDER DESC;",
+ description    = "LIST LOG FROM '2022-04-02 17:53:04' TO '2022-04-26 18:53:04' LEVEL 4 TYPE 4;",
  level          = 4,
  type           = 4,
  username       = "admin",
@@ -76,31 +76,53 @@ User-Agent: Paw/3.3.6 (Macintosh; OS X/10.14.6) GCDHTTPRequest
 
 ```http
 HTTP/1.1 200 OK
-Access-Control-Allow-Headers: Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization
+Access-Control-Allow-Headers: Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, origin, x-requested-with, X-SQLiteCloud-Api-Key
 Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE
 Access-Control-Allow-Origin: *
 Content-Encoding: utf-8
 Content-Type: application/json
-Date: Tue, 26 Apr 2022 16:59:00 GMT
+Date: Fri, 13 Jan 2023 19:44:52 GMT
+Content-Length: 949
 Connection: close
-Transfer-Encoding: chunked
 
 {
-  "value": { 
-    "count":155201,
-    "next_cursor":155101,
+  "message": "OK",
+  "status": 200,
+  "value": {
+    "count": 175530,
     "logs": [
       {
-        "address": "5.100.32.221",
-        "date": "2022-04-26 16:58:59",
-        "description": "LIST LOG FROM '2022-04-02 17:53:04' TO '2022-04-26 18:53:04' LEVEL 4 TYPE 4 ORDER DESC;",
-        "level": 4,
-        "type": 4,
-        "username": "admin"
+        "date": "2022-10-14 21:45:39",
+        "description": "database_execute_v2 error executing PRAGMA application_id;  (26 26 file is not a database) changes: 0",
+        "level": 2,
+        "type": 1
       },
-      ...
+      {
+        "date": "2022-10-14 21:45:39",
+        "description": "/home/andrea/data/9960/databases/wrongdb9.sqlite is not a valid sqlite3 database (file is not a database).",
+        "level": 2,
+        "type": 1
+      },
+      {
+        "date": "2022-10-14 21:45:39",
+        "description": "database_execute_v2 error executing PRAGMA application_id;  (26 26 file is not a database) changes: 0",
+        "level": 2,
+        "type": 1
+      },
+      {
+        "date": "2022-10-14 21:45:39",
+        "description": "database_execute_v2 error executing PRAGMA application_id;  (11 11 database disk image is malformed) changes: 0",
+        "level": 2,
+        "type": 1
+      },
+      {
+        "date": "2022-10-14 21:45:39",
+        "description": "/home/andrea/data/9960/databases/wrongdb5.sqlite is not a valid sqlite3 database (database disk image is malformed).",
+        "level": 2,
+        "type": 1
+      }
     ],
-  "message": "OK",
-  "status": 200
-}  
+    "next_cursor": 4
+  }
+}
 ```
