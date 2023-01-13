@@ -193,7 +193,11 @@ func (this *ConnectionManager) getServerList(project string) ([]string, error) {
 }
 
 func (this *ConnectionManager) getNextServer(project string, reloadNodes bool) (server string, err error) {
-	// return "sqlitecloud://admin:admin@localhost:8860", nil
+	// // TEST: just for testing with localhost server
+	// if project != "auth" {
+	// 	return "sqlitecloud://admin:admin@localhost:8850", nil
+	// }
+
 	server = ""
 	err = nil
 

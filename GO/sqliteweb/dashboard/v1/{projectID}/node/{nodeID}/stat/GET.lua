@@ -36,6 +36,7 @@ Response = {
     raft            = { 0, 0 },     -- array, index of the last raft entry matched by the node and by the leader, respectively
     load            = nil,          -- Load of the machine: num_clients, server_load, disk_usage_perc, example: [12,0.5,36.52]
     stats           = {},
+    memory          = 0,            -- physical memory of the node
   },
 }
 
@@ -69,7 +70,7 @@ Response.value.load = {
   load.Rows[ 3 ].ARRAY  -- disk_usage_perc
 }
 
-command = "LIST STATS NODE ?;"
+command = "LIST STATS NODE ? MEMORY;"
 stats = executeSQL( projectID, command, {machineNodeID} )
 
 if not stats                                  then return error( 504, "Gateway Timeout" )       end
@@ -77,21 +78,32 @@ if stats.ErrorNumber        ~= 0              then return error( 502, "Bad Gatew
 if stats.NumberOfColumns    ~= 3              then return error( 502, "Bad Gateway" )           end
 if stats.NumberOfRows       == 0              then return error( 404, "Stats not found" )       end
 
+count = 0
 for i = 1, stats.NumberOfRows do
-  if not row                                  then row = { memory = { current = 0, max = 0 }, cpu = 0, clients = { current = 0, max = 0 }, commands = 0, io = { reads = 0, writes = 0 }, bytes = { reads = 0, writes = 0 }, sampletime = "0000-00-00 00:00:00" } end
-  if stats.Rows[ i ].key == "CPU_LOAD"        then row.cpu              = stats.Rows[ i ].value end
-  if stats.Rows[ i ].key == "CURRENT_MEMORY"  then row.memory.current   = stats.Rows[ i ].value end
-  if stats.Rows[ i ].key == "MAX_MEMORY"      then row.memory.max       = stats.Rows[ i ].value end
-  if stats.Rows[ i ].key == "CURRENT_CLIENTS" then row.clients.current  = stats.Rows[ i ].value end
-  if stats.Rows[ i ].key == "MAX_CLIENTS"     then row.clients.max      = stats.Rows[ i ].value end
-  if stats.Rows[ i ].key == "NUM_COMMANDS"    then row.commands         = stats.Rows[ i ].value end
-  if stats.Rows[ i ].key == "NUM_READS"       then row.io.reads         = stats.Rows[ i ].value end
-  if stats.Rows[ i ].key == "NUM_WRITES"      then row.io.writes        = stats.Rows[ i ].value end
-  if stats.Rows[ i ].key == "BYTES_IN"        then row.bytes.reads      = stats.Rows[ i ].value end
-  if stats.Rows[ i ].key == "BYTES_OUT"       then row.bytes.writes     = stats.Rows[ i ].value
-                                                   row.sampletime       = stats.Rows[ i ].datetime
-    Response.value.stats[ #Response.value.stats + 1 ] = row
-    row = nil
+  if stats.Rows[ i ].key == "PHYSICAL_MEMORY" then
+    Response.value.memory = stats.Rows[ i ].value 
+  else
+    if not row then 
+      row = { memory = { current = 0, max = 0 }, cpu = 0, clients = { current = 0, max = 0 }, commands = 0, io = { reads = 0, writes = 0 }, bytes = { reads = 0, writes = 0 }, sampletime = stats.Rows[ i ].datetime } 
+    end
+
+    if stats.Rows[ i ].key == "CPU_LOAD"        then row.cpu              = stats.Rows[ i ].value end
+    if stats.Rows[ i ].key == "CURRENT_MEMORY"  then row.memory.current   = stats.Rows[ i ].value end
+    if stats.Rows[ i ].key == "MAX_MEMORY"      then row.memory.max       = stats.Rows[ i ].value end
+    if stats.Rows[ i ].key == "CURRENT_CLIENTS" then row.clients.current  = stats.Rows[ i ].value end
+    if stats.Rows[ i ].key == "MAX_CLIENTS"     then row.clients.max      = stats.Rows[ i ].value end
+    if stats.Rows[ i ].key == "NUM_COMMANDS"    then row.commands         = stats.Rows[ i ].value end
+    if stats.Rows[ i ].key == "NUM_READS"       then row.io.reads         = stats.Rows[ i ].value end
+    if stats.Rows[ i ].key == "NUM_WRITES"      then row.io.writes        = stats.Rows[ i ].value end
+    if stats.Rows[ i ].key == "BYTES_IN"        then row.bytes.reads      = stats.Rows[ i ].value end
+    if stats.Rows[ i ].key == "BYTES_OUT"       then row.bytes.writes     = stats.Rows[ i ].value end
+
+    count = count + 1
+    if count == 10 then 
+      Response.value.stats[ #Response.value.stats + 1 ] = row 
+      count = 0
+      row = nil
+    end
   end
 end
 
