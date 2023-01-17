@@ -551,9 +551,9 @@ int main(int argc, char * argv[]) {
             linenoiseHistoryAdd(command);
             linenoiseHistorySave(CLI_HISTORY_FILENAME);
         }
-        if (strncmp(command, ".exit", 4) == 0) break;
+        if (strncmp(command, ".exit", 5) == 0) break;
         (command[0] == '.') ? do_internal_command(conn, command) : do_command(conn, command);
-        if (strncmp(command, "QUIT SERVER", 4) == 0) break;
+        if (strncmp(command, "QUIT SERVER", 11) == 0) break;
     }
     if (command) free(command);
     
