@@ -46,12 +46,13 @@ const ApiKeyHeaderKey string = "X-SQLiteCloud-Api-Key"
 const rootTableName string = ""
 
 type tableColumnMetadata struct {
-	Name       string
-	DataType   string
-	ColSeq     string
-	NotNull    bool
-	PrimaryKey bool
-	AutoInc    bool
+	Name         string
+	DataType     string
+	ColSeq       string
+	NotNull      bool
+	PrimaryKey   bool
+	AutoInc      bool
+	AffinityType int
 }
 
 type methodMask int
@@ -553,29 +554,47 @@ func openapiSetExposedMethods(reflector *openapi3.Reflector) (methodPaths map[st
 	return methodPaths
 }
 
-func dataTypeToType(dataType string) (t openapi3.SchemaType, err error) {
-	t = openapi3.SchemaType("")
-	uDataType := strings.ToUpper(dataType)
-	switch uDataType {
-	case "INT", "INTEGER", "TINYINT", "SMALLINT", "MEDIUMINT", "BIGINT", "UNSIGNED BIG INT", "INT2", "INT8":
-		t = openapi3.SchemaTypeInteger
-	case "BLOB":
-		t = openapi3.SchemaTypeString
-	case "REAL", "DOUBLE", "DOUBLE PRECISION", "FLOAT":
-		t = openapi3.SchemaTypeNumber
-	case "NUMERIC", "BOOLEAN", "DATE", "DATETIME":
-		t = openapi3.SchemaTypeNumber
-	default:
-		switch {
-		case strings.HasPrefix(uDataType, "CHARACTER"), strings.HasPrefix(uDataType, "VARYING CHARACTER"), strings.HasPrefix(uDataType, "NCHAR"), strings.HasPrefix(uDataType, "NATIVE CHARACTER"), strings.HasPrefix(uDataType, "NVARCHAR"), strings.HasPrefix(uDataType, "TEXT"), strings.HasPrefix(uDataType, "CLOB"):
-			t = openapi3.SchemaTypeString
-		case strings.HasPrefix(uDataType, "DECIMAL"):
-			t = openapi3.SchemaTypeNumber
-		default:
-			t = openapi3.SchemaTypeObject
-		}
-	}
+// func dataTypeToType(dataType string) (t openapi3.SchemaType, err error) {
+// 	t = openapi3.SchemaType("")
+// 	uDataType := strings.ToUpper(dataType)
+// 	switch uDataType {
+// 	case "INT", "INTEGER", "TINYINT", "SMALLINT", "MEDIUMINT", "BIGINT", "UNSIGNED BIG INT", "INT2", "INT8":
+// 		t = openapi3.SchemaTypeInteger
+// 	case "BLOB":
+// 		t = openapi3.SchemaTypeString
+// 	case "REAL", "DOUBLE", "DOUBLE PRECISION", "FLOAT":
+// 		t = openapi3.SchemaTypeNumber
+// 	case "NUMERIC", "BOOLEAN", "DATE", "DATETIME":
+// 		t = openapi3.SchemaTypeNumber
+// 	default:
+// 		switch {
+// 		case strings.HasPrefix(uDataType, "CHARACTER"), strings.HasPrefix(uDataType, "VARYING CHARACTER"), strings.HasPrefix(uDataType, "NCHAR"), strings.HasPrefix(uDataType, "NATIVE CHARACTER"), strings.HasPrefix(uDataType, "NVARCHAR"), strings.HasPrefix(uDataType, "TEXT"), strings.HasPrefix(uDataType, "CLOB"):
+// 			t = openapi3.SchemaTypeString
+// 		case strings.HasPrefix(uDataType, "DECIMAL"):
+// 			t = openapi3.SchemaTypeNumber
+// 		default:
+// 			t = openapi3.SchemaTypeObject
+// 		}
+// 	}
 
+// 	return
+// }
+
+func affinityTypeToSchemaType(affinityType int) (t openapi3.SchemaType, err error) {
+	switch affinityType {
+	case 1: // #define SQLITE_INTEGER  1
+		t = openapi3.SchemaTypeInteger
+	case 2: // #define SQLITE_FLOAT    2
+		t = openapi3.SchemaTypeNumber
+	case 4: // #define SQLITE_BLOB     4
+		t = openapi3.SchemaTypeString
+	case 5: // #define SQLITE_NULL     5
+		t = openapi3.SchemaTypeObject
+	case 3: // #define SQLITE3_TEXT     3
+		t = openapi3.SchemaTypeString
+	default:
+		t = openapi3.SchemaTypeObject
+	}
 	return
 }
 
@@ -663,12 +682,13 @@ func openapiDocumentation(request *http.Request, projectID string, databaseName 
 		}
 
 		colMetadata := tableColumnMetadata{
-			Name:       metadataResult.GetStringValue_(r, 0),
-			DataType:   metadataResult.GetStringValue_(r, 1),
-			ColSeq:     metadataResult.GetStringValue_(r, 2),
-			NotNull:    metadataResult.GetInt32Value_(r, 3) == 1,
-			PrimaryKey: metadataResult.GetInt32Value_(r, 4) == 1,
-			AutoInc:    metadataResult.GetInt32Value_(r, 5) == 1,
+			Name:         metadataResult.GetStringValue_(r, 0),
+			DataType:     metadataResult.GetStringValue_(r, 1),
+			ColSeq:       metadataResult.GetStringValue_(r, 2),
+			NotNull:      metadataResult.GetInt32Value_(r, 3) == 1,
+			PrimaryKey:   metadataResult.GetInt32Value_(r, 4) == 1,
+			AutoInc:      metadataResult.GetInt32Value_(r, 5) == 1,
+			AffinityType: int(metadataResult.GetInt32Value_(r, 7)),
 		}
 
 		columnsMetadata = append(columnsMetadata, colMetadata)
@@ -698,7 +718,8 @@ func openapiDocumentation(request *http.Request, projectID string, databaseName 
 					// add a field for each tables' column
 					for _, colMetadata := range columnsMetadata {
 						// fmt.Printf("colMetadata: %v\n", colMetadata)
-						t, _ := dataTypeToType(colMetadata.DataType)
+						// t, _ := dataTypeToType(colMetadata.DataType)
+						t, _ := affinityTypeToSchemaType(colMetadata.AffinityType)
 						t1 := colMetadata.DataType
 						nullable := !colMetadata.NotNull
 						schema := openapi3.Schema{
