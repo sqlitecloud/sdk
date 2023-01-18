@@ -1,8 +1,18 @@
 package sqlitecloudtest
 
-const testConnectionString = "sqlitecloud://admin:admin@***REMOVED***:9960"
+import "flag"
+
+const testConnectionStringDev1 = "sqlitecloud://admin:admin@***REMOVED***:9960"
+const testConnectionStringLocalhost = "sqlitecloud://admin:admin@localhost:8860"
+
 const testUsername = "admin"
 const testPassword = "admin"
+
+var testConnectionString string = testConnectionStringLocalhost
+
+func init() {
+	flag.StringVar(&testConnectionString, "server", testConnectionStringLocalhost, "Connection String")
+}
 
 func contains[T comparable](s []T, e T) bool {
 	for _, v := range s {
@@ -12,5 +22,3 @@ func contains[T comparable](s []T, e T) bool {
 	}
 	return false
 }
-
-// const testConnectionString = "sqlitecloud://admin:admin@localhost:8860"

@@ -5,6 +5,9 @@ GOPATH		= $(shell go env GOPATH)
 test:	
 	cd sdk/test; go test -v
 
+.PHONY: test_dev1
+test_dev1:
+	cd sdk/test; go test -server sqlitecloud://admin:admin@***REMOVED***:9960 -v
 
 # GO SDK
 .PHONY: sdk
@@ -53,4 +56,4 @@ endif
 clean:
 	rm -rf bin/sqlc* 
 
-all: sdk cli test
+all: sdk cli test_dev1

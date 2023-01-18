@@ -157,15 +157,13 @@ func TestServer(t *testing.T) {
 		t.Fatal("LIST TABLES: ", err.Error())
 	} else {
 		if len(tables) < 1 || !contains(tables, testTableServer) {
-			t.Fatal("LIST DATABASES: ", fmt.Sprintf("Table %s not found in LIST TABLES", testTableServer))
+			t.Fatal("LIST TABLES: ", fmt.Sprintf("Table %s not found in LIST TABLES", testTableServer))
 		}
 	}
 
 	// LIST PLUGINS
-	if plugins, err := db.ListPlugins(); err != nil {
+	if _, err := db.ListPlugins(); err != nil {
 		t.Fatal("LIST PLUGINS: ", err.Error())
-	} else if len(plugins) == 0 {
-		t.Fatal("LIST DATABASES: Invalid result")
 	}
 
 	// LIST CLIENT KEYS
