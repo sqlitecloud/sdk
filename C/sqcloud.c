@@ -89,6 +89,18 @@
 #define ARRAY_STATIC_COUNT                  256
 #define ARRAY_HEADER_BUFFER_SIZE            64
 
+#ifndef TLS_DEFAULT_CA_FILE
+#if CLI_WINDOWS
+// windows
+#elif __APPLE__
+// macos
+#define TLS_DEFAULT_CA_FILE                 "/etc/ssl/cert.pem"
+#else
+// linux
+#define TLS_DEFAULT_CA_FILE                 "/etc/ssl/certs/ca-certificates.crt"
+#endif
+#endif
+
 // MARK: - PROTOTYPES -
 
 static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool mainfd);
@@ -480,6 +492,11 @@ static bool internal_setup_tls (SQCloudConnection *connection, SQCloudConfig *co
     if (config && config->tls_root_certificate) {
         rc = tls_config_set_ca_file(tls_conf, config->tls_root_certificate);
         if (rc < 0) {internal_set_error(connection, INTERNAL_ERRCODE_TLS, "Error in tls_config_set_ca_file: %s.", tls_config_error(tls_conf));}
+    #ifdef TLS_DEFAULT_CA_FILE
+    } else {
+        rc = tls_config_set_ca_file(tls_conf, TLS_DEFAULT_CA_FILE);
+        if (rc < 0) {internal_set_error(connection, INTERNAL_ERRCODE_TLS, "Error in tls_config_set_ca_file: %s.", tls_config_error(tls_conf));}
+    #endif
     }
     
     // loads a file containing the server certificate
