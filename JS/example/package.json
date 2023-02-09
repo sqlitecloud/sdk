@@ -1,0 +1,48 @@
+{
+  "name": "sqlitecloud-chat",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "scripts": {
+    "start": "cross-env NODE_ENV=development webpack serve --open --config ./webpack/webpack.dev.js",
+    "startssl": "cross-env NODE_ENV=development webpack serve --open --config ./webpack/webpack.dev.js | local-ssl-proxy --key C:/Windows/System32/sqlitecloud.io+4-key.pem --cert C:/Windows/System32/sqlitecloud.io+4.pem  --source 3001 --target 8080",
+    "analyze": "webpack --config ./webpack/webpack.analyze.js",
+    "build": "cross-env NODE_ENV=production ASSET_PATH= webpack --config ./webpack/webpack.prod.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.20.12",
+    "@babel/preset-env": "^7.20.2",
+    "@babel/preset-react": "^7.18.6",
+    "@tailwindcss/forms": "^0.5.3",
+    "autoprefixer": "^10.4.13",
+    "babel-loader": "^9.1.2",
+    "css-loader": "^6.7.3",
+    "dotenv-webpack": "^8.0.1",
+    "html-loader": "^4.2.0",
+    "html-webpack-plugin": "^5.5.0",
+    "mini-css-extract-plugin": "^2.7.2",
+    "postcss": "^8.4.21",
+    "postcss-loader": "^7.0.2",
+    "style-loader": "^3.3.1",
+    "tailwindcss": "^3.2.4",
+    "webpack": "^5.75.0",
+    "webpack-bundle-analyzer": "^4.7.0",
+    "webpack-cli": "^5.0.1",
+    "webpack-dev-server": "^4.11.1",
+    "webpack-merge": "^5.8.0"
+  },
+  "dependencies": {
+    "@headlessui/react": "^1.7.8",
+    "@heroicons/react": "^2.0.14",
+    "@textea/json-viewer": "^2.13.1",
+    "cross-env": "^7.0.3",
+    "date-fns": "^2.29.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.8.0",
+    "tiz-test-sdk": "file:../.."
+  }
+}

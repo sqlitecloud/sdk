@@ -27,3 +27,21 @@ GO/src/sqliteweb/dashboard/.nova/Configuration.json
 *.plist
 *.plist
 C/test/test.xcodeproj/xcuserdata/marco.xcuserdatad/xcschemes/xcschememanagement.plist
+
+
+# dependencies
+JS/node_modules
+JS/**/node_modules
+JS/**/**/node_modules
+
+# production
+JS/dist
+JS/**/dist
+JS/**/**/dist
+
+
+#env
+JS/.env
+JS/**/.env
+JS/**/**/.env
+
