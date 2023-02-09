@@ -1,0 +1,20 @@
+{
+  "name": "sqlitecloud-sdk",
+  "version": "1.0.0-beta.0",
+  "description": "",
+  "main": "dist/main.bundle.js",
+  "scripts": {
+    "start": "webpack serve --open --config ./webpack/webpack.dev.js",
+    "build": "webpack --config ./webpack/webpack.prod.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "SQLite Cloud, Inc.",
+  "license": "MIT",
+  "devDependencies": {
+    "webpack": "^5.74.0",
+    "webpack-cli": "^4.10.0",
+    "webpack-dev-server": "^4.10.0",
+    "webpack-merge": "^5.8.0"
+  }
+}
