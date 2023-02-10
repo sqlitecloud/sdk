@@ -2,8 +2,8 @@
 import React, { Fragment, useContext, useState, useEffect } from 'react';
 //react-router
 import { useSearchParams } from 'react-router-dom';
-//Liter
-import { Liter } from 'tiz-test-sdk'
+//SQLiteCloud
+import SQLiteCloud from 'sqlitecloud-sdk'
 /*
 usare client come nome dell'istanza locale 
 */
@@ -36,8 +36,8 @@ export default function Layout(props) {
   //credentials to establish the websocket connection
   var projectId = process.env.PROJECT_ID;
   var apikey = process.env.API_KEY;
-  //state dedicated to Liter instance used to handle websocket connection
-  const [liter, setLiter] = useState(null);
+  //state dedicated to SQLiteCloud instance used to handle websocket connection
+  const [client, setClient] = useState(null);
   const [isConnecting, setIsConnecting] = useState(true);
   const [connectionResponse, setConnectionResponse] = useState(null);
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
@@ -129,28 +129,28 @@ export default function Layout(props) {
   useEffect(() => {
     const onMountWrapper = async () => {
       if (process.env.DEBUG == 'true') logThis('App: ON useEffect');
-      //init Liter instance using provided credentials
-      let locaLiter = new Liter(projectId, apikey, onErrorCallback, onCloseCallback);
+      //init SQLiteCloud instance using provided credentials
+      let localClient = new SQLiteCloud(projectId, apikey, onErrorCallback, onCloseCallback);
       //set websocket request timeout
-      locaLiter.setRequestTimeout(5000);
+      localClient.setRequestTimeout(5000);
       //try to enstablish websocket connection
-      const connectionResponse = await locaLiter.connect();
+      const connectionResponse = await localClient.connect();
       setConnectionResponse(connectionResponse);
       setIsConnecting(false);
       if (process.env.DEBUG == 'true') logThis(connectionResponse.message);
       //check how websocket connection completed  
       if (connectionResponse.status == 'success') {
         //successful websocket connection
-        setLiter(locaLiter)
+        setClient(localClient)
         //based on query parameters select if retrieve tabales db or channels
         //in case of db, tables will be saved as channels
         let channelsListResponse = null;
         setIsLoadingChannels(true);
         if (queryDBName !== null) {
           const execMessage = `USE DATABASE ${queryDBName}; LIST TABLES PUBSUB`
-          channelsListResponse = await locaLiter.exec(execMessage);
+          channelsListResponse = await localClient.exec(execMessage);
         } else {
-          channelsListResponse = await locaLiter.listChannels();
+          channelsListResponse = await localClient.listChannels();
         }
         handlingChannelsListResponse(channelsListResponse);
       } else {
@@ -177,9 +177,9 @@ export default function Layout(props) {
   const [reloadChannelsList, setReloadChannelsList] = useState(false);
   useEffect(() => {
     const onMountWrapper = async () => {
-      if (liter) {
+      if (client) {
         setIsLoadingChannels(true);
-        let channelsListResponse = await liter.listChannels();
+        let channelsListResponse = await client.listChannels();
         handlingChannelsListResponse(channelsListResponse);
       }
     }
@@ -263,7 +263,7 @@ export default function Layout(props) {
           {
             showEditor &&
             <div className='flex-grow-0'>
-              <CreateChannel liter={liter} reloadChannelsList={reloadChannelsList} setReloadChannelsList={setReloadChannelsList} />
+              <CreateChannel client={client} reloadChannelsList={reloadChannelsList} setReloadChannelsList={setReloadChannelsList} />
             </div>
           }
           {
@@ -274,7 +274,7 @@ export default function Layout(props) {
           }
           <div className='flex min-h-0 flex-1 flex-col bg-gray-100'>
             <div className='flex flex-1 flex-col overflow-y-hidden px-2 sm:px-0 pb-4'>
-              <ChannelsList liter={liter} showEditor={showEditor} isLoadingChannels={isLoadingChannels} channelsList={channelsList} reloadChannelsList={reloadChannelsList} setReloadChannelsList={setReloadChannelsList} selectedChannelIndex={selectedChannelIndex} setSelectedChannelIndex={setSelectedChannelIndex} setSelectedChannel={setSelectedChannel} setOpenMobMsg={setOpenMobMsg} />
+              <ChannelsList client={client} showEditor={showEditor} isLoadingChannels={isLoadingChannels} channelsList={channelsList} reloadChannelsList={reloadChannelsList} setReloadChannelsList={setReloadChannelsList} selectedChannelIndex={selectedChannelIndex} setSelectedChannelIndex={setSelectedChannelIndex} setSelectedChannel={setSelectedChannel} setOpenMobMsg={setOpenMobMsg} />
             </div>
             {/* Sidebar footer for desktop */}
             <div className='flex flex-shrink-0 bg-gray-800 p-4'>
@@ -341,7 +341,7 @@ export default function Layout(props) {
             showMessages && isListeningActualChannel &&
             <>
               {
-                chsMap && chsMap.size > 0 && <MessagesList messages={chsMap.get(selectedChannel)} showEditor={showEditor}/>
+                chsMap && chsMap.size > 0 && <MessagesList messages={chsMap.get(selectedChannel)} showEditor={showEditor} />
               }
             </>
           }
@@ -349,7 +349,7 @@ export default function Layout(props) {
         {
           showEditor && showMessages && isListeningActualChannel &&
           <div className='w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8'>
-            <MessageEditor liter={liter} chsMap={chsMap} />
+            <MessageEditor client={client} chsMap={chsMap} />
           </div>
         }
       </div >

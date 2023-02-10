@@ -14,7 +14,7 @@ opt =  {
 export default function CreateChannel(props) {
   if (process.env.DEBUG == "true") logThis("CreateChannel: ON RENDER");
   //extract params from opt
-  const liter = props.liter;
+  const client = props.client;
   const setReloadChannelsList = props.setReloadChannelsList;
   const reloadChannelsList = props.reloadChannelsList;
   //hadle input channel name
@@ -28,7 +28,7 @@ export default function CreateChannel(props) {
   const createChannel = async () => {
     setIsCreatingChannel(true);
     setIsError(null);
-    const response = await liter.createChannel(channelName, true);
+    const response = await client.createChannel(channelName, true);
     if (process.env.DEBUG == "true") console.log(response);
     if (response.status == "success") {
       //if createChannel is succesful reload channelsList

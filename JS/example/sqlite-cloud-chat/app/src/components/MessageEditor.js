@@ -35,7 +35,7 @@ const dueDates = [
   // More items...
 ]
 */
-const MessageEditor = ({ liter }) => {
+const MessageEditor = ({ client }) => {
   if (process.env.DEBUG == "true") logThis("MessageEditor: ON RENDER");
   //react router hooks used to set query string
   const [searchParams, setSearchParams] = useSearchParams();
@@ -81,7 +81,7 @@ const MessageEditor = ({ liter }) => {
     if (queryChannel && !sendingMessage && value) {
       setSendingMessage(true);
       setErrorSending(null);
-      const response = await liter.notify(queryChannel, { message: value });
+      const response = await client.notify(queryChannel, { message: value });
       console.log(response) //TOGLI
       if (response.status == "success") {
         setValue("");

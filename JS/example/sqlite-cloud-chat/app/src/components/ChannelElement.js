@@ -17,7 +17,7 @@ import CircularLoader from './loaders/CircularLoader';
 const ChannelElement = (props) => {
   if (process.env.DEBUG == "true") logThis("ChannelElement: ON RENDER");
   //extract props
-  const liter = props.liter;
+  const client = props.client;
   const index = props.index;
   const name = props.name;
   const showEditor = props.showEditor;
@@ -64,9 +64,9 @@ const ChannelElement = (props) => {
     const registerToCh = async () => {
       let response;
       if (showEditor) {
-        response = await liter.listenChannel(name, listen);
+        response = await client.listenChannel(name, listen);
       } else {
-        response = await liter.listenTable(name, listen);
+        response = await client.listenTable(name, listen);
       }
       setListenResponse(response);
       const queryChannel = searchParams.get("channel");
@@ -135,7 +135,7 @@ const ChannelElement = (props) => {
       setSelectedChannelIndex(-1);
       setSelectedChannel("");
     }
-    const response = await liter.dropChannel(name);
+    const response = await client.dropChannel(name);
     if (process.env.DEBUG == "true") console.log(response);
     if (response.status == "success") {
       //remove from the Maps the dropped channel
