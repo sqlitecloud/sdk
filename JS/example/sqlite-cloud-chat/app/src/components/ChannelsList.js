@@ -9,7 +9,7 @@ import CircularLoader from './loaders/CircularLoader'
 const ChannelsList = (props) => {
   if (process.env.DEBUG == "true") logThis("ChannelsList: ON RENDER");
   //extract props
-  const liter = props.liter;
+  const client = props.client;
   let channelsList = props.channelsList;
   const showEditor = props.showEditor;
   const isLoadingChannels = props.isLoadingChannels;
@@ -40,7 +40,7 @@ const ChannelsList = (props) => {
             <>
               {
                 channelsList.map((channel, i) =>
-                  <ChannelElement key={channel} index={i} liter={liter} name={channel} showEditor={showEditor} reloadChannelsList={reloadChannelsList} setReloadChannelsList={setReloadChannelsList} selectionState={selectedChannelIndex == i} setSelectedChannelIndex={setSelectedChannelIndex} setSelectedChannel={setSelectedChannel} setOpenMobMsg={setOpenMobMsg} />
+                  <ChannelElement key={channel} index={i} client={client} name={channel} showEditor={showEditor} reloadChannelsList={reloadChannelsList} setReloadChannelsList={setReloadChannelsList} selectionState={selectedChannelIndex == i} setSelectedChannelIndex={setSelectedChannelIndex} setSelectedChannel={setSelectedChannel} setOpenMobMsg={setOpenMobMsg} />
                 )
               }
             </>

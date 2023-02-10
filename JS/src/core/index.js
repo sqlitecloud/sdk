@@ -1,6 +1,6 @@
 import { msg } from "./messages";
 
-export class SQLiteCloud {
+export default class SQLiteCloud {
   /* PRIVATE PROPERTIES */
 
   /*
