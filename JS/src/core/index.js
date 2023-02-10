@@ -91,7 +91,7 @@ export default class SQLiteCloud {
       if (this.#wsPubSub == null) {
         try {
           this.#ws = await this.#connectWs(this.url, msg.wsConnectError);
-          //register the close event on websocket
+          //register the error event on websocket
           this.#ws.addEventListener('error', this.#onErrorWs);
           //register the close event on websocket
           this.#ws.addEventListener('close', this.#onCloseWs);
