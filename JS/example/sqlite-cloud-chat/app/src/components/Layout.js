@@ -137,7 +137,7 @@ export default function Layout(props) {
       const connectionResponse = await localClient.connect();
       setConnectionResponse(connectionResponse);
       setIsConnecting(false);
-      if (process.env.DEBUG == 'true') logThis(connectionResponse.message);
+      if (process.env.DEBUG == 'true') console.log(connectionResponse);
       //check how websocket connection completed  
       if (connectionResponse.status == 'success') {
         //successful websocket connection
@@ -284,6 +284,10 @@ export default function Layout(props) {
                     <p className='text-xs font-medium text-white'>project ID:</p>
                     <p className='mt-1 text-xs font-normal text-gray-400'>{projectId}</p>
                   </div>
+                </div>
+                <div className='mt-2 ml-3'>
+                  <p className='text-xs font-medium text-white'>api KEY:</p>
+                  <p className='mt-1 text-xs font-normal text-gray-400'>{apikey}</p>
                 </div>
                 {
                   queryDBName &&
