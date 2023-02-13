@@ -12,7 +12,7 @@ import {
 export default function ChannelElementDropdown(props) {
   if (process.env.DEBUG == "true") logThis("ChannelElementDropdown: ON RENDER");
   //extract params from opt
-  const dropChannel = props.dropChannel;
+  const removeChannel = props.removeChannel;
   //hadle click that opens dropdown menu
   const handleOpenDropdown = (event) => {
     event.stopPropagation();
@@ -45,7 +45,7 @@ export default function ChannelElementDropdown(props) {
               {({ active }) => (
                 <button
                   type="button"
-                  onClick={dropChannel}
+                  onClick={removeChannel}
                   className={classNames(
                     active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
                     'block w-full px-4 py-2 text-sm text-left'

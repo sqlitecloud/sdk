@@ -507,9 +507,9 @@ export default class SQLiteCloud {
   }
 
   /*
-  dropChannel method calls exec method to drop an existing channel 
+  removeChannel method calls exec method to remove an existing channel 
   */
-  async dropChannel(channelName) {
+  async removeChannel(channelName) {
     try {
       //params validation
       //check channelName has been provided
@@ -518,7 +518,7 @@ export default class SQLiteCloud {
           {
             status: "error",
             data: {
-              message: msg.dropChannelErr.mandatory
+              message: msg.removeChannelErr.mandatory
             }
           }
         )
@@ -528,13 +528,13 @@ export default class SQLiteCloud {
           {
             status: "error",
             data: {
-              message: msg.dropChannelErr.string
+              message: msg.removeChannelErr.string
             }
           }
         )
       }
       //params are ok
-      let command = `DROP CHANNEL '${channelName}'`;
+      let command = `REMOVE CHANNEL '${channelName}'`;
       const response = await this.exec(command);
       return (response);
     } catch (error) {

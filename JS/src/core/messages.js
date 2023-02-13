@@ -39,7 +39,7 @@ export const msg = {
     mandatory: "channelName is mandatory",
     string: "channelName has to be a string"
   },
-  dropChannelErr:{
+  removeChannelErr:{
     mandatory: "channelName is mandatory",
     string: "channelName has to be a string"
   } 
