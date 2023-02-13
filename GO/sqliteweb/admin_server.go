@@ -42,8 +42,6 @@ func initAdmin() {
 }
 
 func (this *Server) executeLuaAdminServer(writer http.ResponseWriter, request *http.Request) {
-	this.Auth.cors(writer, request)
-
 	if clientIP, _, err := net.SplitHostPort(request.RemoteAddr); err == nil {
 		if _, maskNet, err := net.ParseCIDR(cfg.Section("admin").Key("allow").String()); err == nil {
 			if maskNet.Contains(net.ParseIP(clientIP)) {

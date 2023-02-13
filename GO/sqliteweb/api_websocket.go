@@ -28,7 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gobwas/glob"
 	"github.com/gorilla/mux"
 
 	"github.com/gorilla/websocket"
@@ -138,21 +137,13 @@ func init() {
 	apiWebsocketUpgrader = websocket.Upgrader{}
 	m = make(map[string]*ApiConnection)
 
-	originChecker := glob.MustCompile("{https://*.sqlitecloud.io,https://*.sqlitecloud.io:*,https://sqlitecloud.io,https://sqlitecloud.io:*,https://fabulous-arithmetic-c4a014.netlify.app}")
-	localhostChecker := glob.MustCompile("{https://localhost:*,https://localhost,http://localhost:*,http://localhost}")
+	// originChecker := glob.MustCompile("{https://*.sqlitecloud.io,https://*.sqlitecloud.io:*,https://sqlitecloud.io,https://sqlitecloud.io:*,https://fabulous-arithmetic-c4a014.netlify.app}")
+	// localhostChecker := glob.MustCompile("{https://localhost:*,https://localhost,http://localhost:*,http://localhost}")
 
 	apiWebsocketUpgrader.CheckOrigin = func(r *http.Request) bool {
-		o := r.Header.Get("Origin")
-		allowed := originChecker.Match(o)
-
-		// TODO: only for debug purposes
-		if !allowed {
-			allowed = localhostChecker.Match(o)
-		}
-		if !allowed {
-			SQLiteWeb.Logger.Debugf("CheckOrigin: not allowed origin -%s-", o)
-		}
-		return allowed
+		// allow all origins
+		// TODO: set the allowed origins for the project in the API settings page of the dashboard
+		return true
 	}
 }
 
@@ -279,27 +270,54 @@ func (this *Server) serveApiWebsocket(writer http.ResponseWriter, request *http.
 			result, err = connection.Select(command)
 
 		case "listen":
-			channel, _ := mmap["channel"].(string)
-
-			err = connection.Listen(channel)
-			puuid, psecret := connection.GetPAuth()
-			if puuid == "" || psecret == "" {
-				err = fmt.Errorf("pubsub: error during authentication")
-			} else {
-				pubsubConn, found := getPubsubConn(uuid)
-				if !found || pubsubConn.GetPubsubws() == nil {
-					pubsubConn := ApiConnection{ws: wsconn, pubsubws: nil, sqlcconn: connection}
-					setPubsubConn(puuid, &pubsubConn)
-					responsedata = ApiResponseDataPAuth{UUID: puuid, Secret: psecret, Channel: channel}
-				} else {
-					responsedata = ApiResponseDataChannel{Channel: channel}
-				}
+			isTable := false
+			channel := ""
+			if c, ok := mmap["channel"]; ok {
+				channel, _ = c.(string)
+			} else if t, ok := mmap["table"]; ok {
+				isTable = true
+				channel, _ = t.(string)
 			}
-			uuid = puuid
+
+			if isTable {
+				err = connection.ListenTable(channel)
+			} else {
+				err = connection.Listen(channel)
+			}
+
+			if err == nil {
+				puuid, psecret := connection.GetPAuth()
+				if puuid == "" || psecret == "" {
+					err = fmt.Errorf("pubsub: error during authentication")
+				} else {
+					pubsubConn, found := getPubsubConn(uuid)
+					if !found || pubsubConn.GetPubsubws() == nil {
+						pubsubConn := ApiConnection{ws: wsconn, pubsubws: nil, sqlcconn: connection}
+						setPubsubConn(puuid, &pubsubConn)
+						responsedata = ApiResponseDataPAuth{UUID: puuid, Secret: psecret, Channel: channel}
+					} else {
+						responsedata = ApiResponseDataChannel{Channel: channel}
+					}
+				}
+				uuid = puuid
+			}
 
 		case "unlisten":
-			channel, _ := mmap["channel"].(string)
-			err = connection.Unlisten(channel)
+			isTable := false
+			channel := ""
+			if c, ok := mmap["channel"]; ok {
+				channel, _ = c.(string)
+			} else if t, ok := mmap["table"]; ok {
+				isTable = true
+				channel, _ = t.(string)
+			}
+
+			if isTable {
+				err = connection.UnlistenTable(channel)
+			} else {
+				err = connection.Unlisten(channel)
+			}
+
 			if err == nil {
 				responsedata = ApiResponseDataChannel{Channel: channel}
 			}

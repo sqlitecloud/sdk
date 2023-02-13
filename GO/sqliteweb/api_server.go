@@ -26,7 +26,7 @@ func init() {
 
 func initApi() {
 	if cfg.Section("api").Key("enabled").MustBool(false) {
-		SQLiteWeb.router.HandleFunc("/api/apiWebsocketTest", apiWebsocketTestClient) // only for test purpose
+		// SQLiteWeb.router.HandleFunc("/api/apiWebsocketTest", apiWebsocketTestClient) // only for test purpose
 		SQLiteWeb.router.HandleFunc("/api/{version:v[0-9]+}/{projectID}/ws", SQLiteWeb.serveApiWebsocket)
 		SQLiteWeb.router.HandleFunc("/api/{version:v[0-9]+}/wspsub", SQLiteWeb.serveApiWebsocketPubsub)
 

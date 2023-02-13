@@ -261,8 +261,6 @@ func (this *AuthServer) GetUserID(tokenFunc TokenFunc, request *http.Request) (i
 ////
 
 func (this *AuthServer) auth(writer http.ResponseWriter, request *http.Request) {
-	this.cors(writer, request)
-
 	var credentials Credentials
 
 	switch err := json.NewDecoder(request.Body).Decode(&credentials); {
@@ -275,8 +273,6 @@ func (this *AuthServer) auth(writer http.ResponseWriter, request *http.Request) 
 }
 
 func (this *AuthServer) reAuth(writer http.ResponseWriter, request *http.Request) {
-	this.cors(writer, request)
-
 	token, _ := SQLiteWeb.Auth.getTokenFromAuthorization(request)
 	claims, _ := SQLiteWeb.Auth.decodeClaims(token)
 

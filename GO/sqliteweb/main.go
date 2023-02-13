@@ -146,6 +146,7 @@ func main() {
 			initStubs()
 			initApi()
 			initWWW()
+			initCors()
 
 			// inittt()
 

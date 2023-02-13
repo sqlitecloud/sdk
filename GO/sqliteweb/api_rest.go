@@ -27,7 +27,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/swaggest/openapi-go/openapi3"
@@ -76,27 +75,21 @@ var (
 )
 
 func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Request) {
-	this.Auth.cors(writer, request)
-
-	start := time.Now()
 	apikey := ""
 	useridjwt := int64(-1)
 	status := http.StatusOK
 	var err error = nil
 
 	defer func() {
-		t := time.Since(start)
-		errstring := ""
 		if err != nil {
-			errstring = err.Error()
+			user := ""
+			if apikey != "" {
+				user = hiddenApiKey(apikey)
+			} else if useridjwt != -1 {
+				user = fmt.Sprintf("%d", useridjwt)
+			}
+			SQLiteWeb.Logger.Infof("rest api error: %s, %s %s \"%s %s\" %d", err.Error(), request.RemoteAddr, user, request.Method, request.RequestURI, status)
 		}
-		user := ""
-		if apikey != "" {
-			user = hiddenApiKey(apikey)
-		} else if useridjwt != -1 {
-			user = fmt.Sprintf("%d", useridjwt)
-		}
-		SQLiteWeb.Logger.Infof("REST API: \"%s %s\" addr:%s user:%s exec_time:%s status:%d err:%s", request.Method, request.URL, request.RemoteAddr, user, t, status, errstring)
 	}()
 
 	// get project, database, table, id

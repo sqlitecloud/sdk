@@ -19,21 +19,43 @@ package main
 
 import (
 	"net/http"
+	"strings"
+
+	"github.com/gorilla/mux"
 )
 
-func init() {
-	initializeSQLiteWeb()
+const allowAllOrigins = "*"
 
-	SQLiteWeb.router.HandleFunc("/dashboard/v1/{path:.*}", func(writer http.ResponseWriter, request *http.Request) {
-		SQLiteWeb.Auth.cors(writer, request)
-	}).Methods("OPTIONS")
+func initCors() {
+	// add a catchall for OPTION method
+	SQLiteWeb.router.PathPrefix("/api/").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", allowAllOrigins)
+	}).Methods(http.MethodOptions)
+
+	SQLiteWeb.router.Use(middlewareCors)
 }
 
-func (this *AuthServer) cors(writer http.ResponseWriter, request *http.Request) {
-	// only for debuging Mauros front end
-	// dont forget to remove it!!!
+func middlewareCors(next http.Handler) http.Handler {
+	apiRoute := SQLiteWeb.router.PathPrefix("/api/")
+	routeMatch := mux.RouteMatch{}
 
-	writer.Header().Set("Access-Control-Allow-Origin", "*")
-	writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	writer.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, origin, x-requested-with, X-SQLiteCloud-Api-Key")
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			allowHeaders := "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, origin, x-requested-with"
+			if strings.HasPrefix(req.RequestURI, "/api/") {
+				allowHeaders += ", X-SQLiteCloud-Api-Key"
+			}
+
+			// allow all origins only for /api/* endpoints
+			// TODO: set the allowed origins for the project in the API settings page of the dashboard
+			if apiRoute.Match(req, &routeMatch) {
+				w.Header().Set("Access-Control-Allow-Origin", allowAllOrigins)
+			}
+
+			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+			w.Header().Set("Access-Control-Allow-Headers", allowHeaders)
+
+			// and call next handler!
+			next.ServeHTTP(w, req)
+		})
 }

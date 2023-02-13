@@ -50,10 +50,6 @@ func initDashboard() {
 }
 
 func (this *Server) executeLuaDashboardServer(writer http.ResponseWriter, request *http.Request) {
-	start := time.Now()
-
-	this.Auth.cors(writer, request)
-
 	id, _ := SQLiteWeb.Auth.GetUserID(SQLiteWeb.Auth.getTokenFromAuthorization, request)
 
 	v := mux.Vars(request)                                       // len(): 1, endpoint: v1/auth
@@ -62,7 +58,4 @@ func (this *Server) executeLuaDashboardServer(writer http.ResponseWriter, reques
 	path := cfg.Section("dashboard").Key("path").String() // "/Users/pfeil/GitHub/SqliteCloud/sdk/GO/src/sqliteweb/dashboard"
 
 	this.executeLua(path, endpoint, id, writer, request)
-
-	t := time.Since(start)
-	SQLiteWeb.Logger.Infof("Dashboard: \"%s %s\" addr:%s user:%d exec_time:%s", request.Method, request.URL, request.RemoteAddr, id, t)
 }
