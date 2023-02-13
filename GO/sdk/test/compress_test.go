@@ -20,16 +20,23 @@ package sqlitecloudtest
 import (
 	"fmt"
 	"math/rand"
+	"net/url"
 	"testing"
 
 	sqlitecloud "github.com/sqlitecloud/sdk"
 )
 
 const testDbnameCompress = "test-gosdk-compress-db.sqlite"
-const testCompressArg = "compress=LZ4"
+const testCompressKey = "compress"
+const testCompressValue = "LZ4"
 
 func TestCompress(t *testing.T) {
-	connstring := fmt.Sprintf("%s/?%s", testConnectionString, testCompressArg)
+	url, err := url.Parse(testConnectionString)
+	values := url.Query()
+	values.Add(testCompressKey, testCompressValue)
+	url.RawQuery = values.Encode()
+
+	connstring := url.String()
 	// log.Printf("TestCompress %s", connstring)
 
 	db, err := sqlitecloud.Connect(connstring)

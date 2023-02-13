@@ -81,6 +81,11 @@ func (this *SQCloud) Listen(Channel string) error { // add a call back function.
 	return this.ExecuteArray("LISTEN ?", []interface{}{Channel})
 }
 
+// Listen subscribes this connection to the specified Table.
+func (this *SQCloud) ListenTable(TableName string) error { // add a call back function...
+	return this.ExecuteArray("LISTEN TABLE ?", []interface{}{TableName})
+}
+
 // Notify sends a wakeup call to the channel Channel
 func (this *SQCloud) Notify(Channel string) error {
 	return this.ExecuteArray("NOTIFY ?", []interface{}{Channel})
@@ -94,6 +99,11 @@ func (this *SQCloud) SendNotificationMessage(Channel string, Message string) err
 // Unlisten unsubsribs this connection from the specified Channel.
 func (this *SQCloud) Unlisten(Channel string) error {
 	return this.ExecuteArray("UNLISTEN ?", []interface{}{Channel})
+}
+
+// Unlisten unsubsribs this connection from the specified Table.
+func (this *SQCloud) UnlistenTable(TableName string) error {
+	return this.ExecuteArray("UNLISTEN TABLE ?", []interface{}{TableName})
 }
 
 // Deletes the specified Channel.

@@ -1,9 +1,9 @@
 Use goreman to run `go get github.com/mattn/goreman`
 # run using `goreman start`
-test_1: go test -v -path=scripts/nwriters2.test -connstring=sqlitecloud://dev1.sqlitecloud.io:7760
-test_2: go test -v -path=scripts/nwriters2.test -connstring=sqlitecloud://dev1.sqlitecloud.io:7760
-test_3: go test -v -path=scripts/nwriters2.test -connstring=sqlitecloud://dev1.sqlitecloud.io:7760
-test_4: go test -v -path=scripts/nwriters2.test -connstring=sqlitecloud://dev1.sqlitecloud.io:7760
+test_1: go test -v -path=scripts/nwriters2.test -connstring=sqlitecloud://dev1.sqlitecloud.io:7760?tls=SQLiteCloudCA
+test_2: go test -v -path=scripts/nwriters2.test -connstring=sqlitecloud://dev1.sqlitecloud.io:7760?tls=SQLiteCloudCA
+test_3: go test -v -path=scripts/nwriters2.test -connstring=sqlitecloud://dev1.sqlitecloud.io:7760?tls=SQLiteCloudCA
+test_4: go test -v -path=scripts/nwriters2.test -connstring=sqlitecloud://dev1.sqlitecloud.io:7760?tls=SQLiteCloudCA
 #test_1: go test -v -path=scripts/nwriters2.test -connstring=sqlitecloud://dev1.sqlitecloud.io:7760?tls=no
 #test_2: go test -v -path=scripts/nwriters2.test -connstring=sqlitecloud://dev1.sqlitecloud.io:7760?tls=no
 #test_3: go test -v -path=scripts/nwriters2.test -connstring=sqlitecloud://dev1.sqlitecloud.io:7760?tls=no

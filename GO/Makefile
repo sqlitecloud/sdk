@@ -7,7 +7,7 @@ test:
 
 .PHONY: test_dev1
 test_dev1:
-	cd sdk/test; go test -server sqlitecloud://admin:admin@dev1.sqlitecloud.io:9960 -v
+	cd sdk/test; go test -server sqlitecloud://admin:admin@dev1.sqlitecloud.io:9960?tls=SQLiteCloudCA -v
 
 # GO SDK
 .PHONY: sdk
