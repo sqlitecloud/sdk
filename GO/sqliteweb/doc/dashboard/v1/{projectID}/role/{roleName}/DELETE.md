@@ -1,6 +1,6 @@
 # API Documentation
 
-DROP ROLE %
+REMOVE ROLE %
 
 ## Requests
 

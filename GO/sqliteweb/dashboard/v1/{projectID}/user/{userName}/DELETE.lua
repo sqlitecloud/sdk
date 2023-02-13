@@ -6,7 +6,7 @@
 --     //             ///   ///  ///    Date        : 2022/03/26
 --    ///             ///   ///  ///    Author      : Andreas Pfeil
 --   ///             ///   ///  ///
---   ///     //////////   ///  ///      Description : DROP USER %
+--   ///     //////////   ///  ///      Description : REMOVE USER %
 --   ////                ///  ///                     
 --     ////     //////////   ///                      
 --        ////            ////          Requires    : Authentication
@@ -26,7 +26,7 @@ local userID,    err, msg = checkUserID( userid )                        if err 
 local projectID, err, msg = checkProjectID( projectID )                  if err ~= 0 then return error( err, msg )                              end
 local userName,  err, msg = checkParameter( userName, 3 )                if err ~= 0 then return error( err, string.format( msg, "userName" ) ) end
 
-command  = "DROP USER ?;"                           
+command  = "REMOVE USER ?;"                           
 result = nil
 
 if userID == 0 then

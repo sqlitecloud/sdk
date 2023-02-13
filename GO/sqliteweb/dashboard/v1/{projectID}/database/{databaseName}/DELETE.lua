@@ -6,7 +6,7 @@
 --     //             ///   ///  ///    Date        : 2022/03/26
 --    ///             ///   ///  ///    Author      : Andreas Pfeil
 --   ///             ///   ///  ///
---   ///     //////////   ///  ///      Description : DROP DATABASE % [IF EXISTS]
+--   ///     //////////   ///  ///      Description : REMOVE DATABASE % [IF EXISTS]
 --   ////                ///  ///                     
 --     ////     //////////   ///        Requires    : Authentication
 --        ////            ////          Output      : status + message
@@ -32,7 +32,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg ) end  
 end
 
-result = executeSQL( projectID, "DROP DATABASE ?;", {dbName} )
+result = executeSQL( projectID, "REMOVE DATABASE ?;", {dbName} )
 if not result                             then return error( 404, "ProjectID not found" ) end
 if result.ErrorNumber       ~= 0          then return error( 404, "Database not found" )  end
 if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end

@@ -107,8 +107,8 @@ func (this *SQCloud) UnlistenTable(TableName string) error {
 }
 
 // Deletes the specified Channel.
-func (this *SQCloud) DropChannel(Channel string) error {
-	return this.ExecuteArray("DROP CHANNEL ?", []interface{}{Channel})
+func (this *SQCloud) RemoveChannel(Channel string) error {
+	return this.ExecuteArray("REMOVE CHANNEL ?", []interface{}{Channel})
 }
 
 // PAuth returns the auth details for pubsub

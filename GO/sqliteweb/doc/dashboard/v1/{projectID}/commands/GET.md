@@ -137,37 +137,37 @@ Connection: close
     },
     {
       "avgtime": 0,
-      "command": "DROP CLIENT KEY \u003ckeyname\u003e",
+      "command": "REMOVE CLIENT KEY \u003ckeyname\u003e",
       "count": 0,
       "privileges": "NONE"
     },
     {
       "avgtime": 0,
-      "command": "DROP DATABASE \u003cdatabase_name\u003e KEY \u003ckeyname\u003e",
+      "command": "REMOVE DATABASE \u003cdatabase_name\u003e KEY \u003ckeyname\u003e",
       "count": 0,
       "privileges": "READ,INSERT,UPDATE,DELETE,READWRITE,PRAGMA,CREATE_TABLE,CREATE_INDEX,CREATE_VIEW,CREATE_TRIGGER,DROP_TABLE,DROP_INDEX,DROP_VIEW,DROP_TRIGGER,ALTER_TABLE,ANALYZE,ATTACH,DETACH,DBADMIN"
     },
     {
       "avgtime": 0,
-      "command": "DROP DATABASE \u003cdatabase_name\u003e [IF EXISTS]",
+      "command": "REMOVE DATABASE \u003cdatabase_name\u003e [IF EXISTS]",
       "count": 0,
       "privileges": "DROP_DATABASE"
     },
     {
       "avgtime": 0,
-      "command": "DROP KEY \u003ckeyname\u003e",
+      "command": "REMOVE KEY \u003ckeyname\u003e",
       "count": 0,
       "privileges": "SETTINGS"
     },
     {
       "avgtime": 0,
-      "command": "DROP ROLE \u003crole_name\u003e",
+      "command": "REMOVE ROLE \u003crole_name\u003e",
       "count": 0,
       "privileges": "USERADMIN"
     },
     {
       "avgtime": 0,
-      "command": "DROP USER \u003cusername\u003e",
+      "command": "REMOVE USER \u003cusername\u003e",
       "count": 0,
       "privileges": "USERADMIN"
     },

@@ -6,7 +6,7 @@
 --     //             ///   ///  ///    Date        : 2022/10/14
 --    ///             ///   ///  ///    Author      : Andrea Donetti
 --   ///             ///   ///  ///
---   ///     //////////   ///  ///      Description : DROP APIKEY %
+--   ///     //////////   ///  ///      Description : REMOVE APIKEY %
 --   ////                ///  ///                     
 --     ////     //////////   ///                      
 --        ////            ////          Requires    : Authentication
@@ -28,7 +28,7 @@ local key,       err, msg = getBodyValue( "key", 3 )                     if err 
 
 local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                   end
 
-command  = "DROP APIKEY ?"
+command  = "REMOVE APIKEY ?"
 result = executeSQL( projectID, command, {key} )           
             
 if not result                                                            then return error( 404, "ProjectID not found" )             end

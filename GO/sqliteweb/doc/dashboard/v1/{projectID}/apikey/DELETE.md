@@ -1,6 +1,6 @@
 # API Documentation
 
-DROP APIKEY <key>
+REMOVE APIKEY <key>
 
 ## Requests
 

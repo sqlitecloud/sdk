@@ -1,6 +1,6 @@
 # API Documentation
 
-DROP USER %
+REMOVE USER %
 
 ## Requests
 

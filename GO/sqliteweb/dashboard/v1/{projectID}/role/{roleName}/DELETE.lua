@@ -6,7 +6,7 @@
 --     //             ///   ///  ///    Date        : 2022/03/26
 --    ///             ///   ///  ///    Author      : Andreas Pfeil
 --   ///             ///   ///  ///
---   ///     //////////   ///  ///      Description : DROP USER %
+--   ///     //////////   ///  ///      Description : REMOVE USER %
 --   ////                ///  ///                     
 --     ////     //////////   ///        Requires    : Authentication
 --        ////            ////          Output      : status + message
@@ -32,7 +32,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                              end
 end
 
-result = executeSQL( projectID, "DROP ROLE ?", {roleName} )
+result = executeSQL( projectID, "REMOVE ROLE ?", {roleName} )
 if not result                             then return error( 404, "ProjectID not found" ) end
 if result.ErrorNumber       ~= 0          then return error( 404, result.ErrorMessage )      end
 if result.NumberOfColumns   ~= 0          then return error( 502, "Bad Gateway" )         end
