@@ -91,7 +91,7 @@ Connection Options:
   -w, --password PASSWORD  Use PASSWORD for authentication
   -t, --timeout SECS       Set Timeout for network operations to SECS seconds [default::10]
   -c, --compress (NO|LZ4)  Use line compression [default::NO]
-  --tls [(NO|INTERN)|FILE] Encrypt the database connection with NO PEM, the internal PEM or the PEM in FILE [default::INTERN]
+  --tls [YES|NO|INTERN|FILE] Encrypt the database connection using the host's root CA set (YES), a custom CA with a PEM from FILE (FILE), the internal SQLiteCloud CA (INTERN), or disable the encryption (NO) [default::YES]
 `
 
 var help = `
@@ -277,7 +277,7 @@ func parseParameters() (Parameter, error) {
 		p["--port"] = getFirstNoneEmptyString([]string{dropError(p.String("--port")), "8860"})
 		p["--timeout"] = getFirstNoneEmptyString([]string{dropError(p.String("--timeout")), "10"})
 		p["--compress"] = getFirstNoneEmptyString([]string{dropError(p.String("--compress")), "NO"})
-		p["--tls"] = getFirstNoneEmptyString([]string{dropError(p.String("--tls")), "INTERN"})
+		p["--tls"] = getFirstNoneEmptyString([]string{dropError(p.String("--tls")), "YES"})
 		p["--separator"] = getFirstNoneEmptyString([]string{dropError(p.String("--separator")), dropError(sqlitecloud.GetDefaultSeparatorForOutputFormat(outputformat)), "|"})
 
 		// Fix invalid(=unset) parameters, quotation & control-chars
@@ -377,13 +377,14 @@ func main() {
 			Database:     parameter.Database,
 			Timeout:      time.Duration(parameter.Timeout) * time.Second,
 			CompressMode: parameter.Compress,
-			Pem:          parameter.Tls,
 			ApiKey:       parameter.ApiKey,
 			NoBlob:       parameter.NoBlob,
 			MaxData:      parameter.MaxData,
 			MaxRows:      parameter.MaxRows,
 			MaxRowset:    parameter.MaxRowset,
 		}
+
+		config.Secure, config.Pem = sqlitecloud.ParseTlsString(parameter.Tls)
 		var db *sqlitecloud.SQCloud = sqlitecloud.New(config)
 
 		if err := db.Connect(); err != nil {
@@ -565,6 +566,7 @@ func Execute(db *sqlitecloud.SQCloud, out *bufio.Writer, cmd string, width int, 
 		}
 	} else {
 		bail(out, err.Error(), Settings)
+		// bail(out, err.Error()+fmt.Sprintf(" (%d:%d:%d)", db.GetErrorCode(), db.GetExtErrorCode(), db.GetErrorOffset()), Settings)
 	}
 	print(out, "", Settings) // Empty line
 }

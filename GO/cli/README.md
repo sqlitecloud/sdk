@@ -185,12 +185,13 @@ Output Format Options:
                            Specify the Output mode [default: BOX]
 
 Connection Options:
-  -h, --host HOSTNAME      Connect to SQLite Cloud database server host name [default: localhost]
-  -p, --port PORT          Use specified port to connect to SQLIte Cloud database server [default: 8860]
-  -u, --user USERNAME      Use USERNAME for authentication 
+  -h, --host HOSTNAME      Connect to SQLite Cloud database server host name [default::localhost]
+  -p, --port PORT          Use specified port to connect to SQLIte Cloud database server [default::8860]
+  -u, --user USERNAME      Use USERNAME for authentication
   -w, --password PASSWORD  Use PASSWORD for authentication
-  -t, --timeout SECS       Set Timeout for network operations to SECS seconds [default: 10]
-  -c, --compress (NO|LZ4)  Use line compression [default: NO]
+  -t, --timeout SECS       Set Timeout for network operations to SECS seconds [default::10]
+  -c, --compress (NO|LZ4)  Use line compression [default::NO]
+  --tls [YES|NO|INTERN|FILE] Encrypt the database connection using the host's root CA set (YES), a custom CA with a PEM from FILE (FILE), the internal SQLiteCloud CA (INTERN), or disable the encryption (NO) [default::YES]
 
 ```
 
@@ -225,7 +226,7 @@ Boolean settings are toggled if no parameter is specified.
 
 ### Starting a new session
 ```console
-./bin/sqlc --host=***REMOVED*** --dbname=X
+./bin/sqlc --host=***REMOVED*** --dbname=X --tls=INTERN
    _____     
   /    /     SQLite Cloud Command Line Application, version 1.0.1
  / ___/ /    (c) 2021 by SQLite Cloud Inc.
@@ -448,17 +449,17 @@ One can switch synthax highlighting on with ``.synthax color``. There is also a 
 ./bin/sqlc --version
 
 ./bin/sqlc -> trying to connect
-./bin/sqlc sqlitecloud://sqlitecloud://***REMOVED***/X -> trying to connect
+./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN -> trying to connect
 
-./bin/sqlc sqlitecloud://***REMOVED***/X
+./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN
 
-./bin/sqlc sqlitecloud://***REMOVED***/X --list
-./bin/sqlc sqlitecloud://***REMOVED***/X --list --format=xml
-./bin/sqlc sqlitecloud://***REMOVED***/X --cmd "LIST DATABASES"
-echo "LIST DATABASES" | ./bin/sqlc sqlitecloud://***REMOVED***/X --format=json
-echo "LIST DATABASES" > script.sql; ./bin/sqlc sqlitecloud://***REMOVED***/X --format=json script.sql
+./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN --list
+./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN --list --format=xml
+./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN --cmd "LIST DATABASES"
+echo "LIST DATABASES" | ./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN --format=json
+echo "LIST DATABASES" > script.sql; ./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN --format=json script.sql
 
-./bin/sqlc sqlitecloud://***REMOVED***/X --list -o outputfile --quiet --format=xml
+./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN --list -o outputfile --quiet --format=xml
 
 ```
 

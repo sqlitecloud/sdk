@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -39,6 +40,7 @@ type SQCloudConfig struct {
 	Database     string
 	Timeout      time.Duration
 	CompressMode string
+	Secure       bool
 	Pem          string
 	ApiKey       string
 	NoBlob       bool // flag to tell the server to not send BLOB columns
@@ -67,7 +69,7 @@ type SQCloud struct {
 	ErrorMessage string
 }
 
-const internalPEM = "<USE INTERNAL PEM>"
+const SQLiteCloudCA = "SQLiteCloudCA"
 
 func New(config SQCloudConfig) *SQCloud {
 	return &SQCloud{SQCloudConfig: config}
@@ -103,7 +105,8 @@ func ParseConnectionString(ConnectionString string) (config *SQCloudConfig, err 
 		config.Database = strings.TrimPrefix(u.Path, "/")
 		config.Timeout = 0
 		config.CompressMode = "NO"
-		config.Pem = internalPEM
+		config.Secure = true
+		config.Pem = ""
 		config.ApiKey = ""
 		config.NoBlob = false
 		config.MaxData = 0
@@ -130,7 +133,7 @@ func ParseConnectionString(ConnectionString string) (config *SQCloudConfig, err 
 			case "compress":
 				config.CompressMode = strings.ToUpper(lastLiteral)
 			case "tls":
-				config.Pem = parsePEMString(lastLiteral)
+				config.Secure, config.Pem = ParseTlsString(lastLiteral)
 			case "apikey":
 				config.ApiKey = lastLiteral
 			case "noblob":
@@ -158,14 +161,16 @@ func ParseConnectionString(ConnectionString string) (config *SQCloudConfig, err 
 	return nil, err
 }
 
-func parsePEMString(Pem string) string {
-	switch strings.ToUpper(strings.TrimSpace(Pem)) {
+func ParseTlsString(tlsconf string) (secure bool, pem string) {
+	switch strings.ToUpper(strings.TrimSpace(tlsconf)) {
 	case "", "0", "N", "NO", "FALSE", "OFF", "DISABLE", "DISABLED":
-		return ""
-	case "1", "Y", "YES", "TRUE", "ON", "ENABLE", "ENABLED", "INTERN", internalPEM:
-		return internalPEM
+		return false, ""
+	case "1", "Y", "YES", "TRUE", "ON", "ENABLE", "ENABLED":
+		return true, ""
+	case strings.ToUpper(SQLiteCloudCA), "INTERN":
+		return true, SQLiteCloudCA
 	default:
-		return strings.TrimSpace(Pem)
+		return true, strings.TrimSpace(tlsconf)
 	}
 }
 
@@ -209,24 +214,38 @@ func (this *SQCloud) CheckConnectionParameter() error {
 		return errors.New(fmt.Sprintf("Invalid compression method (%s)", this.CompressMode))
 	}
 
-	switch trimmed := parsePEMString(this.Pem); trimmed {
-	case "":
-		break // unencrypted connection
-	case internalPEM:
-		this.Pem = PEM // use internal Certificate
-	default:
-		switch pem, err := ioutil.ReadFile(trimmed); {
-		case err != nil:
-			return errors.New(fmt.Sprintf("Could not open PEM file in '%s'", trimmed))
-		default:
-			this.Pem = string(pem)
-		}
-	}
+	if this.Secure {
+		var pool *x509.CertPool = nil
+		pem := []byte{}
 
-	if len(this.Pem) != 0 {
-		pool := x509.NewCertPool()
-		if !pool.AppendCertsFromPEM([]byte(this.Pem)) {
-			return errors.New(fmt.Sprintf("Could not append certs from PEM"))
+		switch _, trimmed := ParseTlsString(this.Pem); trimmed {
+		case "":
+			break
+		case SQLiteCloudCA:
+			pem = []byte(SqliteCloudCAPEM)
+		default:
+			// check if it is a filepath
+			_, err := os.Stat(trimmed)
+			if os.IsNotExist(err) {
+				// not a filepath, use the string as a pem string
+				pem = []byte(trimmed)
+			} else {
+				// its a file, read its content into the pem string
+				switch bytes, err := ioutil.ReadFile(trimmed); {
+				case err != nil:
+					return errors.New(fmt.Sprintf("Could not open PEM file in '%s'", trimmed))
+				default:
+					pem = bytes
+				}
+			}
+		}
+
+		if len(pem) > 0 {
+			pool = x509.NewCertPool()
+
+			if !pool.AppendCertsFromPEM(pem) {
+				return errors.New(fmt.Sprintf("Could not append certs from PEM"))
+			}
 		}
 
 		this.cert = &tls.Config{
