@@ -116,7 +116,7 @@ const ChannelElement = (props) => {
   //hadle click that drop a channel
   const [isDroppingChannel, setIsDroppingChannel] = useState(false);
   const [isErrorDropping, setIsErrorDropping] = useState(null);
-  const dropChannel = async (event) => {
+  const removeChannel = async (event) => {
     event.stopPropagation();
     //verify if the dropped channel is the one selected
     setIsDroppingChannel(true);
@@ -135,7 +135,7 @@ const ChannelElement = (props) => {
       setSelectedChannelIndex(-1);
       setSelectedChannel("");
     }
-    const response = await client.dropChannel(name);
+    const response = await client.removeChannel(name);
     if (process.env.DEBUG == "true") console.log(response);
     if (response.status == "success") {
       //remove from the Maps the dropped channel
@@ -228,7 +228,7 @@ const ChannelElement = (props) => {
       {
         showEditor &&
         <div className="absolute top-1 right-0">
-          <ChannelElementDropdown dropChannel={dropChannel} />
+          <ChannelElementDropdown removeChannel={removeChannel} />
         </div>
       }
     </div>
