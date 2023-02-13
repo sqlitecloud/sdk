@@ -536,5 +536,5 @@ PRAGMA integrity_check(10);
 
 UNUSE DATABASE;
 --match type is ok
-DROP DATABASE {{.dbname}};
+REMOVE DATABASE {{.dbname}};
 --match type is ok

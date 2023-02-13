@@ -20,5 +20,5 @@ COMMIT
 
 UNUSE DATABASE;
 --match type is ok
-DROP DATABASE {{.dbname}};
+REMOVE DATABASE {{.dbname}};
 --match type is ok

@@ -31,8 +31,8 @@ INSERT INTO t1 (b) VALUES (randomblob(100000));
 --end
 
 --// While queries are executed on the follower, call UNUSE the DB on the main worker 
---// and DROP the database on the leader. It will succeed on the leader because no clients
---// currently use the db, but also the follower must be able to DROP the DB even if there
+--// and REMOVE the database on the leader. It will succeed on the leader because no clients
+--// currently use the db, but also the follower must be able to REMOVE the DB even if there
 --// are connected clients, the node must not crash and clients using that db must be disconnected.
 --// But first wait a while so workers can start the slow query.
 --sleep 1000
@@ -40,13 +40,13 @@ LIST CONNECTIONS
 --match type is ROWSET 
 
 UNUSE DATABASE 
-DROP DATABASE {{.dbname}}
+REMOVE DATABASE {{.dbname}}
 --// must fail because there are connections using the db
 --match type is ERROR 
 
 --wait all
 
-DROP DATABASE {{.dbname}}
+REMOVE DATABASE {{.dbname}}
 --match type is OK 
 
 LIST CONNECTIONS 

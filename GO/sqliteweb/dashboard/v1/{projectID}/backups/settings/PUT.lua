@@ -67,7 +67,7 @@ else
         args[#args+1] = name
         args[#args+1] = retention
       else 
-        c = c .. " DROP DATABASE ? KEY backup_retention; "
+        c = c .. " REMOVE DATABASE ? KEY backup_retention; "
         args[#args+1] = name
       end 
     end

@@ -50,5 +50,5 @@ UNUSE DATABASE;
 --match type is ok
 ---- LIST CONNECTIONS
 ---- --dump
-DROP DATABASE {{.dbname}};
+REMOVE DATABASE {{.dbname}};
 --match type is ok

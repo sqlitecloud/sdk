@@ -56,5 +56,5 @@ UNUSE DATABASE;
 --sleep 100
 LIST DATABASE CONNECTIONS {{.dbname}};
 
--- DROP DATABASE {{.dbname}};
+-- REMOVE DATABASE {{.dbname}};
 -- --match type is ok

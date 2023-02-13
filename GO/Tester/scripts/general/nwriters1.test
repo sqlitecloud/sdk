@@ -41,5 +41,5 @@ LIST CONNECTIONS;
 LIST DATABASE CONNECTIONS {{.dbname}};
 -- --dump
 --match type is null -- WAS --match rows 0
-DROP DATABASE {{.dbname}};
+REMOVE DATABASE {{.dbname}};
 --match type is ok
