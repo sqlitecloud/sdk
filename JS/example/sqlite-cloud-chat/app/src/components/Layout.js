@@ -257,7 +257,7 @@ export default function Layout(props) {
             <img
               className='box-content h-8 px-4 py-2 w-auto'
               src={lightLogo}
-              alt='SQLite Cloud'
+              alt=''
             />
           </div>
           {
