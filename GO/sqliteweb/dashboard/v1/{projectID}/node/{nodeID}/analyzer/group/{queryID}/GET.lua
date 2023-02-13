@@ -6,7 +6,7 @@
 --     //             ///   ///  ///    Date        : 2022/11/28
 --    ///             ///   ///  ///    Author      : Andrea Donetti
 --   ///             ///   ///  ///
---   ///     //////////   ///  ///      Description : ANALYZER LIST GROUPID % NODE %
+--   ///     //////////   ///  ///      Description : LIST ANALYZER GROUPID % NODE %
 --     ////     //////////   ///        Requires    : Authentication
 --        ////            ////          Output      : List of queries slower than threshold 
 --          ////     /////                            for a particular database/sql group, specified by the queryid of one query of that group
@@ -33,7 +33,7 @@ end
 
 local machineNodeID, err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                 end
 
-command = "ANALYZER LIST GROUPID ? NODE ?"
+command = "LIST ANALYZER GROUPID ? NODE ?"
 commandargs = {queryID,machineNodeID}
 
 queries = executeSQL( projectID, command, commandargs )

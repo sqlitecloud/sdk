@@ -58,8 +58,6 @@ func (this *Server) dashboardWebsocketDownload(writer http.ResponseWriter, reque
 	var res *sqlitecloud.Result = nil
 	var err error = nil
 
-	start := time.Now()
-
 	id, _ := SQLiteWeb.Auth.GetUserID(SQLiteWeb.Auth.getTokenFromCookie, request)
 	v := mux.Vars(request)
 	projectID := v["projectID"]
@@ -171,17 +169,12 @@ func (this *Server) dashboardWebsocketDownload(writer http.ResponseWriter, reque
 	}
 
 	c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "OK"), time.Now().Add(1*time.Second))
-
-	t := time.Since(start)
-	SQLiteWeb.Logger.Debugf("Endpoint \"%s %s\" addr:%s user:%d exec_time:%s iserr:%v", request.Method, request.URL, request.RemoteAddr, id, t, err != nil)
 }
 
 func (this *Server) dashboardWebsocketUpload(writer http.ResponseWriter, request *http.Request) {
 	var connection *Connection = nil
 	var res *sqlitecloud.Result = nil
 	var err error = nil
-
-	start := time.Now()
 
 	id, _ := SQLiteWeb.Auth.GetUserID(SQLiteWeb.Auth.getTokenFromCookie, request)
 	v := mux.Vars(request)
@@ -320,9 +313,6 @@ func (this *Server) dashboardWebsocketUpload(writer http.ResponseWriter, request
 			SQLiteWeb.Logger.Debug("dashboardWebsocketUpload: ack")
 		}
 	}
-
-	t := time.Since(start)
-	SQLiteWeb.Logger.Debugf("Endpoint \"%s %s\" addr:%s user:%d exec_time:%s iserr:%v", request.Method, request.URL, request.RemoteAddr, id, t, err != nil)
 }
 
 func enquoteString(s string) string {

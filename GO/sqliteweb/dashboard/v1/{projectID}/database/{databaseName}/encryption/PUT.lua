@@ -31,7 +31,7 @@ if key == "" then
   command       = "DECRYPT DATABASE ?;"
   commandargs   = {dbName}
 else
-  command       = "ENCRYPT DATABASE ? WITH KEY ?;"
+  command       = "ENCRYPT DATABASE ? KEY ?;"
   commandargs   = {dbName, key}
 end
 

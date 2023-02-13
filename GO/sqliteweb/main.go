@@ -147,6 +147,7 @@ func main() {
 			initApi()
 			initWWW()
 			initCors()
+			initCloudProviderDigitalOcean()
 
 			// inittt()
 

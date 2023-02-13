@@ -1,6 +1,6 @@
 # API Documentation
 
-ENCRYPT DATABASE % WITH KEY % 
+ENCRYPT DATABASE % KEY % 
 DECRYPT DATABASE %    
 
 ## Requests

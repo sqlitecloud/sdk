@@ -6,7 +6,7 @@
 --     //             ///   ///  ///    Date        : 2022/11/28
 --    ///             ///   ///  ///    Author      : Andrea Donetti
 --   ///             ///   ///  ///
---   ///     //////////   ///  ///      Description : ANALYZER LIST GROUPED
+--   ///     //////////   ///  ///      Description : LIST ANALYZER GROUPED
 --     ////     //////////   ///        Requires    : Authentication
 --        ////            ////          Output      : List of queries slower than threshold 
 --          ////     /////                            grouped by database and sql (normalized_sql)
@@ -33,7 +33,7 @@ end
 
 local machineNodeID, err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )                 end
 
-command = "ANALYZER LIST GROUPED NODE ?"
+command = "LIST ANALYZER GROUPED NODE ?"
 commandargs = {machineNodeID}
 
 -- if query.id       then 

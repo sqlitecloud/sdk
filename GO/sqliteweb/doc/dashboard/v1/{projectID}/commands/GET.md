@@ -185,7 +185,7 @@ Connection: close
     },
     {
       "avgtime": 0,
-      "command": "ENCRYPT DATABASE \u003cdatabase_name\u003e WITH KEY \u003cencryption_key\u003e",
+      "command": "ENCRYPT DATABASE \u003cdatabase_name\u003e KEY \u003cencryption_key\u003e",
       "count": 0,
       "privileges": "CREATE_DATABASE"
     },

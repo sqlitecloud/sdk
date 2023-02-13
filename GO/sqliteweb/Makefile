@@ -33,7 +33,7 @@ web_update: sqliteweb_linux
 
 web_update_service: sqliteweb_linux
 	ssh root@web1.sqlitecloud.io 'systemctl stop sqliteweb'
-	scp $(GOPATH)/bin/sqliteweb_linux web1.sqlitecloud.io:/opt/sqliteweb/sbin/.
+	scp $(GOPATH)/bin/sqliteweb_linux root@web1.sqlitecloud.io:/opt/sqliteweb/sbin/.
 	ssh root@web1.sqlitecloud.io 'systemctl start sqliteweb'	
 
 web_stop:

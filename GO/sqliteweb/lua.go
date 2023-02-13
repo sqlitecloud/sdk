@@ -25,6 +25,7 @@ import (
 	"net"
 	"net/http"
 	"net/smtp"
+	"regexp"
 	"strings"
 	"text/template" // html/template
 	"time"
@@ -389,6 +390,58 @@ func lua_reloadNodes(L *lua.State) int {
 	return 0
 }
 
+// Looks for the first match of pattern in the string s, like lua's string.match(s, pattern) not available here
+func lua_stringMatch(L *lua.State) int {
+	if L.TypeOf(1) != lua.TypeString && L.TypeOf(2) != lua.TypeString {
+		L.PushNil()
+		return 0
+	}
+
+	s := lua.CheckString(L, 1)
+	pattern := lua.CheckString(L, 2)
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		L.PushNil()
+		return 0
+	}
+
+	match := re.FindStringSubmatch(s)
+	if len(match) == 0 {
+		L.PushNil()
+		return 1
+	}
+
+	L.PushString(match[0])
+	return 1
+}
+
+func lua_createNode(L *lua.State) int {
+	if L.TypeOf(1) != lua.TypeNumber || L.TypeOf(2) != lua.TypeString || L.TypeOf(3) != lua.TypeString || L.TypeOf(4) != lua.TypeString || L.TypeOf(5) != lua.TypeString || L.TypeOf(6) != lua.TypeString || L.TypeOf(7) != lua.TypeNumber {
+		SQLiteWeb.Logger.Error("Wrong arguments for createNode")
+		L.PushNil()
+		return 0
+	}
+
+	userid := int(lua.CheckNumber(L, 1))
+	name := lua.CheckString(L, 2)
+	region := lua.CheckString(L, 3)
+	size := lua.CheckString(L, 4)
+	nodetype := lua.CheckString(L, 5)
+	projectuuid := lua.CheckString(L, 6)
+	nodeid := int(lua.CheckNumber(L, 7))
+
+	jobuuid, err := createNode(userid, name, region, size, nodetype, projectuuid, nodeid)
+	if err != nil {
+		SQLiteWeb.Logger.Error(err.Error())
+		L.PushNil()
+		return 0
+	}
+
+	L.PushString(jobuuid)
+	return 1
+}
+
 func lua_executeSQL(L *lua.State) int {
 	if L.TypeOf(1) == lua.TypeString && L.TypeOf(2) == lua.TypeString {
 		uuid := lua.CheckString(L, 1)
@@ -699,6 +752,12 @@ NextPart:
 
 		// register internal mail related functions
 		l.Register("mail", mail)
+
+		// register missing string functions
+		l.Register("stringMatch", lua_stringMatch)
+
+		// register internal droplet related functions
+		l.Register("createNode", lua_createNode)
 
 		// register context related functions
 		l.Register("SetStatus", func(L *lua.State) int {

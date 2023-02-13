@@ -41,9 +41,9 @@ else
   command = "BEGIN TRANSACTION;"
   for i = 1, result.NumberOfRows do
     nodeID = result.Rows[ i ].nodeID
-    command  = string.format( "%s DELETE FROM NodeSettings WHERE node_id = %d; DELETE FROM Node WHERE id = %d;", query, nodeID, nodeID )
+    command  = string.format( "%s DELETE FROM NodeSettings WHERE node_id = %d; DELETE FROM Node WHERE id = %d;", command, nodeID, nodeID )
   end  
-  command = string.format( "%s DELETE FROM Project WHERE uuid = ?; END TRANSACTION;", query )
+  command = string.format( "%s DELETE FROM Project WHERE uuid = ?; END TRANSACTION;", command )
   
   result = executeSQL( "auth", command, {projectID} )
   if not result                                                                      then return error( 504, "Gateway Timeout" )            end

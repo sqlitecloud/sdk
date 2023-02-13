@@ -114,6 +114,7 @@ func (this *Server) Start(s service.Service) error {
 		return errors.New("XXX")
 	}
 
+	this.router.Use(LogReqWithDurationMiddleware)
 	this.router.Use(CommonLogFormatMiddleware)
 
 	this.server = &http.Server{
@@ -144,6 +145,7 @@ func (this *Server) Start(s service.Service) error {
 	go this.run()
 	return nil
 }
+
 func (this *Server) run() {
 	// This line now hangs until shutdown is called
 	err := this.server.ListenAndServeTLS(this.CertPath, this.KeyPath)
@@ -151,6 +153,7 @@ func (this *Server) run() {
 	SQLiteWeb.Logger.Infof("SQLiteWeb ListenAndServeTLS ended: %s", err)
 	//this.Stop()
 }
+
 func (this *Server) Stop(s service.Service) error {
 	if this.ticker != nil {
 		this.ticker.Stop()

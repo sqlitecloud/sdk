@@ -18,13 +18,18 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/handlers"
 )
 
@@ -129,37 +134,115 @@ func header(lvl, msg string) string {
 
 func init() {
 	initializeSQLiteWeb()
-  }
-  
+}
+
 func initLogger() {
-	if ( len(SQLiteWeb.logFile)>0 ) {
+	if len(SQLiteWeb.logFile) > 0 {
 		f, err := os.OpenFile(SQLiteWeb.logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			SQLiteWeb.Logger.Fatal(err)
 		}
 
 		llevel := LogLevelDebug
-		if ( len(SQLiteWeb.logLevel)>0 ) {
+		if len(SQLiteWeb.logLevel) > 0 {
 			switch strings.ToUpper(SQLiteWeb.logLevel) {
-			case "PANIC": llevel = LogLevelPanic
-			case "FATAL": llevel = LogLevelFatal
-			case "ERROR": llevel = LogLevelError
-			case "WARNING": llevel = LogLevelWarn
-			case "INFO": llevel = LogLevelInfo
-			case "DEBUG": llevel = LogLevelDebug
+			case "PANIC":
+				llevel = LogLevelPanic
+			case "FATAL":
+				llevel = LogLevelFatal
+			case "ERROR":
+				llevel = LogLevelError
+			case "WARNING":
+				llevel = LogLevelWarn
+			case "INFO":
+				llevel = LogLevelInfo
+			case "DEBUG":
+				llevel = LogLevelDebug
 			}
 		}
 
-		SQLiteWeb.Logger = &Logger{ Logger: log.New(f, "", log.LstdFlags), LogLevel: llevel }
+		SQLiteWeb.Logger = &Logger{Logger: log.New(f, "", log.LstdFlags), LogLevel: llevel}
 	}
 
-	if ( len(SQLiteWeb.clfLogFile)>0 ) {
+	if len(SQLiteWeb.clfLogFile) > 0 {
 		f, err := os.OpenFile(SQLiteWeb.clfLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			SQLiteWeb.Logger.Fatal(err)
 		}
 		SQLiteWeb.CLFWriter = f
 	}
+}
+
+// responseLogger is wrapper of http.ResponseWriter that keeps track of its HTTP
+// status code and body size
+type responseLogger struct {
+	w      http.ResponseWriter
+	status int
+	size   int
+}
+
+func (l *responseLogger) Write(b []byte) (int, error) {
+	size, err := l.w.Write(b)
+	l.size += size
+	return size, err
+}
+
+func (l *responseLogger) WriteHeader(s int) {
+	l.w.WriteHeader(s)
+	l.status = s
+}
+
+func (l *responseLogger) Status() int {
+	return l.status
+}
+
+func (l *responseLogger) Size() int {
+	return l.size
+}
+
+func (l *responseLogger) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	conn, rw, err := l.w.(http.Hijacker).Hijack()
+	if err == nil && l.status == 0 {
+		// The status will be StatusSwitchingProtocols if there was no error and
+		// WriteHeader has not been called yet
+		l.status = http.StatusSwitchingProtocols
+	}
+	return conn, rw, err
+}
+
+func makeLogger(w http.ResponseWriter) (*responseLogger, http.ResponseWriter) {
+	logger := &responseLogger{w: w, status: http.StatusOK}
+	return logger, httpsnoop.Wrap(w, httpsnoop.Hooks{
+		Write: func(httpsnoop.WriteFunc) httpsnoop.WriteFunc {
+			return logger.Write
+		},
+		WriteHeader: func(httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
+			return logger.WriteHeader
+		},
+	})
+}
+
+func LogReqWithDurationMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
+		logger, w := makeLogger(w)
+
+		next.ServeHTTP(w, r)
+
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			host = r.RemoteAddr
+		}
+
+		user := "-"
+		userid, _ := SQLiteWeb.Auth.GetUserID(SQLiteWeb.Auth.getTokenFromAuthorization, r)
+		if userid != -1 {
+			user = strconv.Itoa(int(userid))
+		}
+
+		t := time.Since(startTime)
+		SQLiteWeb.Logger.Infof("%s %s - \"%s %s\" %d %fms", host, user, r.Method, r.RequestURI, logger.status, float32(t.Nanoseconds())/1e6) // t.String()
+	})
 }
 
 // Web Server CommonLogFormat

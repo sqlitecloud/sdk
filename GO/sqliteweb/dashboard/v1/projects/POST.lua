@@ -55,7 +55,7 @@ else
     Project.name        = name
     Project.description = description
 
-    query = "INSERT INTO Project VALUES( ?, ?, ?, ?, ?, ? ); SELECT changes() AS success;"
+    query = "INSERT INTO Project (uuid, company_id, name, description, admin_username, admin_password) VALUES( ?, ?, ?, ?, ?, ? ); SELECT changes() AS success;"
     result = executeSQL( "auth", query, {Project.id, companyID, name, description, adminUsername, adminPassword} )
 
     if not result                     then goto continue end

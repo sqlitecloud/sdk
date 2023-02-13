@@ -20,7 +20,6 @@ package main
 import (
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gorilla/mux"
 	// _ "net/http/pprof"
@@ -59,3 +58,37 @@ func (this *Server) executeLuaDashboardServer(writer http.ResponseWriter, reques
 
 	this.executeLua(path, endpoint, id, writer, request)
 }
+
+// // SQLiteWeb.router.HandleFunc("/dashboard/{version:v[0-9]+}/{projectID}/node", SQLiteWeb.Auth.JWTAuth(SQLiteWeb.Auth.getTokenFromAuthorization, SQLiteWeb.createNodeHandler)).Methods(http.MethodPost)
+//
+// func (this *Server) createNodeHandler(writer http.ResponseWriter, request *http.Request) {
+// 	id, _ := SQLiteWeb.Auth.GetUserID(SQLiteWeb.Auth.getTokenFromAuthorization, request)
+// 	v := mux.Vars(request)
+
+// 	projectUUID, _, err := verifyProjectID(id, v["projectID"], dashboardcm)
+// 	if err != nil {
+// 		writeError(writer, http.StatusUnauthorized, err.Error(), "")
+// 		return
+// 	}
+
+// 	insertjob := fmt.Sprintf("INSERT INTO Jobs (uuid, name, steps, progress, user_id, project_uuid) VALUES ('%s', 'Create Node', 4, 0, %d, %s); SELECT uuid FROM Jobs WHERE rowid = last_insert_rowid();", uuid.New(), id, projectUUID)
+// 	res, err, _, _, _ := dashboardcm.ExecuteSQL("auth", insertjob)
+// 	if err != nil {
+// 		writeError(writer, http.StatusInternalServerError, err.Error(), "")
+// 		return
+// 	}
+
+// 	jobuuid, err := res.GetStringValue(0, 0)
+// 	if err != nil {
+// 		writeError(writer, http.StatusInternalServerError, err.Error(), "")
+// 		return
+// 	}
+
+// 	go createNode(jobuuid, v)
+
+// 	statusCode := http.StatusOK
+// 	writer.Header().Set("Content-Type", "application/json")
+// 	writer.Header().Set("Content-Encoding", "utf-8")
+// 	writer.WriteHeader(statusCode)
+// 	writer.Write([]byte(fmt.Sprintf("{\"status\":%d,\"message\":\"%s\", \"value\": \"{\"uuid\": \"%s\" }\"}", statusCode, "OK", jobuuid)))
+// }

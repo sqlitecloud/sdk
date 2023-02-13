@@ -80,7 +80,7 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
   local machineNodeID,    err, msg = verifyNodeID( userID, projectID, nodeID )    if err ~= 0 then return error( err, msg )              end
 
-  command = "SELECT Node.id, Node.node_id, Node.name, provider, image AS details, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port, latitude, longitude FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid WHERE User.enabled = 1 AND User.id = ? AND Node.id = ? AND uuid = ?;"
+  command = "SELECT Node.id, Node.node_id, Node.name, provider, image AS details, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port, latitude, longitude FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid WHERE User.enabled = 1 AND User.id = ? AND Node.id = ? AND uuid = ? AND Node.created = 1;"
   nodes = executeSQL( "auth", command, {userID, nodeID, projectID} )
 
   if not nodes                            then return error( 404, "ProjectID OR NodeID not found" ) end
