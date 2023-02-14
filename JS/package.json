@@ -1,6 +1,6 @@
 {
   "name": "sqlitecloud-sdk",
-  "version": "1.0.0-dev.2",
+  "version": "1.0.3",
   "description": "",
   "main": "dist/main.bundle.js",
   "scripts": {
