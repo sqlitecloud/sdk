@@ -9,7 +9,10 @@ dist
 **/**/dist
 
 
-#env
+# env
 .env
 **/.env
 **/**/.env
+
+# example
+example
