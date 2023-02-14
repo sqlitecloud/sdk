@@ -1,15 +1,15 @@
 # dependencies
-JS/node_modules
-JS/**/node_modules
-JS/**/**/node_modules
+node_modules
+**/node_modules
+**/**/node_modules
 
 # production
-JS/dist
-JS/**/dist
-JS/**/**/dist
+dist
+**/dist
+**/**/dist
 
 
 #env
-JS/.env
-JS/**/.env
-JS/**/**/.env
+.env
+**/.env
+**/**/.env
