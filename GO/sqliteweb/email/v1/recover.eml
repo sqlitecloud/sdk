@@ -1,0 +1,14 @@
+To: <{{.To}}>
+From: <{{.From}}>
+Content-Type: text/plain;
+	charset=us-ascii
+Content-Transfer-Encoding: 8bit
+Mime-Version: 1.0
+Subject: Password recovery
+
+Hi,
+
+your password is: {{.Password}}
+
+Best regards,
+SQLiteCloud Team

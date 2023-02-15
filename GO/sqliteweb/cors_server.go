@@ -19,7 +19,6 @@ package main
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -42,13 +41,11 @@ func middlewareCors(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, req *http.Request) {
 			allowHeaders := "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, origin, x-requested-with"
-			if strings.HasPrefix(req.RequestURI, "/api/") {
-				allowHeaders += ", X-SQLiteCloud-Api-Key"
-			}
 
 			// allow all origins only for /api/* endpoints
 			// TODO: set the allowed origins for the project in the API settings page of the dashboard
 			if apiRoute.Match(req, &routeMatch) {
+				allowHeaders += ", X-SQLiteCloud-Api-Key"
 				w.Header().Set("Access-Control-Allow-Origin", allowAllOrigins)
 			}
 

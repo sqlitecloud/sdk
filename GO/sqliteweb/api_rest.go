@@ -105,7 +105,7 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 		methods, err = optionsAllowedMethods(writer, request, projectID, databaseName, tableName)
 		if err != nil {
 			status = http.StatusInternalServerError
-			writeError(writer, status, err.Error(), "")
+			writeError(writer, status, err.Error(), nil)
 			return
 		}
 
@@ -121,7 +121,7 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 	apikey, useridjwt, err = apiRestAuth(request)
 	if err != nil {
 		status = http.StatusUnauthorized
-		writeError(writer, status, err.Error(), "")
+		writeError(writer, status, err.Error(), nil)
 		return
 	}
 
@@ -129,7 +129,7 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 		projectID, _, err = verifyProjectID(useridjwt, projectID, apicm)
 		if err != nil {
 			status = http.StatusUnauthorized
-			writeError(writer, status, err.Error(), "")
+			writeError(writer, status, err.Error(), nil)
 			return
 		}
 	}
@@ -140,7 +140,7 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 		id, err = strconv.Atoi(idstr)
 		if err != nil {
 			status = http.StatusUnprocessableEntity
-			writeError(writer, status, err.Error(), "")
+			writeError(writer, status, err.Error(), nil)
 			return
 		}
 	}
@@ -154,7 +154,7 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 		// writer.Header()["Access-Control-Allow-Methods"] = ""
 		status = http.StatusMethodNotAllowed
 		err = errors.New("Not Allowed")
-		writeError(writer, status, err.Error(), "")
+		writeError(writer, status, err.Error(), nil)
 		return
 	}
 
@@ -162,7 +162,7 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 	query, queryargs, statusCode, err, allowedMethods := apiRestQuery(request, projectID, databaseName, tableName, id)
 	if err != nil {
 		status = statusCode
-		writeError(writer, statusCode, err.Error(), allowedMethods)
+		writeError(writer, statusCode, err.Error(), &allowedMethods)
 		return
 	}
 
@@ -177,14 +177,14 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 	res, err, _, _, _ := apicm.ExecuteSQLArray(projectID, query, &queryargs)
 	if err != nil {
 		status = http.StatusInternalServerError
-		writeError(writer, status, err.Error(), "")
+		writeError(writer, status, err.Error(), nil)
 		return
 	}
 
 	jsonbytes, err := responseValueFromResult(request, projectID, databaseName, tableName, res)
 	if err != nil {
 		status = http.StatusInternalServerError
-		writeError(writer, status, err.Error(), "")
+		writeError(writer, status, err.Error(), nil)
 		return
 	}
 
@@ -193,11 +193,6 @@ func (this *Server) serveApiRest(writer http.ResponseWriter, request *http.Reque
 	writer.Header().Set("Content-Type", "application/json")
 	writer.Header().Set("Content-Encoding", "utf-8")
 	writer.WriteHeader(http.StatusOK)
-	if err != nil {
-		status = http.StatusInternalServerError
-		writeError(writer, status, err.Error(), "")
-	}
-
 	writer.Write(jsonbytes)
 }
 
@@ -242,19 +237,6 @@ func getApiKeyFromHeader(r *http.Request) (string, error) {
 		return "", fmt.Errorf("ApiKey header not found")
 	}
 	return k, nil
-}
-
-func writeError(writer http.ResponseWriter, statusCode int, message string, allowedMethods string) {
-	if statusCode == http.StatusMethodNotAllowed {
-		writer.Header().Set("Access-Control-Allow-Methods", allowedMethods)
-		writer.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-		writer.Header().Set("Pragma", "no-cache")
-		writer.Header().Set("Expires", "0")
-	}
-	writer.Header().Set("Content-Type", "application/json")
-	writer.Header().Set("Content-Encoding", "utf-8")
-	writer.WriteHeader(statusCode)
-	writer.Write([]byte(fmt.Sprintf("{\"status\":%d,\"message\":\"%s\"}", statusCode, message)))
 }
 
 func optionsAllowedMethods(writer http.ResponseWriter, request *http.Request, projectID string, databaseName string, tableName string) (string, error) {

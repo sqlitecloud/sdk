@@ -14,9 +14,9 @@ Since this endpoint is "experimental" and just to demonstrate a basic password r
 
 A note about the recover.eml file.
 
-If the template file is stored in a subdirectory like: ./email/v1/de/recover.eml, it can be used by the LUA command: mail( "recover.eml", "de", template_data )
+If the template file is stored in a subdirectory like: ./email/v1/de/recover.eml, it can be used by the LUA command: mail( "recover.eml", "en", template_data )
 
-The "de" in this LUA command should be replaced by the language variable of the user. If the language subdirectory "de" is not found in the path, the system
+The "en" in this LUA command should be replaced by the language variable of the user. If the language subdirectory "en" is not found in the path, the system
 looks for the recovery.eml file one directory hirachy higher (./email/v1/recover.eml), so in this parent directory, there should always be the default language template (like "en").
 
 The recover.eml template follows the GO template specifications. More info can be found here:

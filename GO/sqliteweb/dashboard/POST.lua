@@ -35,7 +35,7 @@ template_data = {
   Subject = "MySubject"
 }
 
---mail( "welcome.eml", "de", template_data )
+--mail( "welcome.eml", "en", template_data )
 
 Write( jsonEncode( Response ) )
 SetStatus( 200 )

@@ -19,6 +19,10 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"net"
+	"net/http"
+	"net/smtp"
 	"os"
 	"strings"
 
@@ -102,4 +106,29 @@ func ResultToObj(result *sqlitecloud.Result) (interface{}, error) {
 	default:
 		return 0, errors.New("Unknown Output Format")
 	}
+}
+
+func mail(from string, to []string, msg []byte) error {
+	host, _, err := net.SplitHostPort(cfg.Section("mail").Key("mail.proxy.host").String())
+	if err != nil {
+		return err
+	}
+
+	auth := smtp.PlainAuth("", cfg.Section("mail").Key("mail.proxy.user").String(), cfg.Section("mail").Key("mail.proxy.password").String(), host)
+
+	err = smtp.SendMail(cfg.Section("mail").Key("mail.proxy.host").String(), auth, from, to, msg)
+	return err
+}
+
+func writeError(writer http.ResponseWriter, statusCode int, message string, allowedMethods *string) {
+	if statusCode == http.StatusMethodNotAllowed && allowedMethods != nil {
+		writer.Header().Set("Access-Control-Allow-Methods", *allowedMethods)
+		writer.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		writer.Header().Set("Pragma", "no-cache")
+		writer.Header().Set("Expires", "0")
+	}
+	writer.Header().Set("Content-Type", "application/json")
+	writer.Header().Set("Content-Encoding", "utf-8")
+	writer.WriteHeader(statusCode)
+	writer.Write([]byte(fmt.Sprintf("{\"status\":%d,\"message\":\"%s\"}", statusCode, message)))
 }

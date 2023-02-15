@@ -167,7 +167,7 @@ func ParseTlsString(tlsconf string) (secure bool, pem string) {
 		return false, ""
 	case "1", "Y", "YES", "TRUE", "ON", "ENABLE", "ENABLED":
 		return true, ""
-	case strings.ToUpper(SQLiteCloudCA), "INTERN":
+	case strings.ToUpper(SQLiteCloudCA), "INTERN", "<USE INTERNAL PEM>":
 		return true, SQLiteCloudCA
 	default:
 		return true, strings.TrimSpace(tlsconf)

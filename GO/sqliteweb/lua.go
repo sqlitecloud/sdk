@@ -601,9 +601,9 @@ func lua_executeSQL(L *lua.State) int {
 
 // Email & Template helper
 
-// mailTo( mailTo, Subject, template_data ), z.B. mailTo( "andreas@byte.watch", "welcome.eml", { To = "andreas.pfeil@..." } )
-func mail(L *lua.State) int {
-	host, _, err := net.SplitHostPort(cfg.Section("lua").Key("mail.proxy.host").String())
+// mail( template, language, template_data ), z.B. mailTo("welcome.eml", "en", { To = "andreas.pfeil@..." } )
+func lua_mail(L *lua.State) int {
+	host, _, err := net.SplitHostPort(cfg.Section("mail").Key("mail.proxy.host").String())
 
 	switch {
 	case err != nil:
@@ -616,9 +616,9 @@ func mail(L *lua.State) int {
 		goto fail
 
 	default:
-		auth := smtp.PlainAuth("", cfg.Section("lua").Key("mail.proxy.user").String(), cfg.Section("lua").Key("mail.proxy.password").String(), host)
+		auth := smtp.PlainAuth("", cfg.Section("mail").Key("mail.proxy.user").String(), cfg.Section("mail").Key("mail.proxy.password").String(), host)
 
-		path := cfg.Section("lua").Key("mail.template.path").String()
+		path := cfg.Section("mail").Key("mail.template.path").String()
 		tempName := lua.CheckString(L, 1)
 		language := lua.CheckString(L, 2)
 
@@ -632,7 +632,7 @@ func mail(L *lua.State) int {
 		}
 
 		now := time.Now()
-		data["From"] = cfg.Section("lua").Key("mail.from").String()
+		data["From"] = cfg.Section("mail").Key("mail.from").String()
 		data["Time"] = now.Format("15:04:05")
 		data["Date"] = now.Format("2006-01-02")
 		data["Year"] = now.Format("2006")
@@ -648,15 +648,26 @@ func mail(L *lua.State) int {
 
 				var outBuffer bytes.Buffer
 				err = temp.Execute(&outBuffer, data)
-				fmt.Printf("%v (%s)\r\n", err, string(outBuffer.Bytes()))
+				if err != nil {
+					SQLiteWeb.Logger.Errorf("Error in template: %s %s", tempName, err.Error())
+					L.PushBoolean(false)
+					return 1
+				}
+				// fmt.Printf("%v (%s)\r\n", err, string(outBuffer.Bytes()))
 
-				if err = smtp.SendMail(cfg.Section("lua").Key("mail.proxy.host").String(), auth, data["From"], []string{data["To"]}, outBuffer.Bytes()); err == nil {
+				if err = smtp.SendMail(cfg.Section("mail").Key("mail.proxy.host").String(), auth, data["From"], []string{data["To"]}, outBuffer.Bytes()); err != nil {
+					SQLiteWeb.Logger.Errorf("Error sending mail: %s %s", tempName, err.Error())
+					L.PushBoolean(false)
+					return 1
+				} else {
 					L.PushBoolean(true)
 					return 1
 				}
 				// fmt.Printf( "%v\r\n", err )
 			}
 		}
+
+		SQLiteWeb.Logger.Errorf("Mail template not found: %s", tempName)
 	}
 
 fail:
@@ -751,7 +762,7 @@ NextPart:
 		l.Register("getINIBoolean", lua_getINIBoolean)
 
 		// register internal mail related functions
-		l.Register("mail", mail)
+		l.Register("mail", lua_mail)
 
 		// register missing string functions
 		l.Register("stringMatch", lua_stringMatch)

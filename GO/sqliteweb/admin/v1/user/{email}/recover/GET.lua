@@ -42,6 +42,6 @@ if result.NumberOfColumns   ~= 1                                                
 
 template_data.Password = result.Rows[ 1 ].password
 
-mail( "recover.eml", "de", template_data )
+mail( "recover.eml", "en", template_data )
 
 error( 200, "OK" )

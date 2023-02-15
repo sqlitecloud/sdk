@@ -141,6 +141,7 @@ func main() {
 			SQLiteWeb.Auth.cert = cfg.Section("auth").Key("cert").String()
 
 			initLogger()
+			initWeb()
 			initDashboard()
 			initAdmin()
 			initStubs()

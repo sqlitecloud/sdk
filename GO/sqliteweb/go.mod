@@ -19,6 +19,7 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
+	github.com/sendgrid/rest v2.6.9+incompatible // indirect
 	github.com/swaggest/jsonschema-go v0.3.42 // indirect
 	github.com/swaggest/refl v1.1.0 // indirect
 	github.com/xo/dburl v0.12.4 // indirect
@@ -37,6 +38,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.3
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/google/uuid v1.3.0
+	github.com/sendgrid/sendgrid-go v3.12.0+incompatible
 	github.com/sqlitecloud/sdk v0.0.0
 	github.com/swaggest/openapi-go v0.2.26
 	github.com/teris-io/shortid v0.0.0-20220617161101-71ec9f2aa569
