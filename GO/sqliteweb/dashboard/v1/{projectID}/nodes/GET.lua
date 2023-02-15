@@ -78,7 +78,7 @@ if userID == 0 then
 else
   
   local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
-  local command     = "SELECT Node.id, Node.name, provider, image AS details, region, size, IIF( addr4, addr4, '' ) || IIF( addr4 AND addr6, ',', '' ) || IIF( addr6, addr6, '' ) AS address, port, latitude, longitude, node_id FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid WHERE User.enabled = 1 AND User.id = ? AND uuid=? AND Node.created = 1;"
+  local command     = "SELECT Node.id, Node.name, provider, image AS details, region, size, IIF( hostname NOT NULL AND hostname != '', hostname, IIF(addr6 NOT NULL AND addr6 != '', addr6, addr4)) AS address, port, latitude, longitude, node_id FROM User JOIN Company ON User.company_id = Company.id JOIN Project ON Company.id = Project.company_id JOIN Node ON Project.uuid = Node.project_uuid WHERE User.enabled = 1 AND User.id = ? AND uuid=? AND Node.created = 1;"
 
   local databases = nil
 
