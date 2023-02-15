@@ -308,7 +308,7 @@ func (this *CloudProviderDigitalOcean) CreateNode(nodeCreateReq *CloudNodeCreate
 	}
 
 	cloudNode.AddrV4 = addrV4
-	cloudNode.AddrV4 = addrV6
+	cloudNode.AddrV6 = addrV6
 
 	// 3. Add the DNS record
 	ctxDnsRecord, ctxDnsRecordCancel := context.WithTimeout(context.Background(), cloudRequestTimeout)
@@ -346,7 +346,7 @@ func (this *CloudProviderDigitalOcean) DestroyNode(cloudNode *CloudNode) error {
 
 	if cloudNode.DomainRecordID != 0 {
 		ctx := context.TODO()
-		if _, err := this.doclient.Domains.DeleteRecord(ctx, "example.com", cloudNode.DomainRecordID); err != nil {
+		if _, err := this.doclient.Domains.DeleteRecord(ctx, cloudNode.Domain, cloudNode.DomainRecordID); err != nil {
 			return fmt.Errorf("Error: cannot delete domain record %d %s.%s: %s", cloudNode.DomainRecordID, cloudNode.Hostname, cloudNode.Domain, err.Error())
 		}
 	}
