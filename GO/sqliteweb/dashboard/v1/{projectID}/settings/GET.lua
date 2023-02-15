@@ -38,7 +38,7 @@ Response = {
 
 local projectID, err, msg = verifyProjectID( userID, projectID )                if err ~= 0 then return error( err, msg )                     end
 
-command = "LIST KEYS DETAILED"
+command = "LIST KEYS DETAILED NOREADONLY"
 settings = executeSQL( projectID, command )
 
 if not settings                          then return error( 404, "ProjectID OR NodeID not found" ) end
