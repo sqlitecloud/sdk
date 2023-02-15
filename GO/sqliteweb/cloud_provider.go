@@ -30,8 +30,9 @@ import (
 )
 
 const (
-	pollingSleep   = 5 * time.Second
-	pollingTimeout = 10 * time.Minute
+	pollingSleep        = 5 * time.Second
+	pollingTimeout      = 10 * time.Minute
+	cloudRequestTimeout = 5 * time.Minute
 )
 
 func createNode(userid int, name string, region string, size string, nodetype string, projectuuid string, nodeid int) (string, error) {
@@ -94,13 +95,15 @@ func createNode(userid int, name string, region string, size string, nodetype st
 	sqlitecloudPort := 8860
 
 	go func() {
-		clusterConfig, nnodes, err := clusterConfig(projectuuid, nodeid, fmt.Sprintf("%s.%s", nodeshortid, dropletDomain), sqlitecloudPort)
+		clusterConfig, isFirstNode, err := clusterConfig(projectuuid, nodeid, fmt.Sprintf("%s.%s", nodeshortid, dropletDomain), sqlitecloudPort)
 		if err != nil {
 			SQLiteWeb.Logger.Error(err.Error())
-			sql := fmt.Sprintf("UPDATE Jobs SET status = '%s' WHERE uuid = '%s'", err.Error(), jobuuid)
+			sql := fmt.Sprintf("UPDATE Jobs SET status = '%s', error = 1, stamp = DATETIME('now') WHERE uuid = '%s'", err.Error(), jobuuid)
 			authExecSQL(sql)
 			return
 		}
+
+		nodeAddedToClusterConf := false
 
 		// run CreateNode asynchronously in a goroutine
 		nodeCreateReq := &CloudNodeCreateRequest{
@@ -120,50 +123,55 @@ func createNode(userid int, name string, region string, size string, nodetype st
 		cloudNode, err := cloudProvider.CreateNode(nodeCreateReq)
 		if err != nil {
 			SQLiteWeb.Logger.Errorf("digitalocean CreateNode: %s", err.Error())
-			sql := fmt.Sprintf("UPDATE Jobs SET status = '%s' WHERE uuid = '%s'", err.Error(), jobuuid)
+			sql := fmt.Sprintf("UPDATE Jobs SET status = '%s', error = 1, stamp = DATETIME('now') WHERE uuid = '%s'", err.Error(), jobuuid)
 			authExecSQL(sql)
+			destroyCloudNode(cloudProvider, cloudNode, nid, nodeAddedToClusterConf)
 			return
 		}
 		SQLiteWeb.Logger.Debugf("Droplet completed %s %s %d", cloudNode.Name, cloudNode.JobUUID, cloudNode.DropletID)
 
-		if nnodes > 0 {
+		if !isFirstNode {
 			// execute the ADD NODE command to the cluster
-			addCommand := fmt.Sprintf("ADD NODE %d ADDRESS %s:%d", cloudNode.NodeID, cloudNode.AddrV4, cloudNode.Port)
+			addCommand := fmt.Sprintf("ADD NODE %d ADDRESS %s:%d", cloudNode.NodeID, cloudNode.FullyQualifiedDomainName(), cloudNode.Port)
 			_, err, _, _, _ = dashboardcm.ExecuteSQL(projectuuid, addCommand)
 			if err != nil {
-				SQLiteWeb.Logger.Errorf("Cannot add the new node %d to the cluster %s: %s", cloudNode.NodeID, cloudNode.JobUUID, err.Error())
+				err = fmt.Errorf("Cannot add the new node %d to the cluster %s: %s", cloudNode.NodeID, cloudNode.JobUUID, err.Error())
+				SQLiteWeb.Logger.Error(err.Error())
+				sql := fmt.Sprintf("UPDATE Jobs SET status = '%s', error = 1, stamp = DATETIME('now') WHERE uuid = '%s'", err.Error(), jobuuid)
+				authExecSQL(sql)
+				destroyCloudNode(cloudProvider, cloudNode, nid, nodeAddedToClusterConf)
+				return
 			}
 			SQLiteWeb.Logger.Debugf("Node added to the cluster %d %s", cloudNode.NodeID, cloudNode.JobUUID)
+			nodeAddedToClusterConf = true
 		}
 
-		sql = fmt.Sprintf("UPDATE Jobs SET progress = progress + 1, status = 'System setup' WHERE uuid = '%s'", nodeCreateReq.JobUUID)
+		sql = fmt.Sprintf("UPDATE Jobs SET progress = progress + 1, status = 'System setup', stamp = DATETIME('now') WHERE uuid = '%s'", nodeCreateReq.JobUUID)
 		authExecSQL(sql)
 
-		sql = fmt.Sprintf("UPDATE Node SET hostname = '%s', type = '%s', provider = '%s', image = '%s', region = '%s', addr4 = '%s', addr6 = '%s', port = %d, latitude = %f, longitude = %f, created = 1 WHERE id = %d", cloudNode.FullyQualifiedDomainName(), cloudNode.Type, "DigitalOcean", cloudNode.Size, cloudNode.Region, cloudNode.AddrV4, cloudNode.AddrV6, cloudNode.Port, cloudNode.Location.Latitude, cloudNode.Location.Longitude, nid)
+		sql = fmt.Sprintf("UPDATE Node SET hostname = '%s', type = '%s', provider = '%s', image = '%s', region = '%s', addr4 = '%s', addr6 = '%s', port = %d, latitude = %f, longitude = %f WHERE id = %d", cloudNode.FullyQualifiedDomainName(), cloudNode.Type, "DigitalOcean", cloudNode.Size, cloudNode.Region, cloudNode.AddrV4, cloudNode.AddrV6, cloudNode.Port, cloudNode.Location.Latitude, cloudNode.Location.Longitude, nid)
 		authExecSQL(sql)
 
-		conn, err := waitForConnection(cloudNode)
+		adminUser, adminPasswd, tmpAdminUser, tmpAdminPasswd := getProjectAdminCredentials(projectuuid, isFirstNode)
+
+		conn, err := waitForConnection(cloudNode, tmpAdminUser, tmpAdminPasswd)
 		if err != nil {
 			SQLiteWeb.Logger.Error(err.Error())
-			sql := fmt.Sprintf("UPDATE Jobs SET status = '%s' WHERE uuid = '%s'", err.Error(), jobuuid)
+			sql := fmt.Sprintf("UPDATE Jobs SET status = '%s', error = 1, stamp = DATETIME('now') WHERE uuid = '%s'", err.Error(), jobuuid)
 			authExecSQL(sql)
+			destroyCloudNode(cloudProvider, cloudNode, nid, nodeAddedToClusterConf)
 			return
 		}
 
-		if nnodes == 0 {
-			res, err, _, _, _ := dashboardcm.ExecuteSQL("auth", "SELECT admin_username, admin_password FROM Project")
-			if err != nil {
-				SQLiteWeb.Logger.Errorf("Cannot get admin credentials %s", err.Error())
-			}
-			if v := res.GetStringValue_(0, 0); v != "" && v != "admin" {
-				conn.ExecuteArray("RENAME USER admin TO ?", []interface{}{v})
-			}
-			if v := res.GetStringValue_(0, 1); v != "" && v != "admin" {
-				conn.ExecuteArray("SET MY PASSWORD ?", []interface{}{v})
-			}
+		if err := setServerAdminCredentials(conn, adminUser, adminPasswd, isFirstNode); err != nil {
+			SQLiteWeb.Logger.Error(err.Error())
+			sql := fmt.Sprintf("UPDATE Jobs SET status = '%s', error = 1, stamp = DATETIME('now') WHERE uuid = '%s'", err.Error(), jobuuid)
+			authExecSQL(sql)
+			destroyCloudNode(cloudProvider, cloudNode, nid, nodeAddedToClusterConf)
+			return
 		}
 
-		sql = fmt.Sprintf("UPDATE Jobs SET progress = progress + 1, status = 'completed' WHERE uuid = '%s'", nodeCreateReq.JobUUID)
+		sql = fmt.Sprintf("UPDATE Jobs SET progress = progress + 1, status = 'Completed', stamp = DATETIME('now') WHERE uuid = '%s'", nodeCreateReq.JobUUID)
 		authExecSQL(sql)
 
 		sql = fmt.Sprintf("UPDATE Node SET created = 1 WHERE id = %d", nid)
@@ -173,6 +181,61 @@ func createNode(userid int, name string, region string, size string, nodetype st
 	return jobuuid, nil
 }
 
+func destroyCloudNode(cloudProvider CloudProvider, cloudNode *CloudNode, nid int64, nodeAddedToClusterConf bool) {
+	if nodeAddedToClusterConf {
+		removeCommand := fmt.Sprintf("REMOVE NODE %d", cloudNode.NodeID)
+		if _, err, _, _, _ := dashboardcm.ExecuteSQL(cloudNode.ProjectUUID, removeCommand); err != nil {
+			SQLiteWeb.Logger.Error(err.Error())
+			return
+		}
+	}
+
+	if err := cloudProvider.DestroyNode(cloudNode); err != nil {
+		SQLiteWeb.Logger.Error(err.Error())
+		return
+	}
+
+	sql := fmt.Sprintf("DELETE FROM Node WHERE id = %d", nid)
+	authExecSQL(sql)
+}
+
+func getProjectAdminCredentials(projectuuid string, isFirstNode bool) (adminUser string, adminPassword string, tmpAdminUser string, tmpAdminPassword string) {
+	adminUser, adminPassword, tmpAdminUser, tmpAdminPassword = "admin", "admin", "admin", "admin"
+
+	sql := fmt.Sprintf("SELECT admin_username, admin_password FROM Project WHERE uuid = '%s'", projectuuid)
+	if res, err, _, _, _ := dashboardcm.ExecuteSQL("auth", sql); err != nil {
+		SQLiteWeb.Logger.Errorf("Cannot get admin credentials %s", err.Error())
+	} else {
+		adminUser = res.GetStringValue_(0, 0)
+		adminPassword = res.GetStringValue_(0, 1)
+
+		if !isFirstNode {
+			tmpAdminUser = adminUser
+			tmpAdminPassword = adminPassword
+		}
+	}
+
+	return
+}
+
+func setServerAdminCredentials(conn *sqlitecloud.SQCloud, adminUser string, adminPasswd string, isFirstNode bool) error {
+	if isFirstNode {
+		if adminUser != "" && adminUser != "admin" {
+			if err := conn.ExecuteArray("RENAME USER admin TO ?", []interface{}{adminUser}); err != nil {
+				return err
+			}
+
+		}
+		if adminPasswd != "" && adminPasswd != "admin" {
+			if err := conn.ExecuteArray("SET MY PASSWORD ?", []interface{}{adminPasswd}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func authExecSQL(sql string) {
 	_, err, _, _, _ := dashboardcm.ExecuteSQL("auth", sql)
 	if err != nil {
@@ -180,10 +243,10 @@ func authExecSQL(sql string) {
 	}
 }
 
-func waitForConnection(cloudNode *CloudNode) (conn *sqlitecloud.SQCloud, err error) {
+func waitForConnection(cloudNode *CloudNode, user string, passwd string) (conn *sqlitecloud.SQCloud, err error) {
 	timeout := time.NewTimer(pollingTimeout)
 	for {
-		connectionString := fmt.Sprintf("sqlitecloud://admin:admin@%s:%d?timeout=5", cloudNode.FullyQualifiedDomainName(), cloudNode.Port)
+		connectionString := fmt.Sprintf("sqlitecloud://%s:%s@%s:%d?timeout=5", user, passwd, cloudNode.FullyQualifiedDomainName(), cloudNode.Port)
 		conn, err = sqlitecloud.Connect(connectionString)
 		SQLiteWeb.Logger.Debugf("sqlitecloud.Connect %s err %v", connectionString, err)
 		if err == nil && conn != nil {
@@ -204,21 +267,24 @@ func waitForConnection(cloudNode *CloudNode) (conn *sqlitecloud.SQCloud, err err
 	return
 }
 
-func clusterConfig(projectuuid string, nodeid int, hostname string, port int) (string, int, error) {
+func clusterConfig(projectuuid string, nodeid int, hostname string, port int) (clusterConfig string, isFirstNode bool, err error) {
 	sql := fmt.Sprintf("SELECT node_id as id, hostname || ':' || port as 'public' FROM Node WHERE project_uuid = '%s' AND node_id != %d AND created = 1", projectuuid, nodeid)
 	listNodes, err, _, _, _ := dashboardcm.ExecuteSQL("auth", sql)
 	if err != nil {
-		return "", 0, fmt.Errorf("Cannot get project's nodes %s: %s", projectuuid, err.Error())
+		err = fmt.Errorf("Cannot get project's nodes %s: %s", projectuuid, err.Error())
+		return
 	}
 
 	listNodesObj, err := ResultToObj(listNodes)
 	if err != nil {
-		return "", 0, fmt.Errorf("Cannot get project's nodes %s: %s", projectuuid, err.Error())
+		err = fmt.Errorf("Cannot get project's nodes %s: %s", projectuuid, err.Error())
+		return
 	}
 
 	listNodesRowset, ok := listNodesObj.(map[string]interface{})
 	if !ok {
-		return "", 0, fmt.Errorf("Invalid nodesobj response: %v", listNodesObj)
+		err = fmt.Errorf("Invalid nodesobj response: %v", listNodesObj)
+		return
 	}
 
 	listNodesRowsMap, ok := listNodesRowset["rows"].([]map[string]interface{})
@@ -228,12 +294,14 @@ func clusterConfig(projectuuid string, nodeid int, hostname string, port int) (s
 		listNodesRowsMap = []map[string]interface{}{{"id": nodeid, "public": fmt.Sprintf("%s:%d", hostname, port)}}
 	}
 
-	clusterConfig, err := json.Marshal(listNodesRowsMap)
+	clusterConfigB, err := json.Marshal(listNodesRowsMap)
 	if err != nil {
-		return "", 0, err
+		return
 	}
 
-	return string(clusterConfig), int(listNodes.GetNumberOfRows()), nil
+	clusterConfig = string(clusterConfigB)
+	isFirstNode = listNodes.GetNumberOfRows() == 0
+	return
 }
 
 const dropletDomain = "sqlite.cloud"

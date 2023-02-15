@@ -29,7 +29,8 @@ import (
 )
 
 const (
-	imageSlug = "ubuntu-22-04-x64"
+	imageSlug      = "ubuntu-22-04-x64"
+	doProviderName = "DigitalOcean"
 )
 
 var (
@@ -39,6 +40,7 @@ var (
 
 type CloudProvider interface {
 	CreateNode(nodeCreateReq *CloudNodeCreateRequest) (*CloudNode, error)
+	DestroyNode(cloudNode *CloudNode) error
 }
 
 // DropletCreateRequest represents a request to create a Droplet.
@@ -64,21 +66,22 @@ type Coordinates struct {
 }
 
 type CloudNode struct {
-	JobUUID     string
-	Name        string
-	Region      string
-	Size        string
-	Type        string
-	ProjectUUID string
-	NodeID      int
-	Hostname    string
-	Domain      string
-	AddrV4      string
-	AddrV6      string
-	Port        int
-	Location    Coordinates
-	Provider    string
-	DropletID   int
+	JobUUID        string
+	Name           string
+	Region         string
+	Size           string
+	Type           string
+	ProjectUUID    string
+	NodeID         int
+	Hostname       string
+	Domain         string
+	AddrV4         string
+	AddrV6         string
+	Port           int
+	Location       Coordinates
+	Provider       string
+	DropletID      int
+	DomainRecordID int
 }
 
 func (node *CloudNode) FullyQualifiedDomainName() string {
@@ -159,8 +162,6 @@ write_files:
       WantedBy=multi-user.target
 runcmd:
   - cd /root
-  - DIGITALOCEAN_TOKEN={{.Token}}
-  - curl -X POST -H "Content-Type:\ application/json" -H "Authorization:\ Bearer $DIGITALOCEAN_TOKEN" -d "{\"type\":\"A\",\"name\":\"{{.Hostname}}\",\"data\":\"$(curl -s ifconfig.me)\",\"priority\":null,\"port\":null,\"ttl\":1800,\"weight\":null,\"flags\":null,\"tag\":null}" "https://api.digitalocean.com/v2/domains/{{.Domain}}/records" -o "sqlite_cloud_dns_records.log"
   - mkdir -p /var/lib/sqlitecloud/{{.Port}}
   - wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1a8gqZA_R-m0R4BZ_F_7JT0_kuwVgsgtc' -O sqlitecloud-v0.9.8-linux-amd64.tar.gz
   - tar xvzf sqlitecloud-v0.9.8-linux-amd64.tar.gz
@@ -174,7 +175,10 @@ runcmd:
   - ln -s /etc/letsencrypt/live/{{.Hostname}}.{{.Domain}}/fullchain.pem /var/lib/sqlitecloud/{{.Port}}/certificate.pem
   - systemctl start sqlitecloud`))
 
-// - sed -i "s/` + dropletAddrPortStringPlaceholder + `/$(curl -s ifconfig.me):{{.Port}}/g" /etc/sqlitecloud/node.ini
+//   - DIGITALOCEAN_TOKEN={{.Token}}
+//   - curl -X POST -H "Content-Type:\ application/json" -H "Authorization:\ Bearer $DIGITALOCEAN_TOKEN" -d "{\"type\":\"A\",\"name\":\"{{.Hostname}}\",\"data\":\"$(curl -s ifconfig.me)\",\"priority\":null,\"port\":null,\"ttl\":1800,\"weight\":null,\"flags\":null,\"tag\":null}" "https://api.digitalocean.com/v2/domains/{{.Domain}}/records" -o "sqlite_cloud_dns_records.log"
+
+//   - sed -i "s/` + dropletAddrPortStringPlaceholder + `/$(curl -s ifconfig.me):{{.Port}}/g" /etc/sqlitecloud/node.ini
 
 func setDefaults(nodeCreateReq *CloudNodeCreateRequest) {
 	if nodeCreateReq.Port == 0 {
@@ -196,9 +200,10 @@ func (this *CloudProviderDigitalOcean) CreateNode(nodeCreateReq *CloudNodeCreate
 	cloudConfigBuf := new(bytes.Buffer)
 	cloudConfigTemplate.Execute(cloudConfigBuf, nodeCreateReq)
 
-	SQLiteWeb.Logger.Infof("Cloud Config:\n\n\n%s\n\n\n", cloudConfigBuf.String())
+	// SQLiteWeb.Logger.Infof("Cloud Config:\n\n\n%s\n\n\n", cloudConfigBuf.String())
 
-	createRequest := &godo.DropletCreateRequest{
+	// 1. Create Droplet Request
+	createDropletRequest := &godo.DropletCreateRequest{
 		Name:   nodeCreateReq.Name,
 		Region: nodeCreateReq.Region, // "nyc3",
 		Size:   nodeCreateReq.Size,   // "s-1vcpu-1gb",
@@ -210,34 +215,57 @@ func (this *CloudProviderDigitalOcean) CreateNode(nodeCreateReq *CloudNodeCreate
 		UserData: cloudConfigBuf.String(),
 	}
 
-	ctx := context.TODO()
+	ctxDroplet, ctxDropletCancel := context.WithTimeout(context.Background(), cloudRequestTimeout)
+	defer ctxDropletCancel()
 
-	newDroplet, resp, err := this.doclient.Droplets.Create(ctx, createRequest)
-
+	newDroplet, resp, err := this.doclient.Droplets.Create(ctxDroplet, createDropletRequest)
 	if err != nil {
-		err = fmt.Errorf("error: cannot create a digitalocean droplet: %s", err.Error())
+		err = fmt.Errorf("Error: cannot create a digitalocean droplet: %s", err.Error())
+		return nil, err
+	}
+	if newDroplet == nil {
+		err = errors.New("Error: cannot create a digitalocean droplet")
 		return nil, err
 	}
 
+	cloudNode := &CloudNode{
+		JobUUID:     nodeCreateReq.JobUUID,
+		Name:        newDroplet.Name,
+		Region:      newDroplet.Region.Slug,
+		Size:        newDroplet.Size.Slug,
+		Type:        nodeCreateReq.Type,
+		ProjectUUID: nodeCreateReq.ProjectUUID,
+		NodeID:      nodeCreateReq.NodeID,
+		Hostname:    nodeCreateReq.Hostname,
+		Domain:      nodeCreateReq.Domain,
+		Port:        nodeCreateReq.Port,
+		Location:    regionLocation[newDroplet.Region.Slug],
+		Provider:    doProviderName,
+		DropletID:   newDroplet.ID,
+	}
+
 	if len(resp.Links.Actions) != 1 {
-		err = fmt.Errorf("error: invalid response links: %d", len(resp.Links.Actions))
-		return nil, err
+		err = fmt.Errorf("Error: invalid response links: %d", len(resp.Links.Actions))
+		return cloudNode, err
 	}
 
 	SQLiteWeb.Logger.Infof("Droplet created %s %s %d: %s", nodeCreateReq.Name, nodeCreateReq.JobUUID, newDroplet.ID, resp.Links.Actions[0].HREF)
 
+	// 2. Poll the Actions endpoint to get the Droplet addresses
+	ctx := context.TODO()
+	timeout := time.NewTimer(pollingTimeout)
 	for {
 		action, _, err := this.doclient.Actions.Get(ctx, resp.Links.Actions[0].ID)
 		if err != nil {
-			err = fmt.Errorf("error: cannot get actions for created droplet: %s", err.Error())
-			return nil, err
+			err = fmt.Errorf("Error: cannot get actions for created droplet: %s", err.Error())
+			return cloudNode, err
 		}
 
 		completed := false
 		switch action.Status {
 		case "errored":
-			err = errors.New("error: create droplet action status is errored")
-			return nil, err
+			err = errors.New("Error: create droplet action status is errored")
+			return cloudNode, err
 		case "completed":
 			completed = true
 		}
@@ -246,13 +274,21 @@ func (this *CloudProviderDigitalOcean) CreateNode(nodeCreateReq *CloudNodeCreate
 			break
 		}
 
+		select {
+		case <-timeout.C:
+			err = fmt.Errorf("Error: cannot get new droplet's info before timeout %v", pollingTimeout)
+			return cloudNode, err
+		default:
+			// non-blocking select
+		}
+
 		time.Sleep(pollingSleep)
 	}
 
 	newDroplet, resp, err = this.doclient.Droplets.Get(ctx, newDroplet.ID)
 	if err != nil {
-		err = fmt.Errorf("error: cannot get new droplet's info: %s", err.Error())
-		return nil, err
+		err = fmt.Errorf("Error: cannot get new droplet's info: %s", err.Error())
+		return cloudNode, err
 	}
 
 	addrV4 := ""
@@ -271,25 +307,49 @@ func (this *CloudProviderDigitalOcean) CreateNode(nodeCreateReq *CloudNodeCreate
 		}
 	}
 
-	location := regionLocation[newDroplet.Region.Slug]
+	cloudNode.AddrV4 = addrV4
+	cloudNode.AddrV4 = addrV6
 
-	cloudNode := &CloudNode{
-		JobUUID:     nodeCreateReq.JobUUID,
-		Name:        newDroplet.Name,
-		Region:      newDroplet.Region.Slug,
-		Size:        newDroplet.Size.Slug,
-		Type:        nodeCreateReq.Type,
-		ProjectUUID: nodeCreateReq.ProjectUUID,
-		NodeID:      nodeCreateReq.NodeID,
-		Hostname:    nodeCreateReq.Hostname,
-		Domain:      nodeCreateReq.Domain,
-		AddrV4:      addrV4,
-		AddrV6:      addrV6,
-		Port:        nodeCreateReq.Port,
-		Location:    location,
-		Provider:    "DigitalOcean",
-		DropletID:   newDroplet.ID,
+	// 3. Add the DNS record
+	ctxDnsRecord, ctxDnsRecordCancel := context.WithTimeout(context.Background(), cloudRequestTimeout)
+	defer ctxDnsRecordCancel()
+
+	createDomainRecordRequest := &godo.DomainRecordEditRequest{
+		Type: "A",
+		Name: nodeCreateReq.Hostname,
+		Data: addrV4,
+	}
+
+	if domainRecord, _, err := this.doclient.Domains.CreateRecord(ctxDnsRecord, nodeCreateReq.Domain, createDomainRecordRequest); err != nil {
+		err = fmt.Errorf("Error: cannot create new domain record: %s.%s %s", nodeCreateReq.Hostname, nodeCreateReq.Domain, err.Error())
+		return cloudNode, err
+	} else {
+		cloudNode.DomainRecordID = domainRecord.ID
 	}
 
 	return cloudNode, nil
+}
+
+func (this *CloudProviderDigitalOcean) DestroyNode(cloudNode *CloudNode) error {
+	if cloudNode == nil || cloudNode.DropletID == 0 {
+		return nil
+	}
+
+	if cloudNode.Provider != doProviderName {
+		return fmt.Errorf("Error: expecting provider %s, got %s (id: %d)", doProviderName, cloudNode.Provider, cloudNode.DropletID)
+	}
+
+	ctx := context.TODO()
+	if _, err := this.doclient.Droplets.Delete(ctx, cloudNode.DropletID); err != nil {
+		return fmt.Errorf("Error: cannot delete droplet %d: %s", cloudNode.DropletID, err.Error())
+	}
+
+	if cloudNode.DomainRecordID != 0 {
+		ctx := context.TODO()
+		if _, err := this.doclient.Domains.DeleteRecord(ctx, "example.com", cloudNode.DomainRecordID); err != nil {
+			return fmt.Errorf("Error: cannot delete domain record %d %s.%s: %s", cloudNode.DomainRecordID, cloudNode.Hostname, cloudNode.Domain, err.Error())
+		}
+	}
+
+	return nil
 }
