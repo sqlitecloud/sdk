@@ -73,7 +73,7 @@ module.exports = {
     runtimeChunk: 'single',
   },
   stats: {
-    children: true,
+    children: false,
   }
 };
 
