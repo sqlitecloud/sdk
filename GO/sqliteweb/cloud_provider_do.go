@@ -34,21 +34,25 @@ const (
 )
 
 var (
-	digitalocean   CloudProvider
-	regionLocation map[string]Coordinates
+	digitalocean  CloudProvider
+	rSlugLocation map[string]Coordinates
+	regionSlug    map[CloudRegion]string
+	sizeSlug      map[CloudSize]string
 )
 
 type CloudProvider interface {
 	CreateNode(nodeCreateReq *CloudNodeCreateRequest) (*CloudNode, error)
 	DestroyNode(cloudNode *CloudNode) error
+	RegionToSlug(r CloudRegion) (string, bool)
+	SizeToSlug(r CloudSize) (string, bool)
 }
 
 // DropletCreateRequest represents a request to create a Droplet.
 type CloudNodeCreateRequest struct {
 	JobUUID       string
 	Name          string
-	Region        string
-	Size          string
+	Region        CloudRegion
+	Size          CloudSize
 	Type          string
 	ProjectUUID   string
 	NodeID        int
@@ -68,8 +72,10 @@ type Coordinates struct {
 type CloudNode struct {
 	JobUUID        string
 	Name           string
-	Region         string
-	Size           string
+	Region         CloudRegion
+	RegionSlug     string
+	Size           CloudSize
+	SizeSlug       string
 	Type           string
 	ProjectUUID    string
 	NodeID         int
@@ -93,7 +99,7 @@ type CloudProviderDigitalOcean struct {
 }
 
 func init() {
-	regionLocation = map[string]Coordinates{
+	rSlugLocation = map[string]Coordinates{
 		"nyc1": {40.7966743, -74.0334953},
 		"nyc2": {40.7414619, -74.0052546},
 		"nyc3": {40.8299598, -74.128822},
@@ -108,6 +114,29 @@ func init() {
 		"tor1": {43.6508826, -79.3639686},
 		"blr1": {12.8396177, 77.6593288},
 		"syd1": {-33.847927, 150.6517896}, // geo location of sydney, not found any info for the datacenter
+	}
+
+	regionSlug = map[CloudRegion]string{
+		NYC1: "nyc1",
+		NYC2: "myc2",
+		NYC3: "nyc3",
+		SFO1: "sfo1",
+		SFO2: "sfo2",
+		SFO3: "sfo3",
+		AMS2: "ams2",
+		AMS3: "ams3",
+		LON1: "lon1",
+		FRA1: "fra1",
+		SGP1: "sgp1",
+		TOR1: "tor1",
+		BLR1: "blr1",
+		SYD1: "syd1",
+	}
+
+	sizeSlug = map[CloudSize]string{
+		CloudSize_1_1_25: "s-1vcpu-1gb",
+		CloudSize_1_2_50: "s-1vcpu-2gb",
+		CloudSize_2_2_60: "s-2vcpu-2gb",
 	}
 }
 
@@ -202,11 +231,23 @@ func (this *CloudProviderDigitalOcean) CreateNode(nodeCreateReq *CloudNodeCreate
 
 	// SQLiteWeb.Logger.Infof("Cloud Config:\n\n\n%s\n\n\n", cloudConfigBuf.String())
 
+	rSlug, found := this.RegionToSlug(nodeCreateReq.Region)
+	if !found {
+		err := fmt.Errorf("Error: invalid droplet region: %s", nodeCreateReq.Region)
+		return nil, err
+	}
+
+	sSlug, found := this.SizeToSlug(nodeCreateReq.Size)
+	if !found {
+		err := fmt.Errorf("Error: invalid droplet size: %s", nodeCreateReq.Size)
+		return nil, err
+	}
+
 	// 1. Create Droplet Request
 	createDropletRequest := &godo.DropletCreateRequest{
 		Name:   nodeCreateReq.Name,
-		Region: nodeCreateReq.Region, // "nyc3",
-		Size:   nodeCreateReq.Size,   // "s-1vcpu-1gb",
+		Region: rSlug, // "nyc3",
+		Size:   sSlug, // "s-1vcpu-1gb",
 		Image: godo.DropletCreateImage{
 			Slug: imageSlug,
 		},
@@ -231,15 +272,17 @@ func (this *CloudProviderDigitalOcean) CreateNode(nodeCreateReq *CloudNodeCreate
 	cloudNode := &CloudNode{
 		JobUUID:     nodeCreateReq.JobUUID,
 		Name:        newDroplet.Name,
-		Region:      newDroplet.Region.Slug,
-		Size:        newDroplet.Size.Slug,
+		Region:      nodeCreateReq.Region,
+		RegionSlug:  newDroplet.Region.Slug,
+		Size:        nodeCreateReq.Size,
+		SizeSlug:    newDroplet.Size.Slug,
 		Type:        nodeCreateReq.Type,
 		ProjectUUID: nodeCreateReq.ProjectUUID,
 		NodeID:      nodeCreateReq.NodeID,
 		Hostname:    nodeCreateReq.Hostname,
 		Domain:      nodeCreateReq.Domain,
 		Port:        nodeCreateReq.Port,
-		Location:    regionLocation[newDroplet.Region.Slug],
+		Location:    rSlugLocation[newDroplet.Region.Slug],
 		Provider:    doProviderName,
 		DropletID:   newDroplet.ID,
 	}
@@ -352,4 +395,14 @@ func (this *CloudProviderDigitalOcean) DestroyNode(cloudNode *CloudNode) error {
 	}
 
 	return nil
+}
+
+func (this *CloudProviderDigitalOcean) RegionToSlug(r CloudRegion) (slug string, found bool) {
+	slug, found = regionSlug[r]
+	return
+}
+
+func (this *CloudProviderDigitalOcean) SizeToSlug(s CloudSize) (slug string, found bool) {
+	slug, found = sizeSlug[s]
+	return
 }

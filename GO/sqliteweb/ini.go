@@ -18,60 +18,74 @@
 package main
 
 import (
-	"crypto/md5"
-	"fmt"
 	"time"
 )
 
-func GetINIString( section string, key string, defaultValue string ) string {
-  for _, s := range cfg.SectionStrings() {
-    switch {
-    case s != section                         : continue
-    case cfg.Section( section ).HasKey( key ) : return cfg.Section( section ).Key( key ).MustString( defaultValue )
-    default                                   : return defaultValue
-  } }
-  return defaultValue
-}
-
-func GetINIInt( section string, key string, defaultValue int ) int {
+func GetINIString(section string, key string, defaultValue string) string {
 	for _, s := range cfg.SectionStrings() {
-    switch {
-    case s != section                         : continue
-    case cfg.Section( section ).HasKey( key ) : return cfg.Section( section ).Key( key ).MustInt( defaultValue )
-    default                                   : return defaultValue
-  } }
-  return defaultValue
+		switch {
+		case s != section:
+			continue
+		case cfg.Section(section).HasKey(key):
+			return cfg.Section(section).Key(key).MustString(defaultValue)
+		default:
+			return defaultValue
+		}
+	}
+	return defaultValue
 }
 
-func GetINIDuration( section string, key string, defaultValue time.Duration ) time.Duration {
+func GetINIInt(section string, key string, defaultValue int) int {
 	for _, s := range cfg.SectionStrings() {
-    switch {
-    case s != section                         : continue
-    case cfg.Section( section ).HasKey( key ) : return cfg.Section( section ).Key( key ).MustDuration( defaultValue )
-    default                                   : return defaultValue
-  } }
-  return defaultValue
+		switch {
+		case s != section:
+			continue
+		case cfg.Section(section).HasKey(key):
+			return cfg.Section(section).Key(key).MustInt(defaultValue)
+		default:
+			return defaultValue
+		}
+	}
+	return defaultValue
 }
 
-func GetINIBoolean( section string, key string, defaultValue bool ) bool {
+func GetINIDuration(section string, key string, defaultValue time.Duration) time.Duration {
 	for _, s := range cfg.SectionStrings() {
-    switch {
-    case s != section                         : continue
-    case cfg.Section( section ).HasKey( key ) : return cfg.Section( section ).Key( key ).MustBool( defaultValue )
-    default                                   : return defaultValue
-  } }
-  return defaultValue
+		switch {
+		case s != section:
+			continue
+		case cfg.Section(section).HasKey(key):
+			return cfg.Section(section).Key(key).MustDuration(defaultValue)
+		default:
+			return defaultValue
+		}
+	}
+	return defaultValue
 }
 
-func MD5( data string ) string {
-  return fmt.Sprintf( "%x", md5.Sum( []byte( data ) ) )
+func GetINIBoolean(section string, key string, defaultValue bool) bool {
+	for _, s := range cfg.SectionStrings() {
+		switch {
+		case s != section:
+			continue
+		case cfg.Section(section).HasKey(key):
+			return cfg.Section(section).Key(key).MustBool(defaultValue)
+		default:
+			return defaultValue
+		}
+	}
+	return defaultValue
 }
 
-func CheckCredentials( section string, email string, password string ) bool {
-  switch {
-  case GetINIString( section, "email", "" )    != email           : return false
-  case GetINIString( section, "password", "" ) == password        : return true
-  case GetINIString( section, "password", "" ) == MD5( password ) : return true
-  default                                                         : return false
-  }
+func CheckCredentials(section string, email string, password string) bool {
+	switch {
+	case GetINIString(section, "email", "") != email:
+		return false
+	case GetINIString(section, "password", "") == password:
+		return true
+	case GetINIString(section, "password", "") == Hash(password):
+		return true
+	default:
+		return false
+	}
 }

@@ -34,7 +34,7 @@ if userID == 0 then                                           -- get list of pro
 else
   local uID, companyID, err, msg = verifyUserID( userID )                  if err ~= 0 then return error( err, msg )                                end
 
-  Response.value = {"NYC1/US", "NYC2/US", "NYC3/US", "SFO1/US", "SFO2/US", "AMS2/NL", "AMS3/NL"}
+  Response.value = getCloudRegions()
 end
 
 SetStatus( 200 )

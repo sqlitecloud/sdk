@@ -34,7 +34,7 @@ if userID == 0 then                                           -- get list of pro
 else
   local uID, companyID, err, msg = verifyUserID( userID )                  if err ~= 0 then return error( err, msg )                                end
 
-  Response.value = {"1VCPU/1GB/25GB", "1VCPU/2GB/50GB", "2VCPU/2GB/60GB", "2VCPU/16GB/300GB"}
+  Response.value = getCloudHardwares()
 end
 
 SetStatus( 200 )

@@ -257,7 +257,7 @@ ON YOU LOCAL MACHINE> make web_restart
 - enabled: This boolean key defines whether the dashboard endpoints are exposed or not 
 - path: Base path of the lua files implementing the dashboard endpoints. See [Using Lua to write endpoints](#using-lua-to-write-endpoints) 
 - email: Test username
-- password: Test password (can be set as the MD5 hash value of the password)
+- password: Test password (can be set as the SHA256 hash value of the password)
 
 ### The [api] section of the configuration file
 - enabled: This boolean key defines whether the api endpoints are exposed or not 

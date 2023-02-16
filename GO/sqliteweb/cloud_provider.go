@@ -35,7 +35,42 @@ const (
 	cloudRequestTimeout = 5 * time.Minute
 )
 
-func createNode(userid int, name string, region string, size string, nodetype string, projectuuid string, nodeid int) (string, error) {
+type CloudRegion string
+type CloudSize string
+
+const (
+	NYC1 CloudRegion = "NYC1/US"
+	NYC2 CloudRegion = "NYC2/US"
+	NYC3 CloudRegion = "NYC3/US"
+	SFO1 CloudRegion = "SFO1/US"
+	SFO2 CloudRegion = "SFO2/US"
+	SFO3 CloudRegion = "SFO3/US"
+	AMS2 CloudRegion = "AMS2/NL"
+	AMS3 CloudRegion = "AMS3/NL"
+	LON1 CloudRegion = "LON1/UK"
+	FRA1 CloudRegion = "FRA1/DE"
+	SGP1 CloudRegion = "SGP1/SG"
+	TOR1 CloudRegion = "TOR1/CA"
+	BLR1 CloudRegion = "BLR1/IN"
+	SYD1 CloudRegion = "SYD1/AU"
+)
+
+const (
+	CloudSize_1_1_25 CloudSize = "1VCPU/1GB/25GB"
+	CloudSize_1_2_50 CloudSize = "1VCPU/2GB/50GB"
+	CloudSize_2_2_60 CloudSize = "2VCPU/2GB/60GB"
+	// CloudSize_2_16_300 CloudSize = "2VCPU/16GB/300GB"
+)
+
+var CloudRegions []CloudRegion
+var CloudSizes []CloudSize
+
+func init() {
+	CloudRegions = []CloudRegion{NYC1, NYC2, NYC3, SFO1, SFO2, SFO3, AMS2, AMS3, LON1, FRA1, SGP1, TOR1, BLR1, SYD1}
+	CloudSizes = []CloudSize{CloudSize_1_1_25, CloudSize_1_2_50, CloudSize_2_2_60}
+}
+
+func createNode(userid int, name string, region CloudRegion, size CloudSize, nodetype string, projectuuid string, nodeid int) (string, error) {
 	nodeshortid := ""
 	nid := int64(0)
 	nattempts := 0

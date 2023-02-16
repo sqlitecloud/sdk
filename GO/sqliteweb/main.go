@@ -45,6 +45,8 @@ import (
 //import "github.com/gorilla/mux"
 //import "github.com/gorilla/websocket"
 
+const DEBUG_SQLITEWEB = false
+
 var app_name = "sqliteweb"
 var long_name = "SQLite Cloud Web Server"
 var version = "version 0.1.0"

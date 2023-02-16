@@ -23,8 +23,6 @@ import (
 	"net/http"
 	"strings"
 
-	"crypto/md5"
-
 	//"github.com/Shopify/go-lua"
 	"github.com/gorilla/mux"
 )
@@ -50,7 +48,7 @@ func (this *Server) executeLuaAdminServer(writer http.ResponseWriter, request *h
 					switch cfg.Section("admin").Key("password").String() {
 					case password:
 						fallthrough
-					case fmt.Sprintf("%x", md5.Sum([]byte(password))):
+					case fmt.Sprintf("%x", Hash(password)):
 
 						v := mux.Vars(request)
 						endpoint := strings.ReplaceAll(v["endpoint"]+"/", "//", "/") // "v1/fbf94289-64b0-4fc6-9c20-84083f82ee63/database/Foo/connections/"

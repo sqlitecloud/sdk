@@ -96,7 +96,7 @@ func (this *AuthServer) lookupUserID(Login string, Password string) (int64, stri
 	}
 
 	query := "SELECT id, first_name, last_name FROM User WHERE email = ? AND ( password = ? OR password = ? ) AND enabled = 1 LIMIT 1;"
-	args := []interface{}{Login, Password, MD5(Password)}
+	args := []interface{}{Login, Password, Hash(Password)}
 
 	if res, err, _, _, _ := dashboardcm.ExecuteSQLArray("auth", query, &args); res != nil {
 		defer res.Free()

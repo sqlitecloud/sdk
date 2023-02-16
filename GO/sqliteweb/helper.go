@@ -18,6 +18,8 @@
 package main
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"net"
@@ -25,9 +27,14 @@ import (
 	"net/smtp"
 	"os"
 	"strings"
+	"text/template"
 
 	sqlitecloud "github.com/sqlitecloud/sdk"
 )
+
+func Hash(data string) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(data)))
+}
 
 func PathExists(path string) bool {
 	path = strings.TrimSpace(path)
@@ -108,7 +115,42 @@ func ResultToObj(result *sqlitecloud.Result) (interface{}, error) {
 	}
 }
 
-func mail(from string, to []string, msg []byte) error {
+func sendMailWithTemplate(from string, to string, body map[string]string, templateName string, language string) error {
+	if language == "" {
+		language = "en"
+	}
+
+	body["From"] = from
+	body["To"] = to
+
+	path := cfg.Section("mail").Key("mail.template.path").String()
+
+	for _, templatePath := range []string{fmt.Sprintf("%s/%s/%s", path, language, templateName), fmt.Sprintf("%s/%s", path, templateName)} {
+		if !PathExists(templatePath) {
+			continue
+		}
+
+		if template, err := template.ParseFiles(templatePath); err == nil {
+			var outBuffer bytes.Buffer
+			if err = template.Execute(&outBuffer, body); err != nil {
+				return fmt.Errorf("Error in template.ParseFiles: %s %s", templateName, err.Error())
+			}
+
+			if err := sendMail(from, []string{to}, outBuffer.Bytes()); err != nil {
+				return fmt.Errorf("Error while sending mail: %s %s", templateName, err.Error())
+			}
+
+			return nil
+
+		} else {
+			return fmt.Errorf("Error in template.ParseFiles: %s %s", templateName, err.Error())
+		}
+	}
+
+	return fmt.Errorf("Email template not found: %s", templateName)
+}
+
+func sendMail(from string, to []string, msg []byte) error {
 	host, _, err := net.SplitHostPort(cfg.Section("mail").Key("mail.proxy.host").String())
 	if err != nil {
 		return err

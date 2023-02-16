@@ -431,7 +431,7 @@ func lua_createNode(L *lua.State) int {
 	projectuuid := lua.CheckString(L, 6)
 	nodeid := int(lua.CheckNumber(L, 7))
 
-	jobuuid, err := createNode(userid, name, region, size, nodetype, projectuuid, nodeid)
+	jobuuid, err := createNode(userid, name, CloudRegion(region), CloudSize(size), nodetype, projectuuid, nodeid)
 	if err != nil {
 		SQLiteWeb.Logger.Error(err.Error())
 		L.PushNil()
@@ -599,6 +599,38 @@ func lua_executeSQL(L *lua.State) int {
 	return 0
 }
 
+func lua_hashPassword(L *lua.State) int {
+	if L.TypeOf(1) != lua.TypeString {
+		return 0
+	}
+
+	p := lua.CheckString(L, 1)
+	L.PushString(Hash(p))
+	return 1
+}
+
+// Regions, Hardware, etc.
+
+func lua_regions(L *lua.State) int {
+	L.NewTable()
+	for k, m := range CloudRegions {
+		L.PushInteger(k + 1)
+		L.PushString(string(m))
+		L.SetTable(-3)
+	}
+	return 1
+}
+
+func lua_hardwares(L *lua.State) int {
+	L.NewTable()
+	for k, m := range CloudSizes {
+		L.PushInteger(k + 1)
+		L.PushString(string(m))
+		L.SetTable(-3)
+	}
+	return 1
+}
+
 // Email & Template helper
 
 // mail( template, language, template_data ), z.B. mailTo("welcome.eml", "en", { To = "andreas.pfeil@..." } )
@@ -760,6 +792,11 @@ NextPart:
 		l.Register("listINIProjects", lua_listINIProjects)
 		l.Register("getINIArray", lua_getINIArray)
 		l.Register("getINIBoolean", lua_getINIBoolean)
+		l.Register("hashPassword", lua_hashPassword)
+
+		// Regions, Hardware, etc
+		l.Register("getCloudRegions", lua_regions)
+		l.Register("getCloudHardwares", lua_hardwares)
 
 		// register internal mail related functions
 		l.Register("mail", lua_mail)

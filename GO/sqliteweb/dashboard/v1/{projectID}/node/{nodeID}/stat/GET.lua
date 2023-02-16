@@ -50,7 +50,7 @@ if status.NumberOfRows       == 0             then return error( 404, "Empty nod
 
 for i = 1, status.NumberOfRows do
   if status.Rows[ i ].status == "Leader" then Response.value.raft[ 2 ] = status.Rows[ i ].match end
-  if i == machineNodeID then
+  if status.Rows[ i ].id == machineNodeID then
     Response.value.status    = status.Rows[ i ].progress
     Response.value.raft[ 1 ] = status.Rows[ i ].match
     Response.value.type      = status.Rows[ i ].status
@@ -59,7 +59,7 @@ end
 
 command = "GET INFO LOAD,NUM_CLIENTS,DISK_USAGE_PERC NODE ?;" -- server_load, num_clients, cpu_time, mem_current, mem_max
 load = executeSQL( projectID, command, {machineNodeID} )
--- print("command:", command)
+-- print("command: " .. command .. " NODE: " .. machineNodeID)
 if not load                                   then return error( 504, "Gateway Timeout" )       end
 if load.ErrorNumber        ~= 0               then return error( 502, "Bad Gateway" )           end
 if load.NumberOfRows       ~= 3               then return error( 502, "Bad Gateway" )           end

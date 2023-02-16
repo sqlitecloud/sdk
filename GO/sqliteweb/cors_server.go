@@ -26,16 +26,12 @@ import (
 const allowAllOrigins = "*"
 
 func initCors() {
-	// add a catchall for OPTION method
-	SQLiteWeb.router.PathPrefix("/api/").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", allowAllOrigins)
-	}).Methods(http.MethodOptions)
-
 	SQLiteWeb.router.Use(middlewareCors)
 }
 
 func middlewareCors(next http.Handler) http.Handler {
 	apiRoute := SQLiteWeb.router.PathPrefix("/api/")
+	webRoute := SQLiteWeb.router.PathPrefix("/web/")
 	routeMatch := mux.RouteMatch{}
 
 	return http.HandlerFunc(
@@ -44,8 +40,15 @@ func middlewareCors(next http.Handler) http.Handler {
 
 			// allow all origins only for /api/* endpoints
 			// TODO: set the allowed origins for the project in the API settings page of the dashboard
-			if apiRoute.Match(req, &routeMatch) {
+			switch {
+			case apiRoute.Match(req, &routeMatch):
 				allowHeaders += ", X-SQLiteCloud-Api-Key"
+				w.Header().Set("Access-Control-Allow-Origin", allowAllOrigins)
+			case webRoute.Match(req, &routeMatch):
+				w.Header().Set("Access-Control-Allow-Origin", allowAllOrigins)
+			}
+
+			if DEBUG_SQLITEWEB {
 				w.Header().Set("Access-Control-Allow-Origin", allowAllOrigins)
 			}
 

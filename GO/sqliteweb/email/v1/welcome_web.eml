@@ -1,0 +1,53 @@
+Subject: Welcome to SQLiteCloud
+From: SQLiteCloud <{{.From}}>
+To: <{{.To}}>
+Content-Type: multipart/alternative; boundary="000000000000af3d8e05f4d3b74a"
+
+--000000000000af3d8e05f4d3b74a
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+*Welcome aboard.*
+
+
+
+We=E2=80=99re excited you're joining us! Follow these tips as you spin up y=
+our
+first Cluster and start experimenting:
+
+
+Dashboard: https://dashboard.sqlitecloud.io/
+
+Username: {{.Email}}
+
+Password: {{.Password}}
+
+--0000000000001f424a05f4d43474
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr"><strong style=3D"color:rgb(0,0,0);font-family:proxima_nova=
+,sans_serif,Helvetica,Arial;font-size:20px"><span style=3D"font-size:30px">=
+<font color=3D"#3f77de">Welcome aboard.</font></span></strong><br><div clas=
+s=3D"gmail_quote"><div dir=3D"ltr"><p style=3D"margin:0px;color:rgb(91,105,=
+135);font-family:proxima_nova,sans_serif,Helvetica,Arial;font-size:20px">=
+=C2=A0</p><p style=3D"color:rgb(0,0,0);margin:0px;font-family:proxima_nova,=
+sans_serif,Helvetica,Arial;font-size:20px"><span style=3D"font-size:18px"><=
+font color=3D"#313c4d">We=E2=80=99re excited you&#39;re joining us! Follow =
+these tips as you spin up your first Cluster and start experimenting:</font=
+></span></p><p style=3D"color:rgb(0,0,0);margin:0px;font-family:proxima_nov=
+a,sans_serif,Helvetica,Arial;font-size:20px"><span style=3D"font-size:18px"=
+><font color=3D"#313c4d"><br></font></span></p><p style=3D"color:rgb(0,0,0)=
+;margin:0px;font-family:proxima_nova,sans_serif,Helvetica,Arial;font-size:2=
+0px"><span style=3D"font-size:18px"><font color=3D"#313c4d">Dashboard:<span=
+>=C2=A0</span></font></span><a href=3D"https://dashboard.sqlitecloud.io/" t=
+arget=3D"_blank">https://dashboard.sqlitecloud.io/</a></p><p style=3D"color=
+:rgb(0,0,0);margin:0px;font-family:proxima_nova,sans_serif,Helvetica,Arial;=
+font-size:20px"><span style=3D"font-size:18px"><font color=3D"#313c4d">User=
+name: {{.Email}}</font></span></p><p style=3D"color:rgb(0,0,0);margin:0px;f=
+ont-family:proxima_nova,sans_serif,Helvetica,Arial;font-size:20px"><span st=
+yle=3D"font-size:18px"><font color=3D"#313c4d">Password: {{.Password}}</fon=
+t></span></p></div>
+</div></div>
+
+--0000000000001f424a05f4d43474--
