@@ -39,20 +39,22 @@ type CloudRegion string
 type CloudSize string
 
 const (
-	NYC1 CloudRegion = "NYC1/US"
-	NYC2 CloudRegion = "NYC2/US"
-	NYC3 CloudRegion = "NYC3/US"
-	SFO1 CloudRegion = "SFO1/US"
-	SFO2 CloudRegion = "SFO2/US"
-	SFO3 CloudRegion = "SFO3/US"
-	AMS2 CloudRegion = "AMS2/NL"
-	AMS3 CloudRegion = "AMS3/NL"
-	LON1 CloudRegion = "LON1/UK"
-	FRA1 CloudRegion = "FRA1/DE"
-	SGP1 CloudRegion = "SGP1/SG"
-	TOR1 CloudRegion = "TOR1/CA"
-	BLR1 CloudRegion = "BLR1/IN"
-	SYD1 CloudRegion = "SYD1/AU"
+	// https://docs.digitalocean.com/reference/api/api-reference/#tag/Regions
+	CloudRegionNewYork1      CloudRegion = "New York 1"
+	CloudRegionNewYork3      CloudRegion = "New York 3"
+	CloudRegionSanFrancisco3 CloudRegion = "San Francisco 3"
+	CloudRegionAmsterdam3    CloudRegion = "Amsterdam 3"
+	CloudRegionLondon1       CloudRegion = "London 1"
+	CloudRegionFrankfurt1    CloudRegion = "Frankfurt 1"
+	CloudRegionSingapore1    CloudRegion = "Singapore 1"
+	CloudRegionToronto1      CloudRegion = "Toronto 1"
+	CloudRegionBangalore1    CloudRegion = "Bangalore 1"
+	CloudRegionSydney1       CloudRegion = "Sydney 1"
+	// not available regions:
+	// NewYork2 CloudRegion = "New York 2"
+	// SanFrancisco1 CloudRegion = "San Francisco 1"
+	// SanFrancisco2 CloudRegion = "San Francisco 2"
+	// Amsterdam2 CloudRegion = "Amsterdam 2"
 )
 
 const (
@@ -66,7 +68,7 @@ var CloudRegions []CloudRegion
 var CloudSizes []CloudSize
 
 func init() {
-	CloudRegions = []CloudRegion{NYC1, NYC2, NYC3, SFO1, SFO2, SFO3, AMS2, AMS3, LON1, FRA1, SGP1, TOR1, BLR1, SYD1}
+	CloudRegions = []CloudRegion{CloudRegionNewYork1, CloudRegionNewYork1, CloudRegionSanFrancisco3, CloudRegionAmsterdam3, CloudRegionLondon1, CloudRegionFrankfurt1, CloudRegionSingapore1, CloudRegionToronto1, CloudRegionBangalore1, CloudRegionSydney1}
 	CloudSizes = []CloudSize{CloudSize_1_1_25, CloudSize_1_2_50, CloudSize_2_2_60}
 }
 
@@ -230,8 +232,8 @@ func destroyCloudNode(cloudProvider CloudProvider, cloudNode *CloudNode, nid int
 		return
 	}
 
-	sql := fmt.Sprintf("DELETE FROM Node WHERE id = %d", nid)
-	authExecSQL(sql)
+	// sql := fmt.Sprintf("DELETE FROM Node WHERE id = %d", nid)
+	// authExecSQL(sql)
 }
 
 func getProjectAdminCredentials(projectuuid string, isFirstNode bool) (adminUser string, adminPassword string, tmpAdminUser string, tmpAdminPassword string) {

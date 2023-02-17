@@ -61,7 +61,6 @@ type CloudNodeCreateRequest struct {
 	Port          int
 	ClusterPort   int
 	ClusterConfig string
-	Token         string
 }
 
 type Coordinates struct {
@@ -117,20 +116,20 @@ func init() {
 	}
 
 	regionSlug = map[CloudRegion]string{
-		NYC1: "nyc1",
-		NYC2: "myc2",
-		NYC3: "nyc3",
-		SFO1: "sfo1",
-		SFO2: "sfo2",
-		SFO3: "sfo3",
-		AMS2: "ams2",
-		AMS3: "ams3",
-		LON1: "lon1",
-		FRA1: "fra1",
-		SGP1: "sgp1",
-		TOR1: "tor1",
-		BLR1: "blr1",
-		SYD1: "syd1",
+		CloudRegionNewYork1:      "nyc1",
+		CloudRegionNewYork3:      "nyc3",
+		CloudRegionSanFrancisco3: "sfo3",
+		CloudRegionAmsterdam3:    "ams3",
+		CloudRegionLondon1:       "lon1",
+		CloudRegionFrankfurt1:    "fra1",
+		CloudRegionSingapore1:    "sgp1",
+		CloudRegionToronto1:      "tor1",
+		CloudRegionBangalore1:    "blr1",
+		CloudRegionSydney1:       "syd1",
+		// CloudRegionNewYork2:      "myc2",
+		// CloudRegionSanFrancisco1: "sfo1",
+		// CloudRegionSanFrancisco2: "sfo2",
+		// CloudRegionAmsterdam2:    "ams2",
 	}
 
 	sizeSlug = map[CloudSize]string{
@@ -216,10 +215,6 @@ func setDefaults(nodeCreateReq *CloudNodeCreateRequest) {
 
 	if nodeCreateReq.ClusterPort == 0 {
 		nodeCreateReq.ClusterPort = nodeCreateReq.Port + 1000
-	}
-
-	if nodeCreateReq.Token == "" && cfg.Section("digitalocean").HasKey("token") {
-		nodeCreateReq.Token = cfg.Section("digitalocean").Key("token").String()
 	}
 }
 
