@@ -17,7 +17,7 @@ curl -X "POST" "https://localhost:8443/dashboard/v1/fbf94289-64b0-4fc6-9c20-8408
 }'
 ```
 
-### **PUT** - /dashboard/v1/{projectID}/node/{nodeID}
+### **POST** - /dashboard/v1/{projectID}/node/
 
 ### Request object
 

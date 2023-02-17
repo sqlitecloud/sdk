@@ -57,13 +57,16 @@ Connection: close
   "message": "OK",
   "status": 200,
   "value": [
-    "NYC1/US",
-    "NYC2/US",
-    "NYC3/US",
-    "SFO1/US",
-    "SFO2/US",
-    "AMS2/NL",
-    "AMS3/NL"
+    "New York 1",
+    "New York 1",
+    "San Francisco 3",
+    "Amsterdam 3",
+    "London 1",
+    "Frankfurt 1",
+    "Singapore 1",
+    "Toronto 1",
+    "Bangalore 1",
+    "Sydney 1"
   ]
 }
 ```

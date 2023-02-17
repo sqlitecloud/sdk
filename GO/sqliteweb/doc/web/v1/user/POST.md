@@ -13,7 +13,7 @@ curl -X "POST" "https://web1.sqlitecloud.io:8443/web/v1/user" \
 }'
 ```
 
-### **POST** - /web/v1/sendmail
+### **POST** - /web/v1/user
 
 ### Request object
 
