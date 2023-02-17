@@ -6,7 +6,7 @@
 --     //             ///   ///  ///    Date        : 2023/02/14
 --    ///             ///   ///  ///    Author      : Andrea Donetti
 --   ///             ///   ///  ///
---   ///     //////////   ///  ///      Description : Get the status of a job 
+--   ///     //////////   ///  ///      Description : Get the status node-related active jobs
 --   ////                ///  ///                     
 --     ////     //////////   ///                      
 --        ////            ////          Requires    : Authentication
@@ -15,7 +15,7 @@
 --
 -- -----------------------------------------------------------------------TAB=2
 
--- https://localhost:8443/dashboard/v1/{projectID}/job/{jobID}
+-- https://localhost:8443/dashboard/v1/{projectID}/jobs/nodes
 
 require "sqlitecloud"
 
@@ -29,18 +29,7 @@ Response = {
   status            = 200,                       -- status code: 0 = no error, error otherwise
   message           = "OK",                      -- "OK" or error message
 
-  value             = {
-    uuid            = jobID,
-    name            = "",
-    modified        = "",
-    status          = "",
-    steps           = 0,
-    progress        = 0,
-    error           = 0,
-    node_id         = 0,
-    node_name       = "",
-    hostname        = "",
-  },
+  value             = {},
 }
 
 if userID == 0 then
@@ -51,15 +40,14 @@ else
   
   local projectID, err, msg = verifyProjectID( userID, projectID )         if err ~= 0 then return error( err, msg )                     end
 
-  command = "SELECT Jobs.uuid, Jobs.name, Jobs.stamp AS modified, Jobs.status, Jobs.steps, Jobs.progress, Jobs.error, Node.id as node_id, Node.name AS node_name, Node.hostname AS hostname FROM Jobs JOIN Node ON Jobs.node_id = Node.id WHERE Jobs.uuid = ? AND Jobs.user_id = ? AND Node.project_uuid = ?;"
-  jobs = executeSQL( "auth", command, {jobID, userID, projectID} )
+  command = "SELECT Jobs.uuid, Jobs.name, Jobs.stamp AS modified, Jobs.status, Jobs.steps, Jobs.progress, Jobs.error, Node.id as node_id, Node.name AS node_name, Node.hostname AS hostname FROM Jobs JOIN Node ON Jobs.node_id = Node.id WHERE Node.project_uuid = ? AND (Jobs.archived = 0 OR (Jobs.error = 0 AND Jobs.Progress < Jobs.Steps));"
+  jobs = executeSQL( "auth", command, {projectID} )
 
   if not jobs                            then return error( 404, "Job not found" ) end
   if jobs.ErrorNumber              ~= 0  then return error( 502, "Bad Gateway" )   end
   if jobs.NumberOfColumns          ~= 10  then return error( 502, "Bad Gateway" )   end
-  if jobs.NumberOfRows             ~= 1  then return error( 404, "Job not found" ) end
 
-  Response.value = jobs.Rows[ 1 ]  
+  Response.value = jobs.Rows
 end
 
 SetStatus( 200 )
