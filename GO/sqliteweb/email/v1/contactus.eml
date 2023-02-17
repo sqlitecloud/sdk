@@ -1,11 +1,3 @@
-To: <{{.To}}>
-From: <{{.From}}>
-Content-Type: text/plain;
-	charset=us-ascii
-Content-Transfer-Encoding: 8bit
-Mime-Version: 1.0
-Subject: [Contact Us] Message From {{.FirstName}} {{.LastName}}
-
 FirstName: {{.FirstName}} 
 LastName: {{.LastName}}
 Company: {{.Company}}

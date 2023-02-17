@@ -22,12 +22,15 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"net"
+	htmltemplate "html/template"
 	"net/http"
-	"net/smtp"
+	netmail "net/mail"
 	"os"
 	"strings"
-	"text/template"
+	txttemplate "text/template"
+
+	"github.com/sendgrid/sendgrid-go"
+	"github.com/sendgrid/sendgrid-go/helpers/mail"
 
 	sqlitecloud "github.com/sqlitecloud/sdk"
 )
@@ -115,7 +118,75 @@ func ResultToObj(result *sqlitecloud.Result) (interface{}, error) {
 	}
 }
 
-func sendMailWithTemplate(from string, to string, body map[string]string, templateName string, language string) error {
+func sendMailWithTemplate(from *netmail.Address, to *netmail.Address, subject string, body map[string]string, templateName string, language string) error {
+	if language == "" {
+		language = "en"
+	}
+
+	path := cfg.Section("mail").Key("mail.template.path").String()
+
+	for _, templatePath := range []string{fmt.Sprintf("%s/%s/%s", path, language, templateName), fmt.Sprintf("%s/%s", path, templateName)} {
+		templateBasePath := strings.TrimSuffix(templatePath, ".eml")
+		templateEml := templateBasePath + ".eml"
+		templateTxtPath := templateBasePath + ".txt"
+		templateHtmlPath := templateBasePath + ".html"
+
+		if !PathExists(templateEml) && !PathExists(templateTxtPath) && !PathExists(templateHtmlPath) {
+			continue
+		}
+
+		if !PathExists(templateTxtPath) {
+			templateTxtPath = templateEml
+		}
+
+		plainTextContent := ""
+		htmlContent := ""
+		var err1 error
+		var err2 error
+
+		if template, err := txttemplate.ParseFiles(templateTxtPath); err == nil {
+			var outBuffer bytes.Buffer
+			if err1 = template.Execute(&outBuffer, body); err != nil {
+				return fmt.Errorf("Error in template.ParseFiles: %s %s", templateName, err.Error())
+			}
+
+			plainTextContent = outBuffer.String()
+		}
+
+		if template, err := htmltemplate.ParseFiles(templateHtmlPath); err == nil {
+			var outBuffer bytes.Buffer
+			if err2 = template.Execute(&outBuffer, body); err != nil {
+				return fmt.Errorf("Error in template.ParseFiles: %s %s", templateName, err.Error())
+			}
+
+			htmlContent = outBuffer.String()
+		}
+
+		if plainTextContent == "" && htmlContent == "" {
+			return fmt.Errorf("Error in template.ParseFiles: %s %s %s", templateName, err1.Error(), err2.Error())
+		}
+
+		if err := sendMail(from, to, subject, plainTextContent, htmlContent); err != nil {
+			return fmt.Errorf("Error while sending mail: %s %s", templateName, err.Error())
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("Email template not found: %s", templateName)
+}
+
+func sendMail(f *netmail.Address, t *netmail.Address, subject string, plainTextContent string, htmlContent string) error {
+	from := mail.NewEmail(f.Name, f.Address)
+	to := mail.NewEmail(t.Name, t.Address)
+	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
+	client := sendgrid.NewSendClient(cfg.Section("mail").Key("mail.proxy.password").String())
+	_, err := client.Send(message)
+	return err
+}
+
+/*
+func sendMailWithTemplateSmtp(from string, to string, body map[string]string, templateName string, language string) error {
 	if language == "" {
 		language = "en"
 	}
@@ -150,7 +221,7 @@ func sendMailWithTemplate(from string, to string, body map[string]string, templa
 	return fmt.Errorf("Email template not found: %s", templateName)
 }
 
-func sendMail(from string, to []string, msg []byte) error {
+func sendMailSmtp(from string, to []string, msg []byte) error {
 	host, _, err := net.SplitHostPort(cfg.Section("mail").Key("mail.proxy.host").String())
 	if err != nil {
 		return err
@@ -161,6 +232,7 @@ func sendMail(from string, to []string, msg []byte) error {
 	err = smtp.SendMail(cfg.Section("mail").Key("mail.proxy.host").String(), auth, from, to, msg)
 	return err
 }
+*/
 
 func writeError(writer http.ResponseWriter, statusCode int, message string, allowedMethods *string) {
 	if statusCode == http.StatusMethodNotAllowed && allowedMethods != nil {

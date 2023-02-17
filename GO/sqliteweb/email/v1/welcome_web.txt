@@ -1,0 +1,11 @@
+*Welcome aboard.*
+
+We're excited you're joining us! Follow these tips as you spin up your
+first Cluster and start experimenting:
+
+
+Dashboard: https://dashboard.sqlitecloud.io/
+
+Username: {{.Email}}
+
+Password: {{.Password}}
