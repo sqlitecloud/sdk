@@ -61,6 +61,7 @@ type CloudNodeCreateRequest struct {
 	Port          int
 	ClusterPort   int
 	ClusterConfig string
+	NewCluster    bool
 }
 
 type Coordinates struct {
@@ -156,7 +157,7 @@ func NewCloudProviderDigitalOcean(token string) *CloudProviderDigitalOcean {
 
 var cloudConfigTemplate = template.Must(template.New("").Parse(`#cloud-config
 users:
-- name: demo
+- name: sqlitecloud
   groups: sudo
   shell: /bin/bash
   sudo: ALL=(ALL) NOPASSWD:ALL
@@ -171,6 +172,7 @@ write_files:
       listening_port = {{.Port}} 
       cluster_port = {{.ClusterPort}}
       cluster_config = {{.ClusterConfig}}
+      newcluster = {{.NewCluster}}
       backup_node_id = 1
       backup_config = {"checkpoint-interval": "1m", "replicas": [{"url": "s3://sqlc-dev.s3.us-west-004.backblazeb2.com", "access-key-id": "004460c459c4bae0000000001", "secret-access-key": "K004ItQqhbR3Npy/S/qObqiYh/bLZas"}]}
   - path: /etc/systemd/system/sqlitecloud.service
@@ -201,6 +203,7 @@ runcmd:
   - certbot certonly --standalone -d {{.Hostname}}.{{.Domain}} --non-interactive --agree-tos -m certbot@sqlitecloud.io > certbot.log 2> certbot.err.log
   - ln -s /etc/letsencrypt/live/{{.Hostname}}.{{.Domain}}/privkey.pem /var/lib/sqlitecloud/{{.Port}}/certificate_key.pem
   - ln -s /etc/letsencrypt/live/{{.Hostname}}.{{.Domain}}/fullchain.pem /var/lib/sqlitecloud/{{.Port}}/certificate.pem
+  - systemctl enable sqlitecloud
   - systemctl start sqlitecloud`))
 
 //   - DIGITALOCEAN_TOKEN={{.Token}}
@@ -224,7 +227,7 @@ func (this *CloudProviderDigitalOcean) CreateNode(nodeCreateReq *CloudNodeCreate
 	cloudConfigBuf := new(bytes.Buffer)
 	cloudConfigTemplate.Execute(cloudConfigBuf, nodeCreateReq)
 
-	// SQLiteWeb.Logger.Infof("Cloud Config:\n\n\n%s\n\n\n", cloudConfigBuf.String())
+	SQLiteWeb.Logger.Infof("Cloud Config:\n\n\n%s\n\n\n", cloudConfigBuf.String())
 
 	rSlug, found := this.RegionToSlug(nodeCreateReq.Region)
 	if !found {

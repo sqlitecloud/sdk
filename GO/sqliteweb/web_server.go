@@ -193,7 +193,7 @@ func (this *Server) serveWebUser(writer http.ResponseWriter, request *http.Reque
 	}
 
 	// https://github.com/sethvargo/go-password ?
-	password, err := password.Generate(10, 2, 3, false, false)
+	password, err := password.Generate(12, 2, 3, false, false)
 	if err != nil {
 		SQLiteWeb.Logger.Errorf("[WebUser] Error while generating new password: %s", err.Error())
 		writeError(writer, http.StatusInternalServerError, "Internal Server Error", nil)

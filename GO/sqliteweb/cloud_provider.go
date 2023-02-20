@@ -155,6 +155,7 @@ func createNode(userid int, name string, region CloudRegion, size CloudSize, nod
 			Domain:        dropletDomain,
 			Port:          sqlitecloudPort,
 			ClusterConfig: clusterConfig,
+			NewCluster:    isFirstNode,
 		}
 
 		cloudNode, err := cloudProvider.CreateNode(nodeCreateReq)
