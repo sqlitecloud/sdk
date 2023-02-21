@@ -68,13 +68,13 @@ var CloudRegions []CloudRegion
 var CloudSizes []CloudSize
 
 func init() {
-	CloudRegions = []CloudRegion{CloudRegionNewYork1, CloudRegionNewYork1, CloudRegionSanFrancisco3, CloudRegionAmsterdam3, CloudRegionLondon1, CloudRegionFrankfurt1, CloudRegionSingapore1, CloudRegionToronto1, CloudRegionBangalore1, CloudRegionSydney1}
+	CloudRegions = []CloudRegion{CloudRegionNewYork1, CloudRegionNewYork3, CloudRegionSanFrancisco3, CloudRegionAmsterdam3, CloudRegionLondon1, CloudRegionFrankfurt1, CloudRegionSingapore1, CloudRegionToronto1, CloudRegionBangalore1, CloudRegionSydney1}
 	CloudSizes = []CloudSize{CloudSize_1_1_25, CloudSize_1_2_50, CloudSize_2_2_60}
 }
 
 func createNode(userid int, name string, region CloudRegion, size CloudSize, nodetype string, projectuuid string, nodeid int) (string, error) {
 	nodeshortid := ""
-	nid := int64(0)
+	uniqueNodeID := int64(0)
 	nattempts := 0
 	maxretry := 100
 
@@ -107,7 +107,7 @@ func createNode(userid int, name string, region CloudRegion, size CloudSize, nod
 		res, err, errcode, _, _ := dashboardcm.ExecuteSQL("auth", sql)
 		if err == nil && res.GetNumberOfColumns() == 1 && res.GetNumberOfRows() == 1 {
 			nodeshortid = sid
-			nid = res.GetInt64Value_(0, 0)
+			uniqueNodeID = res.GetInt64Value_(0, 0)
 			break
 		}
 
@@ -122,7 +122,7 @@ func createNode(userid int, name string, region CloudRegion, size CloudSize, nod
 	}
 
 	jobuuid := uuid.New().String()
-	sql := fmt.Sprintf("INSERT INTO Jobs (uuid, name, status, steps, progress, user_id, node_id) VALUES ('%s', 'Create Node %s', 'Creating droplet', 2, 0, %d, %d)", jobuuid, name, userid, nid) // ; SELECT uuid FROM Jobs WHERE rowid = last_insert_rowid();
+	sql := fmt.Sprintf("INSERT INTO Jobs (uuid, name, status, steps, progress, user_id, node_id) VALUES ('%s', 'Create Node %s', 'Creating droplet', 2, 0, %d, %d)", jobuuid, name, userid, uniqueNodeID) // ; SELECT uuid FROM Jobs WHERE rowid = last_insert_rowid();
 	_, err, _, _, _ = dashboardcm.ExecuteSQL("auth", sql)
 	if err != nil {
 		return "", fmt.Errorf("Cannot create the job %s: %s", jobuuid, err.Error())
@@ -163,7 +163,7 @@ func createNode(userid int, name string, region CloudRegion, size CloudSize, nod
 			SQLiteWeb.Logger.Errorf("digitalocean CreateNode: %s", err.Error())
 			sql := fmt.Sprintf("UPDATE Jobs SET status = '%s', error = 1, stamp = DATETIME('now') WHERE uuid = '%s'", err.Error(), jobuuid)
 			authExecSQL(sql)
-			destroyCloudNode(cloudProvider, cloudNode, nid, nodeAddedToClusterConf)
+			deleteCloudNode_(cloudProvider, cloudNode, uniqueNodeID, nodeAddedToClusterConf)
 			return
 		}
 		SQLiteWeb.Logger.Debugf("Droplet completed %s %s %d", cloudNode.Name, cloudNode.JobUUID, cloudNode.DropletID)
@@ -177,7 +177,7 @@ func createNode(userid int, name string, region CloudRegion, size CloudSize, nod
 				SQLiteWeb.Logger.Error(err.Error())
 				sql := fmt.Sprintf("UPDATE Jobs SET status = '%s', error = 1, stamp = DATETIME('now') WHERE uuid = '%s'", err.Error(), jobuuid)
 				authExecSQL(sql)
-				destroyCloudNode(cloudProvider, cloudNode, nid, nodeAddedToClusterConf)
+				deleteCloudNode_(cloudProvider, cloudNode, uniqueNodeID, nodeAddedToClusterConf)
 				return
 			}
 			SQLiteWeb.Logger.Debugf("Node added to the cluster %d %s", cloudNode.NodeID, cloudNode.JobUUID)
@@ -187,7 +187,7 @@ func createNode(userid int, name string, region CloudRegion, size CloudSize, nod
 		sql = fmt.Sprintf("UPDATE Jobs SET progress = progress + 1, status = 'System setup', stamp = DATETIME('now') WHERE uuid = '%s'", nodeCreateReq.JobUUID)
 		authExecSQL(sql)
 
-		sql = fmt.Sprintf("UPDATE Node SET hostname = '%s', type = '%s', provider = '%s', image = '%s', region = '%s', addr4 = '%s', addr6 = '%s', port = %d, latitude = %f, longitude = %f WHERE id = %d", cloudNode.FullyQualifiedDomainName(), cloudNode.Type, "DigitalOcean", cloudNode.Size, cloudNode.Region, cloudNode.AddrV4, cloudNode.AddrV6, cloudNode.Port, cloudNode.Location.Latitude, cloudNode.Location.Longitude, nid)
+		sql = fmt.Sprintf("UPDATE Node SET hostname = '%s', type = '%s', provider = '%s', image = '%s', region = '%s', addr4 = '%s', addr6 = '%s', port = %d, latitude = %f, longitude = %f, droplet_id = %d, domain_record_id = %d WHERE id = %d", cloudNode.FullyQualifiedDomainName(), cloudNode.Type, "DigitalOcean", cloudNode.Size, cloudNode.Region, cloudNode.AddrV4, cloudNode.AddrV6, cloudNode.Port, cloudNode.Location.Latitude, cloudNode.Location.Longitude, cloudNode.DropletID, cloudNode.DomainRecordID, uniqueNodeID)
 		authExecSQL(sql)
 
 		adminUser, adminPasswd, tmpAdminUser, tmpAdminPasswd := getProjectAdminCredentials(projectuuid, isFirstNode)
@@ -197,7 +197,7 @@ func createNode(userid int, name string, region CloudRegion, size CloudSize, nod
 			SQLiteWeb.Logger.Error(err.Error())
 			sql := fmt.Sprintf("UPDATE Jobs SET status = '%s', error = 1, stamp = DATETIME('now') WHERE uuid = '%s'", err.Error(), jobuuid)
 			authExecSQL(sql)
-			destroyCloudNode(cloudProvider, cloudNode, nid, nodeAddedToClusterConf)
+			deleteCloudNode_(cloudProvider, cloudNode, uniqueNodeID, nodeAddedToClusterConf)
 			return
 		}
 
@@ -205,36 +205,76 @@ func createNode(userid int, name string, region CloudRegion, size CloudSize, nod
 			SQLiteWeb.Logger.Error(err.Error())
 			sql := fmt.Sprintf("UPDATE Jobs SET status = '%s', error = 1, stamp = DATETIME('now') WHERE uuid = '%s'", err.Error(), jobuuid)
 			authExecSQL(sql)
-			destroyCloudNode(cloudProvider, cloudNode, nid, nodeAddedToClusterConf)
+			deleteCloudNode_(cloudProvider, cloudNode, uniqueNodeID, nodeAddedToClusterConf)
 			return
 		}
 
 		sql = fmt.Sprintf("UPDATE Jobs SET progress = progress + 1, status = 'Completed', stamp = DATETIME('now') WHERE uuid = '%s'", nodeCreateReq.JobUUID)
 		authExecSQL(sql)
 
-		sql = fmt.Sprintf("UPDATE Node SET created = 1 WHERE id = %d", nid)
+		sql = fmt.Sprintf("UPDATE Node SET created = 1 WHERE id = %d", uniqueNodeID)
 		authExecSQL(sql)
 	}()
 
 	return jobuuid, nil
 }
 
-func destroyCloudNode(cloudProvider CloudProvider, cloudNode *CloudNode, nid int64, nodeAddedToClusterConf bool) {
-	if nodeAddedToClusterConf {
-		removeCommand := fmt.Sprintf("REMOVE NODE %d", cloudNode.NodeID)
-		if _, err, _, _, _ := dashboardcm.ExecuteSQL(cloudNode.ProjectUUID, removeCommand); err != nil {
-			SQLiteWeb.Logger.Error(err.Error())
-			return
-		}
-	}
-
-	if err := cloudProvider.DestroyNode(cloudNode); err != nil {
+func deleteCloudNode_(cloudProvider CloudProvider, cloudNode *CloudNode, uniqueNodeID int64, nodeAddedToClusterConf bool) {
+	if err := deleteCloudNode(cloudProvider, cloudNode, uniqueNodeID, nodeAddedToClusterConf); err != nil {
 		SQLiteWeb.Logger.Error(err.Error())
 		return
 	}
+}
 
-	// sql := fmt.Sprintf("DELETE FROM Node WHERE id = %d", nid)
+func deleteCloudNode(cloudProvider CloudProvider, cloudNode *CloudNode, uniqueNodeID int64, nodeAddedToClusterConf bool) error {
+	if nodeAddedToClusterConf {
+		removeCommand := fmt.Sprintf("REMOVE NODE %d", cloudNode.NodeID)
+		if _, err, _, _, _ := dashboardcm.ExecuteSQL(cloudNode.ProjectUUID, removeCommand); err != nil {
+			return err
+		}
+	}
+
+	if err := cloudProvider.DeleteNode(cloudNode); err != nil {
+		return err
+	}
+
+	// sql := fmt.Sprintf("DELETE FROM Node WHERE id = %d", uniqueNodeID)
 	// authExecSQL(sql)
+
+	return nil
+}
+
+func deleteNode(uniqueID int64, clusterNodeID int, projectUUID string) error {
+	cloudProvider := digitalocean
+
+	cloudNode := &CloudNode{
+		NodeID:      clusterNodeID,
+		ProjectUUID: projectUUID,
+		Domain:      dropletDomain,
+		Provider:    cloudProvider.ProviderName(),
+	}
+
+	sql := fmt.Sprintf("SELECT shortuuid, droplet_id, domain_record_id FROM Node WHERE id = %d AND created = 1", uniqueID)
+	if res, err, _, _, _ := dashboardcm.ExecuteSQL("auth", sql); err != nil {
+		return fmt.Errorf("Error n delete node %d: %s", uniqueID, err.Error())
+	} else if !res.IsRowSet() {
+		return fmt.Errorf("Error in delete node %d: Invalid response ", uniqueID)
+	} else if res.GetNumberOfRows() == 0 {
+		return fmt.Errorf("Error in delete node %d: 0 rows", uniqueID)
+	} else {
+		cloudNode.Hostname = res.GetStringValue_(0, 0)
+		cloudNode.DropletID = int(res.GetInt32Value_(0, 1))
+		cloudNode.DomainRecordID = int(res.GetInt32Value_(0, 2))
+	}
+
+	if err := deleteCloudNode(cloudProvider, cloudNode, uniqueID, true); err != nil {
+		return err
+	}
+
+	sql = fmt.Sprintf("UPDATE Node SET created = 0 WHERE id = %d", uniqueID)
+	authExecSQL(sql)
+
+	return nil
 }
 
 func getProjectAdminCredentials(projectuuid string, isFirstNode bool) (adminUser string, adminPassword string, tmpAdminUser string, tmpAdminPassword string) {

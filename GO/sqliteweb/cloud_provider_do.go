@@ -42,9 +42,10 @@ var (
 
 type CloudProvider interface {
 	CreateNode(nodeCreateReq *CloudNodeCreateRequest) (*CloudNode, error)
-	DestroyNode(cloudNode *CloudNode) error
+	DeleteNode(cloudNode *CloudNode) error
 	RegionToSlug(r CloudRegion) (string, bool)
 	SizeToSlug(r CloudSize) (string, bool)
+	ProviderName() string
 }
 
 // DropletCreateRequest represents a request to create a Droplet.
@@ -173,6 +174,8 @@ write_files:
       cluster_port = {{.ClusterPort}}
       cluster_config = {{.ClusterConfig}}
       newcluster = {{.NewCluster}}
+      log_format = STDOUT
+      log_level = DEBUG
       backup_node_id = 1
       backup_config = {"checkpoint-interval": "1m", "replicas": [{"url": "s3://sqlc-dev.s3.us-west-004.backblazeb2.com", "access-key-id": "004460c459c4bae0000000001", "secret-access-key": "K004ItQqhbR3Npy/S/qObqiYh/bLZas"}]}
   - path: /etc/systemd/system/sqlitecloud.service
@@ -227,7 +230,7 @@ func (this *CloudProviderDigitalOcean) CreateNode(nodeCreateReq *CloudNodeCreate
 	cloudConfigBuf := new(bytes.Buffer)
 	cloudConfigTemplate.Execute(cloudConfigBuf, nodeCreateReq)
 
-	SQLiteWeb.Logger.Infof("Cloud Config:\n\n\n%s\n\n\n", cloudConfigBuf.String())
+	// SQLiteWeb.Logger.Infof("Cloud Config:\n\n\n%s\n\n\n", cloudConfigBuf.String())
 
 	rSlug, found := this.RegionToSlug(nodeCreateReq.Region)
 	if !found {
@@ -371,7 +374,7 @@ func (this *CloudProviderDigitalOcean) CreateNode(nodeCreateReq *CloudNodeCreate
 	return cloudNode, nil
 }
 
-func (this *CloudProviderDigitalOcean) DestroyNode(cloudNode *CloudNode) error {
+func (this *CloudProviderDigitalOcean) DeleteNode(cloudNode *CloudNode) error {
 	if cloudNode == nil || cloudNode.DropletID == 0 {
 		return nil
 	}
@@ -403,4 +406,8 @@ func (this *CloudProviderDigitalOcean) RegionToSlug(r CloudRegion) (slug string,
 func (this *CloudProviderDigitalOcean) SizeToSlug(s CloudSize) (slug string, found bool) {
 	slug, found = sizeSlug[s]
 	return
+}
+
+func (this *CloudProviderDigitalOcean) ProviderName() string {
+	return doProviderName
 }

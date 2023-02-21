@@ -442,6 +442,28 @@ func lua_createNode(L *lua.State) int {
 	return 1
 }
 
+func lua_deleteNode(L *lua.State) int {
+	if L.TypeOf(1) != lua.TypeNumber || L.TypeOf(2) != lua.TypeNumber || L.TypeOf(3) != lua.TypeString {
+		SQLiteWeb.Logger.Error("Wrong arguments for delete")
+		L.PushNil()
+		return 0
+	}
+
+	uniqueID := int64(lua.CheckNumber(L, 1))
+	clusterNodeID := int(lua.CheckNumber(L, 2))
+	projectUUID := lua.CheckString(L, 3)
+
+	err := deleteNode(uniqueID, clusterNodeID, projectUUID)
+	if err != nil {
+		SQLiteWeb.Logger.Error(err.Error())
+		L.PushBoolean(false)
+		return 1
+	}
+
+	L.PushBoolean(true)
+	return 1
+}
+
 func lua_executeSQL(L *lua.State) int {
 	if L.TypeOf(1) == lua.TypeString && L.TypeOf(2) == lua.TypeString {
 		uuid := lua.CheckString(L, 1)
@@ -806,6 +828,7 @@ NextPart:
 
 		// register internal droplet related functions
 		l.Register("createNode", lua_createNode)
+		l.Register("deleteNode", lua_deleteNode)
 
 		// register context related functions
 		l.Register("SetStatus", func(L *lua.State) int {

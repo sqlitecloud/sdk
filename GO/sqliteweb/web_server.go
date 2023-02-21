@@ -177,11 +177,20 @@ func (this *Server) serveWebUser(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
+	// https://github.com/sethvargo/go-password ?
+	password, err := password.Generate(12, 2, 3, false, false)
+	if err != nil {
+		SQLiteWeb.Logger.Errorf("[WebUser] Error while generating new password: %s", err.Error())
+		writeError(writer, http.StatusInternalServerError, "Internal Server Error", nil)
+		return
+	}
+	// passwordhash := // if the password is hashed, I have to implement a new password recovery procedure, I cannot send the hashed password
+
 	// add the new user to the waitlist (WebUser table)
 	sql := "INSERT INTO WebUser (first_name, last_name, company, email, referral, message) VALUES (?, ?, ?, ?, ?, ? );"
 	if _, err, errcode, _, _ := dashboardcm.ExecuteSQLArray("auth", sql, &[]interface{}{body["FirstName"], body["LastName"], body["Company"], email.Address, body["Referral"], body["Message"]}); err != nil {
-		// (19) SQLITE_CONSTRAINT
 		if errcode == 19 {
+			// (19) SQLITE_CONSTRAINT
 			SQLiteWeb.Logger.Errorf("[WebUser] Email already exists: %s %s", email.Address, err.Error())
 			writeError(writer, http.StatusConflict, "Email already exists", nil)
 			return
@@ -192,28 +201,37 @@ func (this *Server) serveWebUser(writer http.ResponseWriter, request *http.Reque
 		}
 	}
 
-	// https://github.com/sethvargo/go-password ?
-	password, err := password.Generate(12, 2, 3, false, false)
-	if err != nil {
-		SQLiteWeb.Logger.Errorf("[WebUser] Error while generating new password: %s", err.Error())
-		writeError(writer, http.StatusInternalServerError, "Internal Server Error", nil)
-		return
-	}
-	// passwordhash := // if the password is hashed, I have to implement a new password recovery procedure, I cannot send the hashed password
-
 	// add a new dashboard user (User table)
 	sql = "INSERT INTO Company (name) VALUES (?) RETURNING id"
 	res, err, _, _, _ := dashboardcm.ExecuteSQLArray("auth", sql, &[]interface{}{body["Company"]})
 	if err != nil {
 		SQLiteWeb.Logger.Errorf("[WebUser] Error while executing INSERT INTO Company: %s", err.Error())
 		writeError(writer, http.StatusInternalServerError, "Internal Server Error", nil)
+
+		// rollback
+		if _, err, _, _, _ := dashboardcm.ExecuteSQLArray("auth", "DELETE FROM WebUser WHERE email = ?", &[]interface{}{email.Address}); err != nil {
+			SQLiteWeb.Logger.Errorf("[WebUser] Error while rolling back WebUser %s: %s", email.Address, err.Error())
+		}
 		return
 	}
 
+	companyID := res.GetInt32Value_(0, 0)
 	sql = "INSERT INTO User (company_id, first_name, last_name, email, password) VALUES (?, ?, ?, ?, ?);"
-	if _, err, _, _, _ := dashboardcm.ExecuteSQLArray("auth", sql, &[]interface{}{res.GetInt32Value_(0, 0), body["FirstName"], body["LastName"], email.Address, password, body["Message"]}); err != nil {
-		SQLiteWeb.Logger.Errorf("[WebUser] Error while executing INSERT INTO WebUser: %s", err.Error())
-		writeError(writer, http.StatusInternalServerError, "Internal Server Error", nil)
+	if _, err, errcode, _, _ := dashboardcm.ExecuteSQLArray("auth", sql, &[]interface{}{companyID, body["FirstName"], body["LastName"], email.Address, password, body["Message"]}); err != nil {
+		if errcode == 19 {
+			// (19) SQLITE_CONSTRAINT
+			SQLiteWeb.Logger.Errorf("[WebUser] Email already exists in User table: %s %s", email.Address, err.Error())
+			writeError(writer, http.StatusConflict, "Email already exists", nil)
+		} else {
+			SQLiteWeb.Logger.Errorf("[WebUser] Error while executing INSERT INTO User: %s", err.Error())
+			writeError(writer, http.StatusInternalServerError, "Internal Server Error", nil)
+		}
+
+		// rollback
+		if _, err, _, _, _ := dashboardcm.ExecuteSQLArray("auth", "DELETE FROM WebUser WHERE email = ?; DELETE FROM Company WHERE id = ?", &[]interface{}{email.Address, companyID}); err != nil {
+			SQLiteWeb.Logger.Errorf("[WebUser] Error while rolling back WebUser %s AND Company %d: %s", email.Address, companyID, err.Error())
+		}
+
 		return
 	}
 

@@ -33,9 +33,13 @@ if userID == 0 then
                                                                                           return error( 501, "Not Implemented" )
 else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                     end
-  local machineNodeID, err, msg = verifyNodeID( userID, projectID, nodeID )  if err ~= 0 then return error( err, msg )                     end
+  local clusterNodeID, err, msg = verifyNodeID( userID, projectID, nodeID )  if err ~= 0 then return error( err, msg )                     end
 
-  -- command = string.format( "REMOVE NODE %d", machineNodeID )
+  -- uniqueID, clusterNodeID, projectUUID
+  local deleted = deleteNode(nodeID, clusterNodeID, projectID)
+  if not deleted then return error( 502, "Bad Gateway, Cannot remove node" )  end
+  
+  -- command = string.format( "REMOVE NODE %d", clusterNodeID )
   -- result = executeSQL( projectID, command )                                          then return error( 502, "Bad Gateway, Cannot remove node" )  end
   -- if not result                                                                      then return error( 502, result.ErrorMessage )     end
   -- if result.ErrorNumber ~= 0  
