@@ -19,7 +19,9 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	htmltemplate "html/template"
@@ -124,6 +126,10 @@ func sendMailWithTemplate(from *netmail.Address, to *netmail.Address, subject st
 	}
 
 	path := cfg.Section("mail").Key("mail.template.path").String()
+
+	if from == nil {
+		from, _ = netmail.ParseAddress(cfg.Section("mail").Key("mail.from").String())
+	}
 
 	for _, templatePath := range []string{fmt.Sprintf("%s/%s/%s", path, language, templateName), fmt.Sprintf("%s/%s", path, templateName)} {
 		templateBasePath := strings.TrimSuffix(templatePath, ".eml")
@@ -245,4 +251,12 @@ func writeError(writer http.ResponseWriter, statusCode int, message string, allo
 	writer.Header().Set("Content-Encoding", "utf-8")
 	writer.WriteHeader(statusCode)
 	writer.Write([]byte(fmt.Sprintf("{\"status\":%d,\"message\":\"%s\"}", statusCode, message)))
+}
+
+func rand64UrlSafeString() string {
+	n := 48 // 4*(48/3)=64
+	var r = rand.Reader
+	b := make([]byte, n)
+	_, _ = r.Read(b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }

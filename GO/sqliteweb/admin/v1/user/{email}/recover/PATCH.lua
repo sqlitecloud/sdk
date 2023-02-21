@@ -6,8 +6,8 @@
 --     //             ///   ///  ///    Date        : 2022/04/26
 --    ///             ///   ///  ///    Author      : Andreas Pfeil
 --   ///             ///   ///  ///
---   ///     //////////   ///  ///      Description : Send an email with a reset password link
---   ////                ///  ///                    
+--   ///     //////////   ///  ///      Description : Reset the password for the specified user
+--   ////                ///  ///                     if the token is valid
 --     ////     //////////   ///                      
 --        ////            ////          Requires    : Authentication
 --          ////     /////              Output      : 
@@ -22,9 +22,12 @@ require "sqlitecloud"
 SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
-local email,    err, msg = checkParameter( email, 3 )                   if err ~= 0 then return error( err, string.format( msg, "email" ) )  end
+local email,    err, msg = checkParameter( email, 3 )             if err ~= 0 then return error( err, string.format( msg, "email" ) )  end
 
--- check the email
+local token,    err, msg = getBodyValue( "token", 0 )             if err ~= 0 then return error( err, msg )                                end
+local password, err, msg = getBodyValue( "password", 6 )          if err ~= 0 then return error( err, msg )                                end
+
+-- get the user_id
 command = "SELECT id FROM User WHERE email = ?;"
 result = executeSQL( "auth", command, {email} )
 
@@ -34,22 +37,27 @@ if result.ErrorNumber       ~= 0                                                
 if result.NumberOfRows      ~= 1                                                    then return error( 404, "User not found" )               end
 if result.NumberOfColumns   ~= 1                                                    then return error( 502, "Bad Gateway" )                  end                                
 
-resetToken = rand64UrlSafeString()
-command = "INSERT INTO PasswordResetToken (user_id, token) VALUES (?, ?) RETURNING rowid"
-result = executeSQL( "auth", command, {result.Rows[ 1 ].id, hash(resetToken)} )
+userid = result.Rows[ 1 ].id
+
+-- check the token
+local token_timeout_minutes = 10
+command = string.format("SELECT 1 FROM PasswordResetToken WHERE user_id = ? AND token = ? AND julianday(DATETIME('now')) < julianday(creation_date, '+%d minutes')", token_timeout_minutes)
+result = executeSQL( "auth", command, {userid, hash(token)} )
 
 if not result                                                                       then return error( 504, "Gateway Timeout" )              end
 if result.ErrorMessage      ~= ""                                                   then return error( 502, result.ErrorMessage )            end
 if result.ErrorNumber       ~= 0                                                    then return error( 403, "Could fetch user data" )        end
-if result.NumberOfRows      ~= 1                                                    then return error( 500, "Internal ServerError" )         end
+if result.NumberOfRows      ~= 1                                                    then return error( 401, "Invalid token" )                end
 if result.NumberOfColumns   ~= 1                                                    then return error( 502, "Bad Gateway" )                  end                                
 
+command = "UPDATE User SET password = ? WHERE id = ?; SELECT changes() AS success;"
+result = executeSQL( "auth", command, {hash(password), userid} )
 
-template_data = {
-  Token = resetToken,
-}
-
--- fromstr string (use default sender if empty), tostr string, subject string, templateName string, language string, data map[string]string
-mail("", email, "Reset your password", "recover.eml", "en", template_data)
+if not result                                                                      then return error( 504, "Gateway Timeout" )                  end
+if result.ErrorMessage      ~= ""                                                  then return error( 502, "Bad Gateway" )                end
+if result.ErrorNumber       ~= 0                                                   then return error( 502, "Bad Gateway" )                      end
+if result.NumberOfRows      ~= 1                                                   then return error( 502, "Bad Gateway" )                      end
+if result.NumberOfColumns   ~= 1                                                   then return error( 502, "Bad Gateway" )                      end
+if result.Rows[ 1 ].success ~= 1                                                   then return error( 400, "User not found" )              end
 
 error( 200, "OK" )

@@ -37,7 +37,7 @@ if string.len( newEmail ) == 0    then newEmail = email end
 if bool( enabled )                then enabled = 1 else enabled = 0 end
 
 command  = "UPDATE User SET last_name = ?, first_name = ?, email = ?, password = ?, enabled = ? WHERE email = ?; SELECT changes() AS success;"
-result = executeSQL( "auth", command, {lastName, firstName, newEmail, password, enabled, email} )
+result = executeSQL( "auth", command, {lastName, firstName, newEmail, hash(password), enabled, email} )
 if not result                                                                       then return error( 504, "Gateway Timeout" )              end
 if result.ErrorMessage      ~= ""                                                   then return error( 502, result.ErrorMessage )            end
 if result.ErrorNumber       ~= 0                                                    then return error( 403, "Could not create user" )        end

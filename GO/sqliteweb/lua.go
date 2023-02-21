@@ -18,16 +18,13 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
-	"net/smtp"
+	"net/mail"
 	"regexp"
-	"strings"
-	"text/template" // html/template
+	"strings" // html/template
 	"time"
 
 	"github.com/Shopify/go-lua"
@@ -621,13 +618,19 @@ func lua_executeSQL(L *lua.State) int {
 	return 0
 }
 
-func lua_hashPassword(L *lua.State) int {
+func lua_hash(L *lua.State) int {
 	if L.TypeOf(1) != lua.TypeString {
 		return 0
 	}
 
 	p := lua.CheckString(L, 1)
 	L.PushString(Hash(p))
+	return 1
+}
+
+func lua_rand64UrlSafeString(L *lua.State) int {
+	s := rand64UrlSafeString()
+	L.PushString(s)
 	return 1
 }
 
@@ -655,79 +658,131 @@ func lua_hardwares(L *lua.State) int {
 
 // Email & Template helper
 
-// mail( template, language, template_data ), z.B. mailTo("welcome.eml", "en", { To = "andreas.pfeil@..." } )
+// fromstr string (use default sender if empty), tostr string, subject string, templateName string, language string, data map[string]string
 func lua_mail(L *lua.State) int {
-	host, _, err := net.SplitHostPort(cfg.Section("mail").Key("mail.proxy.host").String())
+	// func sendMailWithTemplate(from *netmail.Address, to *netmail.Address, subject string, body map[string]string, templateName string, language string) error {
+	fromstr := lua.CheckString(L, 1)
+	tostr := lua.CheckString(L, 2)
+	subject := lua.CheckString(L, 3)
+	templateName := lua.CheckString(L, 4)
+	language := lua.CheckString(L, 5)
 
-	switch {
-	case err != nil:
-		goto fail
-	case L.TypeOf(1) != lua.TypeString:
-		goto fail
-	case L.TypeOf(2) != lua.TypeString:
-		goto fail
-	case L.TypeOf(3) != lua.TypeTable:
-		goto fail
-
-	default:
-		auth := smtp.PlainAuth("", cfg.Section("mail").Key("mail.proxy.user").String(), cfg.Section("mail").Key("mail.proxy.password").String(), host)
-
-		path := cfg.Section("mail").Key("mail.template.path").String()
-		tempName := lua.CheckString(L, 1)
-		language := lua.CheckString(L, 2)
-
-		data := make(map[string]string)
-		L.PushNil() // Add nil entry on stack (need 2 free slots).
-		for L.Next(-2) {
-			if L.TypeOf(-2) == lua.TypeString && L.TypeOf(-1) == lua.TypeString {
-				data[lua.CheckString(L, -2)] = lua.CheckString(L, -1)
-			}
-			L.Pop(1)
+	if L.TypeOf(6) != lua.TypeTable {
+		SQLiteWeb.Logger.Errorf("[lua_mail] expecting a table, got %v", L.TypeOf(6))
+		L.PushBoolean(false)
+		return 1
+	}
+	data := make(map[string]string)
+	L.PushNil() // Add nil entry on stack (need 2 free slots).
+	for L.Next(-2) {
+		if L.TypeOf(-2) == lua.TypeString && L.TypeOf(-1) == lua.TypeString {
+			data[lua.CheckString(L, -2)] = lua.CheckString(L, -1)
 		}
-
-		now := time.Now()
-		data["From"] = cfg.Section("mail").Key("mail.from").String()
-		data["Time"] = now.Format("15:04:05")
-		data["Date"] = now.Format("2006-01-02")
-		data["Year"] = now.Format("2006")
-		data["Month"] = now.Format("01")
-		data["Day"] = now.Format("02")
-
-		for _, path := range []string{fmt.Sprintf("%s/%s/%s", path, language, tempName), fmt.Sprintf("%s/%s", path, tempName)} {
-			if !PathExists(path) {
-				continue
-			}
-
-			if temp, err := template.ParseFiles(path); err == nil {
-
-				var outBuffer bytes.Buffer
-				err = temp.Execute(&outBuffer, data)
-				if err != nil {
-					SQLiteWeb.Logger.Errorf("Error in template: %s %s", tempName, err.Error())
-					L.PushBoolean(false)
-					return 1
-				}
-				// fmt.Printf("%v (%s)\r\n", err, string(outBuffer.Bytes()))
-
-				if err = smtp.SendMail(cfg.Section("mail").Key("mail.proxy.host").String(), auth, data["From"], []string{data["To"]}, outBuffer.Bytes()); err != nil {
-					SQLiteWeb.Logger.Errorf("Error sending mail: %s %s", tempName, err.Error())
-					L.PushBoolean(false)
-					return 1
-				} else {
-					L.PushBoolean(true)
-					return 1
-				}
-				// fmt.Printf( "%v\r\n", err )
-			}
-		}
-
-		SQLiteWeb.Logger.Errorf("Mail template not found: %s", tempName)
+		L.Pop(1)
 	}
 
-fail:
-	L.PushBoolean(false)
+	// if the from string is empty, sendMailWithTemplate uses the default email sender
+	var from *mail.Address
+	if len(fromstr) > 0 {
+		if f, err := mail.ParseAddress(fromstr); err != nil {
+			SQLiteWeb.Logger.Errorf("[lua_mail] error while parsint address %s: %s", fromstr, err.Error())
+			L.PushBoolean(false)
+			return 1
+		} else {
+			from = f
+		}
+	}
+
+	to, err := mail.ParseAddress(tostr)
+	if err != nil {
+		SQLiteWeb.Logger.Errorf("[lua_mail] error while parsint address %s: %s", tostr, err.Error())
+		L.PushBoolean(false)
+		return 1
+	}
+
+	if err = sendMailWithTemplate(from, to, subject, data, templateName, language); err != nil {
+		SQLiteWeb.Logger.Errorf("[lua_mail] error: %s", err.Error())
+		L.PushBoolean(false)
+		return 1
+	}
+
+	L.PushBoolean(true)
 	return 1
 }
+
+// mail( template, language, template_data ), z.B. mailTo("welcome.eml", "en", { To = "andreas.pfeil@..." } )
+// func lua_mail(L *lua.State) int {
+// 	host, _, err := net.SplitHostPort(cfg.Section("mail").Key("mail.proxy.host").String())
+
+// 	switch {
+// 	case err != nil:
+// 		goto fail
+// 	case L.TypeOf(1) != lua.TypeString:
+// 		goto fail
+// 	case L.TypeOf(2) != lua.TypeString:
+// 		goto fail
+// 	case L.TypeOf(3) != lua.TypeTable:
+// 		goto fail
+
+// 	default:
+// 		auth := smtp.PlainAuth("", cfg.Section("mail").Key("mail.proxy.user").String(), cfg.Section("mail").Key("mail.proxy.password").String(), host)
+
+// 		path := cfg.Section("mail").Key("mail.template.path").String()
+// 		tempName := lua.CheckString(L, 1)
+// 		language := lua.CheckString(L, 2)
+
+// 		data := make(map[string]string)
+// 		L.PushNil() // Add nil entry on stack (need 2 free slots).
+// 		for L.Next(-2) {
+// 			if L.TypeOf(-2) == lua.TypeString && L.TypeOf(-1) == lua.TypeString {
+// 				data[lua.CheckString(L, -2)] = lua.CheckString(L, -1)
+// 			}
+// 			L.Pop(1)
+// 		}
+
+// 		now := time.Now()
+// 		data["From"] = cfg.Section("mail").Key("mail.from").String()
+// 		data["Time"] = now.Format("15:04:05")
+// 		data["Date"] = now.Format("2006-01-02")
+// 		data["Year"] = now.Format("2006")
+// 		data["Month"] = now.Format("01")
+// 		data["Day"] = now.Format("02")
+
+// 		for _, path := range []string{fmt.Sprintf("%s/%s/%s", path, language, tempName), fmt.Sprintf("%s/%s", path, tempName)} {
+// 			if !PathExists(path) {
+// 				continue
+// 			}
+
+// 			if temp, err := template.ParseFiles(path); err == nil {
+
+// 				var outBuffer bytes.Buffer
+// 				err = temp.Execute(&outBuffer, data)
+// 				if err != nil {
+// 					SQLiteWeb.Logger.Errorf("Error in template: %s %s", tempName, err.Error())
+// 					L.PushBoolean(false)
+// 					return 1
+// 				}
+// 				// fmt.Printf("%v (%s)\r\n", err, string(outBuffer.Bytes()))
+
+// 				if err = smtp.SendMail(cfg.Section("mail").Key("mail.proxy.host").String(), auth, data["From"], []string{data["To"]}, outBuffer.Bytes()); err != nil {
+// 					SQLiteWeb.Logger.Errorf("Error sending mail: %s %s", tempName, err.Error())
+// 					L.PushBoolean(false)
+// 					return 1
+// 				} else {
+// 					L.PushBoolean(true)
+// 					return 1
+// 				}
+// 				// fmt.Printf( "%v\r\n", err )
+// 			}
+// 		}
+
+// 		SQLiteWeb.Logger.Errorf("Mail template not found: %s", tempName)
+// 	}
+
+// fail:
+// 	L.PushBoolean(false)
+// 	return 1
+// }
 
 func (this *Server) executeLua(basePath string, endpoint string, userID int64, writer http.ResponseWriter, request *http.Request) {
 	path := basePath
@@ -814,7 +869,8 @@ NextPart:
 		l.Register("listINIProjects", lua_listINIProjects)
 		l.Register("getINIArray", lua_getINIArray)
 		l.Register("getINIBoolean", lua_getINIBoolean)
-		l.Register("hashPassword", lua_hashPassword)
+		l.Register("hash", lua_hash)
+		l.Register("rand64UrlSafeString", lua_rand64UrlSafeString)
 
 		// Regions, Hardware, etc
 		l.Register("getCloudRegions", lua_regions)

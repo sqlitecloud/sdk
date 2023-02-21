@@ -46,10 +46,9 @@ func (this *Server) executeLuaAdminServer(writer http.ResponseWriter, request *h
 
 				if username, password, ok := request.BasicAuth(); ok && username == cfg.Section("auth").Key("login").String() {
 					switch cfg.Section("admin").Key("password").String() {
-					case password:
-						fallthrough
-					case fmt.Sprintf("%x", Hash(password)):
-
+					// case password:
+					// 	fallthrough
+					case Hash(password):
 						v := mux.Vars(request)
 						endpoint := strings.ReplaceAll(v["endpoint"]+"/", "//", "/") // "v1/fbf94289-64b0-4fc6-9c20-84083f82ee63/database/Foo/connections/"
 						path := cfg.Section("admin").Key("path").String()            // "/Users/pfeil/GitHub/SqliteCloud/sdk/GO/src/sqliteweb/dashboard"

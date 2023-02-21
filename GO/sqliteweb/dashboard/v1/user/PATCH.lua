@@ -36,7 +36,7 @@ else
   commandargs = {}
   local separator = ""
 
-  fields = {first_name = first_name, last_name = last_name, email = email, password = password}
+  fields = {first_name = first_name, last_name = last_name, email = email, password = hash(password)}
 
   for k, v in pairs(fields) do
     if v and string.len(v)>0 then  

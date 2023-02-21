@@ -6,11 +6,9 @@ The Email-Template recover.eml is used.
 
 Assume, the file path to this endpoint is ./admin/v1/user/{email}/recover/GET.lua, then the template file must be stored in: ./email/v1/recover.eml
 
-The ./admin/v1/user/{email}/recover/GET.lua endpoint is sending the password that is stored in the admin.USER database to the given email address.
-This behaviour is not production ready. Instead, there should be a system that sends a first Email with: "A password recovery was requested, if not from you ignore it, if for you klick link". This requires another Endpoint that takes the klick and then generates a random password that is sent in a second email to the user. Any other password recover system is fine, too...
+The ./admin/v1/user/{email}/recover/GET.lua endpoint sending an email with a link that can be used in the next 10 minutes to reset the password
 
-Since this endpoint is "experimental" and just to demonstrate a basic password recovery functionality (without propper GUI user interface), it does not take the
-"last_recovery_request" column in the auth.USER database table into account. This field is there to limit the number of password requests in a certain time period.
+
 
 A note about the recover.eml file.
 
@@ -19,19 +17,21 @@ If the template file is stored in a subdirectory like: ./email/v1/de/recover.eml
 The "en" in this LUA command should be replaced by the language variable of the user. If the language subdirectory "en" is not found in the path, the system
 looks for the recovery.eml file one directory hirachy higher (./email/v1/recover.eml), so in this parent directory, there should always be the default language template (like "en").
 
-The recover.eml template follows the GO template specifications. More info can be found here:
+Each email can contains two types of content: the text/plain message and/or the text/html message
+The mail function will look for the following files:
+- `<templatename>.eml` or `<templatename>.txt` for the text/plain part
+- `<templatename>.html` for the text/html
+One or both parts can be used.
 
-https://pkg.go.dev/text/template
-
-To generate a rich media Email template, just use any Email program, design a rich recovery email (with embedded immages) and send this email to youself. Then open the email and look at the source code. Cut/Copy/Paste this sourcecode into the recover.eml file. Replace the variable data with tamplate variables.
+The eml/txt template follows the GO tex/template specifications.
+The html template follows the GO html/template specifications.
 
 ## Requests
 
 ```sh
 curl "https://localhost:8443/admin/v1/user/sqlitecloud@synergiezentrum.com/recover" \
      -H 'Content-Type: application/json; charset=utf-8' \
-     -u 'admin:password' \
-     -d $'{}'
+     -u 'admin:password'
 ```
 
 ### **GET** - /admin/v1/user/{email}/recover

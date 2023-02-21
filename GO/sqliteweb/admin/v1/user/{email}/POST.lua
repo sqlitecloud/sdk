@@ -40,7 +40,7 @@ if result.NumberOfRows    == 0                                                  
 companyID = result.Rows[1].id
 
 command  = string.format( "INSERT OR FAIL INTO User (first_name,last_name,company_id,email,password,creation_date,enabled) VALUES( ?, ?, ?, ?, ?, '%s', %s);", now, enabled )
-result = executeSQL( "auth", command, {firstName, lastName, companyID, email, password} )
+result = executeSQL( "auth", command, {firstName, lastName, companyID, email, hash(password)} )
 if not result                                                                       then return error( 504, "Gateway Timeout" )              end
 if result.ErrorNumber     ~= 0                                                      then return error( 403, "Could not create user" )        end
 if result.Value           ~= "OK"                                                   then return error( 500, "Internal Server Error" )        end

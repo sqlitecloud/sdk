@@ -1,14 +1,9 @@
-To: <{{.To}}>
-From: <{{.From}}>
-Content-Type: text/plain;
-	charset=us-ascii
-Content-Transfer-Encoding: 8bit
-Mime-Version: 1.0
-Subject: Password recovery
+Reset your password
 
-Hi,
+Forgot password? Visit the link below to choose a
+new one:
 
-your password is: {{.Password}}
+https://dashboard.sqlitecloud.io/auth/reset-password?token={{.Token}}
 
-Best regards,
-SQLiteCloud Team
+If you didn’t mean to reset your password, then you can just ignore
+this email; your password will not change.
