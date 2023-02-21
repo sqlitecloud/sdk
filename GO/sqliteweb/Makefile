@@ -62,6 +62,7 @@ web_test:
 sync:
 	rsync -a dashboard/v1/*  root@web1.sqlitecloud.io:/opt/sqliteweb/dashboard/v1/.
 	rsync -a lib/* root@web1.sqlitecloud.io:/opt/sqliteweb/lib/.
+	rsync -a email/v1/* root@web1.sqlitecloud.io:/opt/sqliteweb/email/v1
 
 sync_admin:
 	rsync -a admin/v1/* root@web1.sqlitecloud.io:/opt/sqliteweb/admin/v1/.
