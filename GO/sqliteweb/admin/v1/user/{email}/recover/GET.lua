@@ -49,6 +49,10 @@ template_data = {
   Token = resetToken,
 }
 
+-- with HTML template use the following tag otherwise the link would be overwritten 
+-- so that any time a customer clicks a link, SendGrid can track those clicks: 
+-- <a clicktracking="off" href='https://mysite/auth/'>My Site</a> 
+
 -- fromstr string (use default sender if empty), tostr string, subject string, templateName string, language string, data map[string]string
 mail("", email, "Reset your password", "recover.eml", "en", template_data)
 
