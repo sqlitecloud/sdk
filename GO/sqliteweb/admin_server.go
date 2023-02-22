@@ -43,7 +43,6 @@ func (this *Server) executeLuaAdminServer(writer http.ResponseWriter, request *h
 	if clientIP, _, err := net.SplitHostPort(request.RemoteAddr); err == nil {
 		if _, maskNet, err := net.ParseCIDR(cfg.Section("admin").Key("allow").String()); err == nil {
 			if maskNet.Contains(net.ParseIP(clientIP)) {
-
 				if username, password, ok := request.BasicAuth(); ok && username == cfg.Section("auth").Key("login").String() {
 					switch cfg.Section("admin").Key("password").String() {
 					// case password:

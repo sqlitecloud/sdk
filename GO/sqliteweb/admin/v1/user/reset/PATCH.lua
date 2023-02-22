@@ -27,28 +27,20 @@ local email,    err, msg = checkParameter( email, 3 )             if err ~= 0 th
 local token,    err, msg = getBodyValue( "token", 0 )             if err ~= 0 then return error( err, msg )                                end
 local password, err, msg = getBodyValue( "password", 6 )          if err ~= 0 then return error( err, msg )                                end
 
--- get the user_id
-command = "SELECT id FROM User WHERE email = ?;"
-result = executeSQL( "auth", command, {email} )
 
-if not result                                                                       then return error( 504, "Gateway Timeout" )              end
-if result.ErrorMessage      ~= ""                                                   then return error( 502, result.ErrorMessage )            end
-if result.ErrorNumber       ~= 0                                                    then return error( 403, "Could fetch user data" )        end
-if result.NumberOfRows      ~= 1                                                    then return error( 404, "User not found" )               end
-if result.NumberOfColumns   ~= 1                                                    then return error( 502, "Bad Gateway" )                  end                                
-
-userid = result.Rows[ 1 ].id
 
 -- check the token
-local token_timeout_minutes = 10
-command = string.format("SELECT 1 FROM PasswordResetToken WHERE user_id = ? AND token = ? AND julianday(DATETIME('now')) < julianday(creation_date, '+%d minutes')", token_timeout_minutes)
-result = executeSQL( "auth", command, {userid, hash(token)} )
+local token_timeout_minutes = 30
+command = string.format("SELECT user_id FROM PasswordResetToken WHERE token = ? AND used = 0 AND julianday(DATETIME('now')) < julianday(creation_date, '+%d minutes')", token_timeout_minutes)
+result = executeSQL( "auth", command, {hash(token)} )
 
 if not result                                                                       then return error( 504, "Gateway Timeout" )              end
 if result.ErrorMessage      ~= ""                                                   then return error( 502, result.ErrorMessage )            end
 if result.ErrorNumber       ~= 0                                                    then return error( 403, "Could fetch user data" )        end
 if result.NumberOfRows      ~= 1                                                    then return error( 401, "Invalid token" )                end
 if result.NumberOfColumns   ~= 1                                                    then return error( 502, "Bad Gateway" )                  end                                
+
+userid = result.Rows[ 1 ].user_id
 
 command = "UPDATE User SET password = ? WHERE id = ?; SELECT changes() AS success;"
 result = executeSQL( "auth", command, {hash(password), userid} )
@@ -59,5 +51,8 @@ if result.ErrorNumber       ~= 0                                                
 if result.NumberOfRows      ~= 1                                                   then return error( 502, "Bad Gateway" )                      end
 if result.NumberOfColumns   ~= 1                                                   then return error( 502, "Bad Gateway" )                      end
 if result.Rows[ 1 ].success ~= 1                                                   then return error( 400, "User not found" )              end
+
+command = "UPDATE PasswordResetToken SET used = 1 WHERE token = ?"
+result = executeSQL( "auth", command, {hash(token)} )
 
 error( 200, "OK" )

@@ -244,7 +244,7 @@ func deleteCloudNode(cloudProvider CloudProvider, cloudNode *CloudNode, uniqueNo
 	return nil
 }
 
-func deleteNode(uniqueID int64, clusterNodeID int, projectUUID string) error {
+func deleteNode(userid int, uniqueNodeID int64, clusterNodeID int, projectUUID string) error {
 	cloudProvider := digitalocean
 
 	cloudNode := &CloudNode{
@@ -254,24 +254,36 @@ func deleteNode(uniqueID int64, clusterNodeID int, projectUUID string) error {
 		Provider:    cloudProvider.ProviderName(),
 	}
 
-	sql := fmt.Sprintf("SELECT shortuuid, droplet_id, domain_record_id FROM Node WHERE id = %d AND created = 1", uniqueID)
+	sql := fmt.Sprintf("SELECT shortuuid, droplet_id, domain_record_id, name FROM Node WHERE id = %d AND created = 1", uniqueNodeID)
 	if res, err, _, _, _ := dashboardcm.ExecuteSQL("auth", sql); err != nil {
-		return fmt.Errorf("Error n delete node %d: %s", uniqueID, err.Error())
+		return fmt.Errorf("Error n delete node %d: %s", uniqueNodeID, err.Error())
 	} else if !res.IsRowSet() {
-		return fmt.Errorf("Error in delete node %d: Invalid response ", uniqueID)
+		return fmt.Errorf("Error in delete node %d: Invalid response ", uniqueNodeID)
 	} else if res.GetNumberOfRows() == 0 {
-		return fmt.Errorf("Error in delete node %d: 0 rows", uniqueID)
+		return fmt.Errorf("Error in delete node %d: 0 rows", uniqueNodeID)
 	} else {
 		cloudNode.Hostname = res.GetStringValue_(0, 0)
 		cloudNode.DropletID = int(res.GetInt32Value_(0, 1))
 		cloudNode.DomainRecordID = int(res.GetInt32Value_(0, 2))
+		cloudNode.Name = res.GetStringValue_(0, 3)
 	}
 
-	if err := deleteCloudNode(cloudProvider, cloudNode, uniqueID, true); err != nil {
+	jobuuid := uuid.New().String()
+	sql = fmt.Sprintf("INSERT INTO Jobs (uuid, name, status, steps, progress, user_id, node_id) VALUES ('%s', 'Delete Node %s', 'Deleting droplet', 1, 0, %d, %d)", jobuuid, cloudNode.Name, userid, uniqueNodeID) // ; SELECT uuid FROM Jobs WHERE rowid = last_insert_rowid();
+	if _, err, _, _, _ := dashboardcm.ExecuteSQL("auth", sql); err != nil {
+		return fmt.Errorf("Cannot create the job %s: %s", jobuuid, err.Error())
+	}
+
+	if err := deleteCloudNode(cloudProvider, cloudNode, uniqueNodeID, true); err != nil {
+		sql = fmt.Sprintf("UPDATE Jobs SET error = 1, status = '%s' WHERE uuid = '%s'", err.Error(), jobuuid)
+		authExecSQL(sql)
 		return err
 	}
 
-	sql = fmt.Sprintf("UPDATE Node SET created = 0 WHERE id = %d", uniqueID)
+	sql = fmt.Sprintf("UPDATE Node SET created = 0 WHERE id = %d", uniqueNodeID)
+	authExecSQL(sql)
+
+	sql = fmt.Sprintf("UPDATE Jobs SET progress = steps, status = 'Completed' WHERE uuid = '%s'", jobuuid)
 	authExecSQL(sql)
 
 	return nil
@@ -326,7 +338,7 @@ func waitForConnection(cloudNode *CloudNode, user string, passwd string) (conn *
 	for {
 		connectionString := fmt.Sprintf("sqlitecloud://%s:%s@%s:%d?timeout=5", user, passwd, cloudNode.FullyQualifiedDomainName(), cloudNode.Port)
 		conn, err = sqlitecloud.Connect(connectionString)
-		SQLiteWeb.Logger.Debugf("sqlitecloud.Connect %s err %v", connectionString, err)
+		SQLiteWeb.Logger.Debugf("sqlitecloud.Connect %s err %v", cloudNode.FullyQualifiedDomainName(), err)
 		if err == nil && conn != nil {
 			break
 		}

@@ -56,7 +56,7 @@ none
 
 ```
 GET /admin/v1/user/sqlitecloud@synergiezentrum.com/recover HTTP/1.1
-Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Authorization: Basic YWRtaW46cGFxxxxxxxx=
 Content-Type: application/json; charset=utf-8
 Host: localhost:8443
 Connection: close

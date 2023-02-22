@@ -440,17 +440,18 @@ func lua_createNode(L *lua.State) int {
 }
 
 func lua_deleteNode(L *lua.State) int {
-	if L.TypeOf(1) != lua.TypeNumber || L.TypeOf(2) != lua.TypeNumber || L.TypeOf(3) != lua.TypeString {
+	if L.TypeOf(1) != lua.TypeNumber || L.TypeOf(2) != lua.TypeNumber || L.TypeOf(3) != lua.TypeNumber || L.TypeOf(4) != lua.TypeString {
 		SQLiteWeb.Logger.Error("Wrong arguments for delete")
 		L.PushNil()
 		return 0
 	}
 
-	uniqueID := int64(lua.CheckNumber(L, 1))
-	clusterNodeID := int(lua.CheckNumber(L, 2))
-	projectUUID := lua.CheckString(L, 3)
+	userID := int(lua.CheckNumber(L, 1))
+	uniqueID := int64(lua.CheckNumber(L, 2))
+	clusterNodeID := int(lua.CheckNumber(L, 3))
+	projectUUID := lua.CheckString(L, 4)
 
-	err := deleteNode(uniqueID, clusterNodeID, projectUUID)
+	err := deleteNode(userID, uniqueID, clusterNodeID, projectUUID)
 	if err != nil {
 		SQLiteWeb.Logger.Error(err.Error())
 		L.PushBoolean(false)

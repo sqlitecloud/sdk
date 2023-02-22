@@ -6,7 +6,7 @@ Reset the password for the specified user, using a valid token
 
 ```sh
 ## Request PATCH LUA Duplicate
-curl "https://localhost:8443/admin/v1/user/sqlitecloud@synergiezentrum.com/recover" \
+curl "https://localhost:8443/admin/v1/user/reset" \
      -H 'Content-Type: application/json; charset=utf-8' \
      -u 'admin:password' \
      -d $'{
@@ -15,7 +15,7 @@ curl "https://localhost:8443/admin/v1/user/sqlitecloud@synergiezentrum.com/recov
 }'
 ```
 
-### **PATCH** - /admin/v1/user/{email}/recover
+### **PATCH** - /admin/v1/user/reset
 
 ### Request object
 
@@ -40,13 +40,13 @@ curl "https://localhost:8443/admin/v1/user/sqlitecloud@synergiezentrum.com/recov
 ### Example Request:
 
 ```http
-PATCH /dashboard/v1/fbf94289-64b0-4fc6-9c20-84083f82ee64?x=Hallo%20wie%20gehts&y=1&z=true&x=Second%20line HTTP/1.1
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1LjEwMC4zMi4yMjEiLCJleHAiOjE2NDc1NTI5OTUsImp0aSI6IjEiLCJpYXQiOjE2NDc1MjI5OTUsImlzcyI6IlNRTGl0ZSBDbG91ZCBXZWIgU2VydmVyIiwibmJmIjoxNjQ3NTIyOTk1LCJzdWIiOiJzcWxpdGVjbG91ZC5pbyJ9.SaOn2-XJbf6_irYDvhTGEkDHNHJobiNeEO7CPQVHUi8
+PATCH /admin/v1/user/reset HTTP/1.1
+Authorization: Basic YWRtaW46cGxxxxxxxxQ=
 Content-Type: application/json; charset=utf-8
-Host: web1.sqlitecloud.io:8443
+Host: localhost:8443
 Connection: close
-User-Agent: Paw/3.3.6 (Macintosh; OS X/10.14.6) GCDHTTPRequest
-Content-Length: 115
+User-Agent: RapidAPI/4.0.0 (Macintosh; OS X/13.2.1) GCDHTTPRequest
+Content-Length: 100
 
 {
   "token": "VODisbCozpy8UEsrEobstQBmsqpVR8F4YLI4L6fY5b7pJSjEJowa4KwEdWcUhT7z",
