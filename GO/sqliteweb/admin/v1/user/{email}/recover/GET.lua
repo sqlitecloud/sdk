@@ -41,7 +41,7 @@ result = executeSQL( "auth", command, {result.Rows[ 1 ].id, hash(resetToken)} )
 if not result                                                                       then return error( 504, "Gateway Timeout" )              end
 if result.ErrorMessage      ~= ""                                                   then return error( 502, result.ErrorMessage )            end
 if result.ErrorNumber       ~= 0                                                    then return error( 403, "Could fetch user data" )        end
-if result.NumberOfRows      ~= 1                                                    then return error( 500, "Internal ServerError" )         end
+if result.NumberOfRows      ~= 1                                                    then return error( 500, "Internal Server Error" )        end
 if result.NumberOfColumns   ~= 1                                                    then return error( 502, "Bad Gateway" )                  end                                
 
 
@@ -54,6 +54,6 @@ template_data = {
 -- <a clicktracking="off" href='https://mysite/auth/'>My Site</a> 
 
 -- fromstr string (use default sender if empty), tostr string, subject string, templateName string, language string, data map[string]string
-mail("", email, "Reset your password", "recover.eml", "en", template_data)
+result = mail("", email, "Reset your password", "recover.eml", "en", template_data)  if not result then return error( 500, "Mail not sent" )      end
 
 error( 200, "OK" )

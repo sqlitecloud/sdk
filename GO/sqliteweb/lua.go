@@ -28,8 +28,8 @@ import (
 	"time"
 
 	"github.com/Shopify/go-lua"
+	"github.com/sethvargo/go-password/password"
 	sqlitecloud "github.com/sqlitecloud/sdk"
-	//"github.com/gorilla/mux"
 )
 
 //import "bytes"
@@ -629,6 +629,30 @@ func lua_hash(L *lua.State) int {
 	return 1
 }
 
+// length, numDigits, numSymbols, noUpper, allowRepeat
+func lua_createPassword(L *lua.State) int {
+	if L.TypeOf(1) != lua.TypeNumber || L.TypeOf(2) != lua.TypeNumber || L.TypeOf(3) != lua.TypeNumber || L.TypeOf(4) != lua.TypeBoolean || L.TypeOf(5) != lua.TypeBoolean {
+		L.PushNil()
+		return 0
+	}
+
+	length := int(lua.CheckNumber(L, 1))
+	numDigits := int(lua.CheckNumber(L, 2))
+	numSymbols := int(lua.CheckNumber(L, 3))
+	noUpper := L.ToBoolean(4)
+	allowRepeat := L.ToBoolean(5)
+
+	// password, err := password.Generate(12, 2, 3, false, false)
+	password, err := password.Generate(length, numDigits, numSymbols, noUpper, allowRepeat)
+	if err != nil {
+		L.PushNil()
+		return 0
+	}
+
+	L.PushString(password)
+	return 1
+}
+
 func lua_rand64UrlSafeString(L *lua.State) int {
 	s := rand64UrlSafeString()
 	L.PushString(s)
@@ -871,6 +895,7 @@ NextPart:
 		l.Register("getINIArray", lua_getINIArray)
 		l.Register("getINIBoolean", lua_getINIBoolean)
 		l.Register("hash", lua_hash)
+		l.Register("createPassword", lua_createPassword)
 		l.Register("rand64UrlSafeString", lua_rand64UrlSafeString)
 
 		// Regions, Hardware, etc

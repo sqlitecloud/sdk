@@ -23,7 +23,7 @@ SetHeader( "Content-Type", "application/json" )
 SetHeader( "Content-Encoding", "utf-8" )
 
 local token,    err, msg = getBodyValue( "token", 0 )             if err ~= 0 then return error( err, msg )                                end
-local password, err, msg = getBodyValue( "password", 6 )          if err ~= 0 then return error( err, msg )                                end
+local password, err, msg = getBodyValue( "password", 8 )          if err ~= 0 then return error( err, msg )                                end
 
 -- check the token
 local token_timeout_minutes = 30

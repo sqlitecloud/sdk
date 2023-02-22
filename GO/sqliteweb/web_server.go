@@ -24,7 +24,6 @@ import (
 	"net/mail"
 
 	"github.com/gobwas/glob"
-	"github.com/sethvargo/go-password/password"
 )
 
 var originChecker glob.Glob
@@ -37,7 +36,7 @@ func init() {
 func initWeb() {
 	if cfg.Section("web").Key("enabled").MustBool(false) {
 		SQLiteWeb.router.HandleFunc("/web/v1/sendmail", SQLiteWeb.serveWebSendmail).Methods(http.MethodPost, http.MethodOptions)
-		SQLiteWeb.router.HandleFunc("/web/v1/user", SQLiteWeb.serveWebUser).Methods(http.MethodPost, http.MethodOptions)
+		SQLiteWeb.router.HandleFunc("/web/v1/user", SQLiteWeb.servePostWebUser).Methods(http.MethodPost, http.MethodOptions)
 	}
 }
 
@@ -88,56 +87,9 @@ func (this *Server) serveWebSendmail(writer http.ResponseWriter, request *http.R
 	writer.Header().Set("Content-Type", "application/json")
 	writer.Header().Set("Content-Encoding", "utf-8")
 	writer.Write([]byte(fmt.Sprintf("{\"status\":%d,\"message\":\"%s\"}", http.StatusOK, "OK")))
-
-	/*
-		if language == "" {
-			language = "en"
-		}
-
-		from := cfg.Section("mail").Key("mail.from").String()
-		to := cfg.Section("mail").Key("mail.contactus.to").String()
-		body["From"] = from
-		body["To"] = to
-
-		path := cfg.Section("mail").Key("mail.template.path").String()
-
-		for _, templatePath := range []string{fmt.Sprintf("%s/%s/%s", path, language, templateName), fmt.Sprintf("%s/%s", path, templateName)} {
-			if !PathExists(templatePath) {
-				continue
-			}
-
-			if template, err := template.ParseFiles(templatePath); err == nil {
-				var outBuffer bytes.Buffer
-				if err = template.Execute(&outBuffer, body); err != nil {
-					SQLiteWeb.Logger.Errorf("[WebSendmail] Error in template.ParseFiles: %s %s", templateName, err.Error())
-					writeError(writer, http.StatusInternalServerError, "Internal Error (1)", nil)
-					return
-				}
-
-				if err := mail(from, []string{to}, outBuffer.Bytes()); err != nil {
-					SQLiteWeb.Logger.Errorf("[WebSendmail] Error while sending mail: %s %s", templateName, err.Error())
-					writeError(writer, http.StatusInternalServerError, "Internal Error (2)", nil)
-					return
-				}
-
-				writer.Header().Set("Content-Type", "application/json")
-				writer.Header().Set("Content-Encoding", "utf-8")
-				writer.Write([]byte(fmt.Sprintf("{\"status\":%d,\"message\":\"%s\"}", http.StatusOK, "OK")))
-				return
-
-			} else {
-				SQLiteWeb.Logger.Errorf("[WebSendmail] Error in template.ParseFiles: %s %s", templateName, err.Error())
-				writeError(writer, http.StatusInternalServerError, "Internal Error (3)", nil)
-				return
-			}
-		}
-
-		SQLiteWeb.Logger.Errorf("[WebSendmail] Email template not found: %s", templateName)
-		writeError(writer, http.StatusInternalServerError, "Internal Error (4)", nil)
-	*/
 }
 
-func (this *Server) serveWebUser(writer http.ResponseWriter, request *http.Request) {
+func (this *Server) servePostWebUser(writer http.ResponseWriter, request *http.Request) {
 	if !DEBUG_SQLITEWEB {
 		// security check, only allow requests from https://sqlitecloud.io
 		origin := request.Header.Get("Origin")
@@ -154,7 +106,6 @@ func (this *Server) serveWebUser(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	// vars := mux.Vars(request)
 	body := make(map[string]string)
 
 	if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
@@ -177,15 +128,6 @@ func (this *Server) serveWebUser(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	// https://github.com/sethvargo/go-password ?
-	password, err := password.Generate(12, 2, 3, false, false)
-	if err != nil {
-		SQLiteWeb.Logger.Errorf("[WebUser] Error while generating new password: %s", err.Error())
-		writeError(writer, http.StatusInternalServerError, "Internal Server Error", nil)
-		return
-	}
-	// passwordhash := // if the password is hashed, I have to implement a new password recovery procedure, I cannot send the hashed password
-
 	// add the new user to the waitlist (WebUser table)
 	sql := "INSERT INTO WebUser (first_name, last_name, company, email, referral, message) VALUES (?, ?, ?, ?, ?, ? );"
 	if _, err, errcode, _, _ := dashboardcm.ExecuteSQLArray("auth", sql, &[]interface{}{body["FirstName"], body["LastName"], body["Company"], email.Address, body["Referral"], body["Message"]}); err != nil {
@@ -199,52 +141,6 @@ func (this *Server) serveWebUser(writer http.ResponseWriter, request *http.Reque
 			writeError(writer, http.StatusInternalServerError, "Internal error", nil)
 			return
 		}
-	}
-
-	// add a new dashboard user (User table)
-	sql = "INSERT INTO Company (name) VALUES (?) RETURNING id"
-	res, err, _, _, _ := dashboardcm.ExecuteSQLArray("auth", sql, &[]interface{}{body["Company"]})
-	if err != nil {
-		SQLiteWeb.Logger.Errorf("[WebUser] Error while executing INSERT INTO Company: %s", err.Error())
-		writeError(writer, http.StatusInternalServerError, "Internal Server Error", nil)
-
-		// rollback
-		if _, err, _, _, _ := dashboardcm.ExecuteSQLArray("auth", "DELETE FROM WebUser WHERE email = ?", &[]interface{}{email.Address}); err != nil {
-			SQLiteWeb.Logger.Errorf("[WebUser] Error while rolling back WebUser %s: %s", email.Address, err.Error())
-		}
-		return
-	}
-
-	companyID := res.GetInt32Value_(0, 0)
-	sql = "INSERT INTO User (company_id, first_name, last_name, email, password) VALUES (?, ?, ?, ?, ?);"
-	if _, err, errcode, _, _ := dashboardcm.ExecuteSQLArray("auth", sql, &[]interface{}{companyID, body["FirstName"], body["LastName"], email.Address, password, body["Message"]}); err != nil {
-		if errcode == 19 {
-			// (19) SQLITE_CONSTRAINT
-			SQLiteWeb.Logger.Errorf("[WebUser] Email already exists in User table: %s %s", email.Address, err.Error())
-			writeError(writer, http.StatusConflict, "Email already exists", nil)
-		} else {
-			SQLiteWeb.Logger.Errorf("[WebUser] Error while executing INSERT INTO User: %s", err.Error())
-			writeError(writer, http.StatusInternalServerError, "Internal Server Error", nil)
-		}
-
-		// rollback
-		if _, err, _, _, _ := dashboardcm.ExecuteSQLArray("auth", "DELETE FROM WebUser WHERE email = ?; DELETE FROM Company WHERE id = ?", &[]interface{}{email.Address, companyID}); err != nil {
-			SQLiteWeb.Logger.Errorf("[WebUser] Error while rolling back WebUser %s AND Company %d: %s", email.Address, companyID, err.Error())
-		}
-
-		return
-	}
-
-	// send a welcome mail with the dashboard password
-	from, _ := mail.ParseAddress(cfg.Section("mail").Key("mail.from").String())
-	subject := "Welcome to SQLiteCloud"
-	templateName := "welcome_web"
-	language := "en"
-	body["Password"] = password
-	if err := sendMailWithTemplate(from, email, subject, body, templateName, language); err != nil {
-		SQLiteWeb.Logger.Errorf("[WebUser] Error while sending welcome mail to %s: %s", email.Address, err.Error())
-		writeError(writer, http.StatusInternalServerError, "Internal Server Error", nil)
-		return
 	}
 
 	writer.Header().Set("Content-Type", "application/json")
