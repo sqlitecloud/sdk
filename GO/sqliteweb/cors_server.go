@@ -32,6 +32,7 @@ func initCors() {
 func middlewareCors(next http.Handler) http.Handler {
 	apiRoute := SQLiteWeb.router.PathPrefix("/api/")
 	webRoute := SQLiteWeb.router.PathPrefix("/web/")
+	adminRoute := SQLiteWeb.router.PathPrefix("/admin/")
 	routeMatch := mux.RouteMatch{}
 
 	return http.HandlerFunc(
@@ -46,6 +47,12 @@ func middlewareCors(next http.Handler) http.Handler {
 				w.Header().Set("Access-Control-Allow-Origin", allowAllOrigins)
 			case webRoute.Match(req, &routeMatch):
 				w.Header().Set("Access-Control-Allow-Origin", allowAllOrigins)
+			case adminRoute.Match(req, &routeMatch):
+				o := req.Header.Get("Origin")
+				// SQLiteWeb.Logger.Debugf("[admin] origin: %s", o)
+				if req.Header.Get("Origin") == "http://beta.sqlitecloud.io" {
+					w.Header().Set("Access-Control-Allow-Origin", o)
+				}
 			}
 
 			if DEBUG_SQLITEWEB {

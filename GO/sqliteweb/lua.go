@@ -870,6 +870,7 @@ NextPart:
 		return
 	}
 	args = append(args, script)
+	dirPath := path
 	path = fmt.Sprintf("%s/%s", path, script)
 	args[0] = fmt.Sprintf("%s/%s", args[0][1:], script)
 
@@ -1015,6 +1016,25 @@ NextPart:
 			panic(err)
 		}
 	} else {
+		if globals["method"] == http.MethodOptions {
+			methods := "OPTIONS"
+			if dir, err := ioutil.ReadDir(dirPath); err == nil {
+				for _, fileinfo := range dir {
+					fileName := fileinfo.Name()
+					m := strings.TrimSuffix(fileName, ".lua")
+					switch m {
+					case http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+						methods += fmt.Sprintf(", %s", m)
+					default:
+					}
+				}
+			}
+
+			writer.Header().Set("Access-Control-Allow-Methods", methods)
+			writer.WriteHeader(http.StatusOK)
+			return
+		}
+
 		sendError(writer, "Endpoint not found.", http.StatusNotFound)
 	}
 }
