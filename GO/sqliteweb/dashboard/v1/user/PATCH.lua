@@ -36,10 +36,11 @@ else
   commandargs = {}
   local separator = ""
 
-  fields = {first_name = first_name, last_name = last_name, email = email, password = hash(password)}
+  fields = {first_name = first_name, last_name = last_name, email = email, password = password}
 
   for k, v in pairs(fields) do
     if v and string.len(v)>0 then  
+      if k == "password" then v = hash(v) end
       command = string.format( "%s%s %s = ?", command, separator, k)
       commandargs[#commandargs+1] = v
       separator = ","
