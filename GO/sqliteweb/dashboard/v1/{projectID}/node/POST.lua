@@ -61,9 +61,9 @@ else
   -- extract the numeric suffix of the input name
   local namenumberstr = stringMatch(name, "\\d+$")
   local basename = name
-  if namenumberstr ~= nil then basename = name:gsub(namenumberstr.."$", "") end
+  if namenumberstr ~= nil then basename = stringTrimSuffix(name, namenumberstr) end
   local namenumber = tonumber(namenumberstr)
-
+  
   for i = 1, counter do
     if namenumber ~= nil then 
       -- the input name already ends with a number
@@ -77,7 +77,7 @@ else
       -- example "ubuntu-s-1vcpu-1gb" -> "ubuntu-s-1vcpu-1gb-01" .. "ubuntu-s-1vcpu-1gb-02"
       name = string.format("%s-%02d", basename, nodeID) 
     end
-  
+    
     local jobuuid = createNode(userID, name, region, hardware, servertype, projectID, nodeID)
     if jobuuid ~= nil and jobuuid ~= '' then 
       Response.value[#Response.value + 1] = {uuid = jobuuid, name = name, nodeID = nodeID}

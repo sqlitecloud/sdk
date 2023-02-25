@@ -413,6 +413,21 @@ func lua_stringMatch(L *lua.State) int {
 	return 1
 }
 
+func lua_stringTrimSuffix(L *lua.State) int {
+	if L.TypeOf(1) != lua.TypeString && L.TypeOf(2) != lua.TypeString {
+		L.PushNil()
+		return 0
+	}
+
+	s := lua.CheckString(L, 1)
+	suffix := lua.CheckString(L, 2)
+
+	s1 := strings.TrimSuffix(s, suffix)
+
+	L.PushString(s1)
+	return 1
+}
+
 func lua_createNode(L *lua.State) int {
 	if L.TypeOf(1) != lua.TypeNumber || L.TypeOf(2) != lua.TypeString || L.TypeOf(3) != lua.TypeString || L.TypeOf(4) != lua.TypeString || L.TypeOf(5) != lua.TypeString || L.TypeOf(6) != lua.TypeString || L.TypeOf(7) != lua.TypeNumber {
 		SQLiteWeb.Logger.Error("Wrong arguments for createNode")
@@ -908,6 +923,7 @@ NextPart:
 
 		// register missing string functions
 		l.Register("stringMatch", lua_stringMatch)
+		l.Register("stringTrimSuffix", lua_stringTrimSuffix)
 
 		// register internal droplet related functions
 		l.Register("createNode", lua_createNode)
