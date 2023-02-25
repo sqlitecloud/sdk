@@ -147,8 +147,8 @@ func (this *ConnectionManager) getServerList(project string) ([]string, error) {
 	// search for uuid in auth database
 	default:
 		if project != "auth" {
-			// query := "SELECT 'sqlitecloud://' || admin_username || ':' || admin_password || '@' || IIF( addr6, addr6, addr4 ) || IIF( port, ':' || port, '' ) AS Node FROM Project JOIN Node ON uuid == project_uuid WHERE uuid = ? AND Node.created = 1;"
-			query := "SELECT 'sqlitecloud://' || admin_username || ':' || admin_password || '@' || IIF( hostname NOT NULL AND hostname != '', hostname, IIF(addr6 NOT NULL AND addr6 != '', addr6, addr4) ) || IIF( port, ':' || port, '' ) || IIF(Node.id <= 8, '?tls=SQLiteCloudCA', '?') AS Node FROM Project JOIN Node ON uuid == project_uuid WHERE uuid = ? AND Node.created = 1;"
+			// query := "SELECT 'sqlitecloud://' || admin_username || ':' || admin_password || '@' || IIF( addr6, addr6, addr4 ) || IIF( port, ':' || port, '' ) AS Node FROM Project JOIN Node ON uuid == project_uuid WHERE uuid = ? AND Node.active = 1;"
+			query := "SELECT 'sqlitecloud://' || admin_username || ':' || admin_password || '@' || IIF( hostname NOT NULL AND hostname != '', hostname, IIF(addr6 NOT NULL AND addr6 != '', addr6, addr4) ) || IIF( port, ':' || port, '' ) || IIF(Node.id <= 8, '?tls=SQLiteCloudCA', '?') AS Node FROM Project JOIN Node ON uuid == project_uuid WHERE uuid = ? AND Node.active = 1;"
 			args := []interface{}{project}
 			SQLiteWeb.Logger.Debugf("query %s %v\n", query, args)
 

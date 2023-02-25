@@ -63,6 +63,7 @@ type CloudNodeCreateRequest struct {
 	ClusterPort   int
 	ClusterConfig string
 	NewCluster    bool
+	Tags          []string
 }
 
 type Coordinates struct {
@@ -252,7 +253,7 @@ func (this *CloudProviderDigitalOcean) CreateNode(nodeCreateReq *CloudNodeCreate
 		Image: godo.DropletCreateImage{
 			Slug: imageSlug,
 		},
-		Tags:     []string{"sqlitecloud", "test"},
+		Tags:     nodeCreateReq.Tags, //[]string{"sqlitecloud", "test"},
 		SSHKeys:  []godo.DropletCreateSSHKey{{Fingerprint: "f0:42:56:b6:23:2a:72:0a:47:94:f4:08:10:32:fb:8d"}},
 		UserData: cloudConfigBuf.String(),
 	}

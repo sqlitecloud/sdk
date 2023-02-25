@@ -35,15 +35,12 @@ else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                     end
   local clusterNodeID, err, msg = verifyNodeID( userID, projectID, nodeID )  if err ~= 0 then return error( err, msg )                     end
 
-  -- uniqueID, clusterNodeID, projectUUID
+  -- delete the droplet and mark the node in table Node with active = 0
   local deleted = deleteNode(userID, nodeID, clusterNodeID, projectID)
   if not deleted then return error( 502, "Bad Gateway, Cannot remove node" )  end
   
-  -- command = string.format( "REMOVE NODE %d", clusterNodeID )
-  -- result = executeSQL( projectID, command )                                          then return error( 502, "Bad Gateway, Cannot remove node" )  end
-  -- if not result                                                                      then return error( 502, result.ErrorMessage )     end
-  -- if result.ErrorNumber ~= 0  
-
+  -- don't need to delete the row in the Node table, the node has already been marked as active = 0
+  -- otherwise the related job would not find old node's info
   result = executeSQL( "auth", string.format( "DELETE FROM NodeSettings WHERE node_id = %d;", nodeID ) )
   if not result                                                                      then return error( 504, "Gateway Timeout" )       end
   if result.ErrorNumber ~= 0                                                         then return error( 502, result.ErrorMessage )     end

@@ -31,24 +31,8 @@ if userID == 0 then
 else
   local projectID, err, msg = verifyProjectID( userID, projectID )       if err ~= 0 then return error( err, msg )                     end
   
-  local command  = "SELECT NODE.id AS nodeID FROM Node JOIN Project ON Project.uuid = Node.project_uuid JOIN Company ON Company.id = Project.company_id JOIN User ON User.company_id = Company.id WHERE USER.enabled = 1 AND USER.id = ? AND PROJECT.uuid = ?;"
-  local result = executeSQL( "auth", command, {userID, projectID} ) 
-
-  if not result                                                                       then return -1, 503, "Service Unavailable"       end
-  if result.ErrorNumber       ~= 0                                                    then return -1, 502, "Bad Gateway"               end
-  if result.NumberOfColumns   ~= 1                                                    then return -1, 502, "Bad Gateway"               end 
-
-  command = "BEGIN TRANSACTION;"
-  for i = 1, result.NumberOfRows do
-    nodeID = result.Rows[ i ].nodeID
-    command  = string.format( "%s DELETE FROM NodeSettings WHERE node_id = %d; DELETE FROM Node WHERE id = %d;", command, nodeID, nodeID )
-  end  
-  command = string.format( "%s DELETE FROM Project WHERE uuid = ?; END TRANSACTION;", command )
-  
-  result = executeSQL( "auth", command, {projectID} )
-  if not result                                                                      then return error( 504, "Gateway Timeout" )            end
-  if result.ErrorMessage ~= ""                                                       then return error( 502, result.ErrorMessage )          end
-  if result.ErrorNumber  ~= 0                                                        then return error( 502, "Bad Gateway" )                end
+  local code, message = deleteProject(projectID, userID) 
+  return error( code, message ) 
 end
 
 error( 200, "OK" )

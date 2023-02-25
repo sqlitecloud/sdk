@@ -153,6 +153,40 @@ end
 -- local nodeID,     errorCode, errorMessage  = verifyNodeID( userID, uuid, 1 )                        if errorCode ~= 0 then return error( errorCode, errorMessage ) end
 -- local settingID,  errorCode, errorMessage  = getNodeSettingsID( userID, uuid, 1, "testkeyvalz"  )  if errorCode ~= 0 then return error( errorCode, errorMessage ) end
 
+function deleteProject(projectID, userID)
+  -- local command  = "SELECT Node.id AS nodeID, Node.node_id AS clusterNodeID, Node.active FROM Node JOIN Project ON Project.uuid = Node.project_uuid JOIN Company ON Company.id = Project.company_id JOIN User ON User.company_id = Company.id WHERE USER.enabled = 1 AND USER.id = ? AND PROJECT.uuid = ?;"
+  local command  = "SELECT id AS nodeID, node_id AS clusterNodeID, active FROM Node WHERE project_uuid = ?;"
+  local result = executeSQL( "auth", command, {projectID} ) 
+  if not result                                                                       then return 503, "Service Unavailable"  end
+  if result.ErrorNumber       ~= 0                                                    then return 502, "Bad Gateway"          end
+  if result.NumberOfColumns   ~= 3                                                    then return 502, "Bad Gateway"          end 
+
+  local nodeErrors = 0
+
+  command = ""
+  for i = 1, result.NumberOfRows do
+    nodeID = result.Rows[ i ].nodeID
+    clusterNodeID = result.Rows[ i ].clusterNodeID
+    active = result.Rows[ i ].active
+
+    local deleted = true
+    if active == 1  then   deleted = deleteNode(userID, nodeID, clusterNodeID, projectID) end
+    if deleted      then   command = string.format( "%s DELETE FROM NodeSettings WHERE node_id = %d; DELETE FROM Node WHERE id = %d; DELETE FROM Jobs WHERE node_id = %d;", command, nodeID, nodeID, nodeID ) 
+    else                   nodeErrors = nodeErrors + 1    end  
+  end  
+
+  if nodeErrors == 0 then command = string.format( "%s DELETE FROM Project WHERE uuid = ?;", command ) end
+  
+  result = executeSQL( "auth", command, {projectID} )
+  if not result                                                                      then return 504, "Gateway Timeout"             end
+  if result.ErrorMessage ~= ""                                                       then return 502, result.ErrorMessage           end
+  if result.ErrorNumber  ~= 0                                                        then return 502, "Bad Gateway"                 end
+
+  if nodeErrors > 0                                                                  then return 502, string.format( "%d nodes can't be deleted", nodeErrors)             end
+  
+  return 200, "OK"
+end
+
 
 function error( code, message )
   local result = {

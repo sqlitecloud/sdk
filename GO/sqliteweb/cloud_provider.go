@@ -103,7 +103,7 @@ func createNode(userid int, name string, region CloudRegion, size CloudSize, nod
 		}
 
 		nattempts += 1
-		sql := fmt.Sprintf("INSERT INTO Node (project_uuid, node_id, shortuuid, name, created) VALUES ('%s', %d, '%s', '%s', 0) RETURNING id;", projectuuid, nodeid, sid, name)
+		sql := fmt.Sprintf("INSERT INTO Node (project_uuid, node_id, shortuuid, name) VALUES ('%s', %d, '%s', '%s') RETURNING id;", projectuuid, nodeid, sid, name)
 		res, err, errcode, _, _ := dashboardcm.ExecuteSQL("auth", sql)
 		if err == nil && res.GetNumberOfColumns() == 1 && res.GetNumberOfRows() == 1 {
 			nodeshortid = sid
@@ -156,6 +156,7 @@ func createNode(userid int, name string, region CloudRegion, size CloudSize, nod
 			Port:          sqlitecloudPort,
 			ClusterConfig: clusterConfig,
 			NewCluster:    isFirstNode,
+			Tags:          []string{"sqlitecloud", projectuuid},
 		}
 
 		cloudNode, err := cloudProvider.CreateNode(nodeCreateReq)
@@ -212,7 +213,7 @@ func createNode(userid int, name string, region CloudRegion, size CloudSize, nod
 		sql = fmt.Sprintf("UPDATE Jobs SET progress = progress + 1, status = 'Completed', stamp = DATETIME('now') WHERE uuid = '%s'", nodeCreateReq.JobUUID)
 		authExecSQL(sql)
 
-		sql = fmt.Sprintf("UPDATE Node SET created = 1 WHERE id = %d", uniqueNodeID)
+		sql = fmt.Sprintf("UPDATE Node SET active = 1 WHERE id = %d", uniqueNodeID)
 		authExecSQL(sql)
 	}()
 
@@ -254,7 +255,7 @@ func deleteNode(userid int, uniqueNodeID int64, clusterNodeID int, projectUUID s
 		Provider:    cloudProvider.ProviderName(),
 	}
 
-	sql := fmt.Sprintf("SELECT shortuuid, droplet_id, domain_record_id, name FROM Node WHERE id = %d AND created = 1", uniqueNodeID)
+	sql := fmt.Sprintf("SELECT shortuuid, droplet_id, domain_record_id, name FROM Node WHERE id = %d AND active = 1", uniqueNodeID)
 	if res, err, _, _, _ := dashboardcm.ExecuteSQL("auth", sql); err != nil {
 		return fmt.Errorf("Error n delete node %d: %s", uniqueNodeID, err.Error())
 	} else if !res.IsRowSet() {
@@ -280,7 +281,7 @@ func deleteNode(userid int, uniqueNodeID int64, clusterNodeID int, projectUUID s
 		return err
 	}
 
-	sql = fmt.Sprintf("UPDATE Node SET created = 0 WHERE id = %d", uniqueNodeID)
+	sql = fmt.Sprintf("UPDATE Node SET active = 0 WHERE id = %d", uniqueNodeID)
 	authExecSQL(sql)
 
 	sql = fmt.Sprintf("UPDATE Jobs SET progress = steps, status = 'Completed' WHERE uuid = '%s'", jobuuid)
@@ -358,7 +359,7 @@ func waitForConnection(cloudNode *CloudNode, user string, passwd string) (conn *
 }
 
 func clusterConfig(projectuuid string, nodeid int, hostname string, port int) (clusterConfig string, isFirstNode bool, err error) {
-	sql := fmt.Sprintf("SELECT node_id as id, hostname || ':' || port as 'public' FROM Node WHERE project_uuid = '%s' AND node_id != %d AND created = 1", projectuuid, nodeid)
+	sql := fmt.Sprintf("SELECT node_id as id, hostname || ':' || port as 'public' FROM Node WHERE project_uuid = '%s' AND node_id != %d AND active = 1", projectuuid, nodeid)
 	listNodes, err, _, _, _ := dashboardcm.ExecuteSQL("auth", sql)
 	if err != nil {
 		err = fmt.Errorf("Cannot get project's nodes %s: %s", projectuuid, err.Error())
