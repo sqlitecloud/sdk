@@ -2269,6 +2269,60 @@ int32_t _reserved12 (char *buffer, uint32_t blen) {
     return internal_array_count(buffer, blen);
 }
 
+bool _reserved13 (SQCloudConnection *connection, const char *dbname, void *xdata,
+                                      int (*xCallback)(void *xdata, const void *buffer, uint32_t blen, int64_t ntot, int64_t nprogress), uint64_t *raft_index, bool ifexists) {
+    // xCallback is mandatory
+    if (!xCallback) return false;
+    
+    // prepare command to execute
+    char buffer[512];
+    snprintf(buffer, sizeof(buffer), "DOWNLOAD DATABASE %s%s", dbname, (ifexists) ? " IF EXISTS" : "");
+    
+    // execute command on server side
+    SQCloudResult *res = SQCloudExec(connection, buffer);
+    
+    // reply must be an Array value (otherwise it is an error)
+    if (SQCloudResultType(res) != RESULT_ARRAY) return false;
+    
+    // res is an ARRAY (database size, number of pages, raft_index)
+    int64_t db_size = SQCloudArrayInt64Value(res, 0);
+    int64_t rindex = SQCloudArrayInt64Value(res, 2);
+    SQCloudResultFree(res);
+    
+    // loop to download
+    int64_t progress_size = 0;
+    snprintf(buffer, sizeof(buffer), "DOWNLOAD STEP");
+    
+    while (progress_size < db_size) {
+        res = SQCloudExec(connection, buffer);
+        
+        // reply must be a BLOB value (otherwise it is an error)
+        if (SQCloudResultType(res) != RESULT_BLOB) return false;
+        
+        // res is BLOB, decode it
+        const void *data = (const void *)SQCloudResultBuffer(res);
+        uint32_t datalen = SQCloudResultLen(res);
+        
+        // execute callback (with progress_size updated)
+        progress_size += datalen;
+        int rc = xCallback(xdata, data, datalen, db_size, progress_size);
+        SQCloudResultFree(res);
+        
+        // check exit condition
+        if (datalen == 0) break;
+        
+        // check if download should be cancelled
+        if (rc != 0) {
+            snprintf(buffer, sizeof(buffer), "DOWNLOAD ABORT");
+            SQCloudExec(connection, buffer);
+            return false;
+        }
+    }
+    
+    if (raft_index) *raft_index = rindex;
+    return true;
+}
+
 // MARK: - PUBLIC -
 
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config) {
@@ -2978,54 +3032,7 @@ void SQCloudArrayDump (SQCloudResult *result) {
 
 bool SQCloudDownloadDatabase (SQCloudConnection *connection, const char *dbname, void *xdata,
                               int (*xCallback)(void *xdata, const void *buffer, uint32_t blen, int64_t ntot, int64_t nprogress)) {
-    // xCallback is mandatory
-    if (!xCallback) return false;
-    
-    // prepare command to execute
-    char buffer[512];
-    snprintf(buffer, sizeof(buffer), "DOWNLOAD DATABASE %s", dbname);
-    
-    // execute command on server side
-    SQCloudResult *res = SQCloudExec(connection, buffer);
-    
-    // reply must be an Array value (otherwise it is an error)
-    if (SQCloudResultType(res) != RESULT_ARRAY) return false;
-    
-    // res is an ARRAY (database size, number of pages)
-    int64_t db_size = SQCloudArrayInt64Value(res, 0);
-    SQCloudResultFree(res);
-    
-    // loop to download
-    int64_t progress_size = 0;
-    snprintf(buffer, sizeof(buffer), "DOWNLOAD STEP");
-    
-    while (progress_size < db_size) {
-        res = SQCloudExec(connection, buffer);
-        
-        // reply must be a BLOB value (otherwise it is an error)
-        if (SQCloudResultType(res) != RESULT_BLOB) return false;
-        
-        // res is BLOB, decode it
-        const void *data = (const void *)SQCloudResultBuffer(res);
-        uint32_t datalen = SQCloudResultLen(res);
-        
-        // execute callback (with progress_size updated)
-        progress_size += datalen;
-        int rc = xCallback(xdata, data, datalen, db_size, progress_size);
-        SQCloudResultFree(res);
-        
-        // check exit condition
-        if (datalen == 0) break;
-        
-        // check if download should be cancelled
-        if (rc != 0) {
-            snprintf(buffer, sizeof(buffer), "DOWNLOAD ABORT");
-            SQCloudExec(connection, buffer);
-            return false;
-        }
-    }
-    
-    return true;
+    return _reserved13(connection, dbname, xdata, xCallback, NULL, false);
 }
 
 bool SQCloudUploadDatabase (SQCloudConnection *connection, const char *dbname, const char *key, void *xdata, int64_t dbsize, int (*xCallback)(void *xdata, void *buffer, uint32_t *blen, int64_t ntot, int64_t nprogress)) {
