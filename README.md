@@ -1,2 +1,3 @@
-# sdk
-Official SDK repository for SQLiteCloud database
+# SQLite Cloud SDK
+
+Official SDK repository for SQLite Cloud databases and nodes.

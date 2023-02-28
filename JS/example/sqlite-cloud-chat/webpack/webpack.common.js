@@ -12,15 +12,18 @@ module.exports = {
   },
   output: {
     publicPath: ASSET_PATH,
-    path: path.resolve(__dirname, '../dist'),
+    path: path.resolve(__dirname, '../public'),
   },
   plugins: [
-    new Dotenv(),
     new HtmlWebpackPlugin({
       template: './template/index.html',
       title: 'SQLite Cloud Chats',
       filename: "index.html"
-    })
+    }),
+    new Dotenv({
+      path: './.env', 
+      allowEmptyValues: true // allow empty variables (e.g. `FOO=`) (treat it as empty string, rather than missing)
+    }),    
   ].concat(
     devMode ?
       []

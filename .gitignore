@@ -38,10 +38,15 @@ JS/**/**/node_modules
 JS/dist
 JS/**/dist
 JS/**/**/dist
+JS/public
+JS/**/public
+JS/**/**/public
 
 
 #env
-JS/.env
-JS/**/.env
-JS/**/**/.env
+# JS/.env
+# JS/**/.env
+# JS/**/**/.env
 
+#vercel
+JS/.vercel

@@ -8,7 +8,9 @@ import { StateProvider } from '../context/StateContext';
 import Layout from './Layout';
 
 const App = () => {
-  if (process.env.DEBUG == 'true') logThis('App: ON RENDER');
+  if (process.env.DEBUG == 'true') logThis('App: ON RENDER TEST');
+  console.log(process.env.PROJECT_ID);
+  console.log(process.env.API_KEY);
   return (
     <Fragment>
       <StateProvider>

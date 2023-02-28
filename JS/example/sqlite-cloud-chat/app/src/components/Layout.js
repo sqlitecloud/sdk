@@ -285,10 +285,6 @@ export default function Layout(props) {
                     <p className='mt-1 text-xs font-normal text-gray-400'>{projectId}</p>
                   </div>
                 </div>
-                <div className='mt-2 ml-3'>
-                  <p className='text-xs font-medium text-white'>api KEY:</p>
-                  <p className='mt-1 text-xs font-normal text-gray-400'>{apikey}</p>
-                </div>
                 {
                   queryDBName &&
                   <div className='mt-2 ml-3'>

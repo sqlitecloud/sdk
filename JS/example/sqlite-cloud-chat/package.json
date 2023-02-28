@@ -44,6 +44,6 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.8.0",
-    "sqlitecloud-sdk": "^1.0.2"
+    "sqlitecloud-sdk": "^1.0.3"
   }
 }
