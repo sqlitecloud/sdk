@@ -287,12 +287,12 @@ func (this *SQCloud) CreateDatabase(Database string, Key string, Encoding string
 	return this.ExecuteArray(sql, args)
 }
 
-// DropDatabase - INTERNAL SERVER COMMAND: Deletes the specified Database on this SQLite Cloud Database Cluster.
+// RemoveDatabase - INTERNAL SERVER COMMAND: Deletes the specified Database on this SQLite Cloud Database Cluster.
 // If the given Database is not present on this Database Server or the user has not the necessary access rights,
 // an error describing the problem will be returned.
 // If the NoError flag is set, no error will be reported if the database does not exist.
-func (this *SQCloud) DropDatabase(Database string, NoError bool) error {
-	sql := "DROP DATABASE ?"
+func (this *SQCloud) RemoveDatabase(Database string, NoError bool) error {
+	sql := "REMOVE DATABASE ?"
 	if NoError {
 		sql += " IF EXISTS"
 	}
@@ -401,10 +401,10 @@ func (this *SQCloud) GetKey(Key string) (string, error) {
 	return "", err
 }
 
-// DropKey deletes the key value pair referenced with Key.
+// RemoveKey deletes the key value pair referenced with Key.
 // If the Key does not exists, no error is returned.
-func (this *SQCloud) DropKey(Key string) error {
-	return this.ExecuteArray("DROP KEY ?", []interface{}{Key})
+func (this *SQCloud) RemoveKey(Key string) error {
+	return this.ExecuteArray("REMOVE KEY ?", []interface{}{Key})
 }
 
 // ListKeys lists all key value pairs on the server and returns an array of SQCloudKeyValues.

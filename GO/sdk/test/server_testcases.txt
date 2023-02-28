@@ -6,8 +6,8 @@
 💤 CLOSE CONNECTION %                                     |
 ✅ CREATE DATABASE % [KEY %] [ENCODING %] [IF NOT EXISTS] |
 💤 DISABLE PLUGIN %                                       |
-✅ DROP DATABASE % [IF EXISTS]                            |
-✅ DROP KEY %                                             |
+✅ REMOVE DATABASE % [IF EXISTS]                            |
+✅ REMOVE KEY %                                             |
 💤 ENABLE PLUGIN %                                        |
 ✅ GET DATABASE [ID]                                      |
 ✅ GET KEY %                                              |

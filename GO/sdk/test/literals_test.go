@@ -208,8 +208,8 @@ func TestLiterals(t *testing.T) {
 	// fmt.Printf("UNUSE DATABASE %v\n", time.Since(start))
 
 	// start := time.Now()
-	if err := db.DropDatabase(testDbnameLiteral, false); err != nil {
-		t.Fatal("DROP DATABASE: ", err.Error())
+	if err := db.RemoveDatabase(testDbnameLiteral, false); err != nil {
+		t.Fatal("REMOVE DATABASE: ", err.Error())
 	}
-	// fmt.Printf("DROP DATABASE %v\n", time.Since(start))
+	// fmt.Printf("REMOVE DATABASE %v\n", time.Since(start))
 }
