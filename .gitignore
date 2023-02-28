@@ -44,9 +44,9 @@ JS/**/**/public
 
 
 #env
-JS/.env
-JS/**/.env
-JS/**/**/.env
+# JS/.env
+# JS/**/.env
+# JS/**/**/.env
 
 #vercel
 JS/.vercel
