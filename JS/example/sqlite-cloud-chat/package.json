@@ -7,7 +7,7 @@
     "start": "cross-env NODE_ENV=development webpack serve --open --config ./webpack/webpack.dev.js",
     "startssl": "cross-env NODE_ENV=development webpack serve --open --config ./webpack/webpack.dev.js | local-ssl-proxy --key C:/Windows/System32/sqlitecloud.io+4-key.pem --cert C:/Windows/System32/sqlitecloud.io+4.pem  --source 3001 --target 8080",
     "analyze": "webpack --config ./webpack/webpack.analyze.js",
-    "build": "cross-env NODE_ENV=production ASSET_PATH= webpack --config ./webpack/webpack.prod.js"
+    "build": "cross-env NODE_ENV=production ASSET_PATH= webpack --config ./webpack/webpack.prod.js --output public"
   },
   "keywords": [],
   "author": "",
