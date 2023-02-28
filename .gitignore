@@ -38,6 +38,9 @@ JS/**/**/node_modules
 JS/dist
 JS/**/dist
 JS/**/**/dist
+JS/public
+JS/**/public
+JS/**/**/public
 
 
 #env

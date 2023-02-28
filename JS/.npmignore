@@ -7,6 +7,9 @@ node_modules
 dist
 **/dist
 **/**/dist
+public
+**/public
+**/**/public
 
 
 # env
