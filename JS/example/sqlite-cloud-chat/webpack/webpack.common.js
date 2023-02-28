@@ -12,7 +12,7 @@ module.exports = {
   },
   output: {
     publicPath: ASSET_PATH,
-    path: path.resolve(__dirname, '../dist'),
+    path: path.resolve(__dirname, '../public'),
   },
   plugins: [
     new Dotenv(),
