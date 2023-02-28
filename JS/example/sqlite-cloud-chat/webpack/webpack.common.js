@@ -1,6 +1,6 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const Dotenv = require('dotenv-webpack');
+// const Dotenv = require('dotenv-webpack');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const devMode = process.env.NODE_ENV !== "production";
 const ASSET_PATH = process.env.ASSET_PATH || '';
@@ -15,10 +15,10 @@ module.exports = {
     path: path.resolve(__dirname, '../public'),
   },
   plugins: [
-    new Dotenv({
-      allowEmptyValues: true, // allow empty variables (e.g. `FOO=`) (treat it as empty string, rather than missing)
-      ignoreStub: true
-    }),
+    // new Dotenv({
+    //   allowEmptyValues: true, // allow empty variables (e.g. `FOO=`) (treat it as empty string, rather than missing)
+    //   ignoreStub: true
+    // }),
     new HtmlWebpackPlugin({
       template: './template/index.html',
       title: 'SQLite Cloud Chats',
