@@ -1376,7 +1376,7 @@ func (w *worker) processTask(task *task) error {
 
 		// it's only a connection task
 		var err error
-		Debugf("w%d connecting ...", w.id)
+		Debugf("w%d %s connecting %s ...", w.id, task.name, task.connstring)
 		if w.conn, err = sqlitecloud.Connect(task.connstring); err != nil {
 			Debugf("w%d connection error %v", w.id, err)
 			w.conn = nil

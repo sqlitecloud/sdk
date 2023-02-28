@@ -100,7 +100,7 @@ func TestPubsub(t *testing.T) {
 		t.Fatal("Timeout")
 	}
 
-	if err := db1.DropChannel(testPubsubChannelName); err != nil {
-		t.Fatal("DropChannel: ", err.Error())
+	if err := db1.RemoveChannel(testPubsubChannelName); err != nil {
+		t.Fatal("RemoveChannel: ", err.Error())
 	}
 }

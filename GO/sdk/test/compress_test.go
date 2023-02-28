@@ -119,8 +119,8 @@ func TestCompress(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	// Checking DROP DATABASE
-	if err := db.DropDatabase(testDbnameCompress, false); err != nil {
+	// Checking REMOVE DATABASE
+	if err := db.RemoveDatabase(testDbnameCompress, false); err != nil {
 		t.Fatal(err.Error())
 	}
 }

@@ -470,6 +470,6 @@ echo "LIST DATABASES" > script.sql; ./bin/sqlc sqlitecloud://dev1.sqlitecloud.io
 - [ ] Make internal .dot commands available in batch files
 - [ ] Test for "empty commands"
 - [ ] Add --log feature
-- [x] Drop the table "sqlite_sequence" from dynamic autocomplete scanning
+- [x] Remove the table "sqlite_sequence" from dynamic autocomplete scanning
 - [ ] Implement the Auth command to use the Password feature
 - [ ] Add more Test example commands

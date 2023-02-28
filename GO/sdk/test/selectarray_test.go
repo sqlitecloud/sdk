@@ -96,8 +96,8 @@ func TestSelectArray(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	// Checking DROP DATABASE
-	if err := db.DropDatabase(testDbnameSelectArray, false); err != nil {
+	// Checking REMOVE DATABASE
+	if err := db.RemoveDatabase(testDbnameSelectArray, false); err != nil {
 		t.Fatal(err.Error())
 	}
 }

@@ -16,7 +16,7 @@ INSERT INTO t1 (b) VALUES (randomblob(100000));
 
 --// create n workers connected to a follower node, each worker use the database 
 --loop i=1; i<=n; i=i+1;
-    --task i name read-on-follower sqlitecloud://admin:admin@localhost:8870
+    --task i name read-on-follower sqlitecloud://admin:admin@localhost:8870?tls=SQLiteCloudCA
         USE DATABASE {{.dbname}}
     --end
 --end
@@ -57,7 +57,7 @@ REMOVE DATABASE {{.dbname}}
 
 --// The database must be dropped on the follower. Check it using a new connection
 --set j=n+2
---task j name read-on-follower sqlitecloud://admin:admin@localhost:8870
+--task j name read-on-follower sqlitecloud://admin:admin@localhost:8870?tls=SQLiteCloudCA
     LIST DATABASES
     --match rows 0
     USE DATABASE {{.dbname}}

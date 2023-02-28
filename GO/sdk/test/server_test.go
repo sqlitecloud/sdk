@@ -101,15 +101,15 @@ func TestServer(t *testing.T) {
 		}
 	}
 
-	// DROP KEY
-	if err := db.DropKey(testKey); err != nil {
-		t.Fatal("DROP KEY: ", err.Error())
+	// REMOVE KEY
+	if err := db.RemoveKey(testKey); err != nil {
+		t.Fatal("REMOVE KEY: ", err.Error())
 	} else {
 		if keys, err := db.ListKeys(); err != nil {
-			t.Fatal("DROP KEY, LIST KEY: ", err.Error())
+			t.Fatal("REMOVE KEY, LIST KEY: ", err.Error())
 		} else {
 			if _, found := keys[testKey]; found {
-				t.Fatal("DROP KEY, LIST KEY: ", fmt.Sprintf("Key %s still found in LIST KEYS", testKey))
+				t.Fatal("REMOVE KEY, LIST KEY: ", fmt.Sprintf("Key %s still found in LIST KEYS", testKey))
 			}
 		}
 	}
@@ -192,9 +192,9 @@ func TestServer(t *testing.T) {
 		t.Fatal("UNUSE DATABASE:", err.Error())
 	}
 
-	// DROP DATABASE
-	if err := db.DropDatabase(testDbnameServer, false); err != nil { // Database, NoError
-		t.Fatal("DROP DATABASES: ", err.Error())
+	// REMOVE DATABASE
+	if err := db.RemoveDatabase(testDbnameServer, false); err != nil { // Database, NoError
+		t.Fatal("REMOVE DATABASES: ", err.Error())
 	}
 
 	// fmt.Printf( "Checking CLOSE CONNECTION..." )
