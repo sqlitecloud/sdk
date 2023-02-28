@@ -21,7 +21,7 @@ module.exports = {
       filename: "index.html"
     }),
     new Dotenv({
-      path: './.env.production', 
+      path: './.env', 
       allowEmptyValues: true // allow empty variables (e.g. `FOO=`) (treat it as empty string, rather than missing)
     }),    
   ].concat(
