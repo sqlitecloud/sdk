@@ -2390,7 +2390,7 @@ SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *pconf
         
         if (rc > 0) {
             config->database = mem_string_dup(database);
-            config->db_memory = (strcmp(database, ":memory:") == 0);
+            config->db_memory = (strcmp(database, ":memory:") == 0 || strcmp(database, ":temp:") == 0);
         }
     }
     
