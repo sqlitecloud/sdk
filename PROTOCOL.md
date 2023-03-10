@@ -75,7 +75,7 @@ The format is `*LEN 0:VERS NROWS NCOLS DATA`. The whole command is built by eigh
 1. The single `*` character
 2. LEN is a string representation of Rowset length (theoretically the maximum supported value is UINT64_MAX but it is usually much lower. LEN does not include the length of the first `*LEN ` part.
 3. A single space is used to separate LEN from 0:VERS
-4. a single `0:` string followed by a VERS number (a string representation of the number) which specifies the version of the Rowset (`1` means that only column names is included in the header, `2` means that column names, declared types, database names, table names and origin names are included in the header)
+4. a single `0:` string followed by a VERS number (a string representation of the number) which specifies the version of the Rowset (`1` means that only column names is included in the header, `2` means that column names, declared types, database names, table names and origin names are included in the header) `MORE ABOUT THE VERSION MEANING`
 5. A single space is used to separate 0:VERS from NROWS
 6. NROWS  is a string representation of the number of rows contained in the Rowset (can be zero)
 7. A single space is used to separate NROWS from NCOLS 
