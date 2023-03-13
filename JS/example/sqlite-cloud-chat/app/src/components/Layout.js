@@ -314,7 +314,7 @@ export default function Layout(props) {
           connectionResponse && connectionResponse.status == "success" && !showMessages &&
           <div className='w-full h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto'>
             <div className='max-w-xl mx-auto h-full flex flex-col items-center justify-start'>
-              <div className='mt-[40%] text-base font-semibold text-center text-gray-600'>
+              <div className='mt-[40%] text-lg font-semibold text-center text-gray-600'>
                 Welcome to SQLite Cloud Chat!
               </div>
               <div className='mt-12 text-base text-gray-700 flex flex-col space-y-6'>
