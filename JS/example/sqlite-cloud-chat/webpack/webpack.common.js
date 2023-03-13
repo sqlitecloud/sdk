@@ -1,5 +1,6 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const FaviconsWebpackPlugin = require('favicons-webpack-plugin');
 const Dotenv = require('dotenv-webpack');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const devMode = process.env.NODE_ENV !== "production";
@@ -23,7 +24,8 @@ module.exports = {
     new Dotenv({
       path: './.env', 
       allowEmptyValues: true // allow empty variables (e.g. `FOO=`) (treat it as empty string, rather than missing)
-    }),    
+    }),
+    new FaviconsWebpackPlugin('./assets/favicon/favicon.png')     
   ].concat(
     devMode ?
       []
