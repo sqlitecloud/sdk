@@ -311,6 +311,27 @@ export default function Layout(props) {
           </div>
         }
         {
+          connectionResponse && connectionResponse.status == "success" && !showMessages &&
+          <div className='w-full h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto'>
+            <div className='max-w-xl mx-auto h-full flex flex-col items-center justify-start'>
+              <div className='mt-[40%] text-2xl lg:text-4xl font-bold text-center text-gray-600'>
+                Welcome to SQLite Cloud Chat!
+              </div>
+              <div className='mt-12 text-lg lg:text-2xl text-gray-700 flex flex-col space-y-6'>
+                <div>
+                  This sample web app demonstrates the power of the Pub/Sub capabilities built into SQLite Cloud.
+                </div>
+                <div>
+                  Open this page on two or more separate devices and try to send messages to different channels.
+                </div>
+                <div>
+                  The underline Javascript SDK communicates with an SQLite Cloud cluster, and it uses the standard PUB/SUB commands to efficiently broadcast messages between the channels.
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+        {
           channelsListResponse && channelsListResponse.status == "error" &&
           <div className='w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto'>
             <Alert opt={{
