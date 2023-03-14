@@ -3200,6 +3200,13 @@ bool SQCloudVMClose (SQCloudVM *vm) {
 }
 
 SQCLOUD_RESULT_TYPE SQCloudVMStep (SQCloudVM *vm) {
+    // stepping into a VM that already contains a ROWSET means increasing its internal rowindex
+    if (vm->result && SQCloudResultType(vm->result) == RESULT_ROWSET) {
+        if (vm->rowindex + 1 == SQCloudRowsetRows(vm->result)) return RESULT_NULL;
+        ++vm->rowindex;
+        return RESULT_ROWSET;
+    }
+    
     char sql[512];
     snprintf(sql, sizeof(sql), "VM STEP %d;", vm->index);
     
@@ -3225,7 +3232,7 @@ SQCLOUD_RESULT_TYPE SQCloudVMStep (SQCloudVM *vm) {
     }
 
     // should never reach this point
-    return RESULT_NULL;
+    return RESULT_ERROR;
 }
 
 int64_t SQCloudVMLastRowID (SQCloudVM *vm) {
