@@ -315,7 +315,7 @@ export default function Layout(props) {
               </div>
               <div className='mt-12 text-base text-gray-700 flex flex-col space-y-6'>
                 <div>
-                  This sample Web App demonstrates the power of the <a href="https://docs.sqlitecloud.io/docs/commands" class="text-blue-600" target="_blank">Pub/Sub</a> capabilities built into SQLite Cloud.
+                  This sample Web App demonstrates the power of the <a href="https://docs.sqlitecloud.io/docs/introduction/pubsub_implementation" class="text-blue-600" target="_blank">Pub/Sub</a> capabilities built into SQLite Cloud.
                 </div>
                 <div>
                   Open this page on two or more separate devices and try to send messages to different channels.
