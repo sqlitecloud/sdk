@@ -42,7 +42,7 @@ export default function Layout(props) {
   const [connectionResponse, setConnectionResponse] = useState(null);
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
   const [channelsListResponse, setChannelsListResponse] = useState(null);
-  //callback function passet to websocket and register on error and close events
+  //callback function passed to websocket and register on error and close events
   let onErrorCallback = function (event, msg) {
     console.log(msg);
   }
@@ -55,12 +55,8 @@ export default function Layout(props) {
   const queryDBName = searchParams.get('dbName');
   //if present, this is the channel you want to listen to 
   const queryChannel = searchParams.get('channel');
-  //check if listeing to the actual selected channel is completed
+  //check if listening to the actual selected channel is completed
   const isListeningActualChannel = chsMap ? chsMap.get(queryChannel) : null;
-  if (queryChannel === "fdsa") {
-    console.log(queryChannel);
-    console.log(isListeningActualChannel);
-  }
   //state to handle actual selected channel
   const [selectedChannel, setSelectedChannel] = useState(queryChannel);
   const [selectedChannelIndex, setSelectedChannelIndex] = useState(-1);
@@ -68,7 +64,7 @@ export default function Layout(props) {
   const [channelsList, setChannelsList] = useState(undefined);
   //based on value of query channel show or not Messages component
   const [showMessages, setShowMessages] = useState(false);
-  //show message editor and other ui element based on query paramters editor is shown when queryDBName is null
+  //show message editor and other ui element based on query parameters editor is shown when queryDBName is null
   const [showEditor, setShowEditor] = useState(false);
   //state used to open or close mobile sidebar holding messages
   const [openMobMsg, setOpenMobMsg] = useState(false);
@@ -142,7 +138,7 @@ export default function Layout(props) {
       if (connectionResponse.status == 'success') {
         //successful websocket connection
         setClient(localClient)
-        //based on query parameters select if retrieve tabales db or channels
+        //based on query parameters select if retrieve tables db or channels
         //in case of db, tables will be saved as channels
         let channelsListResponse = null;
         setIsLoadingChannels(true);
@@ -160,7 +156,7 @@ export default function Layout(props) {
     }
     onMountWrapper();
   }, []);
-  //useEffect triggered everytime selectedChannel changes
+  //useEffect triggered every time selectedChannel changes
   useEffect(() => {
     var testChannelExist = checkChannelExist(channelsList, selectedChannel);
     if (testChannelExist == -1) {
@@ -218,7 +214,7 @@ export default function Layout(props) {
         });
       }
     });
-    //reodered the array from the old messages to the newest
+    //reordered the array from the old messages to the newest
     lastMessagesTimestamp.sort(function (a, b) {
       return ((a.time < b.time) ? -1 : ((a.time == b.time) ? 0 : 1));
     });
@@ -234,7 +230,7 @@ export default function Layout(props) {
       })
       //check if all the original channels are present in the new array
       //if a channel is not present is added to the array
-      //this can happen when there is a problem in listeing a specific channel
+      //this can happen when there is a problem in listening a specific channel
       channelsList.forEach((channel) => {
         if (newChannelsList.indexOf(channel) === -1) {
           newChannelsList.push(channel);
@@ -308,6 +304,30 @@ export default function Layout(props) {
               severity: "error",
               messages: [connectionResponse.data.message]
             }} />
+          </div>
+        }
+        {
+          connectionResponse && connectionResponse.status == "success" && !showMessages &&
+          <div className='w-full h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto'>
+            <div className='max-w-xl mx-auto h-full flex flex-col items-center justify-start'>
+              <div className='mt-[40%] text-lg font-semibold text-center text-gray-600'>
+                Welcome to SQLite Cloud Chat!
+              </div>
+              <div className='mt-12 text-base text-gray-700 flex flex-col space-y-6'>
+                <div>
+                  This sample Web App demonstrates the power of the <a href="https://docs.sqlitecloud.io/docs/commands" class="text-blue-600" target="_blank">Pub/Sub</a> capabilities built into SQLite Cloud.
+                </div>
+                <div>
+                  Open this page on two or more separate devices and try to send messages to different channels.
+                </div>
+                <div>
+                  The underline <a href="https://docs.sqlitecloud.io/docs/sdk" class="text-blue-600" target="_blank">Javascript SDK</a> communicates with an SQLite Cloud cluster, and it uses the standard PUB/SUB commands to efficiently broadcast messages between the channels.
+                </div>
+                <div>
+                  Pub/Sub is also implemented on the database level so you can LISTEN to a database table and start receiving JSON payloads each time that table changes.
+                </div>
+              </div>
+            </div>
           </div>
         }
         {
