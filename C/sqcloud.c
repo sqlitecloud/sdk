@@ -3411,7 +3411,7 @@ int SQCloudVMColumnInt32 (SQCloudVM *vm, int index) {
 }
 
 int64_t SQCloudVMColumnInt64 (SQCloudVM *vm, int index) {
-    return (int)SQCloudRowsetInt64Value(vm->result, vm->rowindex, index);
+    return (int64_t)SQCloudRowsetInt64Value(vm->result, vm->rowindex, index);
 }
 
 int64_t SQCloudVMColumnLen (SQCloudVM *vm, int index) {
