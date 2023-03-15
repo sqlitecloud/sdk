@@ -1,11 +1,12 @@
 {
   "name": "sqlitecloud-sdk",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "",
-  "main": "dist/main.bundle.js",
+  "main": "dist/sqlitecloud-sdk.js",
   "scripts": {
     "start": "webpack serve --open --config ./webpack/webpack.dev.js",
-    "build": "webpack --config ./webpack/webpack.prod.js",
+    "build": "MINIMIZE=false webpack --config ./webpack/webpack.prod.js ",
+    "buildMinify": "MINIMIZE=true webpack --config ./webpack/webpack.prod.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

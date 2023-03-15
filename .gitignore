@@ -50,3 +50,6 @@ JS/**/**/public
 
 #vercel
 JS/.vercel
+
+# JS local example
+JS/example/local-sqlite-cloud-chat

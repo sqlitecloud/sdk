@@ -4,22 +4,33 @@ const { merge } = require('webpack-merge');
 const common = require('./webpack.common.js');
 const TerserPlugin = require("terser-webpack-plugin");
 
-module.exports = merge(common, {
+var minimize = process.env.MINIMIZE === 'false' ? false : true;
+var filename = minimize
+  ? 'sqlitecloud-sdk.min.js'
+  : 'sqlitecloud-sdk.js';
+
+let buildOption = {
   mode: 'production',
-  devtool: 'source-map',
   output: {
     path: path.resolve(__dirname, '../dist'),
-    filename: '[name].bundle.js',
-    clean: true,
+    filename: filename,
+    clean: false,
+    globalObject: 'this',
     library: {
-      name: 'sqliteCloudJs',
+      name: 'SQLiteCloud',
       type: 'umd',
     },
   },
   optimization: {
-    minimize: true,
+    minimize: minimize,
     minimizer: [
       new TerserPlugin()
     ]
   }
-});
+}
+
+if (minimize) {
+  buildOption['devtool'] = 'source-map'
+}
+
+module.exports = merge(common, buildOption);
