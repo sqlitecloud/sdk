@@ -315,13 +315,13 @@ export default function Layout(props) {
               </div>
               <div className='mt-12 text-base text-gray-700 flex flex-col space-y-6'>
                 <div>
-                  This sample Web App demonstrates the power of the <a href="https://docs.sqlitecloud.io/docs/introduction/pubsub_implementation" class="text-blue-600" target="_blank">Pub/Sub</a> capabilities built into SQLite Cloud.
+                  This sample Web App demonstrates the power of the <a href="https://docs.sqlitecloud.io/docs/introduction/pubsub_implementation" className="text-blue-600" target="_blank">Pub/Sub</a> capabilities built into SQLite Cloud.
                 </div>
                 <div>
                   Open this page on two or more separate devices and try to send messages to different channels.
                 </div>
                 <div>
-                  The underline <a href="https://docs.sqlitecloud.io/docs/sdk" class="text-blue-600" target="_blank">Javascript SDK</a> communicates with an SQLite Cloud cluster, and it uses the standard PUB/SUB commands to efficiently broadcast messages between the channels.
+                  The underline <a href="https://docs.sqlitecloud.io/docs/sdk" className="text-blue-600" target="_blank">Javascript SDK</a> communicates with an SQLite Cloud cluster, and it uses the standard PUB/SUB commands to efficiently broadcast messages between the channels.
                 </div>
                 <div>
                   Pub/Sub is also implemented on the database level so you can LISTEN to a database table and start receiving JSON payloads each time that table changes.
