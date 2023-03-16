@@ -431,3 +431,19 @@ execCommandResponse = {
 */
 
 ```
+
+### Notify
+
+#### `SQLiteCloud.notify()` 
+
+You can notify a message on an avaible channel for the the current SQLite Cloud cluster invoking the `async` method `SQLiteCloud.notify()`.
+
+```js
+
+```
+
+This method returns the following object:
+
+```js
+
+```
