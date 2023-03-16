@@ -133,11 +133,14 @@ If `true` during PUB/SUB communications library not return messages sent by the 
 --- | ---
 `async connect()`|Creates a new **main WebSocket*. Returns how creation process completed..
 `close(closePubSub = true)`|By default, closes both the **main WebSocket** and the **Pub/Sub WebSocket**. If invoked with `closePubSub = false`, closes only the **main WebSocket**. Returns how closing process completed.
-`connectionState()`|Returns the actual state of the **main WebSocket**.
-`pubSubState()`|Returns the actual state of the **Pub/Sub WebSocket**.
+`connectionState`|Returns the actual state of the **main WebSocket**.
+`pubSubState`|Returns the actual state of the **Pub/Sub WebSocket**.
+
+
+
 `requestsStackState()`|Returns the list of pending requests.
 `subscriptionsStackState()`|Returns the list of active subscriptions.
-`async exec(command)`|
+`async exec(command)`|Use **main WebSocket** to send commands. On command execution success returns the `response`, if not return error.
 `async notify(channel, payload)`|Invoked after connection sends notification through the **main WebSocket**. On command exectution success returns the `response`, if not return error.
 `async listenChannel(channel, callback)`|Invoked after connection send through the **main WebSocket** the request to start listening for incoming message on the selected channel. It is on the first channel listen request that the SDK open the **Pub/Sub WebSocket**. On the following request the SDK simply add the subscription to the supscriptionStack. For each registered channel is registered the callback to be invoked when a new message arrives. The callback can be different for each channel.  On command exectution success returns the `response`, if not return error.
 `async listenTable(channel, callback)`|Invoked after connection send through the **main WebSocket** the request to start listening for incoming message on the selected table. It is on the first table listen request that the SDK open the **Pub/Sub WebSocket**. On the following request the SDK simply add the subscription to the supscriptionStack. For each registered table is registered the callback to be invoked when a new message arrives. The callback can be different for each channel.  On command exectution success returns the `response`, if not return error.
@@ -154,7 +157,6 @@ If `true` during PUB/SUB communications library not return messages sent by the 
 
 After initializazion and configuration you can connect invoking the `async` method `SQLiteCloud.connect()`.
 
-
 ```js
 async function () {
   const connectionResponse = await client.connect();
@@ -166,7 +168,7 @@ async function () {
 }
 ```
 
-This method returns the following object
+This method returns the following object:
 
 ```js
 //success or warning response
@@ -189,4 +191,68 @@ connectionResponse = {
 
 ```
 
+### Close
+
+#### `SQLiteCloud.close()` 
+
+To close **main WebSocket** and **PUB/SUB WebSocket** you can invoking the method `SQLiteCloud.close()`.
+
+```js
+const close = function (closeAll) {
+  //try to close websocket connection
+  var closeResponse = client.close(closeAll);
+  //check how websocket close completed  
+  console.log(closeResponse);
+  closeResult.innerHTML = closeResponse.data.message;
+  if (closeResponse.status == 'success') {
+    //successful websocket close
+    logThis(closeResponse.data.message);
+  } else {
+    //error on websocket close
+    logThis(closeResponse.data.message);
+  }
+}
+//close both "main WebSocket" and "PUB/SUB WebSocket"
+close(true);
+//close only "main WebSocket" leaving open "PUB/SUB WebSocket" to receive incoming messages on subscripted channels and tables 
+close(true);
+```
+
+This method returns the following object:
+
+```js
+//success or error response
+/*
+connectionResponse = {
+  status: "success" | "error"
+  data: {
+    message: "..."
+  }
+}
+*/
+```
+
+### Main WebSocket connection state
+
+#### `SQLiteCloud.connectionState` 
+
+You can monitor the state of **main WebSocket** invoking the method `SQLiteCloud.connectionState`.
+
+```js
+setInterval(function () {
+  console.log(client.connectionState);
+}, 500)
+```
+
+### PUB/SUB WebSocket connection state
+
+#### `SQLiteCloud.pubSubState` 
+
+You can monitor the state of **PUB/SUB WebSocket** invoking the method `SQLiteCloud.connectionState`.
+
+```js
+setInterval(function () {
+  console.log(client.pubSubState);
+}, 500)
+```
 

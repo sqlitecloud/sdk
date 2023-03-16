@@ -9,7 +9,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js" crossorigin="anonymous"
     referrerpolicy="no-referrer"></script>
   <script type="module" src="./index.js"></script>
-  <script src="https://unpkg.com/sqlitecloud-sdk"></script>
+  <script src="../../dist/1.0/sqlitecloud-sdk.min.js"></script>
 </head>
 
 <body class="h-full">
@@ -45,8 +45,8 @@
                   <div id="connect-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
                   <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
                     <div class="text-sm flex flex-row space-x-8">
-                      <button id="connect" class="text-base font-bold text-indigo-600 hover:text-indigo-500">
-                        Connect
+                      <button id="connect" class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                        Connect "main WebSocket"
                       </button>
                     </div>
                   </div>
@@ -59,11 +59,11 @@
                   <div id="close-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
                   <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
                     <div class="text-sm flex flex-row space-x-8">
-                      <button id="close-all" class="text-base font-bold text-indigo-600 hover:text-indigo-500">
-                        Close All
+                      <button id="close-all" class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                        Close "main WebSocket" and "PUB/SUB WebSocket"
                       </button>
-                      <button id="close-only-main" class="text-base font-bold text-indigo-600 hover:text-indigo-500">
-                        Close Only Main
+                      <button id="close-only-main" class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                        Close "main WebSocket"
                       </button>
                     </div>
                   </div>
@@ -80,7 +80,17 @@
                   <div id="close-callback-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
                 </dd>
               </div>
-              
+              <!-- MAIN WEBSOCKET AND PUB/SUB WEBSOCKET STATE-->
+              <div class="relative overflow-hidden rounded-lg bg-white px-4 pt-5 pb-12 shadow sm:px-0 sm:pt-6">
+                <p class="ml-4 truncate text-sm font-medium text-gray-500">"main WebSocket" state</p>
+                <dd class="ml-4 flex items-baseline pb-6 sm:pb-7">
+                  <div id="main-websocket-state" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+                </dd>
+                <p class="ml-4 truncate text-sm font-medium text-gray-500">"PUB/SUB WebSocket" state</p>
+                <dd class="ml-4 flex items-baseline">
+                  <div id="pubsub-websocket-state" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+                </dd>
+              </div>
               <!-- LIST CHANNELS -->
               <div class="relative overflow-hidden rounded-lg bg-white px-4 pt-5 pb-12 shadow sm:px-0 sm:pt-6">
                 <p class="ml-4 truncate text-sm font-medium text-gray-500">List Channels result</p>
@@ -88,14 +98,13 @@
                   <div id="list-channels-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
                   <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
                     <div class="text-sm">
-                      <button id="list-channels" class="text-base font-bold text-indigo-600 hover:text-indigo-500">
+                      <button id="list-channels" class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
                         List channels
                       </button>
                     </div>
                   </div>
                 </dd>
               </div>
-
               <!-- LIST TABLES OF A DATABASE -->
               <div class="relative overflow-hidden rounded-lg bg-white px-4 pt-5 pb-12 shadow sm:px-0 sm:pt-6">
                 <p class="ml-4 truncate text-sm font-medium text-gray-500">List Tables result</p>
@@ -103,8 +112,8 @@
                   <div id="list-tables-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
                   <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
                     <div class="text-sm">
-                      <button id="list-tables" class="text-base font-bold text-indigo-600 hover:text-indigo-500">
-                        List tables for DB db1.sqlite
+                      <button id="list-tables" class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                        List tables for database "db1.sqlite"
                       </button>
                     </div>
                   </div>

@@ -60,6 +60,13 @@ var close = function (closeAll) {
 }
 closeAllButton.addEventListener("click", function () { close(true) });
 closeOnlyMainButton.addEventListener("click", function () { close(false) });
+//MAIN WEBSOCKET AND PUBSUB WEBSOCKET STATE
+var mainWebSocketState = document.getElementById("main-websocket-state");
+var pubSubWebSocketState = document.getElementById("pubsub-websocket-state");
+setInterval(function () {
+  mainWebSocketState.innerHTML = client.connectionState;
+  pubSubWebSocketState.innerHTML = client.pubSubState;
+}, 500)
 //LIST CHANNELS
 var listChannelsButton = document.getElementById("list-channels");
 var listChannelsResult = document.getElementById("list-channels-result");
