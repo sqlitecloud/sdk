@@ -3136,6 +3136,11 @@ SQCloudVM *SQCloudVMCompile (SQCloudConnection *connection, const char *sql, int
     // result can be array or rowset
     SQCLOUD_RESULT_TYPE type = SQCloudResultType(result);
     
+    if (type == RESULT_NULL) {
+        SQCloudErrorReset(connection);
+        return NULL;
+    }
+    
     // make sure result is an array
     if ((type != RESULT_ARRAY) && (type != RESULT_ROWSET)) {
         internal_set_error(connection, INTERNAL_ERRCODE_FORMAT, "Wrong result type received.");
