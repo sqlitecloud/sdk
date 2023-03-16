@@ -29,7 +29,7 @@ It is very important to emphasize that once you have created and registered chan
 
 
 ## Example
-For a simple, but comprehensive example of the functionality of this SDK check out this [project]() and the [relative code](https://github.com/sqlitecloud/sdk/tree/master/JS/example/simple).
+For a simple, but comprehensive example of the functionality of this SDK check out this [project](https://test-js-sdk.sqlitecloud.io/) and the [relative code](https://github.com/sqlitecloud/sdk/tree/master/JS/example/test-js-sdk).
 
 For a sample WebApp using this SDK that demonstrates the power of the Pub/Sub capabilities built into SQLite Cloud, check out this [SQLite Cloud Chat](https://chat.sqlitecloud.io/) and the [relative code](https://github.com/sqlitecloud/sdk/tree/master/JS/example/sqlite-cloud-chat).
 
