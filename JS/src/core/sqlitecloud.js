@@ -181,7 +181,14 @@ export default class SQLiteCloud {
     if (!closePubSub) {
       if (this.#ws !== null) {
         this.#ws.close(1000, msg.wsCloseByClient);
-        return msg.wsClosingProcess;
+        return (
+          {
+            status: "success",
+            data: {
+              message: msg.wsClosingProcess
+            }
+          }
+        )
       } else {
         return (
           {
@@ -417,13 +424,13 @@ export default class SQLiteCloud {
   /*
   unlistenTable method calls the private method #pubsub to unregister to a table 
   */
-  async unlistenTable(channel) {
-    if (!this.#subscriptionsStack.has(channel)) {
+  async unlistenTable(table) {
+    if (!this.#subscriptionsStack.has(table)) {
       return (
         {
           status: "error",
           data: {
-            message: msg.wsUnlistenError.missingSubscritption + " " + channel
+            message: msg.wsUnlistenError.missingSubscritption + " " + table
           }
         }
       )
@@ -431,7 +438,7 @@ export default class SQLiteCloud {
 
     if (this.#ws !== null) {
       try {
-        const response = await this.#pubsub("unlistenTable", channel, null);
+        const response = await this.#pubsub("unlistenTable", table, null);
         return (response);
       } catch (error) {
         return {
@@ -674,7 +681,7 @@ export default class SQLiteCloud {
           const response = await this.#promiseSend(body);
           //if this is the first subscription, create the websocket connection dedicated to receive pubSub messages
           if (this.#subscriptionsStack.size == 0 && response.status == "success") {
-            //response qui ci sono le informazioni di autenticazione
+            //response here we have authentication information
             const uuid = response.data.uuid;
             const secret = response.data.secret;
             try {
