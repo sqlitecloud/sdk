@@ -139,13 +139,14 @@ If `true` during PUB/SUB communications library not return messages sent by the 
 `async createChannel(channelName, ifNotExist = true)`|Uses **main WebSocket** to create a new channel with the specified name. On command exectution success returns the `response`, if not return error.
 `async removeChannel(channelName)`|Uses **main WebSocket** to remove the channel with the specified name. On command exectution success returns the `response`, if not return error.
 `async exec(command)`|Uses **main WebSocket** to send commands. On command execution success returns the `response`, if not return error.
-`requestsStackState()`|Returns the list of pending requests.
-`subscriptionsStackState()`|Returns the list of active subscriptions.
 `async notify(channel, payload)`|Invoked after connection sends notification through the **main WebSocket**. On command exectution success returns the `response`, if not return error.
 `async listenChannel(channel, callback)`|Invoked after connection send through the **main WebSocket** the request to start listening for incoming message on the selected channel. It is on the first channel listen request that the SDK open the **Pub/Sub WebSocket**. On the following request the SDK simply add the subscription to the supscriptionStack. For each registered channel is registered the callback to be invoked when a new message arrives. The callback can be different for each channel.  On command exectution success returns the `response`, if not return error.
 `async listenTable(channel, callback)`|Invoked after connection send through the **main WebSocket** the request to start listening for incoming message on the selected table. It is on the first table listen request that the SDK open the **Pub/Sub WebSocket**. On the following request the SDK simply add the subscription to the supscriptionStack. For each registered table is registered the callback to be invoked when a new message arrives. The callback can be different for each channel.  On command exectution success returns the `response`, if not return error.
 `async unlistenChannel(channel)`|Invoked after connection send through the **main WebSocket** the request to unlistening for incoming message on the selected channel. On command exectution success returns the `response`, if not return error.
 `async unlistenTable(table)`|Invoked after connection send through the **main WebSocket** the request to unlistening for incoming message on the selected table. On command exectution success returns the `response`, if not return error.
+`requestsStackState()`|Returns the list of pending requests.
+`subscriptionsStackState()`|Returns the list of active subscriptions.
+
 
 
 ### Connection
