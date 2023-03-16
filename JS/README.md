@@ -173,15 +173,15 @@ This method returns the following object
 //success or warning response
 /*
 connectionResponse = {
-  status: "success" | "warning" |
+  status: "success" | "warning"
   data: {
     message: "..."
   }
 }
 */
 
-/*
 //error response
+/*
 connectionResponse = {
   status: "error"
   data: error
@@ -189,4 +189,5 @@ connectionResponse = {
 */
 
 ```
+
 
