@@ -147,7 +147,7 @@ If `true` during PUB/SUB communications library not return messages sent by the 
 
 **Method**|**Description**
 --- | ---
-`async connect()`|Creates a new **main WebSocket*. Returns how creation process completed..
+`async connect()`|Creates a new **main WebSocket*. Returns how creation process completed.
 `close(closePubSub = true)`|By default, closes both the **main WebSocket** and the **Pub/Sub WebSocket**. If invoked with `closePubSub = false`, closes only the **main WebSocket**. Returns how closing process completed.
 `connectionState`|Returns the actual state of the **main WebSocket**.
 `pubSubState`|Returns the actual state of the **Pub/Sub WebSocket**.
@@ -155,11 +155,11 @@ If `true` during PUB/SUB communications library not return messages sent by the 
 `async createChannel(channelName, ifNotExist = true)`|Uses **main WebSocket** to create a new channel with the specified name. On command exectution success returns the `response`, if not return error.
 `async removeChannel(channelName)`|Uses **main WebSocket** to remove the channel with the specified name. On command exectution success returns the `response`, if not return error.
 `async exec(command)`|Uses **main WebSocket** to send commands. On command execution success returns the `response`, if not return error.
-`async notify(channel, payload)`|Invoked after connection sends notification through the **main WebSocket**. On command exectution success returns the `response`, if not return error.
-`async listenChannel(channel, callback)`|Invoked after connection send through the **main WebSocket** the request to start listening for incoming message on the selected channel. It is on the first channel listen request that the SDK open the **Pub/Sub WebSocket**. On the following request the SDK simply add the subscription to the supscriptionStack. For each registered channel is registered the callback to be invoked when a new message arrives. The callback can be different for each channel.  On command exectution success returns the `response`, if not return error.
-`async listenTable(channel, callback)`|Invoked after connection send through the **main WebSocket** the request to start listening for incoming message on the selected table. It is on the first table listen request that the SDK open the **Pub/Sub WebSocket**. On the following request the SDK simply add the subscription to the supscriptionStack. For each registered table is registered the callback to be invoked when a new message arrives. The callback can be different for each channel.  On command exectution success returns the `response`, if not return error.
-`async unlistenChannel(channel)`|Invoked after connection send through the **main WebSocket** the request to unlistening for incoming message on the selected channel. On command exectution success returns the `response`, if not return error.
-`async unlistenTable(table)`|Invoked after connection send through the **main WebSocket** the request to unlistening for incoming message on the selected table. On command exectution success returns the `response`, if not return error.
+`async notify(channel, payload)`|Uses **main WebSocket** to send notification to an avaible channel for the current SQLite Cloud cluster. On notification exectution success returns the `response`, if not return error.
+`async listenChannel(channel, callback)`|Uses **main WebSocket** to start listening for incoming message on the selected channel. On the first listenChannel request the SDK creates the **Pub/Sub WebSocket**. On the following listenChannel request the SDK simply adds the new subscription to the supscriptionStack. For each listend channel a callback is registered to be invoked when a new message arrives. The callback can be different for each channel. On listen execution success returns the `response`, if not return error.
+`async listenTable(table, callback)`|Uses **main WebSocket** to start listening for incoming message on the selected table. On the first listenTable request the SDK creates the **Pub/Sub WebSocket**. On the following listenTable request the SDK simply adds the new subscription to the supscriptionStack. For each listend table a callback is registered to be invoked when a new message arrives. The callback can be different for each table. On listen execution success returns the `response`, if not return error.
+`async unlistenChannel(channel)`|Uses **main WebSocket** to stop listening for incoming message on the selected channel. On unlisten execution success returns the `response`, if not return error.
+`async unlistenTable(table)`|Uses **main WebSocket** to stop listening for incoming message on the selected table. On unlisten execution success returns the `response`, if not return error.
 `requestsStackState()`|Returns the list of pending requests.
 `subscriptionsStackState()`|Returns the list of active subscriptions.
 
