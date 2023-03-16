@@ -19,7 +19,7 @@ This Javascript SDK allows a WebApp to communicate with an SQLite Cloud cluster 
 
 
 ## How to use
-First of all you have to get your APP_KEY and PROJECT_ID from the [SQLiteCloud dashboard](https://dashboard.sqlitecloud.io/) associated to an SQLite Cloud cluster.
+First of all you have to get your `APP_KEY` and `PROJECT_ID` from the [SQLiteCloud dashboard](https://dashboard.sqlitecloud.io/) associated to an SQLite Cloud cluster.
 
 Once you have your credatials, you can create a new main **main channel**. Every instance of the Javascript Client allows to create a **main channel**.
 
@@ -119,10 +119,10 @@ You can get your APP_KEY and PROJECT_ID from the [SQLiteCloud dashboard](https:/
 
 After initializazion it is possibile to configure your client.
 
-### `SQLiteCloud.setRequestTimeout` (Int value in milliseconds)
+#### `SQLiteCloud.setRequestTimeout` (Int value in milliseconds)
 Default value is `3000 ms`
 
-### `SQLiteCloud.setFilterSentMessages` (Boolean)
+#### `SQLiteCloud.setFilterSentMessages` (Boolean)
 Default value is `false`
 
 If `true` during PUB/SUB communications library not return messages sent by the user. 
@@ -153,7 +153,7 @@ If `true` during PUB/SUB communications library not return messages sent by the 
 
 #### `SQLiteCloud.connect()` 
 
-After initializazion and configuration you can connect to invoking the `async` method `SQLiteCloud.connect()`.
+After initializazion and configuration you can connect invoking the `async` method `SQLiteCloud.connect()`.
 
 
 ```js
@@ -166,3 +166,27 @@ async function () {
   }
 }
 ```
+
+This method returns the following object
+
+```js
+//success or warning response
+/*
+connectionResponse = {
+  status: "success" | "warning" |
+  data: {
+    message: "..."
+  }
+}
+*/
+
+/*
+//error response
+connectionResponse = {
+  status: "error"
+  data: error
+}
+*/
+
+```
+
