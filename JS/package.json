@@ -1,8 +1,8 @@
 {
   "name": "sqlitecloud-sdk",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "",
-  "main": "dist/sqlitecloud-sdk.js",
+  "main": "dist/1.0/sqlitecloud-sdk.js",
   "scripts": {
     "start": "webpack serve --open --config ./webpack/webpack.dev.js",
     "build": "MINIMIZE=false webpack --config ./webpack/webpack.prod.js ",
