@@ -159,7 +159,7 @@ Arguments:
 
 Examples:
   sqlc "sqlitecloud://user:pass@host.com:8860/dbname?timeout=10&compress=lz4"
-  sqlc --host ***REMOVED*** -u user --password=pass -d dbname -c LZ4
+  sqlc --host hostname -u user --password=pass -d dbname -c LZ4
   sqlc --version
   sqlc -?
 
@@ -197,7 +197,7 @@ Connection Options:
 
 ### Internal Commands
 ```console
- ***REMOVED***:X > .help
+ hostname.com:X > .help
 
 .help                Show this message
 .bail [on|off]       Stop after hitting an error [default: off]
@@ -218,7 +218,7 @@ Connection Options:
 If no parameter is specified, then the default value is used as the parameter value.
 Boolean settings are toggled if no parameter is specified. 
 
-***REMOVED***:X > 
+hostname:X > 
 
 ```
 
@@ -226,20 +226,20 @@ Boolean settings are toggled if no parameter is specified.
 
 ### Starting a new session
 ```console
-./bin/sqlc --host=***REMOVED*** --dbname=X --tls=INTERN
+./bin/sqlc --host=hostname --dbname=X --tls=INTERN
    _____     
   /    /     SQLite Cloud Command Line Application, version 1.0.1
  / ___/ /    (c) 2021 by SQLite Cloud Inc.
  \  ___/ /   
   \_ ___/    Enter ".help" for usage hints.
 
-***REMOVED***:X >
+hostname:X >
 
 ```
 
 ### SELECT'ing some data
 ```console
-***REMOVED***:X > SELECT * FROM Dummy;
+hostname:X > SELECT * FROM Dummy;
 ┌─────┬───────────┬──────────┬───────┬──────────┬─────────────────────┐
 │ ID  │ FirstName │ LastName │  ZIP  │   City   │       Address       │
 ├─────┼───────────┼──────────┼───────┼──────────┼─────────────────────┤
@@ -250,22 +250,22 @@ Boolean settings are toggled if no parameter is specified.
 └─────┴───────────┴──────────┴───────┴──────────┴─────────────────────┘
 Rows: 4 - Cols: 6: 282 Bytes Time: 86.43071ms
 
-***REMOVED***:X > 
+hostname:X > 
 
 ```
 ### DELETE'ing a row
 ```console
-***REMOVED***:X > DELETE FROM Dummy WHERE ID = 372;
+hostname:X > DELETE FROM Dummy WHERE ID = 372;
 OK
 
-***REMOVED***:X > 
+hostname:X > 
 
 ```
 
 ### Changing the outformat
 ```console
-***REMOVED***:X > .format xml
-***REMOVED***:X > SELECT * FROM Dummy;
+hostname:X > .format xml
+hostname:X > SELECT * FROM Dummy;
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <resultset statement="SELECT * FROM Dummy;" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <row>
@@ -295,7 +295,7 @@ OK
 </resultset>
 Rows: 3 - Cols: 6: 229 Bytes Time: 82.762014ms
 
-***REMOVED***:X > 
+hostname:X > 
 
 ```
 ### Changing the outformat back
@@ -304,8 +304,8 @@ One can enter `.format` without any argument to switch the output format back to
 ### Line Truncation explained:
 Lets assume, that you have a narrow terminal window. If you have entered the following commmands, the output would look something like this:
 ```console
-***REMOVED***:X > .format table
- ***REMOVED***:X > SELECT * FROM Dummy;
+hostname:X > .format table
+ hostname:X > SELECT * FROM Dummy;
 +-----+-----------+----------+-------+----------+---------------
 ------+
 | ID  | FirstName | LastName |  ZIP  |   City   |       Address 
@@ -322,8 +322,8 @@ Lets assume, that you have a narrow terminal window. If you have entered the fol
 ------+
 Rows: 3 - Cols: 6: 229 Bytes Time: 81.418646ms
 
-***REMOVED***:X > .format json
-***REMOVED***:X > SELECT * FROM Dummy;
+hostname:X > .format json
+hostname:X > SELECT * FROM Dummy;
 
 [
   {"ID":369,"FirstName":"Some","LastName":"One","ZIP":96450,"Cit
@@ -335,13 +335,13 @@ y":"Poxdorf","Address":"Langholzstr. 4",},
 ]
 Rows: 3 - Cols: 6: 229 Bytes Time: 87.014696ms
 
-***REMOVED***:X > 
+hostname:X > 
 
 ```
 You can see a nasty line break in the middle of the result line that can easily ruin the screen reading experience. To avoid this annoyance, sqlc build in line trucation mechanism trims its output line in a terminal session by default. The result looks like this:
 ```console
-***REMOVED***:X > .format table
-***REMOVED***:X > SELECT * FROM Dummy;
+hostname:X > .format table
+hostname:X > SELECT * FROM Dummy;
 +-----+-----------+----------+-------+----------+--------------…
 | ID  | FirstName | LastName |  ZIP  |   City   |       Address…
 +-----+-----------+----------+-------+----------+--------------…
@@ -351,8 +351,8 @@ You can see a nasty line break in the middle of the result line that can easily 
 +-----+-----------+----------+-------+----------+--------------…
 Rows: 3 - Cols: 6: 229 Bytes Time: 84.409225ms
 
-***REMOVED***:X > .format json
-***REMOVED***:X > SELECT * FROM Dummy;
+hostname:X > .format json
+hostname:X > SELECT * FROM Dummy;
 [
   {"ID":369,"FirstName":"Some","LastName":"One","ZIP":96450,"Ci…
   {"ID":370,"FirstName":"Someone","LastName":"Else","ZIP":96145…
@@ -360,7 +360,7 @@ Rows: 3 - Cols: 6: 229 Bytes Time: 84.409225ms
 ]
 Rows: 3 - Cols: 6: 229 Bytes Time: 88.874433ms
 
-***REMOVED***:X > 
+hostname:X > 
 ```
 
 If an output line was trimed to a certain width, the truncation can easily be spoted by the `…` character at the very end of a line. In batch mode, all output is sent to an output file, no line truncation will occure. You can switch off this autotrunction behaviour with a `.width 0` command. To switch back to auto truncation, use `.width -1`. Truncation to any other width is also possible with, for exampel a `.width 35` command. 
@@ -370,15 +370,15 @@ To use the build in autocomplete feature, use the [TAB] key. The [TAB] key will 
 
 ### UPDATING'ing some data
 ```console
-***REMOVED***:X > sel[TAB]
-***REMOVED***:X > SELECT 
-***REMOVED***:X > SELECT Fi[TAB]
-***REMOVED***:X > SELECT FirstName
-***REMOVED***:X > SELECT FirstName, Dum[TAB][TAB][TAB][TAB]
-***REMOVED***:X > SELECT FirstName, Dummy.LastName
-***REMOVED***:X > SELECT FirstName, Dummy.LastName Fr[TAB]
-***REMOVED***:X > SELECT FirstName, Dummy.LastName FROM D[TAB]
-***REMOVED***:X > SELECT FirstName, Dummy.LastName FROM Dummy[RETURN]
+hostname:X > sel[TAB]
+hostname:X > SELECT 
+hostname:X > SELECT Fi[TAB]
+hostname:X > SELECT FirstName
+hostname:X > SELECT FirstName, Dum[TAB][TAB][TAB][TAB]
+hostname:X > SELECT FirstName, Dummy.LastName
+hostname:X > SELECT FirstName, Dummy.LastName Fr[TAB]
+hostname:X > SELECT FirstName, Dummy.LastName FROM D[TAB]
+hostname:X > SELECT FirstName, Dummy.LastName FROM Dummy[RETURN]
 ┌───────────┬──────────┐
 │ FirstName │ LastName │
 ├───────────┼──────────┤
@@ -388,15 +388,15 @@ To use the build in autocomplete feature, use the [TAB] key. The [TAB] key will 
 └───────────┴──────────┘
 Rows: 3 - Cols: 2: 74 Bytes Time: 81.865386ms
 
-***REMOVED***:X > up[TAB]
-***REMOVED***:X > UPDATE D[TAB]
-***REMOVED***:X > UPDATE Dummy SET La[TAB]
-***REMOVED***:X > UPDATE Dummy SET LastName 
-***REMOVED***:X > UPDATE Dummy SET LastName = "ONE" WH[TAB]
-***REMOVED***:X > UPDATE Dummy SET LastName = "ONE" WHERE id=369[RETURN]
+hostname:X > up[TAB]
+hostname:X > UPDATE D[TAB]
+hostname:X > UPDATE Dummy SET La[TAB]
+hostname:X > UPDATE Dummy SET LastName 
+hostname:X > UPDATE Dummy SET LastName = "ONE" WH[TAB]
+hostname:X > UPDATE Dummy SET LastName = "ONE" WHERE id=369[RETURN]
 OK
 
-***REMOVED***:X > SELECT * FROM Dummy;
+hostname:X > SELECT * FROM Dummy;
 ┌─────┬───────────┬──────────┬───────┬──────────┬─────────────────────┐
 │ ID  │ FirstName │ LastName │  ZIP  │   City   │       Address       │
 ├─────┼───────────┼──────────┼───────┼──────────┼─────────────────────┤
@@ -406,7 +406,7 @@ OK
 └─────┴───────────┴──────────┴───────┴──────────┴─────────────────────┘
 Rows: 3 - Cols: 6: 229 Bytes Time: 82.797135ms
 
-***REMOVED***:X > 
+hostname:X > 
 ```
 
 ### Setting the prompt
@@ -416,7 +416,7 @@ One can set the user promt ether with the `--promt <format>` command line switch
 
 | Format String | Meaning | Example replacement |
 |:---|:---|:---|
-| \H | Database Host name | ***REMOVED*** |
+| \H | Database Host name | hostname |
 | \p | Database Port      | 8860 |
 | \u | Username      | marco |
 | \d | Database name | X |
@@ -428,9 +428,9 @@ The following prebuild patterns are available as a shortcut:
 
 | Shortcut | Definition | Example |
 |:---|:---|:---|
-| default | ``$host$:$dbname$ >`` | ***REMOVED***:X >_ |
+| default | ``$host$:$dbname$ >`` | hostname:X >_ |
 | simple | ``sqlc >`` | sqlc >_ |
-| full | ``$host$:$dbname$ $user$> `` | ***REMOVED***:X pfeil> _ |
+| full | ``$host$:$dbname$ $user$> `` | hostname:X username> _ |
 
 ### Using Synthax Highlighting
 One can switch synthax highlighting on with ``.synthax color``. There is also a monocrome synthax highlighting mode available that is VT100 compatible and uses only bold and italic character representations. You can switch into this simple VT100 mode with ``.synthax vt100``. To switch synthay highlighting off, please enter ``.synthax off``. Synthax highlighting is set to color in interactive mode by default. Synthay highlighting is automatically switched off in batch mode.
@@ -438,7 +438,7 @@ One can switch synthax highlighting on with ``.synthax color``. There is also a 
 
 ### Exiting the app
 ```console
-***REMOVED***:X > .exit
+hostname:X > .exit
 
 ```
 
@@ -449,17 +449,17 @@ One can switch synthax highlighting on with ``.synthax color``. There is also a 
 ./bin/sqlc --version
 
 ./bin/sqlc -> trying to connect
-./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN -> trying to connect
+./bin/sqlc sqlitecloud://hostname/X?tls=INTERN -> trying to connect
 
-./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN
+./bin/sqlc sqlitecloud://hostname/X?tls=INTERN
 
-./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN --list
-./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN --list --format=xml
-./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN --cmd "LIST DATABASES"
-echo "LIST DATABASES" | ./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN --format=json
-echo "LIST DATABASES" > script.sql; ./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN --format=json script.sql
+./bin/sqlc sqlitecloud://hostname/X?tls=INTERN --list
+./bin/sqlc sqlitecloud://hostname/X?tls=INTERN --list --format=xml
+./bin/sqlc sqlitecloud://hostname/X?tls=INTERN --cmd "LIST DATABASES"
+echo "LIST DATABASES" | ./bin/sqlc sqlitecloud://hostname/X?tls=INTERN --format=json
+echo "LIST DATABASES" > script.sql; ./bin/sqlc sqlitecloud://hostname/X?tls=INTERN --format=json script.sql
 
-./bin/sqlc sqlitecloud://***REMOVED***/X?tls=INTERN --list -o outputfile --quiet --format=xml
+./bin/sqlc sqlitecloud://hostname/X?tls=INTERN --list -o outputfile --quiet --format=xml
 
 ```
 

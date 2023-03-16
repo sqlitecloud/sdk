@@ -59,7 +59,7 @@ Arguments:
 
 Examples:
   sqlc "sqlitecloud://user:pass@host.com:8860/dbname?timeout=10&compress=lz4&tls=intern"
-  sqlc --host ***REMOVED*** -u user --password=pass -d dbname -c LZ4 --tls=no
+  sqlc --host hostname -u user --password=pass -d dbname -c LZ4 --tls=no
   sqlc --version
   sqlc -?
 

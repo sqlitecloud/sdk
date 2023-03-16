@@ -2,7 +2,6 @@ package sqlitecloudtest
 
 import "flag"
 
-const testConnectionStringDev1 = "sqlitecloud://admin:admin@***REMOVED***:9960?tls=SQLiteCloudCA"
 const testConnectionStringLocalhost = "sqlitecloud://admin:admin@localhost:8860?tls=SQLiteCloudCA"
 
 const testUsername = "admin"

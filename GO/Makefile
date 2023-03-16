@@ -5,10 +5,6 @@ GOPATH		= $(shell go env GOPATH)
 test:	
 	cd sdk/test; go test -v
 
-.PHONY: test_dev1
-test_dev1:
-	cd sdk/test; go test -server sqlitecloud://admin:admin@***REMOVED***:9960?tls=SQLiteCloudCA -v
-
 # GO SDK
 .PHONY: sdk
 sdk:	sdk/*.go
@@ -19,7 +15,6 @@ $(GOPATH)/bin/sqlc:	sdk/*.go cli/sqlc.go
 	cd cli; go build -o $(GOPATH)/bin/sqlc
 	
 cli: $(GOPATH)/bin/sqlc
-
 
 github:
 	open https://github.com/sqlitecloud/sdk 

@@ -42,4 +42,4 @@ clean:
 	rm -rf *.o *.a *.so *.dylib
 	
 test: cli
-	./sqlitecloud-cli -h ***REMOVED***
+	./sqlitecloud-cli -h localhost

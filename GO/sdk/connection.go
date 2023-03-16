@@ -94,7 +94,7 @@ func init() {
 // No plausibility checks are done (see: CheckConnectionParameter).
 // If the connection string could not be parsed, an error is returned.
 func ParseConnectionString(ConnectionString string) (config *SQCloudConfig, err error) {
-	u, err := dburl.Parse(ConnectionString) // sqlitecloud://***REMOVED***/X?timeout=14&compress=LZ4&tls=INTERN
+	u, err := dburl.Parse(ConnectionString)
 	if err == nil {
 		config = &SQCloudConfig{}
 
