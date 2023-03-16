@@ -1,5 +1,5 @@
 /*!
- * SQLite Cloud SDK v1.0.5
+ * SQLite Cloud SDK v1.0.6
  * https://sqlitecloud.io/
  *
  * Copyright 2023, SQLite Cloud
