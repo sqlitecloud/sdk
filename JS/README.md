@@ -45,15 +45,17 @@ The following topics are covered:
 ](https://github.com/sqlitecloud/sdk/tree/master/JS#configuration)
 * [SDK Methods
 ](https://github.com/sqlitecloud/sdk/tree/master/JS#sdk-methods)
- * [Connection](https://github.com/sqlitecloud/sdk/tree/master/JS#connection)
- * [Close](https://github.com/sqlitecloud/sdk/tree/master/JS#close)
- * [Main WebSocket connection state](https://github.com/sqlitecloud/sdk/tree/master/JS#main-websocket-connection-state)
- * [PUB/SUB WebSocket connection state](https://github.com/sqlitecloud/sdk/tree/master/JS#pubsub-websocket-connection-state)
- * [List Channels](https://github.com/sqlitecloud/sdk/tree/master/JS#list-channels)
- * [Create Channel](https://github.com/sqlitecloud/sdk/tree/master/JS#create-channel)
- * [Remove Channel](https://github.com/sqlitecloud/sdk/tree/master/JS#remove-channel)
- * [Exec Command](https://github.com/sqlitecloud/sdk/tree/master/JS#exec-command)
- * [Notify](https://github.com/sqlitecloud/sdk/tree/master/JS#notify)
+  * [Connection](https://github.com/sqlitecloud/sdk/tree/master/JS#connection)
+  * [Close](https://github.com/sqlitecloud/sdk/tree/master/JS#close)
+  * [Main WebSocket connection state](https://github.com/sqlitecloud/sdk/tree/master/JS#main-websocket-connection-state)
+  * [PUB/SUB WebSocket connection state](https://github.com/sqlitecloud/sdk/tree/master/JS#pubsub-websocket-connection-state)
+  * [List Channels](https://github.com/sqlitecloud/sdk/tree/master/JS#list-channels)
+  * [Create Channel](https://github.com/sqlitecloud/sdk/tree/master/JS#create-channel)
+  * [Remove Channel](https://github.com/sqlitecloud/sdk/tree/master/JS#remove-channel)
+  * [Exec Command](https://github.com/sqlitecloud/sdk/tree/master/JS#exec-command)
+  * [Notify](https://github.com/sqlitecloud/sdk/tree/master/JS#notify)
+* [Developing](#)
+  * [Building](#)
 
 
 
