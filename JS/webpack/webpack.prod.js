@@ -1,5 +1,5 @@
 var path = require('path');
-
+var Config = require('./hosting_config');
 const { merge } = require('webpack-merge');
 const common = require('./webpack.common.js');
 const TerserPlugin = require("terser-webpack-plugin");
@@ -9,10 +9,13 @@ var filename = minimize
   ? 'sqlitecloud-sdk.min.js'
   : 'sqlitecloud-sdk.js';
 
+
+const distFolder = Config.version.slice(0,3);
+
 let buildOption = {
   mode: 'production',
   output: {
-    path: path.resolve(__dirname, '../dist'),
+    path: path.resolve(__dirname, '../dist/'+distFolder+'/'),
     filename: filename,
     clean: false,
     globalObject: 'this',

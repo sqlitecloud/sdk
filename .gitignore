@@ -35,9 +35,6 @@ JS/**/node_modules
 JS/**/**/node_modules
 
 # production
-JS/dist
-JS/**/dist
-JS/**/**/dist
 JS/public
 JS/**/public
 JS/**/**/public
