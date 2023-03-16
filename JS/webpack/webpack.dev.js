@@ -8,7 +8,7 @@ module.exports = merge(common, {
   devtool: 'inline-source-map',
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'sqlitecloud-sdk.js', //[name].bundle.js',
+    filename: 'sqlitecloud-sdk.js',
     clean: true,
     library: {
       name: 'SQLiteCloud',
