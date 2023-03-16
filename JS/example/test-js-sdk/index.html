@@ -12,8 +12,8 @@
   <script src="../../dist/1.0/sqlitecloud-sdk.min.js"></script>
 </head>
 
-<body class="h-full">
-  <div class="min-h-full">
+<body class="h-full bg-gray-100">
+  <div class="min-h-full h-full">
     <nav class="border-b border-gray-200 bg-white">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="flex h-16 justify-between">
@@ -27,103 +27,158 @@
       </div>
     </nav>
 
-    <div class="py-10">
+    <div class="py-10 h-full">
       <header>
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <h1 class="text-3xl font-bold leading-tight tracking-tight text-indigo-700">Javascript SDK example</h1>
         </div>
       </header>
-      <main>
-        <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-          <div>
-            <h3 class="text-base font-semibold leading-6 text-gray-900">Test command</h3>
-            <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              <!-- CONNECT -->
-              <div class="relative overflow-hidden rounded-lg bg-white px-4 pt-5 pb-12 shadow sm:px-0 sm:pt-6">
-                <p class="ml-4 truncate text-sm font-medium text-gray-500">Connection result</p>
-                <dd class="ml-4 flex items-baseline pb-6 sm:pb-7">
-                  <div id="connect-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
-                  <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
-                    <div class="text-sm flex flex-row space-x-8">
-                      <button id="connect" class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
-                        Connect "main WebSocket"
-                      </button>
-                    </div>
+      <main class="h-full">
+        <div class="h-full mx-auto max-w-7xl sm:px-6 lg:px-8">
+          <h3 class="text-base font-semibold leading-6 text-gray-900">Test command</h3>
+          <div class="mt-5 pb-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <!-- CONNECT -->
+            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">Connection result</p>
+              <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
+                <div id="connect-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+                <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
+                  <div class="text-sm flex flex-row space-x-8">
+                    <button id="connect" class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                      Connect "main WebSocket"
+                    </button>
                   </div>
-                </dd>
+                </div>
               </div>
-              <!-- CLOSE -->
-              <div class="relative overflow-hidden rounded-lg bg-white px-4 pt-5 pb-12 shadow sm:px-0 sm:pt-6">
-                <p class="ml-4 truncate text-sm font-medium text-gray-500">Close result</p>
-                <dd class="ml-4 flex items-baseline pb-6 sm:pb-7">
-                  <div id="close-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
-                  <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
-                    <div class="text-sm flex flex-row space-x-8">
-                      <button id="close-all" class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
-                        Close "main WebSocket" and "PUB/SUB WebSocket"
-                      </button>
-                      <button id="close-only-main" class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
-                        Close "main WebSocket"
-                      </button>
-                    </div>
+            </div>
+            <!-- CLOSE -->
+            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">Close result</p>
+              <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
+                <div id="close-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+                <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
+                  <div class="text-sm flex flex-row space-x-8">
+                    <button id="close-all" class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                      Close "main WebSocket" and "PUB/SUB WebSocket"
+                    </button>
+                    <button id="close-only-main"
+                      class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                      Close "main WebSocket"
+                    </button>
                   </div>
-                </dd>
+                </div>
               </div>
-              <!-- ERROR AND CLOSE CALLBAKS -->
-              <div class="relative overflow-hidden rounded-lg bg-white px-4 pt-5 pb-12 shadow sm:px-0 sm:pt-6">
-                <p class="ml-4 truncate text-sm font-medium text-gray-500">Error Callback</p>
-                <dd class="ml-4 flex items-baseline pb-6 sm:pb-7">
-                  <div id="error-callback-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
-                </dd>
-                <p class="ml-4 truncate text-sm font-medium text-gray-500">Close Callback</p>
-                <dd class="ml-4 flex items-baseline">
-                  <div id="close-callback-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
-                </dd>
+            </div>
+            <!-- ERROR AND CLOSE CALLBAKS -->
+            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">Error Callback</p>
+              <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
+                <div id="error-callback-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
               </div>
-              <!-- MAIN WEBSOCKET AND PUB/SUB WEBSOCKET STATE-->
-              <div class="relative overflow-hidden rounded-lg bg-white px-4 pt-5 pb-12 shadow sm:px-0 sm:pt-6">
-                <p class="ml-4 truncate text-sm font-medium text-gray-500">"main WebSocket" state</p>
-                <dd class="ml-4 flex items-baseline pb-6 sm:pb-7">
-                  <div id="main-websocket-state" class="mt-4 text-lg font-semibold text-gray-900">...</div>
-                </dd>
-                <p class="ml-4 truncate text-sm font-medium text-gray-500">"PUB/SUB WebSocket" state</p>
-                <dd class="ml-4 flex items-baseline">
-                  <div id="pubsub-websocket-state" class="mt-4 text-lg font-semibold text-gray-900">...</div>
-                </dd>
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">Close Callback</p>
+              <div class="ml-4 flex items-baseline">
+                <div id="close-callback-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
               </div>
-              <!-- LIST CHANNELS -->
-              <div class="relative overflow-hidden rounded-lg bg-white px-4 pt-5 pb-12 shadow sm:px-0 sm:pt-6">
-                <p class="ml-4 truncate text-sm font-medium text-gray-500">List Channels result</p>
-                <dd class="ml-4 flex items-baseline pb-6 sm:pb-7">
-                  <div id="list-channels-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
-                  <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
-                    <div class="text-sm">
-                      <button id="list-channels" class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
-                        List channels
-                      </button>
-                    </div>
+            </div>
+            <!-- MAIN WEBSOCKET AND PUB/SUB WEBSOCKET STATE-->
+            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">"main WebSocket" state</p>
+              <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
+                <div id="main-websocket-state" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+              </div>
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">"PUB/SUB WebSocket" state</p>
+              <div class="ml-4 flex items-baseline">
+                <div id="pubsub-websocket-state" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+              </div>
+            </div>
+            <!-- LIST CHANNELS -->
+            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">List Channels result</p>
+              <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
+                <div id="list-channels-result"
+                  class="max-h-32 w-full mt-4 text-lg font-semibold text-gray-900 overflow-auto">...</div>
+                <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
+                  <div class="text-sm">
+                    <button id="list-channels"
+                      class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                      List channels
+                    </button>
                   </div>
-                </dd>
+                </div>
               </div>
-              <!-- LIST TABLES OF A DATABASE -->
-              <div class="relative overflow-hidden rounded-lg bg-white px-4 pt-5 pb-12 shadow sm:px-0 sm:pt-6">
-                <p class="ml-4 truncate text-sm font-medium text-gray-500">List Tables result</p>
-                <dd class="ml-4 flex items-baseline pb-6 sm:pb-7">
-                  <div id="list-tables-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
-                  <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
-                    <div class="text-sm">
-                      <button id="list-tables" class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
-                        List tables for database "db1.sqlite"
-                      </button>
+            </div>
+            <!-- CREATE CHANNEL -->
+            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">Create Channel result</p>
+              <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
+                <div id="create-channel-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+                <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
+                  <div class="text-sm">
+                    <div>
+                      <label for="create-channel-name" class="block text-sm font-medium leading-6 text-gray-900">Channel
+                        name</label>
+                      <div class="m-2">
+                        <input type="text" name="create-channel-name" id="create-channel-name"
+                          class="block w-full rounded-md border-0 py-1.5  pl-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                          placeholder="test channel">
+                      </div>
                     </div>
+                    <button id="create-channel"
+                      class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                      Create channel
+                    </button>
                   </div>
-                </dd>
+                </div>
               </div>
+            </div>
+            <!-- REMOVE CHANNEL -->
+            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">Remove Channel result</p>
+              <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
+                <div id="remove-channel-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+                <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
+                  <div class="text-sm">
+                    <div>
+                      <label for="remove-channel-name" class="block text-sm font-medium leading-6 text-gray-900">Channel
+                        name</label>
+                      <div class="m-2">
+                        <input type="text" name="remove-channel-name" id="remove-channel-name"
+                          class="block w-full rounded-md border-0 py-1.5  pl-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                          placeholder="test channel">
+                      </div>
+                    </div>
+                    <button id="remove-channel"
+                      class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                      Remove channel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- EXEC COMMAND -->
+            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">Exec command result</p>
+              <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
+                <div id="exec-command-result" class="max-h-32 w-full mt-4 text-lg font-semibold text-gray-900 overflow-auto">...</div>
+                <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
+                  <div class="text-sm">
+                    <div>
+                      <label for="command" class="block text-sm font-medium leading-6 text-gray-900">Command</label>
+                      <div class="m-2">
+                        <input type="text" name="command" id="command"
+                          class="block w-full rounded-md border-0 py-1.5  pl-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                          placeholder="USE DATABASE db1.sqlite; LIST TABLES PUBSUB">
+                      </div>
+                    </div>
+                    <button id="exec-command" class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                      Exec command
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-
-            </dl>
           </div>
-
         </div>
       </main>
     </div>

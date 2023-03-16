@@ -78,6 +78,7 @@ var listChannels = async function () {
     //successful channels request connection
     listChannelsResult.innerHTML = "";
     logThis("received channels list");
+    console.log(listChannelsResponse);
     console.log(listChannelsResponse.data.rows);
     var channels = listChannelsResponse.data.rows;
     for (var i = 0; i < channels.length; i++) {
@@ -93,31 +94,67 @@ var listChannels = async function () {
   }
 }
 listChannelsButton.addEventListener("click", listChannels);
-//LIST CHANNELS
-var listTablesButton = document.getElementById("list-tables");
-var listTablesResult = document.getElementById("list-tables-result");
-var listTables = async function () {
-  //try to request database tables
-  var dbName = "chinook-enc.sqlite";
-  var execMessage = `USE DATABASE ${dbName}; LIST TABLES PUBSUB`
-  var listTablesResponse = await client.exec(execMessage);
-  //check how request database tables completed  
-  if (listTablesResponse.status == 'success') {
-    //successful database tables completed
-    listTablesResult.innerHTML = "";
-    logThis("received channels list");
-    console.log(listTablesResponse.data.rows);
-    var channels = listTablesResponse.data.rows;
-    for (var i = 0; i < channels.length; i++) {
-      logThis("ch. name: " + channels[i].chname);
-      var li = document.createElement("li");
-      li.innerText = channels[i].chname;
-      listTablesResult.appendChild(li);
-    }
+//CREATE CHANNEL
+var createChannelButton = document.getElementById("create-channel");
+var createChannelNameInput = document.getElementById("create-channel-name");
+var createChannelResult = document.getElementById("create-channel-result");
+var createChannel = async function () {
+  //try to create a channel
+  var createChannelsResponse = await client.createChannel(createChannelNameInput.value);
+  //check how channel request creation completed  
+  if (createChannelsResponse.status == 'success') {
+    //successful channel request creation
+    createChannelResult.innerHTML = "";
+    console.log(createChannelsResponse)
+    logThis("creation channel " + ' ' + createChannelsResponse.data);
+    createChannelResult.innerHTML = createChannelsResponse.data;
   } else {
-    //error on database tables completed
-    listTablesResult.innerHTML = listTablesResponse.data.message;
-    logThis(listTablesResponse.data.message);
+    //error on channel request creation
+    createChannelResult.innerHTML = createChannelsResponse.data.message;
+    logThis(createChannelsResponse.data.message);
   }
 }
-listTablesButton.addEventListener("click", listTables);
+createChannelButton.addEventListener("click", createChannel);
+//REMOVE CHANNEL
+var removeChannelButton = document.getElementById("remove-channel");
+var removeChannelNameInput = document.getElementById("remove-channel-name");
+var removeChannelResult = document.getElementById("remove-channel-result");
+var removeChannel = async function () {
+  //try to remove a channel
+  var removeChannelsResponse = await client.removeChannel(removeChannelNameInput.value);
+  //check how channel request creation completed  
+  if (removeChannelsResponse.status == 'success') {
+    //successful channel request creation
+    removeChannelResult.innerHTML = "";
+    console.log(removeChannelsResponse)
+    logThis("creation channel " + ' ' + removeChannelsResponse.data);
+    removeChannelResult.innerHTML = removeChannelsResponse.data;
+  } else {
+    //error on channel request creation
+    removeChannelResult.innerHTML = removeChannelsResponse.data.message;
+    logThis(removeChannelsResponse.data.message);
+  }
+}
+removeChannelButton.addEventListener("click", removeChannel);
+//EXEC COMMAND
+var execCommandButton = document.getElementById("exec-command");
+var commandInput = document.getElementById("command");
+var execCommandResult = document.getElementById("exec-command-result");
+var execCommand = async function () {
+  //try to exec command
+  var execCommandResponse = await client.exec(commandInput.value);
+  console.log(execCommandResponse); 
+  //check how command execution request completed  
+  if (execCommandResponse.status == 'success') {
+    //successful channel request creation
+    execCommandResult.innerHTML = "OK. Read console to see payload";
+    execCommandResult.innerHTML = JSON.stringify(execCommandResponse.data);
+    logThis("response to " + commandInput.value);
+    console.log(execCommandResponse)
+  } else {
+    //error on channel request creation
+    execCommandResult.innerHTML = execCommandResponse.data.message;
+    logThis(execCommandResponse.data.message);
+  }
+}
+execCommandButton.addEventListener("click", execCommand);

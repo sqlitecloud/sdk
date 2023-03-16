@@ -135,20 +135,17 @@ If `true` during PUB/SUB communications library not return messages sent by the 
 `close(closePubSub = true)`|By default, closes both the **main WebSocket** and the **Pub/Sub WebSocket**. If invoked with `closePubSub = false`, closes only the **main WebSocket**. Returns how closing process completed.
 `connectionState`|Returns the actual state of the **main WebSocket**.
 `pubSubState`|Returns the actual state of the **Pub/Sub WebSocket**.
-
-
-
+`async listChannels()`|Uses **main WebSocket** to request the list of all active channels for the current SQLite Cloud cluster. On command execution success returns the channels list, if not return error.
+`async createChannel(channelName, ifNotExist = true)`|Uses **main WebSocket** to create a new channel with the specified name. On command exectution success returns the `response`, if not return error.
+`async removeChannel(channelName)`|Uses **main WebSocket** to remove the channel with the specified name. On command exectution success returns the `response`, if not return error.
+`async exec(command)`|Uses **main WebSocket** to send commands. On command execution success returns the `response`, if not return error.
 `requestsStackState()`|Returns the list of pending requests.
 `subscriptionsStackState()`|Returns the list of active subscriptions.
-`async exec(command)`|Use **main WebSocket** to send commands. On command execution success returns the `response`, if not return error.
 `async notify(channel, payload)`|Invoked after connection sends notification through the **main WebSocket**. On command exectution success returns the `response`, if not return error.
 `async listenChannel(channel, callback)`|Invoked after connection send through the **main WebSocket** the request to start listening for incoming message on the selected channel. It is on the first channel listen request that the SDK open the **Pub/Sub WebSocket**. On the following request the SDK simply add the subscription to the supscriptionStack. For each registered channel is registered the callback to be invoked when a new message arrives. The callback can be different for each channel.  On command exectution success returns the `response`, if not return error.
 `async listenTable(channel, callback)`|Invoked after connection send through the **main WebSocket** the request to start listening for incoming message on the selected table. It is on the first table listen request that the SDK open the **Pub/Sub WebSocket**. On the following request the SDK simply add the subscription to the supscriptionStack. For each registered table is registered the callback to be invoked when a new message arrives. The callback can be different for each channel.  On command exectution success returns the `response`, if not return error.
 `async unlistenChannel(channel)`|Invoked after connection send through the **main WebSocket** the request to unlistening for incoming message on the selected channel. On command exectution success returns the `response`, if not return error.
 `async unlistenTable(table)`|Invoked after connection send through the **main WebSocket** the request to unlistening for incoming message on the selected table. On command exectution success returns the `response`, if not return error.
-`async listChannels()`|Invoked after connection send through the **main WebSocket** the request to receive the list of all active channels for the current SQLite Cloud cluster. On command exectution success returns the channels list, if not return error.
-`async createChannel(channelName, ifNotExist = true)`|Invoked after connection send through the **main WebSocket** the request to create a new channel with the specified name. On command exectution success returns the `response`, if not return error.
-`async removeChannel(channelName)`|Invoked after connection send through the **main WebSocket** the request to remove the channel with the specified name. On command exectution success returns the `response`, if not return error.
 
 
 ### Connection
@@ -256,3 +253,180 @@ setInterval(function () {
 }, 500)
 ```
 
+### List Channels
+
+#### `SQLiteCloud.listChannels()` 
+
+You can request the list of all active channels for the the current SQLite Cloud cluster invoking the `async` method `SQLiteCloud.listChannels()`.
+
+```js
+async function () {
+  const listChannelsResponse = await client.listChannels();
+  if (listChannelsResponse.status == 'success') {
+    console.log(listChannelsResponse.data);
+    var channels = listChannelsResponse.data.rows;
+    for (var i = 0; i < channels.length; i++) {
+      console.log(channels[i]);
+    }    
+  } else {
+    console.log(listChannelsResponse.data.message);
+  }
+}
+```
+
+This method returns the following object:
+
+```js
+//success or warning response
+/*
+connectionResponse = {
+  status: "success"
+  data: {
+    columns: ['chname'],  
+    rows: [
+      {chname: ch0},
+      {chname: ch1},
+      {chname: ch2}
+    ],  
+  }
+}
+*/
+
+//error response
+/*
+connectionResponse = {
+  status: "error"
+  data: {
+    message: "..."
+  }
+}
+*/
+
+```
+
+### Create Channel
+
+#### `SQLiteCloud.createChannel()` 
+
+You can request the creation of a new channel for the the current SQLite Cloud cluster invoking the `async` method `SQLiteCloud.createChannel()`.
+
+```js
+const createChannel = async function (channelName) {
+  const createChannelResponse = await client.createChannel(channelName);
+  if (createChannelResponse.status == 'success') {
+    console.log(createChannelResponse.data);   
+  } else {
+    console.log(createChannelResponse.data.message);
+  }
+}
+const newChannel = "test-ch";
+createChannel(newChannel);
+```
+
+This method returns the following object:
+
+```js
+//success or warning response
+/*
+createChannelResponse = {
+  status: "success"
+  data: "OK"
+}
+*/
+
+//error response
+/*
+createChannelResponse = {
+  status: "error"
+  data: {
+    message: "..."
+  }
+}
+*/
+
+```
+
+### Remove Channel
+
+#### `SQLiteCloud.removeChannel()` 
+
+You can request the removal of a channel for the the current SQLite Cloud cluster invoking the `async` method `SQLiteCloud.removeChannel()`.
+
+```js
+const removeChannel = async function (channelName) {
+  const removeChannelResponse = await client.removeChannel(channelName);
+  if (removeChannelResponse.status == 'success') {
+    console.log(removeChannelResponse.data);   
+  } else {
+    console.log(removeChannelResponse.data.message);
+  }
+}
+const removeChannel = "test-ch";
+removeChannel(removeChannel);
+```
+
+This method returns the following object:
+
+```js
+//success or warning response
+/*
+removeChannelResponse = {
+  status: "success"
+  data: "OK"
+}
+*/
+
+//error response
+/*
+removeChannelResponse = {
+  status: "error"
+  data: {
+    message: "..."
+  }
+}
+*/
+
+```
+
+### Exec Command
+
+#### `SQLiteCloud.exec()` 
+
+You can execute a command for the the current SQLite Cloud cluster invoking the `async` method `SQLiteCloud.exec()`.
+
+```js
+const execCommand = async function (command) {
+  const execCommandResponse = await client.exec(command);
+  if (execCommandResponse.status == 'success') {
+    console.log(execCommandResponse.data);   
+  } else {
+    console.log(execCommandResponse.data.message);
+  }
+}
+const command = "USE DATABASE db1.sqlite; LIST TABLES PUBSUB";
+execCommand(command);
+```
+
+This method returns the following object:
+
+```js
+//success response
+/*
+execCommandResponse = {
+  status: "success"
+  data: [depend on submitted command]
+}
+*/
+
+//error response
+/*
+execCommandResponse = {
+  status: "error"
+  data: {
+    code: [int value]
+    message: "..."
+  }
+}
+*/
+
+```
