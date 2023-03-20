@@ -59,8 +59,8 @@ The following topics are covered:
   * [Unlisten table](https://github.com/sqlitecloud/sdk/tree/master/JS#unlisten-table)
   * [Main WebSocket pending requests](https://github.com/sqlitecloud/sdk/tree/master/JS#main-websocket-pending-requests)
   * [PUB/SUB WebSocket subscriptions state](https://github.com/sqlitecloud/sdk/tree/master/JS#pubsub-websocket-subscriptions-state)
-* [Developing](#)
-  * [Building](#)
+* [Developing](https://github.com/sqlitecloud/sdk/tree/master/JS#developing)
+  * [Building](https://github.com/sqlitecloud/sdk/tree/master/JS#building)
 
 
 
@@ -783,3 +783,23 @@ setInterval(function () {
 ```
 
 This method returns a `Map` containing all the channels and tables currently listening.
+
+## Developing
+Install all dependencies via npm:
+
+```bash
+npm install
+```
+Run a development server which serves bundled javascript from <http://localhost:8080/sqlitecloud-sdk.js> so that you can edit files in /src freely.
+
+```bash
+npm run start
+```
+
+### Building
+In order to build run:
+
+```bash
+npm build //not minified version sqlitecloud-sdk.js
+npm buildMinify //minified version sqlitecloud-sdk.min.js
+```
