@@ -54,6 +54,11 @@ The following topics are covered:
   * [Remove Channel](https://github.com/sqlitecloud/sdk/tree/master/JS#remove-channel)
   * [Exec Command](https://github.com/sqlitecloud/sdk/tree/master/JS#exec-command)
   * [Notify](https://github.com/sqlitecloud/sdk/tree/master/JS#notify)
+  * [Listen channel](https://github.com/sqlitecloud/sdk/tree/master/JS#listen-channel)
+  * [Listen table](https://github.com/sqlitecloud/sdk/tree/master/JS#listen-table)
+  * [Unlisten table](https://github.com/sqlitecloud/sdk/tree/master/JS#unlisten-table)
+  * [Main WebSocket pending requests](https://github.com/sqlitecloud/sdk/tree/master/JS#main-websocket-pending-requests)
+  * [PUB/SUB WebSocket subscriptions state](https://github.com/sqlitecloud/sdk/tree/master/JS#pub-sub-websocket-subscriptions-state)
 * [Developing](#)
   * [Building](#)
 
@@ -765,7 +770,7 @@ setInterval(function () {
 
 This method returns a `Map` containing all the IDs of the pending requests.
 
-### Main WebSocket pending requests 
+### PUB/SUB WebSocket subscriptions state 
 
 #### `SQLiteCloud.subscriptionsStackState` 
 
