@@ -9,7 +9,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js" crossorigin="anonymous"
     referrerpolicy="no-referrer"></script>
   <script type="module" src="./index.js"></script>
-  <script src="https://js.sqlitecloud.io/1.0/sqlitecloud-sdk.min.js"></script>
+  <!-- <script src="https://js.sqlitecloud.io/1.0/sqlitecloud-sdk.min.js"></script> -->
+  <script src="../../dist/1.0/sqlitecloud-sdk.min.js"></script>
 </head>
 
 <body class="h-full bg-gray-100">
@@ -80,15 +81,22 @@
                 <div id="close-callback-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
               </div>
             </div>
-            <!-- MAIN WEBSOCKET AND PUB/SUB WEBSOCKET STATE-->
+            <!-- MAIN WEBSOCKET AND PUB/SUB WEBSOCKET STATE AND MAINWEBSOCKET PENDING REQUEST-->
             <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
               <p class="ml-4 truncate text-sm font-medium text-gray-500">"main WebSocket" state</p>
               <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
                 <div id="main-websocket-state" class="mt-4 text-lg font-semibold text-gray-900">...</div>
               </div>
               <p class="ml-4 truncate text-sm font-medium text-gray-500">"PUB/SUB WebSocket" state</p>
-              <div class="ml-4 flex items-baseline">
+              <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
                 <div id="pubsub-websocket-state" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+              </div>
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">"main WebSocket" pending requests</p>
+              <div class="ml-4 flex items-baseline">
+                <div id="main-websocket-pending-requests"
+                  class="w-full mt-4 text-lg font-semibold text-gray-900 max-h-16 overflow-auto">
+
+                </div>
               </div>
             </div>
             <!-- LIST CHANNELS -->
@@ -164,7 +172,7 @@
                 <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
                   <div class="text-sm">
                     <div>
-                      <label for="command" class="block text-sm font-medium leading-6 text-gray-900">Command</label>
+                      <label for="command" class="block text-sm font-medium leading-6 text-gray-900">Command <span class="text-xs">(USE DATABASE db1.sqlite; LIST TABLES PUBSUB)</span></label>
                       <div class="m-2">
                         <input type="text" name="command" id="command"
                           class="block w-full rounded-md border-0 py-1.5  pl-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
@@ -245,7 +253,8 @@
                 <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
                   <div class="text-sm">
                     <div>
-                      <label for="unlisten-channel-name" class="block text-sm font-medium leading-6 text-gray-900">Channel
+                      <label for="unlisten-channel-name"
+                        class="block text-sm font-medium leading-6 text-gray-900">Channel
                         name</label>
                       <div class="m-2">
                         <input type="text" name="unlisten-channel-name" id="unlisten-channel-name"
@@ -255,12 +264,64 @@
                     </div>
                     <button id="unlisten-channel"
                       class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
-                      Unisten channel
+                      Unlisten channel
                     </button>
                   </div>
                 </div>
               </div>
             </div>
+            <!-- LISTEN TABLE -->
+            <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">Listen table result</p>
+              <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
+                <div class="flex flex-col">
+                  <div id="listen-table-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+                  <div id="listen-table-incoming-message" class="mt-4 text-lg font-semibold text-gray-900"></div>
+                </div>
+                <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
+                  <div class="text-sm">
+                    <div>
+                      <label for="listen-table-name" class="block text-sm font-medium leading-6 text-gray-900">Table
+                        name</label>
+                      <div class="m-2">
+                        <input type="text" name="listen-table-name" id="listen-table-name"
+                          class="block w-full rounded-md border-0 py-1.5  pl-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                          placeholder="test table">
+                      </div>
+                    </div>
+                    <button id="listen-table"
+                      class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                      Listen table
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- UNLISTEN TABLE -->
+            <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">Unlisten table result</p>
+              <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
+                <div id="unlisten-table-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+                <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
+                  <div class="text-sm">
+                    <div>
+                      <label for="unlisten-table-name"
+                        class="block text-sm font-medium leading-6 text-gray-900">Table
+                        name</label>
+                      <div class="m-2">
+                        <input type="text" name="unlisten-table-name" id="unlisten-table-name"
+                          class="block w-full rounded-md border-0 py-1.5  pl-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                          placeholder="test table">
+                      </div>
+                    </div>
+                    <button id="unlisten-table"
+                      class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                      Unlisten table
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>     
             <!-- ACTUAL SUBSCRIPTIONS STATE-->
             <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
               <p class="ml-4 truncate text-sm font-medium text-gray-500">active PUB/SUB subscriptions</p>

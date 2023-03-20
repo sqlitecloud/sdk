@@ -106,12 +106,15 @@ export default class SQLiteCloud {
         } catch (error) {
           return {
             status: "error",
-            data: error
-          };
+            data: {
+              message: error.toString(),
+              error: error
+            }
+          }
         }
       } else {
         return {
-          status: "warning",
+          status: "error",
           data: {
             message: msg.wsCantConnectedWsPubSubExist
           }
@@ -119,7 +122,7 @@ export default class SQLiteCloud {
       }
     } else {
       return {
-        status: "warning",
+        status: "error",
         data: {
           message: msg.wsAlreadyConnected
         }
@@ -207,8 +210,9 @@ export default class SQLiteCloud {
   */
   get connectionState() {
     let connectionStateString = msg.wsNotExist;
+    let connectionState = -1;
     if (this.#ws !== null) {
-      let connectionState = this.#ws.readyState;
+      connectionState = this.#ws.readyState;
       switch (connectionState) {
         case 0:
           connectionStateString = msg.wsConnecting;
@@ -226,7 +230,10 @@ export default class SQLiteCloud {
           connectionStateString = msg.wsNotExist;
       }
     }
-    return connectionStateString;
+    return {
+      state: connectionState,
+      description: connectionStateString
+    };
   }
 
   /*
@@ -234,8 +241,9 @@ export default class SQLiteCloud {
   */
   get pubSubState() {
     let connectionStateString = msg.wsPubSubNotExist;
+    let connectionState = -1;
     if (this.#wsPubSub !== null) {
-      let connectionState = this.#wsPubSub.readyState;
+      connectionState = this.#wsPubSub.readyState;
       switch (connectionState) {
         case 0:
           connectionStateString = msg.wsPubSubConnecting;
@@ -253,7 +261,10 @@ export default class SQLiteCloud {
           connectionStateString = msg.wsPubSubNotExist;
       }
     }
-    return connectionStateString;
+    return {
+      state: connectionState,
+      description: connectionStateString
+    };
   }
 
   /*
@@ -284,12 +295,15 @@ export default class SQLiteCloud {
             command: command
           }
         );
-        return (response);
+        return response;
       } catch (error) {
         return {
           status: "error",
-          data: error
-        };
+          data: {
+            message: error.toString(),
+            error: error
+          }
+        }
       }
     } else {
       return {
@@ -316,12 +330,27 @@ export default class SQLiteCloud {
             payload: JSON.stringify(payload)
           }
         );
-        return (response);
+        if (response.status == "success") {
+          return (
+            {
+              status: response.status,
+              data: {
+                message: "OK"
+              }
+            }
+          )
+        }
+        if (response.status == "error") {
+          return response
+        }
       } catch (error) {
         return {
           status: "error",
-          data: error
-        };
+          data: {
+            message: error.toString(),
+            error: error
+          }
+        }
       }
     } else {
       return (
@@ -345,15 +374,20 @@ export default class SQLiteCloud {
         const response = await this.#pubsub("listenChannel", channel, callback);
         return response;
       } catch (error) {
-        return ({
+        return {
           status: "error",
-          data: error
-        });
+          data: {
+            message: error.toString(),
+            error: error
+          }
+        }
       }
     } else {
       return ({
         status: "error",
-        message: msg.wsListenError.errorNoConnection
+        data: {
+          message: msg.wsListenError.errorNoConnection
+        }
       })
     }
   }
@@ -368,15 +402,20 @@ export default class SQLiteCloud {
         const response = await this.#pubsub("listenTable", table, callback);
         return response;
       } catch (error) {
-        return ({
+        return {
           status: "error",
-          data: error
-        });
+          data: {
+            message: error.toString(),
+            error: error
+          }
+        }
       }
     } else {
       return ({
         status: "error",
-        message: msg.wsListenError.errorNoConnection
+        data: {
+          message: msg.wsListenError.errorNoConnection
+        }
       })
     }
   }
@@ -398,13 +437,17 @@ export default class SQLiteCloud {
             }
           )
         }
+        console.log("STO PER unlinset il canale " + channel)
         const response = await this.#pubsub("unlistenChannel", channel, null);
-        return (response);
+        return response;
       } catch (error) {
         return {
           status: "error",
-          data: error
-        };
+          data: {
+            message: error.toString(),
+            error: error
+          }
+        }
       }
     } else {
       return (
@@ -423,26 +466,28 @@ export default class SQLiteCloud {
   unlistenTable method calls the private method #pubsub to unregister to a table 
   */
   async unlistenTable(table) {
-    if (!this.#subscriptionsStack.has(table)) {
-      return (
-        {
-          status: "error",
-          data: {
-            message: msg.wsUnlistenError.missingSubscritption + " " + table
-          }
-        }
-      )
-    }
-
     if (this.#ws !== null) {
       try {
+        if (!this.#subscriptionsStack.has(table)) {
+          return (
+            {
+              status: "error",
+              data: {
+                message: msg.wsUnlistenError.missingSubscritption + " " + table
+              }
+            }
+          )
+        }
         const response = await this.#pubsub("unlistenTable", table, null);
-        return (response);
+        return response;
       } catch (error) {
         return {
           status: "error",
-          data: error
-        };
+          data: {
+            message: error.toString(),
+            error: error
+          }
+        }
       }
     } else {
       return (
@@ -504,12 +549,27 @@ export default class SQLiteCloud {
       let command = `CREATE CHANNEL '${channelName}'`;
       command = ifNotExist ? command + " IF NOT EXISTS" : command;
       const response = await this.exec(command);
-      return (response);
+      if (response.status == "success") {
+        return (
+          {
+            status: response.status,
+            data: {
+              message: response.data
+            }
+          }
+        )
+      }
+      if (response.status == "error") {
+        return response
+      }
     } catch (error) {
       return {
         status: "error",
-        data: error
-      };
+        data: {
+          message: error.toString(),
+          error: error
+        }
+      }
     }
   }
 
@@ -543,12 +603,27 @@ export default class SQLiteCloud {
       //params are ok
       let command = `REMOVE CHANNEL '${channelName}'`;
       const response = await this.exec(command);
-      return (response);
+      if (response.status == "success") {
+        return (
+          {
+            status: response.status,
+            data: {
+              message: response.data
+            }
+          }
+        )
+      }
+      if (response.status == "error") {
+        return response
+      }
     } catch (error) {
       return {
         status: "error",
-        data: error
-      };
+        data: {
+          message: error.toString(),
+          error: error
+        }
+      }
     }
   }
 
@@ -745,6 +820,7 @@ export default class SQLiteCloud {
       }
     } else {
       try {
+        console.log("sto per chiamare this.#promiseSend") //TOGLI
         const response = await this.#promiseSend(
           {
             id: this.#makeid(5),
@@ -752,6 +828,7 @@ export default class SQLiteCloud {
             channel: channel.toLowerCase(),
           }
         );
+        console.log(response) //TOGLI
         this.#subscriptionsStack.delete(channel)
         //check the remaing active subscription. If zero the websocket connection used for pubSub can be closed
         if (this.#subscriptionsStack.size == 0) {
@@ -805,6 +882,7 @@ export default class SQLiteCloud {
   promiseSend private method send request to the server creating a Promise that resolve when a websocket onmessage event is fired.
   */
   #promiseSend(request) {
+    console.log("STO PER CHIAMARE this.#ws.send") //TOGLI
     //request is sent to the server
     this.#ws.send(JSON.stringify(request));
     //extract request id

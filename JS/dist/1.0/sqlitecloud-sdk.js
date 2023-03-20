@@ -39,40 +39,40 @@ __webpack_require__.d(__webpack_exports__, {
 
 ;// CONCATENATED MODULE: ./src/core/messages.js
 const msg = {
-  wsConnectOk: "webSocket connection is active.",
-  wsAlreadyConnected: "webSocket connection has already been created.",
-  wsCantConnectedWsPubSubExist: "webSocket connection cannot be created because a pubSub connection is already active.",
-  wsConnectError: "websocket connection not established. Check your internet connection, project ID and API key.",
-  wsClosingWsPubSubClosingProcess: "closing of the WebSocket and pubSub started.",
-  wsClosingProcess: "closing of the WebSocket started.",
-  wsPubSubClosingProcess: "closing of the pubSub started.",
-  wsCloseComplete: "webSocket connection has been closed.",
-  wsPubSubClosingProcess: "closing of the pubSub started.",
-  wsPubSubCloseComplete: "pubSub connection has been closed.",
-  wsClosingError: "there is no WebSocket that can be closed.",
-  wsCloseByClient: "main WebSocket connection closed by client.",
-  wsPubSubCloseByClient: "pubSub WebSocket connection closed by client.",
-  wsNotExist: "websocket connection not exist.",
-  wsOnError: "websocket connection error.",
-  wsPubSubOnError: "pubSub connection error.",
+  wsConnectOk: "main WebSocket connection is active.",
+  wsAlreadyConnected: "main WebSocket connection has already been created.",
+  wsCantConnectedWsPubSubExist: "main WebSocket connection cannot be created because a PubSub WebSocket connection is already active.",
+  wsConnectError: "main WebSocket connection not established. Check your internet connection, project ID and API key.",
+  wsClosingWsPubSubClosingProcess: "closing of the main WebSocket and PubSub WebSocket started.",
+  wsClosingProcess: "closing of the main WebSocket started.",
+  wsPubSubClosingProcess: "closing of the PubSub WebSocket started.",
+  wsCloseComplete: "main WebSocket connection has been closed.",
+  wsPubSubClosingProcess: "closing of the PubSub WebSocket started.",
+  wsPubSubCloseComplete: "PubSub WebSocket connection has been closed.",
+  wsClosingError: "there is no main WebSocket that can be closed.",
+  wsCloseByClient: "main main WebSocket connection closed by client.",
+  wsPubSubCloseByClient: "PubSub WebSocket main WebSocket connection closed by client.",
+  wsNotExist: "main WebSocket connection not exist.",
+  wsOnError: "main WebSocket connection error.",
+  wsPubSubOnError: "PubSub WebSocket connection error.",
   wsConnecting: "CONNECTING",
   wsOpen: "OPEN",
   wsClosing: "CLOSING",
   wsClosed: "CLOSED",
-  wsPubSubNotExist: "pubSub connection not exist.",
+  wsPubSubNotExist: "PubSub WebSocket connection not exist.",
   wsPubSubConnecting: "CONNECTING",
   wsPubSubOpen: "OPEN",
   wsPubSubClosing: "CLOSING",
   wsPubSubClosed: "CLOSED",
-  wsExecErrorNoConnection: "you need to create a WebSocket connection. Use the connect method.",
-  wsNotifyErrorNoConnection: "you need to create a WebSocket connection. Use the connect method.",
+  wsExecErrorNoConnection: "you need to create a main WebSocket connection. Use the connect method.",
+  wsNotifyErrorNoConnection: "you need to create a main WebSocket connection. Use the connect method.",
   wsListenError: {
     alreadySubscribed: "registration already made to the channel:",
-    errorNoConnection: "you need to create a WebSocket connection. Use the connect method.",
+    errorNoConnection: "you need to create a main WebSocket connection. Use the connect method.",
   },
   wsUnlistenError: {
     missingSubscritption: "it is not possible to unlisten unregistered channel:",
-    errorNoConnection: "you have closed the WebSocket connection, it is no longer possible to unlisten channels.",
+    errorNoConnection: "you have closed the main WebSocket connection, it is no longer possible to unlisten channels.",
   },
   wsTimeoutError: "the request timed out. ID:",
   createChannelErr:{
@@ -257,7 +257,7 @@ class SQLiteCloud {
       } else {
         return (
           {
-            status: "error",
+            status: "warning",
             data: {
               message: msg.wsClosingError
             }
@@ -279,7 +279,7 @@ class SQLiteCloud {
       } else {
         return (
           {
-            status: "error",
+            status: "warning",
             data: {
               message: msg.wsClosingError
             }
@@ -294,8 +294,9 @@ class SQLiteCloud {
   */
   get connectionState() {
     let connectionStateString = msg.wsNotExist;
+    let connectionState = -1;
     if (this.#ws !== null) {
-      let connectionState = this.#ws.readyState;
+      connectionState = this.#ws.readyState;
       switch (connectionState) {
         case 0:
           connectionStateString = msg.wsConnecting;
@@ -313,7 +314,10 @@ class SQLiteCloud {
           connectionStateString = msg.wsNotExist;
       }
     }
-    return connectionStateString;
+    return {
+      state: connectionState,
+      description: connectionStateString
+    };
   }
 
   /*
@@ -321,8 +325,9 @@ class SQLiteCloud {
   */
   get pubSubState() {
     let connectionStateString = msg.wsPubSubNotExist;
+    let connectionState = -1;    
     if (this.#wsPubSub !== null) {
-      let connectionState = this.#wsPubSub.readyState;
+      connectionState = this.#wsPubSub.readyState;
       switch (connectionState) {
         case 0:
           connectionStateString = msg.wsPubSubConnecting;
@@ -340,7 +345,10 @@ class SQLiteCloud {
           connectionStateString = msg.wsPubSubNotExist;
       }
     }
-    return connectionStateString;
+    return {
+      state: connectionState,
+      description: connectionStateString
+    };
   }
 
   /*
@@ -440,7 +448,9 @@ class SQLiteCloud {
     } else {
       return ({
         status: "error",
-        message: msg.wsListenError.errorNoConnection
+        data:{
+          message: msg.wsListenError.errorNoConnection
+        }
       })
     }
   }
@@ -463,7 +473,9 @@ class SQLiteCloud {
     } else {
       return ({
         status: "error",
-        message: msg.wsListenError.errorNoConnection
+        data:{
+          message: msg.wsListenError.errorNoConnection
+        }
       })
     }
   }
@@ -485,6 +497,7 @@ class SQLiteCloud {
             }
           )
         }
+        console.log("STO PER unlinset il canale " + channel)
         const response = await this.#pubsub("unlistenChannel", channel, null);
         return (response);
       } catch (error) {
@@ -510,19 +523,18 @@ class SQLiteCloud {
   unlistenTable method calls the private method #pubsub to unregister to a table 
   */
   async unlistenTable(table) {
-    if (!this.#subscriptionsStack.has(table)) {
-      return (
-        {
-          status: "error",
-          data: {
-            message: msg.wsUnlistenError.missingSubscritption + " " + table
-          }
-        }
-      )
-    }
-
     if (this.#ws !== null) {
       try {
+        if (!this.#subscriptionsStack.has(table)) {
+          return (
+            {
+              status: "error",
+              data: {
+                message: msg.wsUnlistenError.missingSubscritption + " " + table
+              }
+            }
+          )
+        }        
         const response = await this.#pubsub("unlistenTable", table, null);
         return (response);
       } catch (error) {
@@ -570,7 +582,7 @@ class SQLiteCloud {
       if (!channelName) {
         return (
           {
-            status: "error",
+            status: "warning",
             data: {
               message: msg.createChannelErr.mandatory
             }
@@ -580,7 +592,7 @@ class SQLiteCloud {
       if (typeof channelName !== "string") {
         return (
           {
-            status: "error",
+            status: "warning",
             data: {
               message: msg.createChannelErr.string
             }
@@ -591,7 +603,14 @@ class SQLiteCloud {
       let command = `CREATE CHANNEL '${channelName}'`;
       command = ifNotExist ? command + " IF NOT EXISTS" : command;
       const response = await this.exec(command);
-      return (response);
+      return (
+        {
+          status: response.status,
+          data: {
+            message: response.data
+          }
+        }
+      );
     } catch (error) {
       return {
         status: "error",
@@ -832,6 +851,7 @@ class SQLiteCloud {
       }
     } else {
       try {
+        console.log("sto per chiamare this.#promiseSend") //TOGLI
         const response = await this.#promiseSend(
           {
             id: this.#makeid(5),
@@ -839,6 +859,7 @@ class SQLiteCloud {
             channel: channel.toLowerCase(),
           }
         );
+        console.log(response) //TOGLI
         this.#subscriptionsStack.delete(channel)
         //check the remaing active subscription. If zero the websocket connection used for pubSub can be closed
         if (this.#subscriptionsStack.size == 0) {
@@ -892,6 +913,7 @@ class SQLiteCloud {
   promiseSend private method send request to the server creating a Promise that resolve when a websocket onmessage event is fired.
   */
   #promiseSend(request) {
+    console.log("STO PER CHIAMARE this.#ws.send") //TOGLI
     //request is sent to the server
     this.#ws.send(JSON.stringify(request));
     //extract request id
