@@ -800,6 +800,6 @@ npm run start
 In order to build run:
 
 ```bash
-npm build //not minified version sqlitecloud-sdk.js
-npm buildMinify //minified version sqlitecloud-sdk.min.js
+npm run build //not minified version sqlitecloud-sdk.js
+npm run buildMinify //minified version sqlitecloud-sdk.min.js
 ```
