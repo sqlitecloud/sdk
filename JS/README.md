@@ -157,12 +157,11 @@ If `true` during PUB/SUB communications library not return messages sent by the 
 `async exec(command)`|Uses **main WebSocket** to send commands. On command execution success returns the `response`, if not return error.
 `async notify(channel, payload)`|Uses **main WebSocket** to send notification to an avaible channel for the current SQLite Cloud cluster. On notification exectution success returns the `response`, if not return error.
 `async listenChannel(channel, callback)`|Uses **main WebSocket** to start listening for incoming message on the selected channel. On the first listenChannel request the SDK creates the **Pub/Sub WebSocket**. On the following listenChannel request the SDK simply adds the new subscription to the supscriptionStack. For each listend channel a callback is registered to be invoked when a new message arrives. The callback can be different for each channel. On listen execution success returns the `response`, if not return error.
-`async listenTable(table, callback)`|Uses **main WebSocket** to start listening for incoming message on the selected table. On the first listenTable request the SDK creates the **Pub/Sub WebSocket**. On the following listenTable request the SDK simply adds the new subscription to the supscriptionStack. For each listend table a callback is registered to be invoked when a new message arrives. The callback can be different for each table. On listen execution success returns the `response`, if not return error.
 `async unlistenChannel(channel)`|Uses **main WebSocket** to stop listening for incoming message on the selected channel. On unlisten execution success returns the `response`, if not return error.
+`async listenTable(table, callback)`|Uses **main WebSocket** to start listening for incoming message on the selected table. On the first listenTable request the SDK creates the **Pub/Sub WebSocket**. On the following listenTable request the SDK simply adds the new subscription to the supscriptionStack. For each listend table a callback is registered to be invoked when a new message arrives. The callback can be different for each table. On listen execution success returns the `response`, if not return error.
 `async unlistenTable(table)`|Uses **main WebSocket** to stop listening for incoming message on the selected table. On unlisten execution success returns the `response`, if not return error.
 `requestsStackState()`|Returns the list of pending requests.
 `subscriptionsStackState()`|Returns the list of active subscriptions.
-
 
 
 ### Connection
@@ -455,11 +454,43 @@ execCommandResponse = {
 You can notify a message on an avaible channel for the the current SQLite Cloud cluster invoking the `async` method `SQLiteCloud.notify()`.
 
 ```js
+const notify = async function (channel, payload) {
+  const notifyResponse = await client.exec(channel, payload);
+  if (notifyResponse.status == 'success') {
+    console.log(notifyResponse.data);   
+  } else {
+    console.log(notifyResponse.data);
+    if(notifyResponse.data.message){
+      console.log(notifyResponse.data.message);
+    }
+  }
+}
+const command = "USE DATABASE db1.sqlite; LIST TABLES PUBSUB";
+execCommand(command);
 
 ```
 
 This method returns the following object:
 
 ```js
+//success response
+/*
+notifyResponse = {
+  status: "success"
+}
+*/
 
+//error response
+/*
+notifyResponse = {
+  status: "error"
+  data: {
+    message: "..."
+  }
+}
+notifyResponse = {
+  status: "error"
+  data: error
+}
+*/
 ```
