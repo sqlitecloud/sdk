@@ -382,24 +382,22 @@ export default class SQLiteCloud {
   }
 
 
-
   /*
   unlistenChannel method calls the private method #pubsub to unregister to a channel 
   */
   async unlistenChannel(channel) {
-    if (!this.#subscriptionsStack.has(channel)) {
-      return (
-        {
-          status: "error",
-          data: {
-            message: msg.wsUnlistenError.missingSubscritption + " " + channel
-          }
-        }
-      )
-    }
-
     if (this.#ws !== null) {
       try {
+        if (!this.#subscriptionsStack.has(channel)) {
+          return (
+            {
+              status: "error",
+              data: {
+                message: msg.wsUnlistenError.missingSubscritption + " " + channel
+              }
+            }
+          )
+        }
         const response = await this.#pubsub("unlistenChannel", channel, null);
         return (response);
       } catch (error) {
