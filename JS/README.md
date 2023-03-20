@@ -2,7 +2,7 @@
 
 Official SDK repository for SQLite Cloud databases and nodes.
 
-This Javascript SDK allows a WebApp to communicate with an SQLite Cloud cluster using **2 WebSocket**.
+This Javascript SDK allows a WebApp to communicate with an SQLite Cloud cluster using ****2 WebSocket****.
 * A **main WebSocket** used to:
   * execute commands
   * get channels list
@@ -140,14 +140,14 @@ Default value is `3000 ms`
 #### `SQLiteCloud.setFilterSentMessages` (Boolean)
 Default value is `false`
 
-If `true` during PUB/SUB communications library does not return messages sent by the user. 
+If `true` during PUB/SUB communications library does does not return messages sent by the user. 
 
 
 ## SDK Methods
 
 **Method**|**Description**
 --- | ---
-`async connect()`|Creates a new **main WebSocket**. Returns how creation process completed.
+`async connect()`|Creates a new **main WebSocket***. Returns how creation process completed.
 `close(closePubSub = true)`|By default, closes both the **main WebSocket** and the **Pub/Sub WebSocket**. If invoked with `closePubSub = false`, closes only the **main WebSocket**. Returns how closing process completed.
 `connectionState`|Returns the actual state of the **main WebSocket**.
 `pubSubState`|Returns the actual state of the **Pub/Sub WebSocket**.
@@ -169,6 +169,7 @@ If `true` during PUB/SUB communications library does not return messages sent by
 
 #### `async SQLiteCloud.connect`() 
 
+After initialization and configuration you can connect invoking the `async` method `SQLiteCloud.connect()`.
 After initialization and configuration you can connect invoking the `async` method `SQLiteCloud.connect()`.
 
 ```js
