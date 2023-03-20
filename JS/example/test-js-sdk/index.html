@@ -38,7 +38,7 @@
           <h3 class="text-base font-semibold leading-6 text-gray-900">Test command</h3>
           <div class="mt-5 pb-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <!-- CONNECT -->
-            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+            <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
               <p class="ml-4 truncate text-sm font-medium text-gray-500">Connection result</p>
               <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
                 <div id="connect-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
@@ -52,7 +52,7 @@
               </div>
             </div>
             <!-- CLOSE -->
-            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+            <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
               <p class="ml-4 truncate text-sm font-medium text-gray-500">Close result</p>
               <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
                 <div id="close-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
@@ -70,7 +70,7 @@
               </div>
             </div>
             <!-- ERROR AND CLOSE CALLBAKS -->
-            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+            <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
               <p class="ml-4 truncate text-sm font-medium text-gray-500">Error Callback</p>
               <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
                 <div id="error-callback-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
@@ -81,7 +81,7 @@
               </div>
             </div>
             <!-- MAIN WEBSOCKET AND PUB/SUB WEBSOCKET STATE-->
-            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+            <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
               <p class="ml-4 truncate text-sm font-medium text-gray-500">"main WebSocket" state</p>
               <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
                 <div id="main-websocket-state" class="mt-4 text-lg font-semibold text-gray-900">...</div>
@@ -92,7 +92,7 @@
               </div>
             </div>
             <!-- LIST CHANNELS -->
-            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+            <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
               <p class="ml-4 truncate text-sm font-medium text-gray-500">List Channels result</p>
               <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
                 <div id="list-channels-result"
@@ -108,7 +108,7 @@
               </div>
             </div>
             <!-- CREATE CHANNEL -->
-            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+            <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
               <p class="ml-4 truncate text-sm font-medium text-gray-500">Create Channel result</p>
               <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
                 <div id="create-channel-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
@@ -132,7 +132,7 @@
               </div>
             </div>
             <!-- REMOVE CHANNEL -->
-            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+            <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
               <p class="ml-4 truncate text-sm font-medium text-gray-500">Remove Channel result</p>
               <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
                 <div id="remove-channel-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
@@ -156,10 +156,11 @@
               </div>
             </div>
             <!-- EXEC COMMAND -->
-            <div class="relative h-64 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+            <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
               <p class="ml-4 truncate text-sm font-medium text-gray-500">Exec command result</p>
               <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
-                <div id="exec-command-result" class="max-h-32 w-full mt-4 text-lg font-semibold text-gray-900 overflow-auto">...</div>
+                <div id="exec-command-result"
+                  class="max-h-32 w-full mt-4 text-lg font-semibold text-gray-900 overflow-auto">...</div>
                 <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
                   <div class="text-sm">
                     <div>
@@ -177,7 +178,96 @@
                 </div>
               </div>
             </div>
-
+            <!-- NOTIFY -->
+            <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">Notify result</p>
+              <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
+                <div id="notify-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+                <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
+                  <div class="text-sm">
+                    <div>
+                      <label for="notify-channel-name" class="block text-sm font-medium leading-6 text-gray-900">Channel
+                        name</label>
+                      <div class="m-2">
+                        <input type="text" name="notify-channel-name" id="notify-channel-name"
+                          class="block w-full rounded-md border-0 py-1.5  pl-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                          placeholder="test channel">
+                      </div>
+                    </div>
+                    <div>
+                      <label for="notify-message" class="block text-sm font-medium leading-6 text-gray-900">Message
+                      </label>
+                      <div class="m-2">
+                        <input type="text" name="notify-message" id="notify-message"
+                          class="block w-full rounded-md border-0 py-1.5  pl-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                          placeholder="type your message">
+                      </div>
+                    </div>
+                    <button id="notify" class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                      Notify
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- LISTEN CHANNEL -->
+            <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">Listen channel result</p>
+              <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
+                <div class="flex flex-col">
+                  <div id="listen-channel-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+                  <div id="listen-channel-incoming-message" class="mt-4 text-lg font-semibold text-gray-900"></div>
+                </div>
+                <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
+                  <div class="text-sm">
+                    <div>
+                      <label for="listen-channel-name" class="block text-sm font-medium leading-6 text-gray-900">Channel
+                        name</label>
+                      <div class="m-2">
+                        <input type="text" name="listen-channel-name" id="listen-channel-name"
+                          class="block w-full rounded-md border-0 py-1.5  pl-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                          placeholder="test channel">
+                      </div>
+                    </div>
+                    <button id="listen-channel"
+                      class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                      Listen channel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- UNLISTEN CHANNEL -->
+            <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">Unlisten channel result</p>
+              <div class="ml-4 flex items-baseline pb-6 sm:pb-7">
+                <div id="unlisten-channel-result" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+                <div class="absolute inset-x-0 bottom-0 bg-gray-50 px-4 py-4 sm:px-6">
+                  <div class="text-sm">
+                    <div>
+                      <label for="unlisten-channel-name" class="block text-sm font-medium leading-6 text-gray-900">Channel
+                        name</label>
+                      <div class="m-2">
+                        <input type="text" name="unlisten-channel-name" id="unlisten-channel-name"
+                          class="block w-full rounded-md border-0 py-1.5  pl-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                          placeholder="test channel">
+                      </div>
+                    </div>
+                    <button id="unlisten-channel"
+                      class="text-sm text-left font-bold text-indigo-600 hover:text-indigo-500">
+                      Unisten channel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- ACTUAL SUBSCRIPTIONS STATE-->
+            <div class="relative h-80 overflow-hidden rounded-lg bg-white px-4 pt-5 shadow sm:px-0 sm:pt-6">
+              <p class="ml-4 truncate text-sm font-medium text-gray-500">active PUB/SUB subscriptions</p>
+              <div class="ml-4 flex items-baseline">
+                <div id="pubsub-websocket-subscriptions" class="mt-4 text-lg font-semibold text-gray-900">...</div>
+              </div>
+            </div>
           </div>
         </div>
       </main>

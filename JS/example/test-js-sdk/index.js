@@ -143,7 +143,7 @@ var execCommandResult = document.getElementById("exec-command-result");
 var execCommand = async function () {
   //try to exec command
   var execCommandResponse = await client.exec(commandInput.value);
-  console.log(execCommandResponse); 
+  console.log(execCommandResponse);
   //check how command execution request completed  
   if (execCommandResponse.status == 'success') {
     //successful channel request creation
@@ -158,3 +158,98 @@ var execCommand = async function () {
   }
 }
 execCommandButton.addEventListener("click", execCommand);
+//CREATE CHANNEL
+var notifyButton = document.getElementById("notify");
+var notifyChannelNameInput = document.getElementById("notify-channel-name");
+var notifyMessageInput = document.getElementById("notify-message");
+var notifyResult = document.getElementById("notify-result");
+var notify = async function () {
+  var payload = { message: notifyMessageInput.value };
+  //try to send notification to a channel
+  var notificationResponse = await client.notify(notifyChannelNameInput.value, payload);
+  //check how notifcation completed  
+  if (notificationResponse.status == 'success') {
+    //successful notification
+    notifyResult.innerHTML = "";
+    console.log(notificationResponse)
+    logThis("success on notify to channel " + notifyChannelNameInput.value);
+    notifyResult.innerHTML = "OK";
+  } else {
+    //error on notification
+    if (notificationResponse.data.message) {
+      notifyResult.innerHTML = notificationResponse.data.message;
+    } else {
+      notifyResult.innerHTML = "ERROR";
+    }
+    logThis(notificationResponse.data);
+  }
+}
+notifyButton.addEventListener("click", notify);
+//LISTEN CHANNEL
+var listenButton = document.getElementById("listen-channel");
+var listenChannelNameInput = document.getElementById("listen-channel-name");
+var listenChannelResult = document.getElementById("listen-channel-result");
+var listenChannelIncomingMessage = document.getElementById("listen-channel-incoming-message");
+var listenChannelCallback = function (incomingMessage) {
+  logThis("incoming message on channel " + listenChannelNameInput.value);
+  console.log(incomingMessage);
+  listenChannelResult.innerHTML = "received message on " + incomingMessage.channel;
+  listenChannelIncomingMessage.innerHTML = incomingMessage.payload.message;
+};
+var listenChannel = async function () {
+  //try to listen channel
+  var listenChannelResponse = await client.listenChannel(listenChannelNameInput.value, listenChannelCallback);
+  //check how listen completed  
+  if (listenChannelResponse.status == 'success') {
+    //successful listening
+    listenChannelResult.innerHTML = "";
+    logThis("success on listening to channel " + listenChannelNameInput.value,);
+    console.log(listenChannelResponse)
+    listenChannelResult.innerHTML = "listening on channel " + listenChannelNameInput.value;
+    listenChannelIncomingMessage.innerHTML = "";
+  } else {
+    //error on listetning
+    if (listenChannelResponse.data.message) {
+      listenChannelResult.innerHTML = listenChannelResponse.data.message;
+    } else {
+      listenChannelResult.innerHTML = "ERROR";
+    }
+    logThis(listenChannelResponse.data.message);
+  }
+}
+listenButton.addEventListener("click", listenChannel);
+//UNLISTEN CHANNEL
+var unlistenButton = document.getElementById("unlisten-channel");
+var unlistenChannelNameInput = document.getElementById("unlisten-channel-name");
+var unlistenChannelResult = document.getElementById("unlisten-channel-result");
+var unlistenChannel = async function () {
+  //try to unlisten channel
+  var unlistenChannelResponse = await client.unlistenChannel(unlistenChannelNameInput.value);
+  //check how unlisten completed  
+  if (unlistenChannelResponse.status == 'success') {
+    //unsuccessful listening
+    logThis("success on unlistening to channel " + unlistenChannelNameInput.value,);
+    console.log(unlistenChannelResponse)
+    listenChannelResult.innerHTML = "unlistening on channel " + listenChannelNameInput.value;
+  } else {
+    //error on listetning
+    if (unlistenChannelResponse.data.message) {
+      unlistenChannelResult.innerHTML = unlistenChannelResponse.data.message;
+    } else {
+      unlistenChannelResult.innerHTML = "ERROR";
+    }
+    logThis(unlistenChannelResponse.data.message);
+  }
+}
+unlistenButton.addEventListener("click", unlistenChannel);
+//ACTUAL SUBSCRIPTIONS STATE
+var pubSubSubscriptions = document.getElementById("pubsub-websocket-subscriptions");
+setInterval(function () {
+  var subscriptionsStack = client.subscriptionsStackState; 
+  pubSubSubscriptions.innerText = "";
+  for (var chName of subscriptionsStack.keys()) {
+    var li = document.createElement("li");
+    li.innerText = chName;
+    pubSubSubscriptions.appendChild(li);    
+  }
+}, 500)
