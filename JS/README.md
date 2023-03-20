@@ -58,7 +58,7 @@ The following topics are covered:
   * [Listen table](https://github.com/sqlitecloud/sdk/tree/master/JS#listen-table)
   * [Unlisten table](https://github.com/sqlitecloud/sdk/tree/master/JS#unlisten-table)
   * [Main WebSocket pending requests](https://github.com/sqlitecloud/sdk/tree/master/JS#main-websocket-pending-requests)
-  * [PUB/SUB WebSocket subscriptions state](https://github.com/sqlitecloud/sdk/tree/master/JS#pub-sub-websocket-subscriptions-state)
+  * [PUB/SUB WebSocket subscriptions state](https://github.com/sqlitecloud/sdk/tree/master/JS#pubsub-websocket-subscriptions-state)
 * [Developing](#)
   * [Building](#)
 
