@@ -2,7 +2,7 @@
 
 Official SDK repository for SQLite Cloud databases and nodes.
 
-This Javascript SDK allows a WebApp to communicate with an SQLite Cloud cluster using 2 WebSocket.
+This Javascript SDK allows a WebApp to communicate with an SQLite Cloud cluster using **2 WebSocket**.
 * A **main WebSocket** used to:
   * execute commands
   * get channels list
@@ -62,7 +62,7 @@ The following topics are covered:
 ## Supported platforms
 
 * Web
-  * We test against Chrome, Firefox and Safari.
+  * We test against Chrome, Firefox and Safari
   * Works in web pages
 
 
@@ -111,7 +111,7 @@ const SQLiteCloud = window.SQLiteCloud;
 const client = new SQLiteCloud(PROJECT_ID, API_KEY);
 ```
 
-Optionally during initialization you can pass two callbacks functions:
+Optionally, during initialization you can pass two callbacks functions:
 * `onErrorCallback` called on WebSocket error event
 * `onCloseCallback` called on WebSocket close event
 
@@ -132,7 +132,7 @@ You can get your APP_KEY and PROJECT_ID from the [SQLiteCloud dashboard](https:/
 
 ## Configuration
 
-After initializazion it is possibile to configure your client.
+After initialization it is possibile to configure your client.
 
 #### `SQLiteCloud.setRequestTimeout` (Int value in milliseconds)
 Default value is `3000 ms`
@@ -140,26 +140,26 @@ Default value is `3000 ms`
 #### `SQLiteCloud.setFilterSentMessages` (Boolean)
 Default value is `false`
 
-If `true` during PUB/SUB communications library not return messages sent by the user. 
+If `true` during PUB/SUB communications library does not return messages sent by the user. 
 
 
 ## SDK Methods
 
 **Method**|**Description**
 --- | ---
-`async connect()`|Creates a new **main WebSocket*. Returns how creation process completed.
+`async connect()`|Creates a new **main WebSocket**. Returns how creation process completed.
 `close(closePubSub = true)`|By default, closes both the **main WebSocket** and the **Pub/Sub WebSocket**. If invoked with `closePubSub = false`, closes only the **main WebSocket**. Returns how closing process completed.
 `connectionState`|Returns the actual state of the **main WebSocket**.
 `pubSubState`|Returns the actual state of the **Pub/Sub WebSocket**.
-`async listChannels()`|Uses **main WebSocket** to request the list of all active channels for the current SQLite Cloud cluster. On command execution success returns the channels list, if not return error.
-`async createChannel(channelName, ifNotExist = true)`|Uses **main WebSocket** to create a new channel with the specified name. On command exectution success returns the `response`, if not return error.
-`async removeChannel(channelName)`|Uses **main WebSocket** to remove the channel with the specified name. On command exectution success returns the `response`, if not return error.
-`async exec(command)`|Uses **main WebSocket** to send commands. On command execution success returns the `response`, if not return error.
-`async notify(channel, payload)`|Uses **main WebSocket** to send notification to an avaible channel for the current SQLite Cloud cluster. On notification exectution success returns the `response`, if not return error.
-`async listenChannel(channel, callback)`|Uses **main WebSocket** to start listening for incoming message on the selected channel. On the first listenChannel request the SDK creates the **Pub/Sub WebSocket**. On the following listenChannel request the SDK simply adds the new subscription to the supscriptionStack. For each listend channel a callback is registered to be invoked when a new message arrives. The callback can be different for each channel. On listen execution success returns the `response`, if not return error.
-`async unlistenChannel(channel)`|Uses **main WebSocket** to stop listening for incoming message on the selected channel. On unlisten execution success returns the `response`, if not return error.
-`async listenTable(table, callback)`|Uses **main WebSocket** to start listening for incoming message on the selected table. On the first listenTable request the SDK creates the **Pub/Sub WebSocket**. On the following listenTable request the SDK simply adds the new subscription to the supscriptionStack. For each listend table a callback is registered to be invoked when a new message arrives. The callback can be different for each table. On listen execution success returns the `response`, if not return error.
-`async unlistenTable(table)`|Uses **main WebSocket** to stop listening for incoming message on the selected table. On unlisten execution success returns the `response`, if not return error.
+`async listChannels()`|Uses **main WebSocket** to request the list of all active channels for the current SQLite Cloud cluster. If method executes successfully returns the channels list, else returns error.
+`async createChannel(channelName, ifNotExist = true)`|Uses **main WebSocket** to create a new channel with the specified name. if method executes successfully returns the `response`, else returns error.
+`async removeChannel(channelName)`|Uses **main WebSocket** to remove the channel with the specified name. if method executes successfully returns the `response`, else returns error.
+`async exec(command)`|Uses **main WebSocket** to send commands. if method executes successfully returns the `response`, else returns error.
+`async notify(channel, payload)`|Uses **main WebSocket** to send notification to an avaible channel for the current SQLite Cloud cluster. if method executes successfully returns the `response`, else returns error.
+`async listenChannel(channel, callback)`|Uses **main WebSocket** to start listening for incoming messages on the selected channel. On the first `listenChannel()` request the SDK creates the **Pub/Sub WebSocket**. On the following `listenChannel()` request the SDK simply adds the new subscription to the `supscriptionStack`. For each listened channel a callback is registered to be invoked when a new message arrives. The callback can be different for each channel. if method executes successfully returns the `response`, else returns error.
+`async unlistenChannel(channel)`|Uses **main WebSocket** to stop listening for incoming messages on the selected channel. if method executes successfully returns the `response`, else returns error.
+`async listenTable(table, callback)`|Uses **main WebSocket** to start listening for incoming messages on the selected table. On the first `listenTable()` request the SDK creates the **Pub/Sub WebSocket**. On the following `listenTable()` request the SDK simply adds the new subscription to the `supscriptionStack`. For each listened  table a callback is registered to be invoked when a new message arrives. The callback can be different for each table. if method executes successfully returns the `response`, else returns error.
+`async unlistenTable(table)`|Uses **main WebSocket** to stop listening for incoming messages on the selected table. if method executes successfully returns the `response`, else returns error.
 `requestsStackState()`|Returns the list of pending requests.
 `subscriptionsStackState()`|Returns the list of active subscriptions.
 
@@ -168,7 +168,7 @@ If `true` during PUB/SUB communications library not return messages sent by the 
 
 #### `SQLiteCloud.connect()` 
 
-After initializazion and configuration you can connect invoking the `async` method `SQLiteCloud.connect()`.
+After initialization and configuration you can connect invoking the `async` method `SQLiteCloud.connect()`.
 
 ```js
 async function () {
