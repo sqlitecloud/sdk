@@ -55,6 +55,7 @@ The following topics are covered:
   * [Exec Command](https://github.com/sqlitecloud/sdk/tree/master/JS#exec-command)
   * [Notify](https://github.com/sqlitecloud/sdk/tree/master/JS#notify)
   * [Listen channel](https://github.com/sqlitecloud/sdk/tree/master/JS#listen-channel)
+  * [Unlisten channel](https://github.com/sqlitecloud/sdk/tree/master/JS#unlisten-channel)  
   * [Listen table](https://github.com/sqlitecloud/sdk/tree/master/JS#listen-table)
   * [Unlisten table](https://github.com/sqlitecloud/sdk/tree/master/JS#unlisten-table)
   * [Main WebSocket pending requests](https://github.com/sqlitecloud/sdk/tree/master/JS#main-websocket-pending-requests)
