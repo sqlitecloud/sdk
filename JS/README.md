@@ -128,7 +128,7 @@ var onErrorCallback = function (event, msg) {
 var onCloseCallback = function (msg) {
   console.log("WebSocket OnClose callback:" + msg);
 }
-var client = new SQLiteCloud(config.PROJECT_ID, config.API_KEY, onErrorCallback, onCloseCallback);
+var client = new SQLiteCloud(PROJECT_ID, API_KEY, onErrorCallback, onCloseCallback);
 
 ```
 
@@ -145,14 +145,14 @@ Default value is `3000 ms`
 #### `SQLiteCloud.setFilterSentMessages` (Boolean)
 Default value is `false`
 
-If `true` during PUB/SUB communications library does does not return messages sent by the user. 
+If `true` during PUB/SUB communications library does not return sent messages, but only incoming messages. 
 
 
 ## SDK Methods
 
 **Method**|**Description**
 --- | ---
-`async connect()`|Creates a new **main WebSocket***. Returns how creation process completed.
+`async connect()`|Creates a new **main WebSocket**. Returns how creation process completed.
 `close(closePubSub = true)`|By default, closes both the **main WebSocket** and the **Pub/Sub WebSocket**. If invoked with `closePubSub = false`, closes only the **main WebSocket**. Returns how closing process completed.
 `connectionState`|Returns the actual state of the **main WebSocket**.
 `pubSubState`|Returns the actual state of the **Pub/Sub WebSocket**.
@@ -173,7 +173,6 @@ If `true` during PUB/SUB communications library does does not return messages se
 
 #### `async SQLiteCloud.connect`() 
 
-After initialization and configuration you can connect invoking the `async` method `SQLiteCloud.connect()`.
 After initialization and configuration you can connect invoking the `async` method `SQLiteCloud.connect()`.
 
 ```js
