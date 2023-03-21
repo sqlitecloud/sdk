@@ -820,7 +820,6 @@ export default class SQLiteCloud {
       }
     } else {
       try {
-        console.log("sto per chiamare this.#promiseSend") //TOGLI
         const response = await this.#promiseSend(
           {
             id: this.#makeid(5),
@@ -828,7 +827,6 @@ export default class SQLiteCloud {
             channel: channel.toLowerCase(),
           }
         );
-        console.log(response) //TOGLI
         this.#subscriptionsStack.delete(channel)
         //check the remaing active subscription. If zero the websocket connection used for pubSub can be closed
         if (this.#subscriptionsStack.size == 0) {
@@ -882,7 +880,6 @@ export default class SQLiteCloud {
   promiseSend private method send request to the server creating a Promise that resolve when a websocket onmessage event is fired.
   */
   #promiseSend(request) {
-    console.log("STO PER CHIAMARE this.#ws.send") //TOGLI
     //request is sent to the server
     this.#ws.send(JSON.stringify(request));
     //extract request id
