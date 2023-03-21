@@ -772,7 +772,7 @@ This method returns a `Map` containing all the IDs of the pending requests.
 
 #### `SQLiteCloud.subscriptionsStackState` 
 
-You can monitor the pending requests sent on **main WebSocket** invoking the method `SQLiteCloud.subscriptionsStackState`.
+You can monitor which channels and tables you are actually listening to on **PUB/SUB WebSocket** invoking the method `SQLiteCloud.subscriptionsStackState`.
 
 ```js
 setInterval(function () {
