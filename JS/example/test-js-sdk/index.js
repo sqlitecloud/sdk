@@ -5,7 +5,7 @@ var config = {
   PROJECT_ID: 'f9cdd1d5-7d16-454b-8cc0-548dc1712c26',
   API_KEY: 'B24tAXTnXFYatN7mSXTPTIRXEEJRiH1lawMEdxmRrps'
 };
-//DEFINE CALLBACKS FUNCTION PASSED TO WEBSOCKET AND REGISTERED ON ERROR AND CLOSE EVENTS
+//DEFINE CALLBACKS FUNCTIONS PASSED TO WEBSOCKET AND REGISTERED ON ERROR AND CLOSE EVENTS
 var onErrorCallback = function (event, msg) {
   var errorCallbackResult = document.getElementById("error-callback-result");
   errorCallbackResult.innerHTML = msg;
@@ -27,16 +27,18 @@ client.setFilterSentMessages(false);
 var connectButton = document.getElementById("connect");
 var connectResult = document.getElementById("connect-result");
 var connect = async function () {
-  //try to establish websocket connection
+  //try to establish main websocket connection
+  logThis("start main websocket connection");
   var connectionResponse = await client.connect();
-  //check how websocket connection completed  
+  logThis("end main websocket connection");
+  logThis(connectionResponse.status);
+  logThis(connectionResponse.data.message);
   connectResult.innerHTML = connectionResponse.data.message;
-  if (connectionResponse.status == 'success' || connectionResponse.status == 'warning') {
-    //successful websocket connection
-    logThis(connectionResponse.data.message);
-  } else {
-    //error on websocket connection
-    logThis(connectionResponse.data.message);
+  if (connectionResponse.status == "success") {
+    //do your stuff 
+  }
+  if (connectionResponse.status == "error") {
+    //error handling
   }
 }
 connectButton.addEventListener("click", connect);
@@ -45,22 +47,33 @@ var closeAllButton = document.getElementById("close-all");
 var closeOnlyMainButton = document.getElementById("close-only-main");
 var closeResult = document.getElementById("close-result");
 var close = function (closeAll) {
-  //try to close websocket connection
-  var closeResponse = client.close(closeAll);
-  //check how websocket close completed  
-  console.log(closeResponse);
-  closeResult.innerHTML = closeResponse.data.message;
-  if (closeResponse.status == 'success' || closeResponse.status == 'warning') {
-    //successful websocket close
-    logThis(closeResponse.data.message);
+  //try to close based on closeAll value 
+  //both main websocket and PUB/SUB websocket
+  //or only main websocket
+  if (closeAll) {
+    logThis("start closing main websocket and pub/sub websocket");
   } else {
-    //error on websocket close
-    logThis(closeResponse.data.message);
+    logThis("start closing only main websocket");
+  }
+  var closeResponse = client.close(closeAll);
+  if (closeAll) {
+    logThis("end closing main websocket and pub/sub websocket");
+  } else {
+    logThis("end closing only main websocket");
+  }
+  logThis(closeResponse.status);
+  logThis(closeResponse.data.message);
+  closeResult.innerHTML = closeResponse.data.message;
+  if (closeResponse.status == "success") {
+    //do your stuff 
+  }
+  if (closeResponse.status == "error") {
+    //error handling
   }
 }
 closeAllButton.addEventListener("click", function () { close(true) });
 closeOnlyMainButton.addEventListener("click", function () { close(false) });
-//MAIN WEBSOCKET AND PUBSUB WEBSOCKET STATE AND MAIN WEBSOCKET PENDING REQUEST
+//MAIN WEBSOCKET AND PUB/SUB WEBSOCKET STATE AND MAIN WEBSOCKET PENDING REQUEST
 var mainWebSocketState = document.getElementById("main-websocket-state");
 var pubSubWebSocketState = document.getElementById("pubsub-websocket-state");
 var mainWebsocketPendingRequests = document.getElementById("main-websocket-pending-requests");
@@ -80,25 +93,24 @@ var listChannelsButton = document.getElementById("list-channels");
 var listChannelsResult = document.getElementById("list-channels-result");
 var listChannels = async function () {
   //try to request channels
+  logThis("start channels list request");
   var listChannelsResponse = await client.listChannels();
-  //check how channels request completed  
-  if (listChannelsResponse.status == 'success' || listChannelsResponse.status == 'warning') {
-    //successful channels request connection
+  logThis("end channels list request");
+  logThis(listChannelsResponse.status);
+  if (listChannelsResponse.status == 'success') {
     listChannelsResult.innerHTML = "";
-    logThis("received channels list");
-    console.log(listChannelsResponse);
-    console.log(listChannelsResponse.data.rows);
+    logThis("received channels list name");
     var channels = listChannelsResponse.data.rows;
     for (var i = 0; i < channels.length; i++) {
-      logThis("ch. name: " + channels[i].chname);
+      logThis(channels[i].chname);
       var li = document.createElement("li");
       li.innerText = channels[i].chname;
       listChannelsResult.appendChild(li);
     }
-  } else {
-    //error on channels request
-    listChannelsResult.innerHTML = listChannelsResponse.data.message;
+  }
+  if (listChannelsResponse.status == 'error') {
     logThis(listChannelsResponse.data.message);
+    listChannelsResult.innerHTML = listChannelsResponse.data.message;
   }
 }
 listChannelsButton.addEventListener("click", listChannels);
@@ -108,19 +120,19 @@ var createChannelNameInput = document.getElementById("create-channel-name");
 var createChannelResult = document.getElementById("create-channel-result");
 var createChannel = async function () {
   //try to create a channel
-  var createChannelsResponse = await client.createChannel(createChannelNameInput.value);
-  console.log(createChannelsResponse) //TOGLI
-  //check how channel request creation completed  
-  if (createChannelsResponse.status == 'success' || createChannelsResponse.status == 'warning') {
-    //successful channel request creation
-    createChannelResult.innerHTML = "";
-    console.log(createChannelsResponse)
-    logThis("creation channel " + ' ' + createChannelsResponse.data.message);
-    createChannelResult.innerHTML = createChannelsResponse.data.message;
-  } else {
-    //error on channel request creation
-    createChannelResult.innerHTML = createChannelsResponse.data.message;
-    logThis(createChannelsResponse.data.message);
+  var newChannelName = createChannelNameInput.value;
+  logThis("start creation of channel: " + newChannelName);
+  var createChannelsResponse = await client.createChannel(newChannelName);
+  logThis("end creation of channel: " + newChannelName);
+  logThis(createChannelsResponse.status);
+  logThis(createChannelsResponse.data.message);
+  createChannelResult.innerHTML = "";
+  createChannelResult.innerHTML = createChannelsResponse.data.message;
+  if (createChannelsResponse.status == 'success') {
+    //do your stuff
+  }
+  if (createChannelsResponse.status == 'error') {
+    //error handling
   }
 }
 createChannelButton.addEventListener("click", createChannel);
@@ -130,19 +142,19 @@ var removeChannelNameInput = document.getElementById("remove-channel-name");
 var removeChannelResult = document.getElementById("remove-channel-result");
 var removeChannel = async function () {
   //try to remove a channel
-  var removeChannelsResponse = await client.removeChannel(removeChannelNameInput.value);
-  console.log(removeChannelsResponse); //TOGLI
-  //check how channel request creation completed  
-  if (removeChannelsResponse.status == 'success' || removeChannelsResponse.status == 'warning') {
-    //successful channel request creation
-    removeChannelResult.innerHTML = "";
-    console.log(removeChannelsResponse)
-    logThis("creation channel " + ' ' + removeChannelsResponse.data.message);
-    removeChannelResult.innerHTML = removeChannelsResponse.data.message;
-  } else {
-    //error on channel request creation
-    removeChannelResult.innerHTML = removeChannelsResponse.data.message;
-    logThis(removeChannelsResponse);
+  var removeChannelName = removeChannelNameInput.value;
+  logThis("start remove of channel: " + removeChannelName);
+  var removeChannelsResponse = await client.removeChannel(removeChannelName);
+  logThis("end remove of channel: " + removeChannelName);
+  logThis(removeChannelsResponse.status);
+  logThis(removeChannelsResponse.data.message);
+  removeChannelResult.innerHTML = "";
+  removeChannelResult.innerHTML = removeChannelsResponse.data.message;
+  if (removeChannelsResponse.status == 'success') {
+    //do your stuff 
+  }
+  if (removeChannelsResponse.status == 'error') {
+    //error handling
   }
 }
 removeChannelButton.addEventListener("click", removeChannel);
@@ -152,45 +164,40 @@ var commandInput = document.getElementById("command");
 var execCommandResult = document.getElementById("exec-command-result");
 var execCommand = async function () {
   //try to exec command
+  logThis("start exec command: " + commandInput.value);
   var execCommandResponse = await client.exec(commandInput.value);
-  console.log(execCommandResponse);
-  //check how command execution request completed  
-  if (execCommandResponse.status == 'success' || execCommandResponse.status == 'warning') {
-    //successful channel request creation
-    execCommandResult.innerHTML = "OK. Read console to see payload";
+  logThis("end exec command: " + commandInput.value);
+  logThis(execCommandResponse.status);
+  if (execCommandResponse.status == 'success') {
     execCommandResult.innerHTML = JSON.stringify(execCommandResponse.data);
-    logThis("response to " + commandInput.value);
-  } else {
-    //error on channel request creation
-    execCommandResult.innerHTML = execCommandResponse.data.message;
+    logThis(JSON.stringify(execCommandResponse.data));
+  }
+  if (execCommandResponse.status == 'error') {
     logThis(execCommandResponse.data.message);
+    execCommandResult.innerHTML = execCommandResponse.data.message;
   }
 }
 execCommandButton.addEventListener("click", execCommand);
-//CREATE CHANNEL
+//NOTIFY MESSAGE
 var notifyButton = document.getElementById("notify");
 var notifyChannelNameInput = document.getElementById("notify-channel-name");
 var notifyMessageInput = document.getElementById("notify-message");
 var notifyResult = document.getElementById("notify-result");
 var notify = async function () {
-  var payload = { message: notifyMessageInput.value };
   //try to send notification to a channel
+  var payload = { message: notifyMessageInput.value };
+  logThis("start notify with message: " + JSON.stringify(payload));
   var notificationResponse = await client.notify(notifyChannelNameInput.value, payload);
-  console.log(notificationResponse)
-  //check how notifcation completed  
-  if (notificationResponse.status == 'success' || notificationResponse.status == 'warning') {
-    //successful notification
-    notifyResult.innerHTML = "";
-    logThis("success on notify to channel " + notifyChannelNameInput.value);
-    notifyResult.innerHTML = notificationResponse.data.message;
-  } else {
-    //error on notification
-    if (notificationResponse.data.message) {
-      notifyResult.innerHTML = notificationResponse.data.message;
-    } else {
-      notifyResult.innerHTML = "ERROR";
-    }
-    logThis(notificationResponse.data);
+  logThis("end notify with message: " + JSON.stringify(payload));
+  logThis(notificationResponse.status);
+  logThis(notificationResponse.data.message);
+  notifyResult.innerHTML = "";
+  notifyResult.innerHTML = notificationResponse.data.message;
+  if (notificationResponse.status == 'success') {
+    //do your stuff
+  }
+  if (notificationResponse.status == 'error') {
+    //error handling
   }
 }
 notifyButton.addEventListener("click", notify);
@@ -200,31 +207,27 @@ var listenChannelNameInput = document.getElementById("listen-channel-name");
 var listenChannelResult = document.getElementById("listen-channel-result");
 var listenChannelIncomingMessage = document.getElementById("listen-channel-incoming-message");
 var listenChannelCallback = function (incomingMessage) {
-  console.log(incomingMessage) //TOGLI
-  logThis("incoming message on channel " + listenChannelNameInput.value);
-  console.log(incomingMessage);
+  logThis("incoming message on channel: " + incomingMessage.channel);
+  logThis("incoming message payload: " + JSON.stringify(incomingMessage));
   listenChannelResult.innerHTML = "received message on " + incomingMessage.channel;
   listenChannelIncomingMessage.innerHTML = incomingMessage.payload.message;
 };
 var listenChannel = async function () {
   //try to listen channel
-  var listenChannelResponse = await client.listenChannel(listenChannelNameInput.value, listenChannelCallback);
-  console.log(listenChannelResponse)
-  //check how listen completed  
-  if (listenChannelResponse.status == 'success' || listenChannelResponse.status == 'warning') {
-    //successful listening
+  var listenChannelName = listenChannelNameInput.value;
+  logThis("start listen on channel: " + listenChannelName);
+  var listenChannelResponse = await client.listenChannel(listenChannelName, listenChannelCallback);
+  logThis("end listen on channel: " + listenChannelName);
+  logThis(listenChannelResponse.status);
+  if (listenChannelResponse.status == 'success') {
+    logThis("success on listening to " + listenChannelName);
     listenChannelResult.innerHTML = "";
-    logThis("success on listening to " + listenChannelNameInput.value,);
-    listenChannelResult.innerHTML = "listening on channel " + listenChannelNameInput.value;
+    listenChannelResult.innerHTML = "listening on " + listenChannelName;
     listenChannelIncomingMessage.innerHTML = "";
-  } else {
-    //error on listetning
-    if (listenChannelResponse.data.message) {
-      listenChannelResult.innerHTML = listenChannelResponse.data.message;
-      logThis(listenChannelResponse.data.message);
-    } else {
-      listenChannelResult.innerHTML = "ERROR";
-    }
+  }
+  if (listenChannelResponse.status == 'error') {
+    logThis(listenChannelResponse.data.message);
+    listenChannelResult.innerHTML = listenChannelResponse.data.message;
   }
 }
 listenChannelButton.addEventListener("click", listenChannel);
@@ -234,21 +237,18 @@ var unlistenChannelNameInput = document.getElementById("unlisten-channel-name");
 var unlistenChannelResult = document.getElementById("unlisten-channel-result");
 var unlistenChannel = async function () {
   //try to unlisten channel
-  var unlistenChannelResponse = await client.unlistenChannel(unlistenChannelNameInput.value);
-  //check how unlisten completed  
-  if (unlistenChannelResponse.status == 'success' || unlistenChannelResponse.status == 'warning') {
-    //unsuccessful listening
-    logThis("success on unlistening to channel " + unlistenChannelNameInput.value,);
-    console.log(unlistenChannelResponse)
-    listenChannelResult.innerHTML = "unlistening on channel " + listenChannelNameInput.value;
-  } else {
-    //error on listetning
-    if (unlistenChannelResponse.data.message) {
-      unlistenChannelResult.innerHTML = unlistenChannelResponse.data.message;
-    } else {
-      unlistenChannelResult.innerHTML = "ERROR";
-    }
+  var unlistenChannelName = unlistenChannelNameInput.value;
+  logThis("start unlisten on channel: " + unlistenChannelName);
+  var unlistenChannelResponse = await client.unlistenChannel(unlistenChannelName);
+  logThis("end unlisten on channel: " + unlistenChannelName);
+  logThis(unlistenChannelResponse.status)
+  if (unlistenChannelResponse.status == 'success') {
+    logThis("success on unlistening to channel: " + unlistenChannelName);
+    unlistenChannelResult.innerHTML = "unlistening on channel " + listenChannelNameInput.value;
+  }
+  if (unlistenChannelResponse.status == 'error') {
     logThis(unlistenChannelResponse.data.message);
+    unlistenChannelResult.innerHTML = unlistenChannelResponse.data.message;
   }
 }
 unlistenChannelButton.addEventListener("click", unlistenChannel);
@@ -258,30 +258,27 @@ var listenTableNameInput = document.getElementById("listen-table-name");
 var listenTableResult = document.getElementById("listen-table-result");
 var listenTableIncomingMessage = document.getElementById("listen-table-incoming-message");
 var listenTableCallback = function (incomingMessage) {
-  logThis("incoming message on table " + listenTableNameInput.value);
-  console.log(incomingMessage);
-  listenTableResult.innerHTML = "received message on " + incomingMessage.table;
+  logThis("incoming message on table: " + incomingMessage.channel);
+  logThis("incoming message payload: " + JSON.stringify(incomingMessage));
+  listenTableResult.innerHTML = "received message on " + incomingMessage.channel;
   listenTableIncomingMessage.innerHTML = incomingMessage.payload.message;
 };
 var listenTable = async function () {
   //try to listen table
-  var listenTableResponse = await client.listenTable(listenTableNameInput.value, listenTableCallback);
-  console.log(listenTableResponse)
-  //check how listen completed  
-  if (listenTableResponse.status == 'success' || listenTableResponse.status == 'warning') {
-    //successful listening
+  var listenTableName = listenTableNameInput.value;
+  logThis("start listen on table: " + listenTableName);
+  var listenTableResponse = await client.listenTable(listenTableName, listenTableCallback);
+  logThis("end listen on table: " + listenTableName);
+  logThis(listenTableResponse.status);
+  if (listenTableResponse.status == 'success') {
+    logThis("success on listening to " + listenTableName);
     listenTableResult.innerHTML = "";
-    logThis("success on listening to " + listenTableNameInput.value,);
-    listenTableResult.innerHTML = "listening on table " + listenTableNameInput.value;
+    listenTableResult.innerHTML = "listening on " + listenTableName;
     listenTableIncomingMessage.innerHTML = "";
-  } else {
-    //error on listetning
-    if (listenTableResponse.data.message) {
-      listenTableResult.innerHTML = listenTableResponse.data.message;
-    } else {
-      listenTableResult.innerHTML = "ERROR";
-    }
+  }
+  if (listenTableResponse.status == 'error') {
     logThis(listenTableResponse.data.message);
+    listenTableIncomingMessage.innerHTML = listenTableResponse.data.message;
   }
 }
 listenTableButton.addEventListener("click", listenTable);
@@ -291,21 +288,18 @@ var unlistenTableNameInput = document.getElementById("unlisten-table-name");
 var unlistenTableResult = document.getElementById("unlisten-table-result");
 var unlistenTable = async function () {
   //try to unlisten table
-  var unlistenTableResponse = await client.unlistenTable(unlistenTableNameInput.value);
-  //check how unlisten completed  
-  if (unlistenTableResponse.status == 'success' || unlistenTableResponse.status == 'warning') {
-    //unsuccessful listening
-    logThis("success on unlistening to table " + unlistenTableNameInput.value,);
-    console.log(unlistenTableResponse)
-    listenTableResult.innerHTML = "unlistening on table " + listenTableNameInput.value;
-  } else {
-    //error on listetning
-    if (unlistenTableResponse.data.message) {
-      unlistenTableResult.innerHTML = unlistenTableResponse.data.message;
-    } else {
-      unlistenTableResult.innerHTML = "ERROR";
-    }
+  var unlistenTableName = unlistenTableNameInput.value;
+  logThis("start unlisten on table: " + unlistenTableName);
+  var unlistenTableResponse = await client.unlistenTable(unlistenTableName);
+  logThis("end unlisten on table: " + unlistenTableName);
+  logThis(unlistenTableResponse.status);
+  if (unlistenTableResponse.status == 'success') {
+    logThis("success on unlistening to table " + unlistenTableName);
+    unlistenTableResult.innerHTML = "unlistening on table " + listenTableNameInput.value;
+  }
+  if (unlistenTableResponse.status == 'error') {
     logThis(unlistenTableResponse.data.message);
+    unlistenTableResult.innerHTML = unlistenTableResponse.data.message;
   }
 }
 unlistenTableButton.addEventListener("click", unlistenTable);
