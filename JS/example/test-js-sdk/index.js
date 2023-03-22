@@ -241,10 +241,10 @@ var unlistenChannel = async function () {
   logThis("start unlisten on channel: " + unlistenChannelName);
   var unlistenChannelResponse = await client.unlistenChannel(unlistenChannelName);
   logThis("end unlisten on channel: " + unlistenChannelName);
-  logThis(unlistenChannelResponse.status)
+  logThis(unlistenChannelResponse.status);
   if (unlistenChannelResponse.status == 'success') {
     logThis("success on unlistening to channel: " + unlistenChannelName);
-    unlistenChannelResult.innerHTML = "unlistening on channel " + listenChannelNameInput.value;
+    unlistenChannelResult.innerHTML = "unlistening on " + unlistenChannelResponse.data.channel;
   }
   if (unlistenChannelResponse.status == 'error') {
     logThis(unlistenChannelResponse.data.message);
@@ -261,7 +261,7 @@ var listenTableCallback = function (incomingMessage) {
   logThis("incoming message on table: " + incomingMessage.channel);
   logThis("incoming message payload: " + JSON.stringify(incomingMessage));
   listenTableResult.innerHTML = "received message on " + incomingMessage.channel;
-  listenTableIncomingMessage.innerHTML = incomingMessage.payload.message;
+  listenTableIncomingMessage.innerHTML = JSON.stringify(incomingMessage.payload);
 };
 var listenTable = async function () {
   //try to listen table
@@ -294,8 +294,8 @@ var unlistenTable = async function () {
   logThis("end unlisten on table: " + unlistenTableName);
   logThis(unlistenTableResponse.status);
   if (unlistenTableResponse.status == 'success') {
-    logThis("success on unlistening to table " + unlistenTableName);
-    unlistenTableResult.innerHTML = "unlistening on table " + listenTableNameInput.value;
+    logThis("success on unlistening to table " + unlistenTableResponse.data.channel);
+    unlistenTableResult.innerHTML = "unlistening on table " + unlistenTableResponse.data.channel;
   }
   if (unlistenTableResponse.status == 'error') {
     logThis(unlistenTableResponse.data.message);
