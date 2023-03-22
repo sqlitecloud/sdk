@@ -22,7 +22,7 @@
   "homepage": "https://github.com/sqlitecloud/sdk",
   "devDependencies": {
     "terser-webpack-plugin": "^5.3.6",
-    "webpack": "^5.74.0",
+    "webpack": "^5.76.2",
     "webpack-cli": "^4.10.0",
     "webpack-dev-server": "^4.10.0",
     "webpack-merge": "^5.8.0"
