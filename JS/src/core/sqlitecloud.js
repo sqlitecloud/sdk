@@ -437,7 +437,6 @@ export default class SQLiteCloud {
             }
           )
         }
-        console.log("STO PER unlinset il canale " + channel)
         const response = await this.#pubsub("unlistenChannel", channel, null);
         return response;
       } catch (error) {
@@ -713,7 +712,7 @@ export default class SQLiteCloud {
   pubsub method calls 
   */
   async #pubsub(type, channel, callback) {
-    //based on the value of of callback, create a new subscription or remove the subscription
+    //based on the value of callback, create a new subscription or remove the subscription
     if (callback !== null) {
       //check if the channel subscription is already active
       if (!this.#subscriptionsStack.has(channel)) {
@@ -730,13 +729,7 @@ export default class SQLiteCloud {
               channel: channel.toLowerCase(),
             }
           }
-          if (type == "unlistenChannel") {
-            body = {
-              id: this.#makeid(5),
-              type: "unlisten",
-              channel: channel.toLowerCase(),
-            }
-          }
+
           if (type == "listenTable") {
             body = {
               id: this.#makeid(5),
@@ -744,13 +737,7 @@ export default class SQLiteCloud {
               table: channel.toLowerCase(),
             }
           }
-          if (type == "unlistenTable") {
-            body = {
-              id: this.#makeid(5),
-              type: "unlisten",
-              table: channel.toLowerCase(),
-            }
-          }
+
           const response = await this.#promiseSend(body);
           //if this is the first subscription, create the websocket connection dedicated to receive pubSub messages
           if (this.#subscriptionsStack.size == 0 && response.status == "success") {
@@ -811,7 +798,7 @@ export default class SQLiteCloud {
         //if the subscription exists
         return (
           {
-            status: "warning",
+            status: "error",
             data: {
               message: msg.wsListenError.alreadySubscribed + " " + channel
             }
@@ -820,19 +807,30 @@ export default class SQLiteCloud {
       }
     } else {
       try {
-        const response = await this.#promiseSend(
-          {
+        let body;
+        //based on type value build the right body
+        //important in case of channel, the channel key is present in the body
+        //important in case of table, the table key is present in the body
+        if (type == "unlistenChannel") {
+          body = {
             id: this.#makeid(5),
-            type: type,
+            type: "unlisten",
             channel: channel.toLowerCase(),
           }
-        );
+        }
+        if (type == "unlistenTable") {
+          body = {
+            id: this.#makeid(5),
+            type: "unlisten",
+            table: channel.toLowerCase(),
+          }
+        }
+        const response = await this.#promiseSend(body);
         this.#subscriptionsStack.delete(channel)
         //check the remaing active subscription. If zero the websocket connection used for pubSub can be closed
         if (this.#subscriptionsStack.size == 0) {
           this.#wsPubSub.removeEventListener('message', this.#wsPubSubonMessage);
           this.#wsPubSub.close(1000, msg.wsPubSubCloseByClient);
-          this.#wsPubSub = null;
         }
         return (response);
       } catch (error) {
