@@ -1,5 +1,5 @@
 /*!
- * SQLite Cloud SDK v1.0.8
+ * SQLite Cloud SDK v1.0.10
  * https://sqlitecloud.io/
  *
  * Copyright 2023, SQLite Cloud
@@ -39,40 +39,40 @@ __webpack_require__.d(__webpack_exports__, {
 
 ;// CONCATENATED MODULE: ./src/core/messages.js
 const msg = {
-  wsConnectOk: "main WebSocket connection is active.",
-  wsAlreadyConnected: "main WebSocket connection has already been created.",
-  wsCantConnectedWsPubSubExist: "main WebSocket connection cannot be created because a PubSub WebSocket connection is already active.",
-  wsConnectError: "main WebSocket connection not established. Check your internet connection, project ID and API key.",
-  wsClosingWsPubSubClosingProcess: "closing of the main WebSocket and PubSub WebSocket started.",
-  wsClosingProcess: "closing of the main WebSocket started.",
-  wsPubSubClosingProcess: "closing of the PubSub WebSocket started.",
-  wsCloseComplete: "main WebSocket connection has been closed.",
-  wsPubSubClosingProcess: "closing of the PubSub WebSocket started.",
-  wsPubSubCloseComplete: "PubSub WebSocket connection has been closed.",
-  wsClosingError: "there is no main WebSocket that can be closed.",
-  wsCloseByClient: "main main WebSocket connection closed by client.",
-  wsPubSubCloseByClient: "PubSub WebSocket main WebSocket connection closed by client.",
-  wsNotExist: "main WebSocket connection not exist.",
-  wsOnError: "main WebSocket connection error.",
-  wsPubSubOnError: "PubSub WebSocket connection error.",
+  wsConnectOk: "main websocket connection is active.",
+  wsAlreadyConnected: "main websocket connection has already been created.",
+  wsCantConnectedWsPubSubExist: "main websocket connection cannot be created because a PubSub websocket connection is already active.",
+  wsConnectError: "main websocket connection not established. Check your internet connection, project ID and API key.",
+  wsClosingWsPubSubClosingProcess: "closing of the main websocket and PubSub websocket started.",
+  wsClosingProcess: "closing of the main websocket started.",
+  wsPubSubClosingProcess: "closing of the PubSub websocket started.",
+  wsCloseComplete: "main websocket connection has been closed.",
+  wsPubSubClosingProcess: "closing of the PubSub websocket started.",
+  wsPubSubCloseComplete: "PubSub websocket connection has been closed.",
+  wsClosingError: "there is no main websocket that can be closed.",
+  wsCloseByClient: "main main websocket connection closed by client.",
+  wsPubSubCloseByClient: "PubSub websocket main websocket connection closed by client.",
+  wsNotExist: "main websocket connection not exist.",
+  wsOnError: "main websocket connection error.",
+  wsPubSubOnError: "PubSub websocket connection error.",
   wsConnecting: "CONNECTING",
   wsOpen: "OPEN",
   wsClosing: "CLOSING",
   wsClosed: "CLOSED",
-  wsPubSubNotExist: "PubSub WebSocket connection not exist.",
+  wsPubSubNotExist: "PubSub websocket connection not exist.",
   wsPubSubConnecting: "CONNECTING",
   wsPubSubOpen: "OPEN",
   wsPubSubClosing: "CLOSING",
   wsPubSubClosed: "CLOSED",
-  wsExecErrorNoConnection: "you need to create a main WebSocket connection. Use the connect method.",
-  wsNotifyErrorNoConnection: "you need to create a main WebSocket connection. Use the connect method.",
+  wsExecErrorNoConnection: "you need to create a main websocket connection. Use the connect method.",
+  wsNotifyErrorNoConnection: "you need to create a main websocket connection. Use the connect method.",
   wsListenError: {
     alreadySubscribed: "registration already made to the channel:",
-    errorNoConnection: "you need to create a main WebSocket connection. Use the connect method.",
+    errorNoConnection: "you need to create a main websocket connection. Use the connect method.",
   },
   wsUnlistenError: {
     missingSubscritption: "it is not possible to unlisten unregistered channel:",
-    errorNoConnection: "you have closed the main WebSocket connection, it is no longer possible to unlisten channels.",
+    errorNoConnection: "you have closed the main websocket connection, it is no longer possible to unlisten channels.",
   },
   wsTimeoutError: "the request timed out. ID:",
   createChannelErr:{
@@ -524,7 +524,6 @@ class SQLiteCloud {
             }
           )
         }
-        console.log("STO PER unlinset il canale " + channel)
         const response = await this.#pubsub("unlistenChannel", channel, null);
         return response;
       } catch (error) {
@@ -800,7 +799,7 @@ class SQLiteCloud {
   pubsub method calls 
   */
   async #pubsub(type, channel, callback) {
-    //based on the value of of callback, create a new subscription or remove the subscription
+    //based on the value of callback, create a new subscription or remove the subscription
     if (callback !== null) {
       //check if the channel subscription is already active
       if (!this.#subscriptionsStack.has(channel)) {
@@ -817,13 +816,7 @@ class SQLiteCloud {
               channel: channel.toLowerCase(),
             }
           }
-          if (type == "unlistenChannel") {
-            body = {
-              id: this.#makeid(5),
-              type: "unlisten",
-              channel: channel.toLowerCase(),
-            }
-          }
+
           if (type == "listenTable") {
             body = {
               id: this.#makeid(5),
@@ -831,13 +824,7 @@ class SQLiteCloud {
               table: channel.toLowerCase(),
             }
           }
-          if (type == "unlistenTable") {
-            body = {
-              id: this.#makeid(5),
-              type: "unlisten",
-              table: channel.toLowerCase(),
-            }
-          }
+
           const response = await this.#promiseSend(body);
           //if this is the first subscription, create the websocket connection dedicated to receive pubSub messages
           if (this.#subscriptionsStack.size == 0 && response.status == "success") {
@@ -898,7 +885,7 @@ class SQLiteCloud {
         //if the subscription exists
         return (
           {
-            status: "warning",
+            status: "error",
             data: {
               message: msg.wsListenError.alreadySubscribed + " " + channel
             }
@@ -907,21 +894,30 @@ class SQLiteCloud {
       }
     } else {
       try {
-        console.log("sto per chiamare this.#promiseSend") //TOGLI
-        const response = await this.#promiseSend(
-          {
+        let body;
+        //based on type value build the right body
+        //important in case of channel, the channel key is present in the body
+        //important in case of table, the table key is present in the body
+        if (type == "unlistenChannel") {
+          body = {
             id: this.#makeid(5),
-            type: type,
+            type: "unlisten",
             channel: channel.toLowerCase(),
           }
-        );
-        console.log(response) //TOGLI
+        }
+        if (type == "unlistenTable") {
+          body = {
+            id: this.#makeid(5),
+            type: "unlisten",
+            table: channel.toLowerCase(),
+          }
+        }
+        const response = await this.#promiseSend(body);
         this.#subscriptionsStack.delete(channel)
         //check the remaing active subscription. If zero the websocket connection used for pubSub can be closed
         if (this.#subscriptionsStack.size == 0) {
           this.#wsPubSub.removeEventListener('message', this.#wsPubSubonMessage);
           this.#wsPubSub.close(1000, msg.wsPubSubCloseByClient);
-          this.#wsPubSub = null;
         }
         return (response);
       } catch (error) {
@@ -969,7 +965,6 @@ class SQLiteCloud {
   promiseSend private method send request to the server creating a Promise that resolve when a websocket onmessage event is fired.
   */
   #promiseSend(request) {
-    console.log("STO PER CHIAMARE this.#ws.send") //TOGLI
     //request is sent to the server
     this.#ws.send(JSON.stringify(request));
     //extract request id
