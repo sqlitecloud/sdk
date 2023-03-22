@@ -578,7 +578,7 @@ This method returns the following object:
   response = {
     status: "success" 
     data: {
-      channel: String, //the name of the channel started listening correctly
+      channel: String, //the name of the channel listened correctly
     }
   }
 
@@ -637,7 +637,7 @@ This method returns the following object:
   response = {
     status: "success" 
     data: {
-      //TODO
+      channel: String, //the name of the channel unlistened correctly
     }
   }
 
@@ -683,7 +683,7 @@ This method returns the following object:
   response = {
     status: "success" 
     data: {
-      channel: String, //the name of the table started listening correctly
+      channel: String, //the name of the table listened correctly
     }
   }
 
@@ -739,7 +739,7 @@ This method returns the following object:
   response = {
     status: "success" 
     data: {
-      //TODO
+      channel: String, //the name of the table unlistened correctly
     }
   }
 
