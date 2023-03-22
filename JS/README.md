@@ -705,7 +705,7 @@ The callback returns the following object:
   incomingMessage = {
     channel: String, //the name of the channel that received the message
     ownMessage: Boolean,//true if the user that sent that message is the same that is receiving the message 
-    payload: Object, //the object representing the change made to the table //TODO
+    payload: Object, //the object representing the change made to the table
     sender: String //ID of the sender
   }
 */
