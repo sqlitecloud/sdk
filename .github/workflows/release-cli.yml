@@ -30,7 +30,7 @@ jobs:
         uses: bruceadams/get-release@v1.2.3
         if: runner.os != 'macOS'
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Upload Release Asset
         id: upload-release-asset 
