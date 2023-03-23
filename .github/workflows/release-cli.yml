@@ -39,7 +39,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} 
+          upload_url: ${{ steps.release.outputs.upload_url }} 
           asset_path: ./C/sqlitecloud-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
           asset_name: sqlitecloud-cli-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
           asset_content_type: application/zip
