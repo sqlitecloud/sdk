@@ -1606,8 +1606,12 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     // ipv6 code from https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_72/rzab6/xip6client.htm
     memset(&hints, 0, sizeof(hints));
 
-    hints.ai_family = (config) ? config->family : AF_INET;
+    hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
+    if (config && config->family) {
+        if (config->family == SQCLOUD_IPv6) hints.ai_family = AF_INET6;
+        if (config->family == SQCLOUD_IPANY) hints.ai_family = AF_UNSPEC;
+    }
     
     // get the address information for the server using getaddrinfo()
     char port_string[256];
@@ -1939,7 +1943,7 @@ bool internal_upload_database (SQCloudConnection *connection, const char *dbname
         }
         
         // send BLOB
-        if (SQCloudSendBLOB(connection, buffer, blen) == false) return false;
+        if (internal_send_blob(connection, buffer, blen) == false) return false;
         
         // update progress
         nprogress += blen;
@@ -2578,14 +2582,6 @@ cleanup:
     }
     
     return result;
-}
-
-SQCloudResult *SQCloudRead (SQCloudConnection *connection) {
-    return internal_socket_read(connection, true);
-}
-
-bool SQCloudSendBLOB (SQCloudConnection *connection, void *buffer, uint32_t blen) {
-    return internal_send_blob(connection, buffer, blen);
 }
 
 void SQCloudDisconnect (SQCloudConnection *connection) {

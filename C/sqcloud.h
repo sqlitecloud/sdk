@@ -15,15 +15,15 @@
 extern "C" {
 #endif
 
-#define SQCLOUD_SDK_VERSION         "0.9.0"
-#define SQCLOUD_SDK_VERSION_NUM     0x000900
+#define SQCLOUD_SDK_VERSION         "0.9.5"
+#define SQCLOUD_SDK_VERSION_NUM     0x000905
 #define SQCLOUD_DEFAULT_PORT        8860
 #define SQCLOUD_DEFAULT_TIMEOUT     12
 #define SQCLOUD_DEFAULT_UPLOAD_SIZE 512*1024
 
-#define SQCLOUD_IPany               0
-#define SQCLOUD_IPv4                2
-#define SQCLOUD_IPv6                30
+#define SQCLOUD_IPv4                0
+#define SQCLOUD_IPv6                1
+#define SQCLOUD_IPANY               2
 
 #ifndef BITCHECK
 #define BITCHECK(byte,nbit)         ((byte) &   (1<<(nbit)))
@@ -60,13 +60,13 @@ typedef void (*SQCloudPubSubCB)             (SQCloudConnection *connection, SQCl
 typedef int (*config_cb)                    (char *buffer, int len, void *data);
 typedef int64_t (*SQCloudBackupOnDataCB)    (SQCloudBackup *backup, const char *data, uint32_t len, int page_size, int page_counter);
 
-// configuration struct to be passed to the connect function (currently unused)
+// configuration struct to be passed to the connect function
 typedef struct SQCloudConfigStruct {
     const char      *username;
     const char      *password;
     const char      *database;
     int             timeout;
-    int             family;                 // can be: SQCLOUD_IPv4, SQCLOUD_IPv6 or SQCLOUD_IPany
+    int             family;                 // can be: SQCLOUD_IPv4, SQCLOUD_IPv6 or SQCLOUD_IPANY
     bool            compression;            // compression flag
     bool            sqlite_mode;            // special sqlite compatibility mode
     bool            zero_text;              // flag to tell the server to zero-terminate strings
@@ -169,10 +169,10 @@ typedef enum {
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
 SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *config);
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command);
-SQCloudResult *SQCloudRead (SQCloudConnection *connection);
 char *SQCloudUUID (SQCloudConnection *connection);
-bool SQCloudSendBLOB (SQCloudConnection *connection, void *buffer, uint32_t blen);
 void SQCloudDisconnect (SQCloudConnection *connection);
+
+// MARK: - Pub/Sub -
 void SQCloudSetPubSubCallback (SQCloudConnection *connection, SQCloudPubSubCB callback, void *data);
 SQCloudResult *SQCloudSetPubSubOnly (SQCloudConnection *connection);
 
@@ -283,6 +283,9 @@ int SQCloudBackupPageCount (SQCloudBackup *backup);
 void *SQCloudBackupSetData (SQCloudBackup *backup, void *data);
 void *SQCloudBackupData (SQCloudBackup *backup);
 SQCloudConnection *SQCloudBackupConnection (SQCloudBackup *backup);
+
+// MARK: - Reserved -
+
 
 #ifdef __cplusplus
 }
