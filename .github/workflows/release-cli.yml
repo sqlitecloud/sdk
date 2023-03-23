@@ -7,14 +7,14 @@ name: Upload CLI Release Asset
 
 jobs:
   build:
-    if: github.event_name == 'release' && startsWith(github.ref, 'cli-')
+    if: github.event_name == 'release' && startsWith(github.event.release.name, 'cli-')
     name: Upload Release Asset
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     env:
-      OSNAME: ${{ runner.os == 'Linux' && 'linux' || runner.os == 'Windows' && 'windows' || 'macos' }}
+      OSNAME: ${{matrix.os == 'ubuntu-latest' && 'linux' || matrix.os == 'windows-latest' && 'windows' || 'macos' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -23,7 +23,7 @@ jobs:
         run: |
           cd C
           make cli
-          tar -czvf sqlitecloud-cli-${{ github.ref }}-${{ env.OSNAME }}.tar.gz sqlitecloud-cli
+          tar -czvf sqlitecloud-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz sqlitecloud-cli
 
       - name: Get release
         id: release
@@ -40,14 +40,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} 
-          asset_path: ./C/sqlitecloud-cli-${{ github.ref }}-${{ env.OSNAME }}.tar.gz
-          asset_name: sqlitecloud-cli-${{ github.ref }}-${{ env.OSNAME }}.tar.gz
+          asset_path: ./C/sqlitecloud-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
+          asset_name: sqlitecloud-cli-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
           asset_content_type: application/zip
           
       - name: Upload binary artifact
         uses: actions/upload-artifact@v2
         if: runner.os == 'macOS'
         with:
-          name: sqlitecloud-cli-${{ github.ref }}-${{ env.OSNAME }}.tar.gz
-          path: ./C/sqlitecloud-cli-${{ github.ref }}-${{ env.OSNAME }}.tar.gz
+          name: sqlitecloud-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
+          path: ./C/sqlitecloud-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
           if-no-files-found: error
