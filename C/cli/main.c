@@ -489,7 +489,7 @@ int main(int argc, char * argv[]) {
             case 'u': timeout = atoi(optarg); break;
             case 'y':
                 if (strcasestr(optarg, "IPv6") != 0) {family = SQCLOUD_IPv6;}
-                else if (strcasestr(optarg, "IPany") != 0) {family = SQCLOUD_IPany;}
+                else if (strcasestr(optarg, "IPany") != 0) {family = SQCLOUD_IPANY;}
                 break;
             case 'n': username = optarg; break;
             case 'm': password = optarg; break;
