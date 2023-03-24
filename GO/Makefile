@@ -49,6 +49,6 @@ endif
 	@$(GOPATH)/bin/godoc -http=:6060 -index -play -goroot ./
 
 clean:
-	rm -rf bin/sqlc* 
+	rm -rf $(GOPATH)/bin/sqlc* 
 
 all: sdk cli test_dev1
