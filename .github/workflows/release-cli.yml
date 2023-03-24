@@ -17,7 +17,7 @@ jobs:
       OSNAME: ${{matrix.os == 'ubuntu-latest' && 'linux' || matrix.os == 'windows-latest' && 'windows' || 'macos' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         
       - name: Build project
         run: |
@@ -41,7 +41,7 @@ jobs:
         with:
           upload_url: ${{ steps.release.outputs.upload_url }} 
           asset_path: ./C/sqlitecloud-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
-          asset_name: sqlitecloud-cli-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
+          asset_name: sqlitecloud-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
           asset_content_type: application/zip
           
       - name: Upload binary artifact
