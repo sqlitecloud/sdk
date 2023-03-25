@@ -15,13 +15,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       OSNAME: ${{matrix.os == 'ubuntu-latest' && 'linux' || matrix.os == 'windows-latest' && 'windows' || 'macos' }}
-      TARFILE: sqlitecloud-c-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         
       - name: Build CLI
         run: |
+          echo "TARFILE=sqlitecloud-c-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz" >> $GITHUB_ENV
           cd C
           make cli
           tar -czvf ${{ env.TARFILE }} sqlitecloud-cli
@@ -74,16 +75,16 @@ jobs:
     runs-on: ubuntu-latest
     env:
       OSNAME: ${{matrix.goos == 'darwin' && 'macos' || matrix.goos }}
-      TARFILE: sqlitecloud-go-${{ github.event.release.name }}-${{ env.OSNAME }}-${{ env.GOARCH }}.tar.gz
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         
       - name: Build CLI
         run: |
+          echo "TARFILE=sqlitecloud-go-${{ github.event.release.name }}-${{ env.OSNAME }}-${{ env.GOARCH }}.tar.gz" >> $GITHUB_ENV
           cd GO
           make cli
-          tar -czvf sqlitecloud-go-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz sqlitecloud-cli
+          tar -czvf ${{ env.TARFILE }} sqlitecloud-cli
 
       - name: Get release
         id: release
