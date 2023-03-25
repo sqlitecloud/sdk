@@ -78,7 +78,7 @@ jobs:
     env:
       OSNAME: ${{matrix.goos == 'darwin' && 'macos' || matrix.goos }}
       GOARCH: ${{ matrix.goarch }}
-      GOARM:  ${{ matrix.goos }}
+      GOOS:  ${{ matrix.goos }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
