@@ -6,24 +6,25 @@ on:
 name: Upload CLI Release Asset
 
 jobs:
-  build:
+  release-c-cli:
+    name: Upload Release C CLI
     if: github.event_name == 'release' && startsWith(github.event.release.name, 'cli-')
-    name: Upload Release Asset
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     env:
       OSNAME: ${{matrix.os == 'ubuntu-latest' && 'linux' || matrix.os == 'windows-latest' && 'windows' || 'macos' }}
+      TARFILE: sqlitecloud-c-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         
-      - name: Build project
+      - name: Build CLI
         run: |
           cd C
           make cli
-          tar -czvf sqlitecloud-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz sqlitecloud-cli
+          tar -czvf ${{ env.TARFILE }} sqlitecloud-cli
 
       - name: Get release
         id: release
@@ -40,14 +41,73 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.release.outputs.upload_url }} 
-          asset_path: ./C/sqlitecloud-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
-          asset_name: sqlitecloud-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
+          asset_path: ./C/${{ env.TARFILE }}
+          asset_name: ${{ env.TARFILE }}
           asset_content_type: application/zip
           
       - name: Upload binary artifact
         uses: actions/upload-artifact@v2
         if: runner.os == 'macOS'
         with:
-          name: sqlitecloud-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
-          path: ./C/sqlitecloud-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz
+          name: ${{ env.TARFILE }}
+          path: ./C/${{ env.TARFILE }}
+          if-no-files-found: error
+          
+  release-go-cli:
+    name: Upload Release GO CLI
+    if: github.event_name == 'release' && startsWith(github.event.release.name, 'cli-')
+    strategy:
+      matrix:
+        include: 
+          - goarch: amd64
+            goos:   linux
+            
+          - goarch: amd64
+            goos:   windows
+          
+          - goarch: arm64
+            goos:   darwin
+            
+          - goarch: amd64
+            goos:   darwin
+            
+    runs-on: ubuntu-latest
+    env:
+      OSNAME: ${{matrix.goos == 'darwin' && 'macos' || matrix.goos }}
+      TARFILE: sqlitecloud-go-${{ github.event.release.name }}-${{ env.OSNAME }}-${{ env.GOARCH }}.tar.gz
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Build CLI
+        run: |
+          cd GO
+          make cli
+          tar -czvf sqlitecloud-go-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz sqlitecloud-cli
+
+      - name: Get release
+        id: release
+        uses: bruceadams/get-release@v1.2.3
+        if: matrix.goos != 'darwin'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
+        if: matrix.goos != 'darwin'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.release.outputs.upload_url }} 
+          asset_path: ./GO/${{ env.TARFILE }}
+          asset_name: ${{ env.TARFILE }}
+          asset_content_type: application/zip
+          
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v2
+        if: matrix.goos == 'darwin'
+        with:
+          name: ${{ env.TARFILE }}
+          path: ./GO/${{ env.TARFILE }}
           if-no-files-found: error
