@@ -11,7 +11,7 @@ jobs:
     if: github.event_name == 'release' && startsWith(github.event.release.name, 'cli-')
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest] # windows-latest
     runs-on: ${{ matrix.os }}
     env:
       OSNAME: ${{matrix.os == 'ubuntu-latest' && 'linux' || matrix.os == 'windows-latest' && 'windows' || 'macos' }}
@@ -77,6 +77,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       OSNAME: ${{matrix.goos == 'darwin' && 'macos' || matrix.goos }}
+      GOARCH: ${{ matrix.arch }}
+      GOARM:  ${{ matrix.arm }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -87,7 +89,7 @@ jobs:
       - name: Build CLI
         run: |
           cd GO/cli
-          go build -o ../sqlc
+          go build -o sqlc
           tar -czvf ${{ env.TARFILE }} sqlc
 
       - name: Get release
