@@ -20,9 +20,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         
+      - name: Set env var
+        run: echo "TARFILE=sqlitecloud-c-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz" >> $GITHUB_ENV
+        
       - name: Build CLI
         run: |
-          echo "TARFILE=sqlitecloud-c-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz" >> $GITHUB_ENV
           cd C
           make cli
           tar -czvf ${{ env.TARFILE }} sqlitecloud-cli
@@ -47,7 +49,7 @@ jobs:
           asset_content_type: application/zip
           
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: runner.os == 'macOS'
         with:
           name: ${{ env.TARFILE }}
@@ -78,13 +80,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        
+      
+      - name: Set env var
+        run: echo "TARFILE=sqlitecloud-go-${{ github.event.release.name }}-${{ env.OSNAME }}-${{ env.GOARCH }}.tar.gz" >> $GITHUB_ENV
+      
       - name: Build CLI
         run: |
-          echo "TARFILE=sqlitecloud-go-${{ github.event.release.name }}-${{ env.OSNAME }}-${{ env.GOARCH }}.tar.gz" >> $GITHUB_ENV
-          cd GO
-          make cli
-          tar -czvf ${{ env.TARFILE }} sqlitecloud-cli
+          cd GO/cli
+          go build -o ../sqlc
+          tar -czvf ${{ env.TARFILE }} sqlc
 
       - name: Get release
         id: release
@@ -106,7 +110,7 @@ jobs:
           asset_content_type: application/zip
           
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: matrix.goos == 'darwin'
         with:
           name: ${{ env.TARFILE }}
