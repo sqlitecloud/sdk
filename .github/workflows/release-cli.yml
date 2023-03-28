@@ -21,13 +21,13 @@ jobs:
         uses: actions/checkout@v3
         
       - name: Set env var
-        run: echo "ZIPFILE=sqlitecloud-c-${{ github.event.release.name }}-${{ env.OSNAME }}.tar.gz" >> $GITHUB_ENV
+        run: echo "ZIPFILE=sqlitecloud-c-${{ github.event.release.name }}-${{ env.OSNAME }}.zip" >> $GITHUB_ENV
         
       - name: Build CLI
         run: |
           cd C
           make cli
-          tar -czvf ${{ env.ZIPFILE }} sqlitecloud-cli
+          zip ${{ env.ZIPFILE }} sqlitecloud-cli
 
       - name: Get release
         id: release
@@ -77,14 +77,14 @@ jobs:
         uses: actions/checkout@v3
       
       - name: Set env var
-        run: echo "TARFILE=sqlitecloud-go-${{ github.event.release.name }}-${{ env.OSNAME }}-${{ env.GOARCH }}.tar.gz" >> $GITHUB_ENV
+        run: echo "ZIPFILE=sqlitecloud-go-${{ github.event.release.name }}-${{ env.OSNAME }}-${{ env.GOARCH }}.zip" >> $GITHUB_ENV
       
       - name: Build CLI
         run: |
           cd GO/cli
           go build -o ../sqlc
           cd ..
-          tar -czvf ${{ env.TARFILE }} sqlc
+          zip ${{ env.ZIPFILE }} sqlc
 
       - name: Get release
         id: release
@@ -101,14 +101,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.release.outputs.upload_url }} 
-          asset_path: ./GO/${{ env.TARFILE }}
-          asset_name: ${{ env.TARFILE }}
+          asset_path: ./GO/${{ env.ZIPFILE }}
+          asset_name: ${{ env.ZIPFILE }}
           asset_content_type: application/zip
           
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         if: matrix.goos == 'darwin'
         with:
-          name: ${{ env.TARFILE }}
-          path: ./GO/${{ env.TARFILE }}
+          name: ${{ env.ZIPFILE }}
+          path: ./GO/${{ env.ZIPFILE }}
           if-no-files-found: error
