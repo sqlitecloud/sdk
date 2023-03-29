@@ -24,7 +24,7 @@ echo $GOPATH
 If you want to run the Test programs: `make test`
 
 ### Building the CLI App
-To build the CLI App (Warning: not fully functional, this is officially Step 1), you have to enter: `make cli`
+To build the CLI App, you have to enter: `make cli`
 
 ### Build all at the same time:
 If you want to do all at the same time: `make all`
