@@ -196,7 +196,7 @@ struct SQCloudVM {
     bool                finalized;
     
     bool                isreadonly;
-    bool                isexplain;
+    int                 isexplain;
     int                 rowindex;
     int                 nparams;
     int                 ncolumns;
@@ -2640,8 +2640,8 @@ SQCloudResult *SQCloudSetPubSubOnly (SQCloudConnection *connection) {
     return internal_run_command(connection, command, strlen(command), true);
 }
 
-char *SQCloudUUID (SQCloudConnection *connection) {
-    return connection->uuid;
+const char *SQCloudUUID (SQCloudConnection *connection) {
+    return (const char *)connection->uuid;
 }
 
 // MARK: - ERROR -
@@ -2730,6 +2730,14 @@ double SQCloudResultDouble (SQCloudResult *result) {
     char *buffer = result->buffer;
     buffer[result->blen] = 0;
     return (double)strtod(buffer, NULL);
+}
+
+float SQCloudResultFloat (SQCloudResult *result) {
+    if ((!result) || (result->tag != RESULT_FLOAT)) return 0.0;
+    
+    char *buffer = result->buffer;
+    buffer[result->blen] = 0;
+    return (float)strtof(buffer, NULL);
 }
 
 void SQCloudResultFree (SQCloudResult *result) {
@@ -3224,6 +3232,7 @@ SQCLOUD_RESULT_TYPE SQCloudVMStep (SQCloudVM *vm) {
     if (type == RESULT_ARRAY) {
         SQCloudVMSetResult(vm, NULL);
         SQCloudArrayResultDecode(vm, result);
+        SQCloudResultFree(result);
         return RESULT_OK;
     }
     
@@ -3268,13 +3277,58 @@ bool SQCloudVMIsReadOnly (SQCloudVM *vm) {
     return vm->isreadonly;
 }
 
-bool SQCloudVMIsExplain (SQCloudVM *vm) {
+int SQCloudVMIsExplain (SQCloudVM *vm) {
     return vm->isexplain;
 }
 
 int SQCloudVMBindParameterCount (SQCloudVM *vm) {
     return vm->nparams;
 }
+
+int SQCloudVMBindParameterIndex (SQCloudVM *vm, const char *name) {
+    // VM PARAMETER <vmindex> INDEX <name>
+    
+    char sql[512];
+    snprintf(sql, sizeof(sql), "VM PARAMETER %d INDEX ?;", vm->index);
+        
+    const char *r[1] = {name};
+    uint32_t rlen[1] = {(uint32_t)strlen(name)};
+    SQCLOUD_VALUE_TYPE types[1] = {VALUE_TEXT};
+    
+    SQCloudResult *result = SQCloudExecArray(vm->connection, sql, r, rlen, types, 1);
+    if (SQCloudResultType(result) == RESULT_ERROR) {
+        SQCloudVMSetError(vm);
+        SQCloudResultFree(result);
+        return 0;
+    }
+    
+    int index = SQCloudResultInt32(result);
+    SQCloudResultFree(result);
+    return index;
+}
+
+const char *SQCloudVMBindParameterName (SQCloudVM *vm, int index) {
+    // VM PARAMETER <vmindex> NAME <index>
+    
+    char sql[512];
+    snprintf(sql, sizeof(sql), "VM PARAMETER %d NAME %d;", vm->index, index);
+    
+    SQCloudResult *result = SQCloudExec(vm->connection, sql);
+    if (SQCloudResultType(result) == RESULT_ERROR) {
+        SQCloudVMSetError(vm);
+        SQCloudResultFree(result);
+        return NULL;
+    }
+    
+    const char *name = NULL;
+    if (SQCloudResultBuffer(result) != NULL) {
+        name = mem_string_dup(SQCloudResultBuffer(result));
+    }
+    
+    SQCloudResultFree(result);
+    return name;
+}
+
 
 int SQCloudVMColumnCount (SQCloudVM *vm) {
     return vm->ncolumns;

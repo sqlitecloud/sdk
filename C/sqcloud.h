@@ -62,10 +62,10 @@ typedef int64_t (*SQCloudBackupOnDataCB)    (SQCloudBackup *backup, const char *
 
 // configuration struct to be passed to the connect function
 typedef struct SQCloudConfigStruct {
-    const char      *username;
-    const char      *password;
-    const char      *database;
-    int             timeout;
+    const char      *username;              // connection username
+    const char      *password;              // connection password
+    const char      *database;              // database to use during connection
+    int             timeout;                // connection timeout parameter
     int             family;                 // can be: SQCLOUD_IPv4, SQCLOUD_IPv6 or SQCLOUD_IPANY
     bool            compression;            // compression flag
     bool            sqlite_mode;            // special sqlite compatibility mode
@@ -169,7 +169,7 @@ typedef enum {
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
 SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *config);
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command);
-char *SQCloudUUID (SQCloudConnection *connection);
+const char *SQCloudUUID (SQCloudConnection *connection);
 void SQCloudDisconnect (SQCloudConnection *connection);
 
 // MARK: - Pub/Sub -
@@ -194,6 +194,7 @@ char *SQCloudResultBuffer (SQCloudResult *result);
 int32_t SQCloudResultInt32 (SQCloudResult *result);
 int64_t SQCloudResultInt64 (SQCloudResult *result);
 double SQCloudResultDouble (SQCloudResult *result);
+float SQCloudResultFloat (SQCloudResult *result);
 void SQCloudResultFree (SQCloudResult *result);
 bool SQCloudResultIsOK (SQCloudResult *result);
 bool SQCloudResultIsError (SQCloudResult *result);
@@ -244,9 +245,11 @@ const char *SQCloudVMErrorMsg (SQCloudVM *vm);
 int SQCloudVMErrorCode (SQCloudVM *vm);
 int SQCloudVMIndex (SQCloudVM *vm);
 bool SQCloudVMIsReadOnly (SQCloudVM *vm);
-bool SQCloudVMIsExplain (SQCloudVM *vm);
+int SQCloudVMIsExplain (SQCloudVM *vm);
 bool SQCloudVMIsFinalized (SQCloudVM *vm);
 int SQCloudVMBindParameterCount (SQCloudVM *vm);
+int SQCloudVMBindParameterIndex (SQCloudVM *vm, const char *name);
+const char *SQCloudVMBindParameterName (SQCloudVM *vm, int index);
 int SQCloudVMColumnCount (SQCloudVM *vm);
 bool SQCloudVMBindDouble (SQCloudVM *vm, int index, double value);
 bool SQCloudVMBindInt (SQCloudVM *vm, int index, int value);
@@ -261,10 +264,10 @@ double SQCloudVMColumnDouble (SQCloudVM *vm, int index);
 int SQCloudVMColumnInt32 (SQCloudVM *vm, int index);
 int64_t SQCloudVMColumnInt64 (SQCloudVM *vm, int index);
 int64_t SQCloudVMColumnLen (SQCloudVM *vm, int index);
+SQCLOUD_VALUE_TYPE SQCloudVMColumnType (SQCloudVM *vm, int index);
 int64_t SQCloudVMLastRowID (SQCloudVM *vm);
 int64_t SQCloudVMChanges (SQCloudVM *vm);
 int64_t SQCloudVMTotalChanges (SQCloudVM *vm);
-SQCLOUD_VALUE_TYPE SQCloudVMColumnType (SQCloudVM *vm, int index);
 
 // MARK: - BLOB -
 SQCloudBlob *SQCloudBlobOpen (SQCloudConnection *connection, const char *dbname, const char *tablename, const char *colname, int64_t rowid, bool wrflag);
