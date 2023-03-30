@@ -1,0 +1,38 @@
+[
+  {
+    "version": "3.41.2",
+    "file": "3410200.zip",
+    "SHA3-256": "a06bc6f054acb1fad272602f2f5bcc756b02ec80b62c857eca603c2b97b12b4d",
+    "normalized_version": "3410200"
+  },
+  {
+    "version": "3.41.1",
+    "file": "3410100.zip",
+    "SHA3-256": "dfd55a69f534b34ed8e448d273e890e041e5df2a9ad0f18949cdbfb175bd389f",
+    "normalized_version": "3410100"
+  },
+  {
+    "version": "3.41.0",
+    "file": "3410000.zip",
+    "SHA3-256": "61ef5bffd61bb62ff6c9de22b7b096861b95231d000700b0068250559576f23e",
+    "normalized_version": "3410000"
+  },
+  {
+    "version": "3.40.0",
+    "file": "3400000.zip",
+    "SHA3-256": "70204ff334a5f12e99c4de5d086a62de914c1b6f02f66a276c486fe37f3ab152",
+    "normalized_version": "3400000"
+  },
+  {
+    "version": "3.39.0",
+    "file": "3390000.zip",
+    "SHA3-256": "a7a0c9714db85d814beee10945b49baa2c6f89d24c4d0749cedd31e749706deb",
+    "normalized_version": "3390000"
+  },
+  {
+    "version": "3.38.0",
+    "file": "3380000.zip",
+    "SHA3-256": "199919fc9f196302405b19f4cb704a4435059792c3de6fb5224ad5d02afa8e11",
+    "normalized_version": "3380000"
+  }
+]
