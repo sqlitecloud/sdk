@@ -1054,15 +1054,15 @@ const char *tls_peer_ocsp_url(struct tls *_ctx);
 extern "C" {
 #endif
 
-#define SQCLOUD_SDK_VERSION         "0.9.0"
-#define SQCLOUD_SDK_VERSION_NUM     0x000900
+#define SQCLOUD_SDK_VERSION         "0.9.5"
+#define SQCLOUD_SDK_VERSION_NUM     0x000905
 #define SQCLOUD_DEFAULT_PORT        8860
 #define SQCLOUD_DEFAULT_TIMEOUT     12
 #define SQCLOUD_DEFAULT_UPLOAD_SIZE 512*1024
 
-#define SQCLOUD_IPany               0
-#define SQCLOUD_IPv4                2
-#define SQCLOUD_IPv6                30
+#define SQCLOUD_IPv4                0
+#define SQCLOUD_IPv6                1
+#define SQCLOUD_IPANY               2
 
 #ifndef BITCHECK
 #define BITCHECK(byte,nbit)         ((byte) &   (1<<(nbit)))
@@ -1099,13 +1099,13 @@ typedef void (*SQCloudPubSubCB)             (SQCloudConnection *connection, SQCl
 typedef int (*config_cb)                    (char *buffer, int len, void *data);
 typedef int64_t (*SQCloudBackupOnDataCB)    (SQCloudBackup *backup, const char *data, uint32_t len, int page_size, int page_counter);
 
-// configuration struct to be passed to the connect function (currently unused)
+// configuration struct to be passed to the connect function
 typedef struct SQCloudConfigStruct {
-    const char      *username;
-    const char      *password;
-    const char      *database;
-    int             timeout;
-    int             family;                 // can be: SQCLOUD_IPv4, SQCLOUD_IPv6 or SQCLOUD_IPany
+    const char      *username;              // connection username
+    const char      *password;              // connection password
+    const char      *database;              // database to use during connection
+    int             timeout;                // connection timeout parameter
+    int             family;                 // can be: SQCLOUD_IPv4, SQCLOUD_IPv6 or SQCLOUD_IPANY
     bool            compression;            // compression flag
     bool            sqlite_mode;            // special sqlite compatibility mode
     bool            zero_text;              // flag to tell the server to zero-terminate strings
@@ -1208,10 +1208,10 @@ typedef enum {
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
 SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *config);
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command);
-SQCloudResult *SQCloudRead (SQCloudConnection *connection);
-char *SQCloudUUID (SQCloudConnection *connection);
-bool SQCloudSendBLOB (SQCloudConnection *connection, void *buffer, uint32_t blen);
+const char *SQCloudUUID (SQCloudConnection *connection);
 void SQCloudDisconnect (SQCloudConnection *connection);
+
+// MARK: - Pub/Sub -
 void SQCloudSetPubSubCallback (SQCloudConnection *connection, SQCloudPubSubCB callback, void *data);
 SQCloudResult *SQCloudSetPubSubOnly (SQCloudConnection *connection);
 
@@ -1233,6 +1233,7 @@ char *SQCloudResultBuffer (SQCloudResult *result);
 int32_t SQCloudResultInt32 (SQCloudResult *result);
 int64_t SQCloudResultInt64 (SQCloudResult *result);
 double SQCloudResultDouble (SQCloudResult *result);
+float SQCloudResultFloat (SQCloudResult *result);
 void SQCloudResultFree (SQCloudResult *result);
 bool SQCloudResultIsOK (SQCloudResult *result);
 bool SQCloudResultIsError (SQCloudResult *result);
@@ -1283,9 +1284,11 @@ const char *SQCloudVMErrorMsg (SQCloudVM *vm);
 int SQCloudVMErrorCode (SQCloudVM *vm);
 int SQCloudVMIndex (SQCloudVM *vm);
 bool SQCloudVMIsReadOnly (SQCloudVM *vm);
-bool SQCloudVMIsExplain (SQCloudVM *vm);
+int SQCloudVMIsExplain (SQCloudVM *vm);
 bool SQCloudVMIsFinalized (SQCloudVM *vm);
 int SQCloudVMBindParameterCount (SQCloudVM *vm);
+int SQCloudVMBindParameterIndex (SQCloudVM *vm, const char *name);
+const char *SQCloudVMBindParameterName (SQCloudVM *vm, int index);
 int SQCloudVMColumnCount (SQCloudVM *vm);
 bool SQCloudVMBindDouble (SQCloudVM *vm, int index, double value);
 bool SQCloudVMBindInt (SQCloudVM *vm, int index, int value);
@@ -1300,10 +1303,10 @@ double SQCloudVMColumnDouble (SQCloudVM *vm, int index);
 int SQCloudVMColumnInt32 (SQCloudVM *vm, int index);
 int64_t SQCloudVMColumnInt64 (SQCloudVM *vm, int index);
 int64_t SQCloudVMColumnLen (SQCloudVM *vm, int index);
+SQCLOUD_VALUE_TYPE SQCloudVMColumnType (SQCloudVM *vm, int index);
 int64_t SQCloudVMLastRowID (SQCloudVM *vm);
 int64_t SQCloudVMChanges (SQCloudVM *vm);
 int64_t SQCloudVMTotalChanges (SQCloudVM *vm);
-SQCLOUD_VALUE_TYPE SQCloudVMColumnType (SQCloudVM *vm, int index);
 
 // MARK: - BLOB -
 SQCloudBlob *SQCloudBlobOpen (SQCloudConnection *connection, const char *dbname, const char *tablename, const char *colname, int64_t rowid, bool wrflag);
@@ -1322,6 +1325,9 @@ int SQCloudBackupPageCount (SQCloudBackup *backup);
 void *SQCloudBackupSetData (SQCloudBackup *backup, void *data);
 void *SQCloudBackupData (SQCloudBackup *backup);
 SQCloudConnection *SQCloudBackupConnection (SQCloudBackup *backup);
+
+// MARK: - Reserved -
+
 
 #ifdef __cplusplus
 }
@@ -5135,7 +5141,7 @@ struct SQCloudVM {
     bool                finalized;
     
     bool                isreadonly;
-    bool                isexplain;
+    int                 isexplain;
     int                 rowindex;
     int                 nparams;
     int                 ncolumns;
@@ -6545,8 +6551,12 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     // ipv6 code from https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_72/rzab6/xip6client.htm
     memset(&hints, 0, sizeof(hints));
 
-    hints.ai_family = (config) ? config->family : AF_INET;
+    hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
+    if (config && config->family) {
+        if (config->family == SQCLOUD_IPv6) hints.ai_family = AF_INET6;
+        if (config->family == SQCLOUD_IPANY) hints.ai_family = AF_UNSPEC;
+    }
     
     // get the address information for the server using getaddrinfo()
     char port_string[256];
@@ -6878,7 +6888,7 @@ bool internal_upload_database (SQCloudConnection *connection, const char *dbname
         }
         
         // send BLOB
-        if (SQCloudSendBLOB(connection, buffer, blen) == false) return false;
+        if (internal_send_blob(connection, buffer, blen) == false) return false;
         
         // update progress
         nprogress += blen;
@@ -7519,14 +7529,6 @@ cleanup:
     return result;
 }
 
-SQCloudResult *SQCloudRead (SQCloudConnection *connection) {
-    return internal_socket_read(connection, true);
-}
-
-bool SQCloudSendBLOB (SQCloudConnection *connection, void *buffer, uint32_t blen) {
-    return internal_send_blob(connection, buffer, blen);
-}
-
 void SQCloudDisconnect (SQCloudConnection *connection) {
     if (!connection) return;
     
@@ -7583,8 +7585,8 @@ SQCloudResult *SQCloudSetPubSubOnly (SQCloudConnection *connection) {
     return internal_run_command(connection, command, strlen(command), true);
 }
 
-char *SQCloudUUID (SQCloudConnection *connection) {
-    return connection->uuid;
+const char *SQCloudUUID (SQCloudConnection *connection) {
+    return (const char *)connection->uuid;
 }
 
 // MARK: - ERROR -
@@ -7673,6 +7675,14 @@ double SQCloudResultDouble (SQCloudResult *result) {
     char *buffer = result->buffer;
     buffer[result->blen] = 0;
     return (double)strtod(buffer, NULL);
+}
+
+float SQCloudResultFloat (SQCloudResult *result) {
+    if ((!result) || (result->tag != RESULT_FLOAT)) return 0.0;
+    
+    char *buffer = result->buffer;
+    buffer[result->blen] = 0;
+    return (float)strtof(buffer, NULL);
 }
 
 void SQCloudResultFree (SQCloudResult *result) {
@@ -8167,6 +8177,7 @@ SQCLOUD_RESULT_TYPE SQCloudVMStep (SQCloudVM *vm) {
     if (type == RESULT_ARRAY) {
         SQCloudVMSetResult(vm, NULL);
         SQCloudArrayResultDecode(vm, result);
+        SQCloudResultFree(result);
         return RESULT_OK;
     }
     
@@ -8211,13 +8222,58 @@ bool SQCloudVMIsReadOnly (SQCloudVM *vm) {
     return vm->isreadonly;
 }
 
-bool SQCloudVMIsExplain (SQCloudVM *vm) {
+int SQCloudVMIsExplain (SQCloudVM *vm) {
     return vm->isexplain;
 }
 
 int SQCloudVMBindParameterCount (SQCloudVM *vm) {
     return vm->nparams;
 }
+
+int SQCloudVMBindParameterIndex (SQCloudVM *vm, const char *name) {
+    // VM PARAMETER <vmindex> INDEX <name>
+    
+    char sql[512];
+    snprintf(sql, sizeof(sql), "VM PARAMETER %d INDEX ?;", vm->index);
+        
+    const char *r[1] = {name};
+    uint32_t rlen[1] = {(uint32_t)strlen(name)};
+    SQCLOUD_VALUE_TYPE types[1] = {VALUE_TEXT};
+    
+    SQCloudResult *result = SQCloudExecArray(vm->connection, sql, r, rlen, types, 1);
+    if (SQCloudResultType(result) == RESULT_ERROR) {
+        SQCloudVMSetError(vm);
+        SQCloudResultFree(result);
+        return 0;
+    }
+    
+    int index = SQCloudResultInt32(result);
+    SQCloudResultFree(result);
+    return index;
+}
+
+const char *SQCloudVMBindParameterName (SQCloudVM *vm, int index) {
+    // VM PARAMETER <vmindex> NAME <index>
+    
+    char sql[512];
+    snprintf(sql, sizeof(sql), "VM PARAMETER %d NAME %d;", vm->index, index);
+    
+    SQCloudResult *result = SQCloudExec(vm->connection, sql);
+    if (SQCloudResultType(result) == RESULT_ERROR) {
+        SQCloudVMSetError(vm);
+        SQCloudResultFree(result);
+        return NULL;
+    }
+    
+    const char *name = NULL;
+    if (SQCloudResultBuffer(result) != NULL) {
+        name = mem_string_dup(SQCloudResultBuffer(result));
+    }
+    
+    SQCloudResultFree(result);
+    return name;
+}
+
 
 int SQCloudVMColumnCount (SQCloudVM *vm) {
     return vm->ncolumns;
@@ -10635,7 +10691,7 @@ SQLITE_API SQLITECLOUD_NOT_NEEDED int sqlite3rebaser_rebase_strm(
 ** This file containes the public and private SQLite API that need to be
 ** copied as-is.
 **
-** This code was generated on Fri Mar 17 08:05:13 2023
+** This code was generated on Thu Mar 30 06:53:08 2023
 ** Using sqlite3transform version 1.0.0
 **
 */
