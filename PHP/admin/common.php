@@ -15,7 +15,7 @@
 		$sqlitecloud = new SQLiteCloud();
 		$sqlitecloud->username = $username;
 		$sqlitecloud->password = $password;
-		$sqlitecloud->tls_root_certificate = 'assets/ca.pem';
+		if (file_exists('assets/ca.pem')) {$sqlitecloud->tls_root_certificate = 'assets/ca.pem';}
 		$sqlitecloud->compression = false;
 		
 		try {
