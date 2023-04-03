@@ -41,7 +41,32 @@
 #endif
 
 #ifndef SQLITECLOUD_DISABLE_TSL
+
+#ifdef SQLITECLOUD_USE_TLS_HEADER
 #include "tls.h"
+#else
+#ifndef HEADER_TLS_H
+#define TLS_WANT_POLLIN     -2
+#define TLS_WANT_POLLOUT    -3
+struct tls;
+struct tls_config;
+struct tls *tls_client(void);
+struct tls_config *tls_config_new(void);
+int tls_init(void);
+int tls_configure(struct tls *_ctx, struct tls_config *_config);
+int tls_connect_socket(struct tls *_ctx, int _s, const char *_servername);
+int tls_close(struct tls *_ctx);
+int tls_config_set_ca_file(struct tls_config *_config, const char *_ca_file);
+int tls_config_set_cert_file(struct tls_config *_config,const char *_cert_file);
+int tls_config_set_key_file(struct tls_config *_config, const char *_key_file);
+ssize_t tls_read(struct tls *_ctx, void *_buf, size_t _buflen);
+ssize_t tls_write(struct tls *_ctx, const void *_buf, size_t _buflen);
+const char *tls_error(struct tls *_ctx);
+const char *tls_config_error(struct tls_config *_config);
+void tls_free(struct tls *_ctx);
+#endif
+#endif
+
 #endif
 
 // MARK: MACROS -
