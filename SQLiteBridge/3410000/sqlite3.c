@@ -10691,7 +10691,7 @@ SQLITE_API SQLITECLOUD_NOT_NEEDED int sqlite3rebaser_rebase_strm(
 ** This file containes the public and private SQLite API that need to be
 ** copied as-is.
 **
-** This code was generated on Thu Mar 30 06:53:08 2023
+** This code was generated on Mon Apr  3 03:59:57 2023
 ** Using sqlite3transform version 1.0.0
 **
 */
@@ -12195,6 +12195,16 @@ SQLITE_API int sqlite3_complete(const char *zSql){
 #include <ctype.h>
 
 // (AMALGAMATED) #include "sqlite3cloud_api.h"
+
+#ifndef htonll
+#if __BIG_ENDIAN__
+#define htonll(x)       (x)
+#define ntohll(x)       (x)
+#else
+#define htonll(x)       htobe64(x)
+#define ntohll(x)       be64toh(x)
+#endif
+#endif
 
 // used in sqlite3_memory API
 static sqlite3_int64 memory_used = 0;

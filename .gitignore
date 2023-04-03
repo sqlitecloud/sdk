@@ -21,6 +21,7 @@ mvdan.cc
 *.xcexplist
 *.xcbkptlist
 native*.go
+*.out
 
 GO/src/gopkg.in/ini.v1/
 GO/src/sqliteweb/dashboard/.nova/Configuration.json
