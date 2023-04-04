@@ -26,7 +26,7 @@ jobs:
       - name: Build CLI
         run: |
           cd C
-          make cli
+          make TLS_STATIC=1 cli
           zip ${{ env.ZIPFILE }} sqlitecloud-cli
 
       - name: Get release
