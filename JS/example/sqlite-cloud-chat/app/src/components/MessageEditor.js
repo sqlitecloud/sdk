@@ -82,7 +82,6 @@ const MessageEditor = ({ client }) => {
       setSendingMessage(true);
       setErrorSending(null);
       const response = await client.notify(queryChannel, { message: value });
-      console.log(response) //TOGLI
       if (response.status == "success") {
         setValue("");
       }

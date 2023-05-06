@@ -39,7 +39,6 @@ export default function MessagesList(props) {
   useEffect(() => {
     contRef.current.scrollTo({ left: 0, top: contRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
-  console.log(messages); //TOGLI
   //render ui
   return (
     <div ref={contRef} className="absolute bottom-0 w-[95%] max-h-full overflow-auto py-4" >
@@ -66,11 +65,11 @@ export default function MessagesList(props) {
                         <div className="w-6 h-px my-1 bg-gray-500"></div>
                         <div>
                           {
-                            showEditor &&
+                            showEditor && message.payload &&
                             <NewlineText text={message.payload.message} />
                           }
                           {
-                            !showEditor &&
+                            !showEditor && message.payload &&
                             <JsonViewer value={message.payload} />
                           }
                         </div>

@@ -13,6 +13,8 @@ opt =  {
 */
 export default function CreateChannel(props) {
   if (process.env.DEBUG == "true") logThis("CreateChannel: ON RENDER");
+  //exctract env variable
+  var projectId = process.env.PROJECT_ID;
   //extract params from opt
   const client = props.client;
   const setReloadChannelsList = props.setReloadChannelsList;
@@ -33,6 +35,7 @@ export default function CreateChannel(props) {
     if (response.status == "success") {
       //if createChannel is succesful reload channelsList
       setReloadChannelsList(!reloadChannelsList);
+      const response = await client.notify(projectId, { action: "create", channel: channelName });
     } else {
       setIsError(response.data.message);
     }

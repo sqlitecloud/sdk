@@ -149,6 +149,8 @@ export default function Layout(props) {
           channelsListResponse = await localClient.listChannels();
         }
         handlingChannelsListResponse(channelsListResponse);
+        //create if not exists a reserved channel deditaced to system communication
+        const response = await localClient.createChannel(projectId, true);
       } else {
         //error on websocket connection
         if (process.env.DEBUG == 'true') logThis(connectionResponse.data.message);

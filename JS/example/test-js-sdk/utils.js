@@ -7,4 +7,3 @@ const logThis = (msg) => {
   console.log(prefix + " - " + msg);
 }
 export { logThis };
-

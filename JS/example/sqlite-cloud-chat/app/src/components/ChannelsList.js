@@ -8,6 +8,8 @@ import CircularLoader from './loaders/CircularLoader'
 
 const ChannelsList = (props) => {
   if (process.env.DEBUG == "true") logThis("ChannelsList: ON RENDER");
+  //exctract env variable
+  var projectId = process.env.PROJECT_ID;
   //extract props
   const client = props.client;
   let channelsList = props.channelsList;
