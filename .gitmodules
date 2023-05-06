@@ -1,0 +1,3 @@
+[submodule "GO"]
+	path = GO
+	url = https://github.com/sqlitecloud/go-sdk.git

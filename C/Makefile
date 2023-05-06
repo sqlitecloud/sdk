@@ -1,7 +1,8 @@
 AR        := ar
 CC        := gcc
-INCLUDES  := -I. -Icli -I./SSL/include
+INCLUDES  := -I. -Icli 
 OPTIONS   := -Wno-macro-redefined -Wno-shift-negative-value -Os
+
 
 ifeq ($(OS),Windows_NT)
 	# Windows
@@ -10,11 +11,19 @@ else
 	ifeq ($(UNAME_S),Darwin)
 		# MacOS
 		LDFLAGS = -lpthread -ltls
-		LIBFLAGS = -L./SSL/macos_fat
+		ifeq ($(TLS_STATIC), 1)
+			LIBFLAGS = -L./SSL/macos_fat
+		else
+			LIBFLAGS = -L/opt/homebrew/opt/libressl/lib
+		endif
 	else
 		# Linux
 		LDFLAGS = -lpthread -ltls
-		LIBFLAGS = -L./SSL/linux_64bit
+		ifeq ($(TLS_STATIC), 1)
+			LIBFLAGS = -L./SSL/linux_64bit
+		else
+			LIBFLAGS = -L/usr/local/libressl/lib/ -Wl,-rpath=/usr/local/libressl/lib/
+		endif
 	endif
 endif
 
@@ -35,7 +44,7 @@ libsqcloud.dylib: lz4.o sqcloud.o
 
 all:	lz4.o
 
-cli:	libsqcloud.a cli/linenoise.c cli/linenoise.h cli/main.c
+cli: libsqcloud.a cli/linenoise.c cli/linenoise.h cli/main.c
 	$(CC) $(OPTIONS) $(INCLUDES) cli/*.c libsqcloud.a -o sqlitecloud-cli ${LIBFLAGS} ${LDFLAGS}
 
 clean:
