@@ -51,16 +51,16 @@ const ChannelElement = (props) => {
   const listen = (message) => {
     if (message.channel == name && message.channel !== projectId) {
       let newChsMap = new Map(JSON.parse(JSON.stringify(Array.from(chsMapRef.current))));
-      if(newChsMap.get(name)){
-        let newMessages = JSON.parse(JSON.stringify(newChsMap.get(name)));
-        message.time = format(new Date(), "yyyy-MM-dd' | 'HH:mm:ss")
-        message.timeMs = getTime(new Date())
-        setMsgTimestamp(message.time);
-        newMessages.push(message);
-        newChsMap.set(name, newMessages)
-        chsMapRef.current = newChsMap;
-        setChsMap(newChsMap);
-      }
+      // if(newChsMap.get(name)){
+      let newMessages = JSON.parse(JSON.stringify(newChsMap.get(name)));
+      message.time = format(new Date(), "yyyy-MM-dd' | 'HH:mm:ss")
+      message.timeMs = getTime(new Date())
+      setMsgTimestamp(message.time);
+      newMessages.push(message);
+      newChsMap.set(name, newMessages)
+      chsMapRef.current = newChsMap;
+      setChsMap(newChsMap);
+      // }
     }
     if (message.channel == name && message.channel == projectId && !message.ownMessage) {
       const payload = message.payload;
