@@ -49,7 +49,7 @@ const ChannelElement = (props) => {
   //see here https://medium.com/geographit/accessing-react-state-in-event-listeners-with-usestate-and-useref-hooks-8cceee73c559
   //whene a new message arrives it is added in the chsMap in correspondence of the element which has the channel name as its key
   const listen = (message) => {
-    if (message.channel == name && message.channel !== projectId) {
+    if (message.channel == name && message.channel !== projectId && message.payload) {
       let newChsMap = new Map(JSON.parse(JSON.stringify(Array.from(chsMapRef.current))));
       // if(newChsMap.get(name)){
       let newMessages = JSON.parse(JSON.stringify(newChsMap.get(name)));
