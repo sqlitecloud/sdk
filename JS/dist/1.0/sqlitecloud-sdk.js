@@ -799,6 +799,7 @@ class SQLiteCloud {
   pubsub method calls 
   */
   async #pubsub(type, channel, callback) {
+    // channel = channel.toLowerCase();
     //based on the value of callback, create a new subscription or remove the subscription
     if (callback !== null) {
       //check if the channel subscription is already active
@@ -813,7 +814,7 @@ class SQLiteCloud {
             body = {
               id: this.#makeid(5),
               type: "listen",
-              channel: channel.toLowerCase(),
+              channel: channel,
             }
           }
 
@@ -821,7 +822,7 @@ class SQLiteCloud {
             body = {
               id: this.#makeid(5),
               type: "listen",
-              table: channel.toLowerCase(),
+              table: channel,
             }
           }
 
@@ -835,9 +836,9 @@ class SQLiteCloud {
               this.#wsPubSubUrl = `wss://web1.sqlitecloud.io:8443/api/v1/wspsub?uuid=${uuid}&secret=${secret}`;
               this.#wsPubSub = await this.#connectWs(this.#wsPubSubUrl, "PubSub connection not established");
               //when the PubSub WebSocket is created the channel is added to the stack
-              this.#subscriptionsStack.set(channel.toLowerCase(),
+              this.#subscriptionsStack.set(channel,
                 {
-                  channel: channel.toLowerCase(),
+                  channel: channel,
                   callback: callback
                 }
               );
@@ -857,9 +858,9 @@ class SQLiteCloud {
           }
           //if this isn't the first subscription, just add the supscription to the stack
           if (this.#subscriptionsStack.size > 0 && response.status == "success") {
-            this.#subscriptionsStack.set(channel.toLowerCase(),
+            this.#subscriptionsStack.set(channel,
               {
-                channel: channel.toLowerCase(),
+                channel: channel,
                 callback: callback
               }
             );
@@ -902,14 +903,14 @@ class SQLiteCloud {
           body = {
             id: this.#makeid(5),
             type: "unlisten",
-            channel: channel.toLowerCase(),
+            channel: channel,
           }
         }
         if (type == "unlistenTable") {
           body = {
             id: this.#makeid(5),
             type: "unlisten",
-            table: channel.toLowerCase(),
+            table: channel,
           }
         }
         const response = await this.#promiseSend(body);
@@ -934,8 +935,6 @@ class SQLiteCloud {
   based on the channel indicated in the message the right callback is called
   */
   #wsPubSubonMessage = (event) => {
-    const pubSubMessage = JSON.parse(event.data);
-
     //since payload can be both a string or JSON, this function based on check of it is or not a valid JSON return the correct parsed paylod
     function payloadParser(str) {
       try {
@@ -945,19 +944,24 @@ class SQLiteCloud {
       }
       return JSON.parse(str);
     }
-
+    const pubSubMessage = JSON.parse(event.data);
+    const channel = pubSubMessage.channel; //pubSubMessage.channel.toLowerCase();
+    const sender = pubSubMessage.sender;
+    const payload = payloadParser(pubSubMessage.payload);
+    const ownMessage = this.#uuid == sender;
     //build the obj returned to the user removing fields not usefull
+
     const userPubSubMessage = {
-      channel: pubSubMessage.channel,
-      sender: pubSubMessage.sender,
-      payload: payloadParser(pubSubMessage.payload),
-      ownMessage: this.#uuid == pubSubMessage.sender
+      channel: channel,
+      sender: sender,
+      payload: payload,
+      ownMessage: ownMessage
     }
     //this is the case in which the user decide to filter the message sent by himself
-    if (this.filterSentMessages && this.#uuid == pubSubMessage.sender) {
+    if (this.filterSentMessages && ownMessage) {
 
     } else {
-      this.#subscriptionsStack.get(pubSubMessage.channel).callback(userPubSubMessage);
+      this.#subscriptionsStack.get(channel).callback(userPubSubMessage);
     }
   }
 

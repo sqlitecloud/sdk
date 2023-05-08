@@ -40,9 +40,8 @@ JS/public
 JS/**/public
 JS/**/**/public
 
-
 #env
-# JS/.env
+JS/.env
 # JS/**/.env
 # JS/**/**/.env
 
