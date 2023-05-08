@@ -147,6 +147,7 @@ const ChannelElement = (props) => {
     channelButtonRef.current.blur();
     setAlertNewMsg(0);
     setSelectedChannelIndex(index);
+    setPrevMsgLenght(chsMapRef.current.get(name).length);
     setSelectedChannel(name);
     if (queryDBName !== null) {
       setSearchParams({
