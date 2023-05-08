@@ -13,28 +13,6 @@ import {
 //components
 import Alert from './alert/Alert'
 import CircularLoader from './loaders/CircularLoader';
-/* dummy data from demo component. can be usefull in future 
-const assignees = [
-  { name: 'Unassigned', value: null },
-  {
-    name: 'Wade Cooper',
-    value: 'wade-cooper',
-    avatar:
-      'https://images.unsplash.com/photo-1491528323818-fdd1faba62cc?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-  },
-  // More items...
-]
-const labels = [
-  { name: 'Unlabelled', value: null },
-  { name: 'Engineering', value: 'engineering' },
-  // More items...
-]
-const dueDates = [
-  { name: 'No due date', value: null },
-  { name: 'Today', value: 'today' },
-  // More items...
-]
-*/
 const MessageEditor = ({ client }) => {
   if (process.env.DEBUG == "true") logThis("MessageEditor: ON RENDER");
   //react router hooks used to set query string
