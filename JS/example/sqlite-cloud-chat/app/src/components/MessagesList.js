@@ -48,7 +48,7 @@ export default function MessagesList(props) {
           {messages.map((message) => {
             const bgColor = message.ownMessage ? "bg-green-500" : "bg-indigo-500";
             return (
-              <li key={message.user + message.time} className="flex flex-row p-4 my-4 bg-gray-50 rounded-md transition-all duration-200">
+              <li key={message.channel + message.sender + message.timeMs} className="flex flex-row p-4 my-4 bg-gray-50 rounded-md transition-all duration-200">
                 <div className="relative">
                   <div className={`relative flex items-start space-x-3`}>
                     <div className="relative">
