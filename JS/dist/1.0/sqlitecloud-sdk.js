@@ -1,5 +1,5 @@
 /*!
- * SQLite Cloud SDK v1.0.12
+ * SQLite Cloud SDK v1.0.13
  * https://sqlitecloud.io/
  *
  * Copyright 2023, SQLite Cloud
@@ -50,7 +50,7 @@ const msg = {
   wsPubSubClosingProcess: "closing of the PubSub websocket started.",
   wsPubSubCloseComplete: "PubSub websocket connection has been closed.",
   wsClosingError: "there is no main websocket that can be closed.",
-  wsCloseByClient: "main main websocket connection closed by client.",
+  wsCloseByClient: "main websocket connection closed by client.",
   wsPubSubCloseByClient: "PubSub websocket main websocket connection closed by client.",
   wsNotExist: "main websocket connection not exist.",
   wsOnError: "main websocket connection error.",
@@ -803,95 +803,81 @@ class SQLiteCloud {
     //based on the value of callback, create a new subscription or remove the subscription
     if (callback !== null) {
       //check if the channel subscription is already active
-      if (!this.#subscriptionsStack.has(channel)) {
-        //if the subscription does not exist 
-        try {
-          let body;
-          //based on type value build the right body
-          //important in case of channel, the channel key is present in the body
-          //important in case of table, the table key is present in the body
-          if (type == "listenChannel") {
-            body = {
-              id: this.#makeid(5),
-              type: "listen",
-              channel: channel,
-            }
+      try {
+        let body;
+        //based on type value build the right body
+        //important in case of channel, the channel key is present in the body
+        //important in case of table, the table key is present in the body
+        if (type == "listenChannel") {
+          body = {
+            id: this.#makeid(5),
+            type: "listen",
+            channel: channel,
           }
+        }
 
-          if (type == "listenTable") {
-            body = {
-              id: this.#makeid(5),
-              type: "listen",
-              table: channel,
-            }
+        if (type == "listenTable") {
+          body = {
+            id: this.#makeid(5),
+            type: "listen",
+            table: channel,
           }
-
-          const response = await this.#promiseSend(body);
-          //if this is the first subscription, create the websocket connection dedicated to receive pubSub messages
-          if (this.#subscriptionsStack.size == 0 && response.status == "success") {
-            //response here we have authentication information
-            const uuid = response.data.uuid;
-            const secret = response.data.secret;
-            try {
-              this.#wsPubSubUrl = `wss://web1.sqlitecloud.io:8443/api/v1/wspsub?uuid=${uuid}&secret=${secret}`;
-              this.#wsPubSub = await this.#connectWs(this.#wsPubSubUrl, "PubSub connection not established");
-              //when the PubSub WebSocket is created the channel is added to the stack
-              this.#subscriptionsStack.set(channel,
-                {
-                  channel: channel,
-                  callback: callback
-                }
-              );
-              this.#uuid = uuid;
-              //register the onmessage event on pubSub websocket
-              this.#wsPubSub.addEventListener('message', this.#wsPubSubonMessage);
-              //register the close event on websocket
-              this.#wsPubSub.addEventListener('error', this.#onErrorWsPubSub);
-              //register the close event on websocket
-              this.#wsPubSub.addEventListener('close', this.#onCloseWsPubSub);
-            } catch (error) {
-              return {
-                status: "error",
-                data: error
-              };
-            }
-          }
-          //if this isn't the first subscription, just add the supscription to the stack
-          if (this.#subscriptionsStack.size > 0 && response.status == "success") {
+        }
+        const response = await this.#promiseSend(body);
+        //if this is the first subscription, create the websocket connection dedicated to receive pubSub messages
+        if (this.#subscriptionsStack.size == 0 && response.status == "success") {
+          //response here we have authentication information
+          const uuid = response.data.uuid;
+          const secret = response.data.secret;
+          try {
+            this.#wsPubSubUrl = `wss://web1.sqlitecloud.io:8443/api/v1/wspsub?uuid=${uuid}&secret=${secret}`;
+            this.#wsPubSub = await this.#connectWs(this.#wsPubSubUrl, "PubSub connection not established");
+            //when the PubSub WebSocket is created the channel is added to the stack
             this.#subscriptionsStack.set(channel,
               {
                 channel: channel,
                 callback: callback
               }
             );
+            this.#uuid = uuid;
+            //register the onmessage event on pubSub websocket
+            this.#wsPubSub.addEventListener('message', this.#wsPubSubonMessage);
+            //register the close event on websocket
+            this.#wsPubSub.addEventListener('error', this.#onErrorWsPubSub);
+            //register the close event on websocket
+            this.#wsPubSub.addEventListener('close', this.#onCloseWsPubSub);
+          } catch (error) {
+            return {
+              status: "error",
+              data: error
+            };
           }
-          //build the object returned to client
-          let userResponse = {};
-          userResponse.status = response.status;
-          if (response.status == "success") {
-            userResponse.data = {};
-            userResponse.data.channel = response.data.channel;
-          }
-          if (response.status == "error") {
-            userResponse.data = response.data;
-          }
-          return userResponse;
-        } catch (error) {
-          return {
-            status: "error",
-            data: error
-          };
         }
-      } else {
-        //if the subscription exists
-        return (
-          {
-            status: "error",
-            data: {
-              message: msg.wsListenError.alreadySubscribed + " " + channel
+        //if this isn't the first subscription, just add the supscription to the stack
+        if (this.#subscriptionsStack.size > 0 && response.status == "success") {
+          this.#subscriptionsStack.set(channel,
+            {
+              channel: channel,
+              callback: callback
             }
-          }
-        )
+          );
+        }
+        //build the object returned to client
+        let userResponse = {};
+        userResponse.status = response.status;
+        if (response.status == "success") {
+          userResponse.data = {};
+          userResponse.data.channel = response.data.channel;
+        }
+        if (response.status == "error") {
+          userResponse.data = response.data;
+        }
+        return userResponse;
+      } catch (error) {
+        return {
+          status: "error",
+          data: error
+        };
       }
     } else {
       try {
@@ -914,7 +900,7 @@ class SQLiteCloud {
           }
         }
         const response = await this.#promiseSend(body);
-        this.#subscriptionsStack.delete(channel)
+        this.#subscriptionsStack.delete(channel);
         //check the remaing active subscription. If zero the websocket connection used for pubSub can be closed
         if (this.#subscriptionsStack.size == 0) {
           this.#wsPubSub.removeEventListener('message', this.#wsPubSubonMessage);
@@ -945,15 +931,17 @@ class SQLiteCloud {
       return JSON.parse(str);
     }
     const pubSubMessage = JSON.parse(event.data);
+
     const channel = pubSubMessage.channel; //pubSubMessage.channel.toLowerCase();
     const sender = pubSubMessage.sender;
+    const type = pubSubMessage.type;
     const payload = payloadParser(pubSubMessage.payload);
     const ownMessage = this.#uuid == sender;
     //build the obj returned to the user removing fields not usefull
-
     const userPubSubMessage = {
       channel: channel,
       sender: sender,
+      type: type,
       payload: payload,
       ownMessage: ownMessage
     }
