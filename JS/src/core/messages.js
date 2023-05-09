@@ -10,7 +10,7 @@ export const msg = {
   wsPubSubClosingProcess: "closing of the PubSub websocket started.",
   wsPubSubCloseComplete: "PubSub websocket connection has been closed.",
   wsClosingError: "there is no main websocket that can be closed.",
-  wsCloseByClient: "main main websocket connection closed by client.",
+  wsCloseByClient: "main websocket connection closed by client.",
   wsPubSubCloseByClient: "PubSub websocket main websocket connection closed by client.",
   wsNotExist: "main websocket connection not exist.",
   wsOnError: "main websocket connection error.",
