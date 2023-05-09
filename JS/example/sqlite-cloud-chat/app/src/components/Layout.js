@@ -1,5 +1,5 @@
 //core
-import React, { Fragment, useContext, useState, useEffect } from 'react';
+import React, { Fragment, useRef, useContext, useState, useEffect } from 'react';
 //react-router
 import { useSearchParams } from 'react-router-dom';
 //SQLiteCloud
@@ -38,6 +38,8 @@ export default function Layout(props) {
   var apikey = process.env.API_KEY;
   //state dedicated to SQLiteCloud instance used to handle websocket connection
   const [client, setClient] = useState(null);
+  const clientRef = useRef(null);
+  clientRef.current = client;
   const [isConnecting, setIsConnecting] = useState(true);
   const [connectionResponse, setConnectionResponse] = useState(null);
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
@@ -173,6 +175,8 @@ export default function Layout(props) {
   }, [selectedChannel]);
   //section dedicated to handling channels list after a channel is created o dropped
   const [reloadChannelsList, setReloadChannelsList] = useState(false);
+  const reloadChannelsListRef = useRef(null);
+  reloadChannelsListRef.current = reloadChannelsList;
   useEffect(() => {
     const onMountWrapper = async () => {
       if (client) {
@@ -242,6 +246,33 @@ export default function Layout(props) {
       setSelectedChannelIndex(newSelectedIndex);
     }
   }, [chsMap])
+  //handle reconnection of windows focus
+  useEffect(() => {
+    const handleWindowFocusEvent = async () => {
+      if (clientRef.current) {
+        console.log(clientRef.current.connectionState);
+        const connectionState = clientRef.current.connectionState;
+        if (connectionState.state !== 1) {
+          setIsConnecting(true);
+          //try to enstablish websocket connection
+          const connectionResponse = await clientRef.current.connect();
+          setConnectionResponse(connectionResponse);
+          setIsConnecting(false);
+          //check how websocket connection completed  
+          if (connectionResponse.status == 'success') {
+            setReloadChannelsList(!reloadChannelsListRef.current);
+          } else {
+            //error on websocket connection
+            if (process.env.DEBUG == 'true') logThis(connectionResponse.data.message);
+          }
+        }
+      }
+    }
+    window.addEventListener("focus", handleWindowFocusEvent);
+    return () => {
+      window.removeEventListener("focus", handleWindowFocusEvent);
+    };
+  }, []);
   //show or not sidebar on mobile
   const showSideBarOnMob = openMobMsg || selectedChannelIndex == -1;
   //render UI
@@ -257,6 +288,9 @@ export default function Layout(props) {
               src={lightLogo}
               alt=''
             />
+            {/* TEST CLOSE CONNECTION TOGLI*/}
+            <button onClick={()=>{client.close()}}>CLOSE</button>
+            <button onClick={()=>{console.log(client.subscriptionsStackState);}}>List active pub sub</button>
           </div>
           {
             showEditor &&

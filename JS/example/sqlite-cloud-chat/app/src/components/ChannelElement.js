@@ -48,10 +48,10 @@ const ChannelElement = (props) => {
   //we need to create a reference to context state since the listen callback is called inside an event listener
   //see here https://medium.com/geographit/accessing-react-state-in-event-listeners-with-usestate-and-useref-hooks-8cceee73c559
   //whene a new message arrives it is added in the chsMap in correspondence of the element which has the channel name as its key
-  const listen = (message) => {
+  const listen = async (message) => {
+    console.log(message)
     if (message.channel == name && message.channel !== projectId && message.payload) {
       let newChsMap = new Map(JSON.parse(JSON.stringify(Array.from(chsMapRef.current))));
-      // if(newChsMap.get(name)){
       let newMessages = JSON.parse(JSON.stringify(newChsMap.get(name)));
       message.time = format(new Date(), "yyyy-MM-dd' | 'HH:mm:ss")
       message.timeMs = getTime(new Date())
@@ -60,9 +60,13 @@ const ChannelElement = (props) => {
       newChsMap.set(name, newMessages)
       chsMapRef.current = newChsMap;
       setChsMap(newChsMap);
-      // }
     }
-    if (message.channel == name && message.channel == projectId && !message.ownMessage) {
+    if (
+      (message.channel == name && message.channel == projectId && !message.ownMessage)
+      // ||
+      // (message.channel == name && message.channel !== projectId && message.type == "REMOVE" && !message.ownMessage)
+    ) {
+      console.log("HERE")
       const payload = message.payload;
       const action = payload.action;
       const channel = payload.channel;
@@ -87,12 +91,13 @@ const ChannelElement = (props) => {
             setSelectedChannelIndex(-1);
             setSelectedChannel("");
           }
+          //unlisten the channel
+          await client.unlistenChannel(channel);
           //remove from the Maps the dropped channel
           let newChsMap = new Map(JSON.parse(JSON.stringify(Array.from(chsMapRef.current))));
           newChsMap.delete(channel);
           chsMapRef.current = newChsMap;
           setChsMap(newChsMap);
-          //if createChannel is succesful reload channelsList
           setReloadChannelsList(!reloadChannelsListRef.current);
           break;
         case 'create':
@@ -127,6 +132,19 @@ const ChannelElement = (props) => {
     }
     registerToCh();
   }, [])
+  //listen again
+  useEffect(() => {
+    const listenAgain = async () => {
+      let response;
+      if (showEditor) {
+        response = await client.listenChannel(name, listen);
+      } else {
+        response = await client.listenTable(name, listen);
+      }
+      setListenResponse(response);
+    }
+    listenAgain();
+  }, [reloadChannelsList])
   //update the counter indicating the unread messages everytime the chsMap changes
   useEffect(() => {
     if (chsMapRef.current.get(name)) {
@@ -138,7 +156,6 @@ const ChannelElement = (props) => {
       }
     }
   }, [chsMapRef.current])
-
   //method called every time a channel is selected
   //whene a channel is selected the counter for unread messages is set to zero
   //the current channel name and current channel index are setted to the current clicked channel
@@ -186,6 +203,7 @@ const ChannelElement = (props) => {
     const response = await client.removeChannel(name);
     if (process.env.DEBUG == "true") console.log(response);
     if (response.status == "success") {
+      await client.unlistenChannel(name);
       //remove from the Maps the dropped channel
       let newChsMap = new Map(JSON.parse(JSON.stringify(Array.from(chsMapRef.current))));
       newChsMap.delete(name);
@@ -194,7 +212,7 @@ const ChannelElement = (props) => {
       //if createChannel is succesful reload channelsList
       setReloadChannelsList(!reloadChannelsList);
       //notify on service channel that the channel has been removed
-      const response = await client.notify(projectId, { action: "remove", channel: name });
+      const response = await client.notify(projectId, { action: "remove", channel: name }); //METTI
     } else {
       setIsDroppingChannel(false);
       setIsErrorDropping(response.data.message)
