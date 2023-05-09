@@ -250,7 +250,6 @@ export default function Layout(props) {
   useEffect(() => {
     const handleWindowFocusEvent = async () => {
       if (clientRef.current) {
-        console.log(clientRef.current.connectionState);
         const connectionState = clientRef.current.connectionState;
         if (connectionState.state !== 1) {
           setIsConnecting(true);
@@ -289,8 +288,8 @@ export default function Layout(props) {
               alt=''
             />
             {/* TEST CLOSE CONNECTION TOGLI*/}
-            <button onClick={()=>{client.close()}}>CLOSE</button>
-            <button onClick={()=>{console.log(client.subscriptionsStackState);}}>List active pub sub</button>
+            {/* <button onClick={()=>{client.close()}}>CLOSE</button> */}
+            {/* <button onClick={()=>{console.log(client.subscriptionsStackState);}}>List active pub sub</button> */}
           </div>
           {
             showEditor &&
