@@ -55,13 +55,11 @@ The format is `!LEN STRING0`. See **SCSP Strings** for details, the only differe
 For example to send the string "Hello World!" the command would be: `!13 Hello World!0`
 
 ### SCSP Errors
-The format is `-LEN ERRCODE STRING`. Error replies are only sent by the server when something wrong happens. The first ERRCODE field in the error represents a numeric error code. The remaining string is the error message itself. The error code is useful for clients to distinguish among different error conditions without having to do pattern matching in the error message, that may change. LEN does not include the length of the first `-LEN ` part.
+The format is `-LEN ERRCODE[:EXTCODE[:OFFCODE]] STRING`. Error replies are only sent by the server when something wrong happens. The ERRCODE field in the numeric error code. The optional part, EXTCODE and OFFCODE are numeric values specific to SQLite. EXTCODE represents the extended error code (as specified in the documentation at https://www.sqlite.org/rescode.html), while OFFCODE indicates the offset index within the SQL token where the syntax error occurs (or -1 if none). TThe remaining part of the string corresponds to the error message itself. The error code proves valuable to clients as it enables them to differentiate between various error conditions without resorting to pattern matching within the error message, which may undergo changes. LEN does not include the length of the first `-LEN ` part.
 
-If `ERRCODE` contains an extended error code (optional) then the `ERRCODE` format is `ERRCODE:EXTERRCODE`.
-
-- ERROCODE < 10,000 are SQLite error codes as reported by https://www.sqlite.org/rescode.html
+- ERRCODE < 10,000 are SQLite error codes as reported by https://www.sqlite.org/rescode.html
 - ERRCODE >= 10,000 and <100,000 are SQLite Cloud error codes
-- ERROCODE >= 100,000 are generated internally by the SDK
+- ERRCODE >= 100,000 are generated internally by the SDK
 
 ### SCSP Integer
 The format is `:VALUE `. Where `VALUE` is a string representation of the integer value. `VALUE` can be negative and in C it can be parsed using the `strtol/strtoll` API. `VALUE` is guarantee to be an Integer 64 bit number.
