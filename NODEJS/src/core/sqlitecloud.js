@@ -1,4 +1,5 @@
 const tls = require('tls');
+var net = require('net');
 var lz4 = require('lz4')
 
 const logThis = (id = "SQLiteCloud", msg) => {
@@ -344,6 +345,7 @@ export default class SQLiteCloud {
   /* tls options */
   #host = null;
   #port = null;
+  #disableTLS = {};
   #tlsOptions = {};
   /* auth credential */
   #user = null;
@@ -379,6 +381,7 @@ export default class SQLiteCloud {
         connectionString: string, //required unless user, password, host, port are provided
         tlsOptions: any, //optional passed directly to node.TLSSocket, supports all tls.connect options
         queryTimeout: number, //optional number of milliseconds before a query call will timeout, default is 300sec
+        disableTLS: boolean//optional, if true disable TLS authentication
         database: string, // TODOOO
         dbCreate: boolean, // TODOOO
         dbMemory: boolean, // TODOOO
@@ -400,6 +403,7 @@ export default class SQLiteCloud {
   constructor(config, debug_sdk = false) {
     this.#debug_sdk = debug_sdk;
     this.#clientId = config.clientId;
+    this.#disableTLS = config.disableTLS ? config.disableTLS : false;
     if (config.connectionString) {
       //TODOO exctract from connectionString tls options 
     } else {
@@ -483,9 +487,44 @@ export default class SQLiteCloud {
         if (timeoutError) reject(timeoutError);
       }
       //try to connect
-      var client = new tls.connect(this.#port, this.#host, this.#tlsOptions, async () => {
-        if (client.authorized) {
-          if (this.#debug_sdk) logThis(this.#clientId, "connection authorized");
+      var client;
+      if (!this.#disableTLS) {
+        client = new tls.connect(this.#port, this.#host, this.#tlsOptions, async () => {
+          if (client.authorized) {
+            if (this.#debug_sdk) logThis(this.#clientId, "connection authorized");
+            if (this.#debug_sdk) logThis(this.#clientId, "sending init commands: " + this.#initCommands);
+            try {
+              this.#client = client;
+              const response = await this.sendCommands(this.#initCommands);
+              resolve(response);
+            } catch (error) {
+              logThis(this.#clientId, "initCommandsResponse error");
+              reject(error);
+            }
+          } else {
+            if (this.#debug_sdk) logThis(this.#clientId, "connection NOT authorized");
+            reject(
+              new Error("Connection NOT authorized", { cause: client.authorizationError })
+            );
+          }
+        })
+          .on('close', () => {
+            if (this.#debug_sdk) logThis(this.#clientId, "connection closed");
+          })
+          .on('end', () => {
+            if (this.#debug_sdk) logThis(this.#clientId, "end connection");
+          })
+          .once('error', (error) => {
+            if (this.#debug_sdk) logThis(this.#clientId, "received error");
+            if (this.#debug_sdk) console.log(error);
+            client.destroy();
+            reject(
+              new Error("Connection on error event", { cause: error })
+            );
+          });
+      } else {
+        client = new net.connect(this.#port, this.#host, this.#tlsOptions, async () => {
+          if (this.#debug_sdk) logThis(this.#clientId, "connection created");
           if (this.#debug_sdk) logThis(this.#clientId, "sending init commands: " + this.#initCommands);
           try {
             this.#client = client;
@@ -495,27 +534,22 @@ export default class SQLiteCloud {
             logThis(this.#clientId, "initCommandsResponse error");
             reject(error);
           }
-        } else {
-          if (this.#debug_sdk) logThis(this.#clientId, "connection NOT authorized");
-          reject(
-            new Error("Connection NOT authorized", { cause: client.authorizationError })
-          );
-        }
-      })
-        .on('close', () => {
-          if (this.#debug_sdk) logThis(this.#clientId, "connection closed");
         })
-        .on('end', () => {
-          if (this.#debug_sdk) logThis(this.#clientId, "end connection");
-        })
-        .once('error', (error) => {
-          if (this.#debug_sdk) logThis(this.#clientId, "received error");
-          if (this.#debug_sdk) console.log(error);
-          client.destroy();
-          reject(
-            new Error("Connection on error event", { cause: error })
-          );
-        });
+          .on('close', () => {
+            if (this.#debug_sdk) logThis(this.#clientId, "connection closed");
+          })
+          .on('end', () => {
+            if (this.#debug_sdk) logThis(this.#clientId, "end connection");
+          })
+          .once('error', (error) => {
+            if (this.#debug_sdk) logThis(this.#clientId, "received error");
+            if (this.#debug_sdk) console.log(error);
+            client.destroy();
+            reject(
+              new Error("Connection on error event", { cause: error })
+            );
+          });
+      }
     });
   }
   /*

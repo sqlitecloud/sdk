@@ -25,8 +25,9 @@ let buildOption = {
     },
   },
   externals: {
-    lz4: 'lz4',
     tls: 'tls',
+    net: 'net',
+    lz4: 'lz4',
   },
   optimization: {
     minimize: minimize,

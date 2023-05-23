@@ -1,5 +1,5 @@
 /*!
- * SQLite Cloud Node.js SDK v1.0.0
+ * SQLite Cloud Node.js SDK v1.0.2
  * https://sqlitecloud.io/
  *
  * Copyright 2023, SQLite Cloud
@@ -8,14 +8,14 @@
 
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory(require("tls"), require("lz4"));
+		module.exports = factory(require("tls"), require("net"), require("lz4"));
 	else if(typeof define === 'function' && define.amd)
-		define(["tls", "lz4"], factory);
+		define(["tls", "net", "lz4"], factory);
 	else if(typeof exports === 'object')
-		exports["SQLiteCloud"] = factory(require("tls"), require("lz4"));
+		exports["SQLiteCloud"] = factory(require("tls"), require("net"), require("lz4"));
 	else
-		root["SQLiteCloud"] = factory(root["tls"], root["lz4"]);
-})(this, (__WEBPACK_EXTERNAL_MODULE__535__, __WEBPACK_EXTERNAL_MODULE__43__) => {
+		root["SQLiteCloud"] = factory(root["tls"], root["net"], root["lz4"]);
+})(this, (__WEBPACK_EXTERNAL_MODULE__535__, __WEBPACK_EXTERNAL_MODULE__548__, __WEBPACK_EXTERNAL_MODULE__43__) => {
 return /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
@@ -35,6 +35,7 @@ module.exports = __webpack_require__(774)["default"];
 /* harmony export */   "default": () => (/* binding */ SQLiteCloud)
 /* harmony export */ });
 const tls = __webpack_require__(535);
+var net = __webpack_require__(548);
 var lz4 = __webpack_require__(43)
 
 const logThis = (id = "SQLiteCloud", msg) => {
@@ -380,6 +381,7 @@ class SQLiteCloud {
   /* tls options */
   #host = null;
   #port = null;
+  #disableTLS = {};
   #tlsOptions = {};
   /* auth credential */
   #user = null;
@@ -415,6 +417,7 @@ class SQLiteCloud {
         connectionString: string, //required unless user, password, host, port are provided
         tlsOptions: any, //optional passed directly to node.TLSSocket, supports all tls.connect options
         queryTimeout: number, //optional number of milliseconds before a query call will timeout, default is 300sec
+        disableTLS: boolean//optional, if true disable TLS authentication
         database: string, // TODOOO
         dbCreate: boolean, // TODOOO
         dbMemory: boolean, // TODOOO
@@ -436,6 +439,7 @@ class SQLiteCloud {
   constructor(config, debug_sdk = false) {
     this.#debug_sdk = debug_sdk;
     this.#clientId = config.clientId;
+    this.#disableTLS = config.disableTLS ? config.disableTLS : false;
     if (config.connectionString) {
       //TODOO exctract from connectionString tls options 
     } else {
@@ -519,9 +523,44 @@ class SQLiteCloud {
         if (timeoutError) reject(timeoutError);
       }
       //try to connect
-      var client = new tls.connect(this.#port, this.#host, this.#tlsOptions, async () => {
-        if (client.authorized) {
-          if (this.#debug_sdk) logThis(this.#clientId, "connection authorized");
+      var client;
+      if (!this.#disableTLS) {
+        client = new tls.connect(this.#port, this.#host, this.#tlsOptions, async () => {
+          if (client.authorized) {
+            if (this.#debug_sdk) logThis(this.#clientId, "connection authorized");
+            if (this.#debug_sdk) logThis(this.#clientId, "sending init commands: " + this.#initCommands);
+            try {
+              this.#client = client;
+              const response = await this.sendCommands(this.#initCommands);
+              resolve(response);
+            } catch (error) {
+              logThis(this.#clientId, "initCommandsResponse error");
+              reject(error);
+            }
+          } else {
+            if (this.#debug_sdk) logThis(this.#clientId, "connection NOT authorized");
+            reject(
+              new Error("Connection NOT authorized", { cause: client.authorizationError })
+            );
+          }
+        })
+          .on('close', () => {
+            if (this.#debug_sdk) logThis(this.#clientId, "connection closed");
+          })
+          .on('end', () => {
+            if (this.#debug_sdk) logThis(this.#clientId, "end connection");
+          })
+          .once('error', (error) => {
+            if (this.#debug_sdk) logThis(this.#clientId, "received error");
+            if (this.#debug_sdk) console.log(error);
+            client.destroy();
+            reject(
+              new Error("Connection on error event", { cause: error })
+            );
+          });
+      } else {
+        client = new net.connect(this.#port, this.#host, this.#tlsOptions, async () => {
+          if (this.#debug_sdk) logThis(this.#clientId, "connection created");
           if (this.#debug_sdk) logThis(this.#clientId, "sending init commands: " + this.#initCommands);
           try {
             this.#client = client;
@@ -531,27 +570,22 @@ class SQLiteCloud {
             logThis(this.#clientId, "initCommandsResponse error");
             reject(error);
           }
-        } else {
-          if (this.#debug_sdk) logThis(this.#clientId, "connection NOT authorized");
-          reject(
-            new Error("Connection NOT authorized", { cause: client.authorizationError })
-          );
-        }
-      })
-        .on('close', () => {
-          if (this.#debug_sdk) logThis(this.#clientId, "connection closed");
         })
-        .on('end', () => {
-          if (this.#debug_sdk) logThis(this.#clientId, "end connection");
-        })
-        .once('error', (error) => {
-          if (this.#debug_sdk) logThis(this.#clientId, "received error");
-          if (this.#debug_sdk) console.log(error);
-          client.destroy();
-          reject(
-            new Error("Connection on error event", { cause: error })
-          );
-        });
+          .on('close', () => {
+            if (this.#debug_sdk) logThis(this.#clientId, "connection closed");
+          })
+          .on('end', () => {
+            if (this.#debug_sdk) logThis(this.#clientId, "end connection");
+          })
+          .once('error', (error) => {
+            if (this.#debug_sdk) logThis(this.#clientId, "received error");
+            if (this.#debug_sdk) console.log(error);
+            client.destroy();
+            reject(
+              new Error("Connection on error event", { cause: error })
+            );
+          });
+      }
     });
   }
   /*
@@ -671,6 +705,14 @@ class SQLiteCloud {
 
 "use strict";
 module.exports = __WEBPACK_EXTERNAL_MODULE__43__;
+
+/***/ }),
+
+/***/ 548:
+/***/ ((module) => {
+
+"use strict";
+module.exports = __WEBPACK_EXTERNAL_MODULE__548__;
 
 /***/ }),
 
