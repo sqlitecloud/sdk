@@ -4,7 +4,6 @@ node_modules
 **/**/node_modules
 
 # production
-
 public
 **/public
 **/**/public
