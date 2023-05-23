@@ -10,12 +10,12 @@ var filename = minimize
   : 'sqlitecloud-nodejs-sdk.js';
 
 
-const distFolder = Config.version.slice(0,3);
+const distFolder = Config.version.slice(0, 3);
 
 let buildOption = {
   mode: 'production',
   output: {
-    path: path.resolve(__dirname, '../dist/'+distFolder+'/'),
+    path: path.resolve(__dirname, '../dist/' + distFolder + '/'),
     filename: filename,
     clean: false,
     globalObject: 'this',
@@ -23,6 +23,9 @@ let buildOption = {
       name: 'SQLiteCloud',
       type: 'umd',
     },
+  },
+  externals: {
+    lz4: 'lz4',
   },
   optimization: {
     minimize: minimize,
