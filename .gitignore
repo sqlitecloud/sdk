@@ -34,6 +34,9 @@ C/test/test.xcodeproj/xcuserdata/marco.xcuserdatad/xcschemes/xcschememanagement.
 JS/node_modules
 JS/**/node_modules
 JS/**/**/node_modules
+NODEJS/node_modules
+NODEJS/**/node_modules
+NODEJS/**/**/node_modules
 
 # production
 JS/public
