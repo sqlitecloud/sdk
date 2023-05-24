@@ -37,6 +37,10 @@ JS/**/**/node_modules
 NODEJS/node_modules
 NODEJS/**/node_modules
 NODEJS/**/**/node_modules
+EDGE/node_modules
+EDGE/**/node_modules
+EDGE/**/**/node_modules
+
 
 # production
 JS/public
