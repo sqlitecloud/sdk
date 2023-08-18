@@ -2669,6 +2669,10 @@ const char *SQCloudUUID (SQCloudConnection *connection) {
     return (const char *)connection->uuid;
 }
 
+SQCloudConfig *SQCloudGetConfig (SQCloudConnection *connection) {
+    return connection->_config;
+}
+
 // MARK: - ERROR -
 
 bool SQCloudIsError (SQCloudConnection *connection) {
