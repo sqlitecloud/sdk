@@ -1957,6 +1957,7 @@ bool internal_upload_database (SQCloudConnection *connection, const char *dbname
     
     uint32_t blen = 0;
     int64_t nprogress = 0;
+    bool result = false;
     do {
         // execute callback to read buffer
         blen = SQCLOUD_DEFAULT_UPLOAD_SIZE;
@@ -1964,17 +1965,21 @@ bool internal_upload_database (SQCloudConnection *connection, const char *dbname
         if (rc != 0) {
             SQCloudResult *res = SQCloudExec(connection, "UPLOAD ABORT");
             SQCloudResultFree(res);
-            return false;
+            goto cleanup;
         }
         
         // send BLOB
-        if (internal_send_blob(connection, buffer, blen) == false) return false;
+        if (internal_send_blob(connection, buffer, blen) == false) goto cleanup;
         
         // update progress
         nprogress += blen;
     } while (blen > 0);
     
-    return true;
+    result = true;
+    
+cleanup:
+    mem_free(buffer);
+    return result;
 }
 
 // n is the total number of items in the array
@@ -2785,7 +2790,11 @@ void SQCloudResultFree (SQCloudResult *result) {
         if (result->tblname) mem_free(result->tblname);
         if (result->origname) mem_free(result->origname);
         
-        if (result->ischunk && !result->externalbuffer) {
+        if (result->ischunk) {
+            // in case of chunk, I assume that the buffers must be always freed
+            // even if externalbuffer is true, because the chunk are compressed.
+            // For compressed data, the buffer pointer is replaced with a new
+            // allocated buffer big enough to hold uncompressed data + raw header.
             for (uint32_t i = 0; i<result->bcount; ++i) {
                 if (result->buffers[i]) mem_free(result->buffers[i]);
             }
