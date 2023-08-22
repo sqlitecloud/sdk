@@ -150,6 +150,7 @@ struct SQCloudResult {
         };
         struct {
             char        **buffers;          // array of buffers used by rowset sent in chunk
+            bool        *bext;              // array of flags, if true the buffer must not be freed
             uint32_t    *blens;             // array of buffer len
             uint32_t    *nheads;            // array of header len
             uint32_t    bcount;             // number of buffers in the array
@@ -1020,6 +1021,9 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
         rowset->buffers = (char **)mem_zeroalloc((sizeof(char *) * DEFAULT_CHUCK_NBUFFERS));
         if (!rowset->buffers) goto abort_rowset;
         
+        rowset->bext = (bool *)mem_zeroalloc((sizeof(bool) * DEFAULT_CHUCK_NBUFFERS));
+        if (!rowset->bext) goto abort_rowset;
+        
         rowset->blens = (uint32_t *)mem_zeroalloc((sizeof(uint32_t) * DEFAULT_CHUCK_NBUFFERS));
         if (!rowset->blens) goto abort_rowset;
         
@@ -1028,6 +1032,7 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
         
         rowset->bnum = DEFAULT_CHUCK_NBUFFERS;
         rowset->buffers[0] = buffer;
+        rowset->bext[0] = false;
         rowset->blens[0] = blen;
         rowset->nheads[0] = bstart;
         rowset->bcount = 1;
@@ -1063,6 +1068,10 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
         if (!temp) goto abort_rowset;
         rowset->buffers = temp;
         
+        bool *temp1 = (bool*)mem_realloc(rowset->bext, (sizeof(bool) * n));
+        if (!temp1) goto abort_rowset;
+        rowset->bext = temp1;
+        
         uint32_t *temp2 = (uint32_t*)mem_realloc(rowset->blens, (sizeof(uint32_t) * n));
         if (!temp2) goto abort_rowset;
         rowset->blens = temp2;
@@ -1086,6 +1095,7 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
     // adjust internal fields
     if (!first_chunk) {
         rowset->buffers[rowset->bcount] = buffer;
+        rowset->bext[rowset->bcount] = rowset->externalbuffer;
         rowset->blens[rowset->bcount] = blen;
         rowset->nheads[rowset->bcount] = bstart;
         rowset->nrows += nrows;
@@ -1254,7 +1264,10 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             if (connection->_chunk) connection->_chunk->externalbuffer = externalbuffer;
             if (buffer[0] == CMD_ROWSET) res = internal_parse_rowset(connection, buffer, blen, bstart, nrows, ncols, flags);
             else res = internal_parse_rowset_chunck(connection, buffer, blen, bstart, idx, nrows, ncols, flags);
-            if (res) res->externalbuffer = externalbuffer;
+            if (res) {
+                res->externalbuffer = externalbuffer;
+                if (res->ischunk && res->bcount == 1) res->bext[0] = externalbuffer;
+            }
             
             // check free buffer
             if (!res && !isstatic && !externalbuffer) mem_free(buffer);
@@ -2791,14 +2804,13 @@ void SQCloudResultFree (SQCloudResult *result) {
         if (result->origname) mem_free(result->origname);
         
         if (result->ischunk) {
-            // in case of chunk, I assume that the buffers must be always freed
-            // even if externalbuffer is true, because the chunk are compressed.
-            // For compressed data, the buffer pointer is replaced with a new
-            // allocated buffer big enough to hold uncompressed data + raw header.
+            // each buffer has its own externalbuffer flag, it depends on whether the original
+            // buffer was external or not and whether it was reallocated (in case of compression) or not
             for (uint32_t i = 0; i<result->bcount; ++i) {
-                if (result->buffers[i]) mem_free(result->buffers[i]);
+                if (result->buffers[i] && !result->bext[i]) mem_free(result->buffers[i]);
             }
             mem_free(result->buffers);
+            mem_free(result->bext);
             mem_free(result->blens);
             mem_free(result->nheads);
         }
