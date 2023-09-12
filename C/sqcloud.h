@@ -78,7 +78,7 @@ typedef struct SQCloudConfigStruct {
     int             max_data;               // value to tell the server to not send columns with more than max_data bytes
     int             max_rows;               // value to control rowset chunks based on the number of rows
     int             max_rowset;             // value to control the maximum allowed size for a rowset
-    #ifndef SQLITECLOUD_DISABLE_TSL
+    #ifndef SQLITECLOUD_DISABLE_TLS
     const char      *tls_root_certificate;
     const char      *tls_certificate;
     const char      *tls_certificate_key;

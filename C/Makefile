@@ -27,6 +27,8 @@ else
 	endif
 endif
 
+all: libsqcloud.a
+
 lz4.o:	lz4.c lz4.h
 	$(CC) $(OPTIONS) $(INCLUDES) lz4.c -c -o lz4.o
 	
@@ -41,8 +43,6 @@ libsqcloud.so: lz4.o sqcloud.o
 	
 libsqcloud.dylib: lz4.o sqcloud.o
 	$(CC) -dynamiclib -install_name -flat_namespace *.o -o libsqcloud.dylib
-
-all:	lz4.o
 
 cli: libsqcloud.a cli/linenoise.c cli/linenoise.h cli/main.c
 	$(CC) $(OPTIONS) $(INCLUDES) cli/*.c libsqcloud.a -o sqlitecloud-cli ${LIBFLAGS} ${LDFLAGS}

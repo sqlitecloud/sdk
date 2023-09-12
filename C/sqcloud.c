@@ -40,7 +40,7 @@
 #include <inttypes.h>
 #endif
 
-#ifndef SQLITECLOUD_DISABLE_TSL
+#ifndef SQLITECLOUD_DISABLE_TLS
 
 #ifdef SQLITECLOUD_USE_TLS_HEADER
 #include "tls.h"
@@ -208,7 +208,7 @@ struct SQCloudConnection {
     int             port;
     pthread_t       tid;
     
-    #ifndef SQLITECLOUD_DISABLE_TSL
+    #ifndef SQLITECLOUD_DISABLE_TLS
     struct tls      *tls_context;
     struct tls      *tls_pubsub_context;
     #endif
@@ -341,7 +341,7 @@ static void *pubsub_thread (void *arg) {
     SQCloudConnection *connection = (SQCloudConnection *)arg;
     
     int fd = connection->pubsubfd;
-    #ifndef SQLITECLOUD_DISABLE_TSL
+    #ifndef SQLITECLOUD_DISABLE_TLS
     struct tls *tls = connection->tls_pubsub_context;
     #endif
     
@@ -362,7 +362,7 @@ static void *pubsub_thread (void *arg) {
         if (rc <= 0) continue;
         
         //  read payload string
-        #ifndef SQLITECLOUD_DISABLE_TSL
+        #ifndef SQLITECLOUD_DISABLE_TLS
         ssize_t nread = (tls) ? tls_read(tls, buffer, blen) : readsocket(fd, buffer, blen);
         if ((tls) && (nread == TLS_WANT_POLLIN || nread == TLS_WANT_POLLOUT)) continue;
         #else
@@ -371,7 +371,7 @@ static void *pubsub_thread (void *arg) {
         
         if (nread < 0) {
             const char *msg = "";
-            #ifndef SQLITECLOUD_DISABLE_TSL
+            #ifndef SQLITECLOUD_DISABLE_TLS
             if (tls) msg = tls_error(tls);
             #endif
             
@@ -382,7 +382,7 @@ static void *pubsub_thread (void *arg) {
         
         if (nread == 0) {
             const char *msg = "";
-            #ifndef SQLITECLOUD_DISABLE_TSL
+            #ifndef SQLITECLOUD_DISABLE_TLS
             if (tls) msg = tls_error(tls);
             #endif
             
@@ -500,7 +500,7 @@ static void internal_clear_error (SQCloudConnection *connection) {
 }
 
 static bool internal_setup_tls (SQCloudConnection *connection, SQCloudConfig *config, bool mainfd) {
-    #ifndef SQLITECLOUD_DISABLE_TSL
+    #ifndef SQLITECLOUD_DISABLE_TLS
     if (config && config->insecure) return true;
     
     int rc = 0;
@@ -1311,13 +1311,13 @@ static bool internal_socket_forward_read (SQCloudConnection *connection, bool (*
     char *buffer = sbuffer;
     char *original = buffer;
     int fd = connection->fd;
-    #ifndef SQLITECLOUD_DISABLE_TSL
+    #ifndef SQLITECLOUD_DISABLE_TLS
     struct tls *tls = connection->tls_context;
     #endif
     
     while (1) {
         // perform read operation
-        #ifndef SQLITECLOUD_DISABLE_TSL
+        #ifndef SQLITECLOUD_DISABLE_TLS
         ssize_t nread = (tls) ? tls_read(tls, buffer, blen) : readsocket(fd, buffer, blen);
         if ((tls) && (nread == TLS_WANT_POLLIN || nread == TLS_WANT_POLLOUT)) continue;
         #else
@@ -1327,7 +1327,7 @@ static bool internal_socket_forward_read (SQCloudConnection *connection, bool (*
         // sanity check read
         if (nread < 0) {
             const char *msg = "";
-            #ifndef SQLITECLOUD_DISABLE_TSL
+            #ifndef SQLITECLOUD_DISABLE_TLS
             if (tls) msg = tls_error(tls);
             #endif
             
@@ -1337,7 +1337,7 @@ static bool internal_socket_forward_read (SQCloudConnection *connection, bool (*
         
         if (nread == 0) {
             const char *msg = "";
-            #ifndef SQLITECLOUD_DISABLE_TSL
+            #ifndef SQLITECLOUD_DISABLE_TLS
             if (tls) msg = tls_error(tls);
             #endif
             
@@ -1382,13 +1382,13 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool 
     uint32_t clen = 0;
 
     int fd = (mainfd) ? connection->fd : connection->pubsubfd;
-    #ifndef SQLITECLOUD_DISABLE_TSL
+    #ifndef SQLITECLOUD_DISABLE_TLS
     struct tls *tls = (mainfd) ? connection->tls_context : connection->tls_pubsub_context;
     #endif
     
     char *original = buffer;
     while (1) {
-        #ifndef SQLITECLOUD_DISABLE_TSL
+        #ifndef SQLITECLOUD_DISABLE_TLS
         ssize_t nread = (tls) ? tls_read(tls, buffer, blen) : readsocket(fd, buffer, blen);
         if ((tls) && (nread == TLS_WANT_POLLIN || nread == TLS_WANT_POLLOUT)) continue;
         #else
@@ -1397,7 +1397,7 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool 
         
         if (nread < 0) {
             const char *msg = "";
-            #ifndef SQLITECLOUD_DISABLE_TSL
+            #ifndef SQLITECLOUD_DISABLE_TLS
             if (tls) msg = tls_error(tls);
             #endif
             
@@ -1407,7 +1407,7 @@ static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool 
         
         if (nread == 0) {
             const char *msg = "";
-            #ifndef SQLITECLOUD_DISABLE_TSL
+            #ifndef SQLITECLOUD_DISABLE_TLS
             if (tls) msg = tls_error(tls);
             #endif
             
@@ -1465,14 +1465,14 @@ abort_read:
 static bool internal_socket_raw_write (SQCloudConnection *connection, const char *buffer) {
     // this function is used only to debug possible security issues
     int fd = connection->fd;
-    #ifndef SQLITECLOUD_DISABLE_TSL
+    #ifndef SQLITECLOUD_DISABLE_TLS
     struct tls *tls = connection->tls_context;
     #endif
     
     size_t len = strlen(buffer);
     size_t written = 0;
     while (len > 0) {
-        #ifndef SQLITECLOUD_DISABLE_TSL
+        #ifndef SQLITECLOUD_DISABLE_TLS
         ssize_t nwrote = (tls) ? tls_write(tls, buffer, len) : writesocket(fd, buffer, len);
         if ((tls) && (nwrote == TLS_WANT_POLLIN || nwrote == TLS_WANT_POLLOUT)) continue;
         #else
@@ -1481,7 +1481,7 @@ static bool internal_socket_raw_write (SQCloudConnection *connection, const char
         
         if (nwrote < 0) {
             const char *msg = "";
-            #ifndef SQLITECLOUD_DISABLE_TSL
+            #ifndef SQLITECLOUD_DISABLE_TLS
             if (tls) msg = tls_error(tls);
             #endif
             return internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while writing data: %s (%s).", strerror(errno), msg);
@@ -1499,7 +1499,7 @@ static bool internal_socket_raw_write (SQCloudConnection *connection, const char
 
 static bool internal_socket_write (SQCloudConnection *connection, const char *buffer, size_t len, bool mainfd, bool compute_header) {
     int fd = (mainfd) ? connection->fd : connection->pubsubfd;
-    #ifndef SQLITECLOUD_DISABLE_TSL
+    #ifndef SQLITECLOUD_DISABLE_TLS
     struct tls *tls = (mainfd) ? connection->tls_context : connection->tls_pubsub_context;
     #endif
     
@@ -1512,7 +1512,7 @@ static bool internal_socket_write (SQCloudConnection *connection, const char *bu
         int hlen = snprintf(header, sizeof(header), "%c%zu ", (connection->isblob) ? CMD_BLOB : CMD_STRING, len);
         int len1 = hlen;
         while (len1) {
-            #ifndef SQLITECLOUD_DISABLE_TSL
+            #ifndef SQLITECLOUD_DISABLE_TLS
             ssize_t nwrote = (tls) ? tls_write(tls, p, len1) : writesocket(fd, p, len1);
             if ((tls) && (nwrote == TLS_WANT_POLLIN || nwrote == TLS_WANT_POLLOUT)) continue;
             #else
@@ -1521,7 +1521,7 @@ static bool internal_socket_write (SQCloudConnection *connection, const char *bu
             
             if ((nwrote < 0) || (nwrote == 0 && written != hlen)) {
                 const char *msg = "";
-                #ifndef SQLITECLOUD_DISABLE_TSL
+                #ifndef SQLITECLOUD_DISABLE_TLS
                 if (tls) msg = tls_error(tls);
                 #endif
                 return internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while writing header data: %s (%s).", strerror(errno), msg);
@@ -1536,7 +1536,7 @@ static bool internal_socket_write (SQCloudConnection *connection, const char *bu
     // write buffer
     written = 0;
     while (len > 0) {
-        #ifndef SQLITECLOUD_DISABLE_TSL
+        #ifndef SQLITECLOUD_DISABLE_TLS
         ssize_t nwrote = (tls) ? tls_write(tls, buffer, len) : writesocket(fd, buffer, len);
         if ((tls) && (nwrote == TLS_WANT_POLLIN || nwrote == TLS_WANT_POLLOUT)) continue;
         #else
@@ -1545,7 +1545,7 @@ static bool internal_socket_write (SQCloudConnection *connection, const char *bu
         
         if (nwrote < 0) {
             const char *msg = "";
-            #ifndef SQLITECLOUD_DISABLE_TSL
+            #ifndef SQLITECLOUD_DISABLE_TLS
             if (tls) msg = tls_error(tls);
             #endif
             return internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while writing data: %s (%s).", strerror(errno), msg);
@@ -1797,7 +1797,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
         connection->fd = sockfd;
         connection->port = port;
         connection->hostname = mem_string_dup(hostname);
-        #ifndef SQLITECLOUD_DISABLE_TSL
+        #ifndef SQLITECLOUD_DISABLE_TLS
         if (config && !config->insecure) {
             rc = tls_connect_socket(connection->tls_context, sockfd, hostname);
             if (rc < 0) printf("Error on tls_connect_socket: %s\n", tls_error(connection->tls_context));
@@ -1805,7 +1805,7 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
         #endif
     } else {
         connection->pubsubfd = sockfd;
-        #ifndef SQLITECLOUD_DISABLE_TSL
+        #ifndef SQLITECLOUD_DISABLE_TLS
         if (config && !config->insecure) {
             rc = tls_connect_socket(connection->tls_pubsub_context, sockfd, hostname);
             if (rc < 0) printf("Error on tls_connect_socket\n");
@@ -2039,7 +2039,7 @@ void internal_free_config (SQCloudConfig *config) {
     if (config->username) mem_free((void *)config->username);
     if (config->password) mem_free((void *)config->password);
     if (config->database) mem_free((void *)config->database);
-    #ifndef SQLITECLOUD_DISABLE_TSL
+    #ifndef SQLITECLOUD_DISABLE_TLS
     if (config->tls_root_certificate) mem_free((void *)config->tls_root_certificate);
     if (config->tls_certificate) mem_free((void *)config->tls_certificate);
     if (config->tls_certificate_key) mem_free((void *)config->tls_certificate_key);
@@ -2470,7 +2470,7 @@ SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *pconf
             int db_create = (int)strtol(value, NULL, 0);
             if (db_create) config->db_create = (db_create > 0) ? true : false;
         }
-        #ifndef SQLITECLOUD_DISABLE_TSL
+        #ifndef SQLITECLOUD_DISABLE_TLS
         else if (strcasecmp(key, "insecure") == 0) {
             int insecure = (int)strtol(value, NULL, 0);
             config->insecure = (insecure > 0) ? true : false;
@@ -2631,7 +2631,7 @@ void SQCloudDisconnect (SQCloudConnection *connection) {
     if (!connection) return;
     
     // free TLS
-    #ifndef SQLITECLOUD_DISABLE_TSL
+    #ifndef SQLITECLOUD_DISABLE_TLS
     if (connection->tls_context) {
         tls_close(connection->tls_context);
         tls_free(connection->tls_context);
