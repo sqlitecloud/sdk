@@ -29,6 +29,10 @@ GO/src/sqliteweb/dashboard/.nova/Configuration.json
 *.plist
 C/test/test.xcodeproj/xcuserdata/marco.xcuserdatad/xcschemes/xcschememanagement.plist
 
+C/apple/libressl-*
+C/apple/build/
+C/apple/fat/
+C/apple/output/
 
 # dependencies
 JS/node_modules
