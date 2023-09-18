@@ -423,6 +423,7 @@ static void *pubsub_thread (void *arg) {
         
         SQCloudResult *result = internal_parse_buffer(connection, original, tread, (clen) ? cstart : 0, false, false);
         if (result->tag == RESULT_STRING) result->tag = RESULT_JSON;
+        if (!connection->callback) break;
         
         connection->callback(connection, result, connection->data);
         

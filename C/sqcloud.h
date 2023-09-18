@@ -47,6 +47,8 @@ extern "C" {
 #define CMD_COMMAND                 '^'
 #define CMD_RECONNECT               '@'
 #define CMD_ARRAY                   '='
+#define CMD_ASYNC_STRING            '>'
+#define CMD_ASYNC_ARRAY             '<'
 
 // MARK: -
 
