@@ -87,6 +87,7 @@ void tls_free(struct tls *_ctx);
 #define mem_alloc(_s)                       malloc(_s)
 #define mem_free(_s)                        free(_s)
 #define mem_string_dup(_s)                  strdup(_s)
+#define mem_string_ndup(_s,_n)              strndup(_s,_n)
 #endif
 #ifndef MIN
 #define MIN(a,b)                            (((a)<(b))?(a):(b))
@@ -472,27 +473,6 @@ static bool internal_set_error (SQCloudConnection *connection, int errcode, cons
     return false;
 }
 
-static void internal_parse_uuid (SQCloudConnection *connection, const char *buffer, size_t blen) {
-    // sanity check
-    if (!buffer || blen == 0) return;
-    
-    // expected buffer is PAUTH uuid secret
-    // PUATH -> 5
-    // uuid -> 36
-    // secret -> 36
-    // spaces -> 2
-    if (blen != (5 + 36 + 36 + 2)) return;
-    
-    if (strncmp(buffer, "PAUTH ", 6) != 0) return;
-    
-    // allocate 36 (UUID) + 1 (null-terminated) zero-bytes
-    char *uuid = mem_zeroalloc(37);
-    if (!uuid) return;
-    
-    memcpy(uuid, &buffer[6], 36);
-    connection->uuid = uuid;
-}
-
 static void internal_clear_error (SQCloudConnection *connection) {
     connection->errcode = 0;
     connection->extcode = 0;
@@ -728,7 +708,6 @@ static SQCloudResult *internal_setup_pubsub (SQCloudConnection *connection, cons
     if (internal_connect(connection, connection->hostname, connection->port, connection->_config, false)) {
         SQCloudResult *result = internal_run_command(connection, buffer, blen, false);
         if (!SQCloudResultIsOK(result)) return result;
-        internal_parse_uuid(connection, buffer, blen);
         pthread_create(&connection->tid, NULL, pubsub_thread, (void *)connection);
     } else {
         return NULL;
@@ -2685,6 +2664,12 @@ SQCloudResult *SQCloudSetPubSubOnly (SQCloudConnection *connection) {
 }
 
 const char *SQCloudUUID (SQCloudConnection *connection) {
+    if (!connection->uuid) {
+        SQCloudResult *result = SQCloudExec(connection, "GET CLIENT KEY UUID");
+        if (SQCloudResultType(result) == RESULT_STRING) connection->uuid = mem_string_ndup(SQCloudResultBuffer(result), SQCloudResultLen(result));
+        SQCloudResultFree(result);
+    }
+    
     return (const char *)connection->uuid;
 }
 
