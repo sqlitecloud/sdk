@@ -3559,8 +3559,10 @@ bool SQCloudBlobReOpen (SQCloudBlob *blob, int64_t rowid) {
     if (SQCloudResultType(result) == RESULT_ERROR) {
         blob->rc = SQCloudErrorCode(blob->connection);
     }
-    
     SQCloudResultFree(result);
+    
+    // make sure to reset bytes counter
+    blob->bytes = -1;
     return (blob->rc == 0);
 }
 
