@@ -382,12 +382,7 @@ static void *pubsub_thread (void *arg) {
         }
         
         if (nread == 0) {
-            const char *msg = "";
-            #ifndef SQLITECLOUD_DISABLE_TLS
-            if (tls) msg = tls_error(tls);
-            #endif
-            
-            internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while reading data: %s (%s).", strerror(errno), msg);
+            internal_set_error(connection, INTERNAL_ERRCODE_SOCKCLOSED, "PubSub connection closed.");
             connection->callback(connection, NULL, connection->data);
             break;
         }
