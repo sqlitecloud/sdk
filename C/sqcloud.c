@@ -383,7 +383,7 @@ static void *pubsub_thread (void *arg) {
         
         if (nread == 0) {
             internal_set_error(connection, INTERNAL_ERRCODE_SOCKCLOSED, "PubSub connection closed.");
-            connection->callback(connection, NULL, connection->data);
+            if (connection->callback) connection->callback(connection, NULL, connection->data);
             break;
         }
         
