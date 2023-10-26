@@ -377,7 +377,7 @@ static void *pubsub_thread (void *arg) {
             #endif
             
             internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while reading data: %s (%s).", strerror(errno), msg);
-            connection->callback(connection, NULL, connection->data);
+            if (connection->callback) connection->callback(connection, NULL, connection->data);
             break;
         }
         
@@ -405,7 +405,7 @@ static void *pubsub_thread (void *arg) {
                 char *clone = mem_alloc(clen + cstart + 1);
                 if (!clone) {
                     internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory: %d.", clen + cstart + 1);
-                    connection->callback(connection, NULL, connection->data);
+                    if (connection->callback) connection->callback(connection, NULL, connection->data);
                     break;
                 }
                 memcpy(clone, original, tread);
