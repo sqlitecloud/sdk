@@ -7,3 +7,6 @@ node_modules
 public
 **/public
 **/**/public
+
+
+/example

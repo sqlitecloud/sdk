@@ -57,3 +57,6 @@ JS/.vercel
 
 # JS local example
 JS/example/local-sqlite-cloud-chat
+
+# NODEJS local example
+NODEJS/example
