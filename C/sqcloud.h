@@ -15,8 +15,8 @@
 extern "C" {
 #endif
 
-#define SQCLOUD_SDK_VERSION         "0.9.5"
-#define SQCLOUD_SDK_VERSION_NUM     0x000905
+#define SQCLOUD_SDK_VERSION         "0.9.6"
+#define SQCLOUD_SDK_VERSION_NUM     0x000906
 #define SQCLOUD_DEFAULT_PORT        8860
 #define SQCLOUD_DEFAULT_TIMEOUT     12
 #define SQCLOUD_DEFAULT_UPLOAD_SIZE 512*1024
@@ -47,6 +47,8 @@ extern "C" {
 #define CMD_COMMAND                 '^'
 #define CMD_RECONNECT               '@'
 #define CMD_ARRAY                   '='
+#define CMD_ASYNC_STRING            '>'
+#define CMD_ASYNC_ARRAY             '<'
 
 // MARK: -
 
@@ -78,7 +80,7 @@ typedef struct SQCloudConfigStruct {
     int             max_data;               // value to tell the server to not send columns with more than max_data bytes
     int             max_rows;               // value to control rowset chunks based on the number of rows
     int             max_rowset;             // value to control the maximum allowed size for a rowset
-    #ifndef SQLITECLOUD_DISABLE_TSL
+    #ifndef SQLITECLOUD_DISABLE_TLS
     const char      *tls_root_certificate;
     const char      *tls_certificate;
     const char      *tls_certificate_key;
@@ -151,7 +153,8 @@ typedef enum {
     INTERNAL_ERRCODE_MEMORY = 100004,
     INTERNAL_ERRCODE_NETWORK = 100005,
     INTERNAL_ERRCODE_FORMAT = 100006,
-    INTERNAL_ERRCODE_INDEX = 100007
+    INTERNAL_ERRCODE_INDEX = 100007,
+    INTERNAL_ERRCODE_SOCKCLOSED = 100008,
 } SQCLOUD_INTERNAL_ERRCODE;
 
 // from SQLiteCloud
@@ -169,6 +172,7 @@ typedef enum {
 SQCloudConnection *SQCloudConnect (const char *hostname, int port, SQCloudConfig *config);
 SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *config);
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command);
+SQCloudConfig *SQCloudGetConfig (SQCloudConnection *connection);
 const char *SQCloudUUID (SQCloudConnection *connection);
 void SQCloudDisconnect (SQCloudConnection *connection);
 

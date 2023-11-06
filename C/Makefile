@@ -1,7 +1,7 @@
 AR        := ar
 CC        := gcc
 INCLUDES  := -I. -Icli 
-OPTIONS   := -Wno-macro-redefined -Wno-shift-negative-value -Os
+OPTIONS   := -Wno-shift-negative-value -Os -fPIC
 
 
 ifeq ($(OS),Windows_NT)
@@ -14,7 +14,8 @@ else
 		ifeq ($(TLS_STATIC), 1)
 			LIBFLAGS = -L./SSL/macos_fat
 		else
-			LIBFLAGS = -L/opt/homebrew/opt/libressl/lib
+			LIBRESSLDIR ?= /opt/homebrew/opt/libressl/lib/
+			LIBFLAGS = -L$(LIBRESSLDIR)
 		endif
 	else
 		# Linux
@@ -22,10 +23,14 @@ else
 		ifeq ($(TLS_STATIC), 1)
 			LIBFLAGS = -L./SSL/linux_64bit
 		else
-			LIBFLAGS = -L/usr/local/libressl/lib/ -Wl,-rpath=/usr/local/libressl/lib/
+			LIBRESSLDIR ?= /usr/local/lib/
+			# LIBRESSLDIR ?= /usr/local/libressl/lib/
+			LIBFLAGS = -L$(LIBRESSLDIR) -Wl,-rpath=$(LIBRESSLDIR)
 		endif
 	endif
 endif
+
+all: libsqcloud.a
 
 lz4.o:	lz4.c lz4.h
 	$(CC) $(OPTIONS) $(INCLUDES) lz4.c -c -o lz4.o
@@ -37,18 +42,18 @@ libsqcloud.a: lz4.o sqcloud.o
 	$(AR) rcs libsqcloud.a *.o
 
 libsqcloud.so: lz4.o sqcloud.o
-	$(CC) -fPIC -shared *.o -o libsqcloud.so
+	$(CC) -fPIC -shared *.o -o libsqcloud.so ${LIBFLAGS} ${LDFLAGS}
 	
 libsqcloud.dylib: lz4.o sqcloud.o
 	$(CC) -dynamiclib -install_name -flat_namespace *.o -o libsqcloud.dylib
 
-all:	lz4.o
+cli: sqlitecloud-cli
 
-cli: libsqcloud.a cli/linenoise.c cli/linenoise.h cli/main.c
+sqlitecloud-cli: libsqcloud.a cli/linenoise.c cli/linenoise.h cli/main.c
 	$(CC) $(OPTIONS) $(INCLUDES) cli/*.c libsqcloud.a -o sqlitecloud-cli ${LIBFLAGS} ${LDFLAGS}
 
 clean:
-	rm -rf *.o *.a *.so *.dylib
+	rm -rf *.o *.a *.so *.dylib sqlitecloud-cli
 	
 test: cli
 	./sqlitecloud-cli -h localhost

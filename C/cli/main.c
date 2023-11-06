@@ -510,7 +510,7 @@ int main(int argc, char * argv[]) {
     config.timeout = timeout;
     
     // setup TLS config parameter
-    #ifndef SQLITECLOUD_DISABLE_TSL
+    #ifndef SQLITECLOUD_DISABLE_TLS
     if (insecure) config.insecure = true;
     if (root_certificate_path) config.tls_root_certificate = root_certificate_path;
     if (client_certificate_path) config.tls_certificate = client_certificate_path;
