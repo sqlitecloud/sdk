@@ -1,5 +1,5 @@
 /*!
- * SQLite Cloud Node.js SDK v1.0.2
+ * SQLite Cloud Node.js SDK v1.0.3
  * https://sqlitecloud.io/
  *
  * Copyright 2023, SQLite Cloud
@@ -133,7 +133,9 @@ const parseData = (buffer) => {
       buffer = uncompressionResult.buffer;
       dataType = uncompressionResult.dataType;
     }
+    spaceIndex = buffer.indexOf(" ");
   }
+
   switch (dataType) {
     case CMD_INT:
       parsedData = parseInt(buffer.subarray(1, buffer.length - 1).toString('utf8'));
