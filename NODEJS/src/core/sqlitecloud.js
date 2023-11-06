@@ -662,4 +662,18 @@ export default class SQLiteCloud {
         });
     })
   }
+
+  /*
+  method called to close socket connection
+  */
+  disconnect() {
+    return new Promise((resolve, reject) => {
+      this.#client.end(() => {
+        if (this.#debug_sdk) logThis(this.#clientId, "closing connection")
+        resolve(
+          `Closed connection for clientId ${this.#clientId}`
+        );
+      });
+    })
+  }
 }

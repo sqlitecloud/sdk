@@ -1,5 +1,5 @@
 /*!
- * SQLite Cloud Node.js SDK v1.0.3
+ * SQLite Cloud Node.js SDK v1.0.4
  * https://sqlitecloud.io/
  *
  * Copyright 2023, SQLite Cloud
@@ -696,6 +696,20 @@ class SQLiteCloud {
             new Error("Connection on error event", { cause: error })
           );
         });
+    })
+  }
+
+  /*
+  method called to close socket connection
+  */
+  disconnect() {
+    return new Promise((resolve, reject) => {
+      this.#client.end(() => {
+        if (this.#debug_sdk) logThis(this.#clientId, "closing connection")
+        resolve(
+          `Closed connection for clientId ${this.#clientId}`
+        );
+      });
     })
   }
 }
