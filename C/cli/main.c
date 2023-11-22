@@ -126,6 +126,7 @@ static void do_print_usage (void) {
     printf("  -q                    activate quite mode (disable output print)\n");
     printf("  -x                    activate special sqlite mode\n");
     printf("  -z                    request zero-terminated strings in all replies\n");
+    printf("  -w                    in case of -f file to execute, skip the line by line processing and send the whole file\n");
 }
 
 bool do_print (SQCloudConnection *conn, SQCloudResult *res) {
@@ -191,7 +192,7 @@ bool do_command_without_ok_reply (SQCloudConnection *conn, char *command) {
 
 bool do_internal_command (SQCloudConnection *conn, char *command);
 
-bool do_process_file (SQCloudConnection *conn, const char *filename) {
+bool do_process_file (SQCloudConnection *conn, const char *filename, bool linebyline) {
     // should continue flag set to false by default
     bool should_continue = false;
     
@@ -201,14 +202,34 @@ bool do_process_file (SQCloudConnection *conn, const char *filename) {
         return false;
     }
     
-    char line[512];
-    while (fgets(line, sizeof(line), file)) {
-        line[strcspn(line, "\n")] = 0;
-        if (strcasecmp(line, ".PROMPT")==0) {should_continue = true; break;}
-        printf(">> %s\n", line);
-        (line[0] == '.') ? do_internal_command(conn, line) : do_command(conn, line);
+    if (linebyline) {
+        char line[512];
+        while (fgets(line, sizeof(line), file)) {
+            line[strcspn(line, "\n")] = 0;
+            if (strcasecmp(line, ".PROMPT")==0) {should_continue = true; break;}
+            printf(">> %s\n", line);
+            (line[0] == '.') ? do_internal_command(conn, line) : do_command(conn, line);
+        }
+    } else {
+        // get file size
+        fseek(file, 0, SEEK_END);
+        long size = ftell(file);
+        fseek(file, 0, SEEK_SET);
+        
+        char *buffer = malloc(size + 1);
+        if (!buffer) {printf("Unable to allocate %ld buffer size.\n", size); goto cleanup;}
+        
+        size_t nread = fread(buffer, 1, size, file);
+        if (nread != size) {printf("An error occurred while reading file %s (%ld - %zu).\n", filename, size, nread); free(buffer); goto cleanup;}
+        buffer[size] = 0;
+        
+        printf(">> Executing file: %s\n\n%s\n\n", filename, buffer);
+        
+        do_command(conn, buffer);
+        free(buffer);
     }
     
+cleanup:
     fclose(file);
     return should_continue;
 }
@@ -469,9 +490,10 @@ int main(int argc, char * argv[]) {
     bool insecure = false;
     bool sqlite = false;
     bool zerotext = false;
+    bool linebyline = true;
     
     int c;
-    while ((c = getopt (argc, argv, "h:p:f:vciqxzr:s:t:d:y:u:n:m:")) != -1) {
+    while ((c = getopt (argc, argv, "h:p:f:vciqxwzr:s:t:d:y:u:n:m:")) != -1) {
         switch (c) {
             case 'v': do_print_usage(); return 0;
             case 'h': hostname = optarg; break;
@@ -482,6 +504,7 @@ int main(int argc, char * argv[]) {
             case 'q': quiet = true; break;
             case 'x': sqlite = true; break;
             case 'z': zerotext = true; break;
+            case 'w': linebyline = false; break;
             case 'd': database = optarg; break;
             case 'r': root_certificate_path = optarg; break;
             case 's': client_certificate_path = optarg; break;
@@ -537,7 +560,7 @@ int main(int argc, char * argv[]) {
     linenoiseHistoryLoad(CLI_HISTORY_FILENAME);
     
     if (filename) {
-        bool should_continue = do_process_file(conn, filename);
+        bool should_continue = do_process_file(conn, filename, linebyline);
         if (should_continue == false) return 0;
     }
     
