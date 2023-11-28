@@ -1478,9 +1478,23 @@ static bool internal_socket_write (SQCloudConnection *connection, const char *bu
     struct tls *tls = (mainfd) ? connection->tls_context : connection->tls_pubsub_context;
     #endif
     
-    size_t written = 0;
+    
+    // optimization tip
+    // instead of writing twice to the socket (one for the header and one for the data)
+    // try to pack everything inside the same buffer, which is generally faster
+    // -12 is to reserve enough space for the header
+    char blocal[4096];
+    if (compute_header && !connection->isblob && (len < sizeof(blocal)-12)) {
+        size_t len_local = snprintf(blocal, sizeof(blocal), "+%zu %s", len, buffer);
+        if (len_local < sizeof(blocal)) {
+            len = len_local;
+            buffer = blocal;
+            compute_header = false;
+        }
+    }
     
     // write header
+    size_t written = 0;
     if (compute_header) {
         char header[32];
         char *p = header;
