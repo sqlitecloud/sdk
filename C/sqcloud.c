@@ -2471,6 +2471,10 @@ SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *pconf
             int insecure = (int)strtol(value, NULL, 0);
             config->insecure = (insecure > 0) ? true : false;
         }
+        else if (strcasecmp(key, "no_verify_certificate") == 0) {
+            int no_verify_certificate = (int)strtol(value, NULL, 0);
+            config->no_verify_certificate = (no_verify_certificate > 0) ? true : false;
+        }
         else if (strcasecmp(key, "root_certificate") == 0) {
             config->tls_root_certificate = mem_string_dup(value);
         }
