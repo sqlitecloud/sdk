@@ -123,6 +123,7 @@ static void do_print_usage (void) {
     printf("  -m PASSWORD           authentication password\n");
     printf("  -c                    activate compression\n");
     printf("  -i                    activate insecure mode (non TLS connection)\n");
+    printf("  -j                    disable certificate verification\n");
     printf("  -q                    activate quite mode (disable output print)\n");
     printf("  -x                    activate special sqlite mode\n");
     printf("  -z                    request zero-terminated strings in all replies\n");
@@ -488,12 +489,13 @@ int main(int argc, char * argv[]) {
     
     bool compression = false;
     bool insecure = false;
+    bool noverifycert = false;
     bool sqlite = false;
     bool zerotext = false;
     bool linebyline = true;
     
     int c;
-    while ((c = getopt (argc, argv, "h:p:f:vciqxwzr:s:t:d:y:u:n:m:")) != -1) {
+    while ((c = getopt (argc, argv, "h:p:f:vcijqxwzr:s:t:d:y:u:n:m:")) != -1) {
         switch (c) {
             case 'v': do_print_usage(); return 0;
             case 'h': hostname = optarg; break;
@@ -501,6 +503,7 @@ int main(int argc, char * argv[]) {
             case 'f': filename = optarg; break;
             case 'c': compression = true; break;
             case 'i': insecure = true; break;
+            case 'j': noverifycert = true; break;
             case 'q': quiet = true; break;
             case 'x': sqlite = true; break;
             case 'z': zerotext = true; break;
@@ -535,6 +538,7 @@ int main(int argc, char * argv[]) {
     // setup TLS config parameter
     #ifndef SQLITECLOUD_DISABLE_TLS
     if (insecure) config.insecure = true;
+    if (noverifycert) config.no_verify_certificate = true;
     if (root_certificate_path) config.tls_root_certificate = root_certificate_path;
     if (client_certificate_path) config.tls_certificate = client_certificate_path;
     if (client_certificate_key_path) config.tls_certificate_key = client_certificate_key_path;

@@ -56,6 +56,8 @@ int tls_init(void);
 int tls_configure(struct tls *_ctx, struct tls_config *_config);
 int tls_connect_socket(struct tls *_ctx, int _s, const char *_servername);
 int tls_close(struct tls *_ctx);
+void tls_config_insecure_noverifycert(struct tls_config *config);
+void tls_config_insecure_noverifyname(struct tls_config *config);
 int tls_config_set_ca_file(struct tls_config *_config, const char *_ca_file);
 int tls_config_set_cert_file(struct tls_config *_config,const char *_cert_file);
 int tls_config_set_key_file(struct tls_config *_config, const char *_key_file);
@@ -488,6 +490,11 @@ static bool internal_setup_tls (SQCloudConnection *connection, SQCloudConfig *co
     struct tls_config *tls_conf = tls_config_new();
     if (!tls_conf) {
         return internal_set_error(connection, INTERNAL_ERRCODE_TLS, "Error while initializing a new TLS configuration.");
+    }
+    
+    if (config->no_verify_certificate) {
+        tls_config_insecure_noverifycert(tls_conf);
+        tls_config_insecure_noverifyname(tls_conf);
     }
     
     // loads a file containing the root certificates

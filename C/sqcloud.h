@@ -85,6 +85,7 @@ typedef struct SQCloudConfigStruct {
     const char      *tls_certificate;
     const char      *tls_certificate_key;
     bool            insecure;               // flag to disable TLS
+    bool            no_verify_certificate;  // flag to accept invalid TLS certificates
     #endif
     config_cb       callback;               // reserved callback for internal usage
     void            *data;                  // reserved callback data parameter
