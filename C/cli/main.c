@@ -114,9 +114,10 @@ static void do_print_usage (void) {
     printf("  -p PORT               port to connect to (default %d)\n", SQCLOUD_DEFAULT_PORT);
     printf("  -f FILEPATH           file path with commands to execute\n");
     printf("  -d DATABASE           database name\n");
+    printf("  -s CONNECTIONSTRING   connection string\n");
     printf("  -r ROOT_CERTIFICATE   path to root certificate for TLS connection\n");
-    printf("  -s CLI_CERTIFICATE    path to client certificate for TLS connection\n");
-    printf("  -t CLI_KEY            path to client key certificate for TLS connection\n");
+    printf("  -t CLI_CERTIFICATE    path to client certificate for TLS connection\n");
+    printf("  -k CLI_KEY            path to client key certificate for TLS connection\n");
     printf("  -u TIMEOUT            connection timeout in seconds (default no timeout)\n");
     printf("  -y IP                 connection type (IPv4, IPv6 or IPany, default IPv4)\n");
     printf("  -n USERNAME           authentication username\n");
@@ -479,6 +480,7 @@ int main(int argc, char * argv[]) {
     const char *password = NULL;
     const char *filename = NULL;
     const char *database = NULL;
+    const char *connstring = NULL;
     const char *root_certificate_path = NULL;
     const char *client_certificate_path = NULL;
     const char *client_certificate_key_path = NULL;
@@ -510,8 +512,8 @@ int main(int argc, char * argv[]) {
             case 'w': linebyline = false; break;
             case 'd': database = optarg; break;
             case 'r': root_certificate_path = optarg; break;
-            case 's': client_certificate_path = optarg; break;
-            case 't': client_certificate_key_path = optarg; break;
+            case 't': client_certificate_path = optarg; break;
+            case 'k': client_certificate_key_path = optarg; break;
             case 'u': timeout = atoi(optarg); break;
             case 'y':
                 if (strcasestr(optarg, "IPv6") != 0) {family = SQCLOUD_IPv6;}
@@ -519,6 +521,7 @@ int main(int argc, char * argv[]) {
                 break;
             case 'n': username = optarg; break;
             case 'm': password = optarg; break;
+            case 's': connstring = optarg; break;
         }
     }
     
@@ -535,24 +538,30 @@ int main(int argc, char * argv[]) {
     config.family = family;
     config.timeout = timeout;
     
-    // setup TLS config parameter
-    #ifndef SQLITECLOUD_DISABLE_TLS
-    if (insecure) config.insecure = true;
-    if (noverifycert) config.no_verify_certificate = true;
-    if (root_certificate_path) config.tls_root_certificate = root_certificate_path;
-    if (client_certificate_path) config.tls_certificate = client_certificate_path;
-    if (client_certificate_key_path) config.tls_certificate_key = client_certificate_key_path;
-    #endif
-    
-    if (sqlite) config.sqlite_mode = true;
-    if (zerotext) config.zero_text = true;
-    if (compression) config.compression = true;
-    if (database) config.database = database;
-    if (username) config.username = username;
-    if (password) config.password = password;
-    
     // try to connect to hostname:port
-    SQCloudConnection *conn = SQCloudConnect(hostname, port, &config);
+    SQCloudConnection *conn = NULL;
+    if (connstring) {
+        conn = SQCloudConnectWithString(connstring, &config);
+    } else {
+        // setup TLS config parameter
+        #ifndef SQLITECLOUD_DISABLE_TLS
+        if (insecure) config.insecure = true;
+        if (noverifycert) config.no_verify_certificate = true;
+        if (root_certificate_path) config.tls_root_certificate = root_certificate_path;
+        if (client_certificate_path) config.tls_certificate = client_certificate_path;
+        if (client_certificate_key_path) config.tls_certificate_key = client_certificate_key_path;
+        #endif
+        
+        if (sqlite) config.sqlite_mode = true;
+        if (zerotext) config.zero_text = true;
+        if (compression) config.compression = true;
+        if (database) config.database = database;
+        if (username) config.username = username;
+        if (password) config.password = password;
+        
+        conn = SQCloudConnect(hostname, port, &config);
+    }
+    
     if (SQCloudIsError(conn)) {
         printf("ERROR connecting to %s: %s (%d)\n", hostname, SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
         return -1;
