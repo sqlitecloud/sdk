@@ -3,7 +3,7 @@ import { logThis } from './utils.js'
 var SQLiteCloud = window.SQLiteCloud;
 var config = {
   PROJECT_ID: 'f9cdd1d5-7d16-454b-8cc0-548dc1712c26',
-  API_KEY: 'B24tAXTnXFYatN7mSXTPTIRXEEJRiH1lawMEdxmRrps'
+  API_KEY: 'AkNW407R8oKYslzCcdMdCTbAOA8oClRpVYlZLGHZfIs'
 };
 //DEFINE CALLBACKS FUNCTIONS PASSED TO WEBSOCKET AND REGISTERED ON ERROR AND CLOSE EVENTS
 var onErrorCallback = function (event, msg) {
