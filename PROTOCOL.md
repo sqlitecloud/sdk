@@ -143,7 +143,7 @@ The format is `=LEN N VALUE1 VALUE2 ... VALUEN`. The whole command is built by N
 4. N values separated by a space ` ` character
 
 ### SQLite Statements
-SQLite statements are usually sent from client to server as `SCSP Strings`.
+SQLite statements are usually sent from client to server as `SCSP Strings`.  
 In case of bindings the whole statement can be sent as `SCSP Array`.
 
 The server replies to READ statements (like SELECT) with a `SCSP Rowset` or SCSP Rowset Chunk. In case of WRITE statements (like INSERT, UPDATE, DELETE) the SQLite Cloud server replies with a `SCSP Array` in the following format: `=LEN 6 TYPE INDEX ROWID CHANGES TOTAL_CHANGES FINALIZED`:
