@@ -170,16 +170,19 @@ struct SQCloudResult {
     uint32_t        nheader;                // number of character in the first part of the header (which is usually skipped)
     
     // used in TYPE_ROWSET only
-    uint32_t        flags;                  // rowset flags
+    uint32_t        version;                // rowset version
     uint32_t        nrows;                  // number of rows
     uint32_t        ncols;                  // number of columns
     uint32_t        ndata;                  // number of items stores in data
     char            **data;                 // data contained in the rowset
     char            **name;                 // column names
-    char            **decltype;             // column declared types (sqlite mode only)
-    char            **dbname;               // column database names (sqlite mode only)
-    char            **tblname;              // column table names (sqlite mode only)
-    char            **origname;             // column origin names (sqlite mode only)
+    char            **decltype;             // column declared types
+    char            **dbname;               // column database names
+    char            **tblname;              // column table names
+    char            **origname;             // column origin names
+    int             *notnull;               // column is not null
+    int             *prikey;                // column is primary key
+    int             *autoinc;               // column is auto increment
     uint32_t        *clen;                  // max len for each column (used to display result)
     uint32_t        maxlen;                 // max len for each row/column
     
@@ -801,12 +804,20 @@ static char *internal_get_rowset_header (SQCloudResult *result, char **header, u
     return internal_parse_value(header[col], len, NULL);
 }
 
-static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer, uint32_t *pblen, uint32_t ncols, uint32_t flags) {
-    if (BITCHECK(flags, SQCLOUD_ROWSET_FLAG_DATAONLY)) return true;
+static int internal_get_rowset_header_int (SQCloudResult *result, int *header, uint32_t col) {
+    if (!result || result->tag != RESULT_ROWSET) return -1;
+    if (col >= result->ncols) return -1;
+    if (header == NULL) return -1;
+    return header[col];
+}
+
+static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer, uint32_t *pblen, uint32_t ncols, uint32_t version) {
+    if (version == ROWSET_TYPE_DATA_ONLY) return true;
     
     char *buffer = *pbuffer;
     uint32_t blen = *pblen;
     
+    /*
     if (BITCHECK(flags, SQCLOUD_ROWSET_FLAG_METAVM)) {
         uint32_t cstart1 = 0, cstart2 = 0, cstart3 = 0, cstart4 = 0, cstart5 = 0;
         
@@ -838,8 +849,9 @@ static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer,
         rowset->n4 = n4;
         rowset->n5 = n5;
     }
+     */
     
-    // header is guarantee to contains column names (1st)
+    // header is guarantee to contain column names
     for (uint32_t i=0; i<ncols; ++i) {
         uint32_t cstart = 0;
         uint32_t len = internal_parse_number(&buffer[1], blen, &cstart);
@@ -850,7 +862,8 @@ static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer,
         if (rowset->maxlen < len) rowset->maxlen = len;
     }
     
-    if (BITCHECK(flags, SQCLOUD_ROWSET_FLAG_METACOLS)) {
+    // check if additional metadata is contained
+    if (version == ROWSET_TYPE_METADATA_v1) {
         rowset->decltype = (char **) mem_alloc(ncols * sizeof(char *));
         if (!rowset->decltype) return false;
         rowset->dbname = (char **) mem_alloc(ncols * sizeof(char *));
@@ -859,8 +872,14 @@ static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer,
         if (!rowset->tblname) return false;
         rowset->origname = (char **) mem_alloc(ncols * sizeof(char *));
         if (!rowset->origname) return false;
+        rowset->notnull = (int *) mem_alloc(ncols * sizeof(int));
+        if (!rowset->notnull) return false;
+        rowset->prikey = (int *) mem_alloc(ncols * sizeof(int));
+        if (!rowset->prikey) return false;
+        rowset->autoinc = (int *) mem_alloc(ncols * sizeof(int));
+        if (!rowset->autoinc) return false;
         
-        // in sqlite mode header contains column declared types (2nd)
+        // column declared types
         for (uint32_t i=0; i<ncols; ++i) {
             uint32_t cstart = 0;
             uint32_t len = internal_parse_number(&buffer[1], blen, &cstart);
@@ -869,7 +888,7 @@ static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer,
             blen -= cstart + len + 1;
         }
         
-        // in sqlite mode header contains column database names (3rd)
+        // column database names
         for (uint32_t i=0; i<ncols; ++i) {
             uint32_t cstart = 0;
             uint32_t len = internal_parse_number(&buffer[1], blen, &cstart);
@@ -878,7 +897,7 @@ static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer,
             blen -= cstart + len + 1;
         }
         
-        // in sqlite mode header contains column table names (4th)
+        // column table names
         for (uint32_t i=0; i<ncols; ++i) {
             uint32_t cstart = 0;
             uint32_t len = internal_parse_number(&buffer[1], blen, &cstart);
@@ -887,11 +906,41 @@ static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer,
             blen -= cstart + len + 1;
         }
         
-        // in sqlite mode header contains column origin names (5th)
+        // column origin names
         for (uint32_t i=0; i<ncols; ++i) {
             uint32_t cstart = 0;
             uint32_t len = internal_parse_number(&buffer[1], blen, &cstart);
             rowset->origname[i] = buffer;
+            buffer += cstart + len + 1;
+            blen -= cstart + len + 1;
+        }
+        
+        // column not null flag
+        for (uint32_t i=0; i<ncols; ++i) {
+            uint32_t cstart = 0;
+            uint32_t value = internal_parse_number(&buffer[1], blen, &cstart);
+            rowset->notnull[i] = (int)value;
+            uint32_t len = 0;
+            buffer += cstart + len + 1;
+            blen -= cstart + len + 1;
+        }
+        
+        // column primary key flag
+        for (uint32_t i=0; i<ncols; ++i) {
+            uint32_t cstart = 0;
+            uint32_t value = internal_parse_number(&buffer[1], blen, &cstart);
+            rowset->prikey[i] = (int)value;
+            uint32_t len = 0;
+            buffer += cstart + len + 1;
+            blen -= cstart + len + 1;
+        }
+        
+        // column autoincrement key flag
+        for (uint32_t i=0; i<ncols; ++i) {
+            uint32_t cstart = 0;
+            uint32_t value = internal_parse_number(&buffer[1], blen, &cstart);
+            rowset->autoinc[i] = (int)value;
+            uint32_t len = 0;
             buffer += cstart + len + 1;
             blen -= cstart + len + 1;
         }
@@ -903,8 +952,8 @@ static bool internal_parse_rowset_header (SQCloudResult *rowset, char **pbuffer,
     return true;
 }
 
-static bool internal_parse_rowset_values (SQCloudResult *rowset, char **pbuffer, uint32_t *pblen, uint32_t index, uint32_t bound, uint32_t ncols, uint32_t flags) {
-    if (BITCHECK(flags, SQCLOUD_ROWSET_FLAG_HEADONLY)) return true;
+static bool internal_parse_rowset_values (SQCloudResult *rowset, char **pbuffer, uint32_t *pblen, uint32_t index, uint32_t bound, uint32_t ncols, uint32_t version) {
+    if (version == ROWSET_TYPE_HEADER_ONLY) return true;
     
     char *buffer = *pbuffer;
     uint32_t blen = *pblen;
@@ -924,7 +973,7 @@ static bool internal_parse_rowset_values (SQCloudResult *rowset, char **pbuffer,
 }
 
 static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart,
-                                             uint32_t nrows, uint32_t ncols, uint32_t flags) {
+                                             uint32_t nrows, uint32_t ncols, uint32_t version) {
     SQCloudResult *rowset = (SQCloudResult *)mem_zeroalloc(sizeof(SQCloudResult));
     if (!rowset) {
         internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory for SQCloudResult: %d.", sizeof(SQCloudResult));
@@ -937,7 +986,7 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
     rowset->blen = blen;
     rowset->balloc = blen;
     rowset->nheader = bstart;
-    rowset->flags = flags;
+    rowset->version = version;
     
     rowset->nrows = nrows;
     rowset->ncols = ncols;
@@ -950,10 +999,10 @@ static SQCloudResult *internal_parse_rowset (SQCloudConnection *connection, char
     blen -= bstart;
     
     // parse rowset header
-    if (!internal_parse_rowset_header(rowset, &buffer, &blen, ncols, flags)) goto abort_rowset;
+    if (!internal_parse_rowset_header(rowset, &buffer, &blen, ncols, version)) goto abort_rowset;
     
     // parse values (buffer and blen was updated in internal_parse_rowset_header)
-    if (!internal_parse_rowset_values(rowset, &buffer, &blen, 0, nrows * ncols, ncols, flags)) goto abort_rowset;
+    if (!internal_parse_rowset_values(rowset, &buffer, &blen, 0, nrows * ncols, ncols, version)) goto abort_rowset;
     
     return rowset;
     
@@ -968,7 +1017,7 @@ abort_rowset:
 }
 
 static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t bstart, uint32_t idx,
-                                                    uint32_t nrows, uint32_t ncols, uint32_t flags) {
+                                                    uint32_t nrows, uint32_t ncols, uint32_t version) {
     SQCloudResult *rowset = connection->_chunk;
     bool first_chunk = false;
     
@@ -997,7 +1046,7 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
     
     if (first_chunk) {
         rowset->tag = RESULT_ROWSET;
-        rowset->flags = flags;
+        rowset->version = version;
         rowset->ischunk = true;
         
         rowset->buffers = (char **)mem_zeroalloc((sizeof(char *) * DEFAULT_CHUCK_NBUFFERS));
@@ -1030,7 +1079,7 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
         buffer += bstart;
         
         // parse rowset header
-        if (!internal_parse_rowset_header(rowset, &buffer, &blen, ncols, flags)) goto abort_rowset;
+        if (!internal_parse_rowset_header(rowset, &buffer, &blen, ncols, version)) goto abort_rowset;
     }
     
     // update total buffer size
@@ -1092,14 +1141,16 @@ static SQCloudResult *internal_parse_rowset_chunck (SQCloudConnection *connectio
     uint32_t bound = rowset->ndata + (nrows * ncols);
     
     // parse values
-    if (!internal_parse_rowset_values(rowset, &buffer, &blen, index, bound, ncols, flags)) goto abort_rowset;
+    if (!internal_parse_rowset_values(rowset, &buffer, &blen, index, bound, ncols, version)) goto abort_rowset;
     
     // this check is for internal usage only
     if (connection->fd == 0) return rowset;
     
-    // normal usage
+    #if 0
+    // January 24th, 2024 -> ACK disabled for Rowset in chunks
     // send ACK
-    if (!internal_socket_write(connection, "OK", 2, true, true)) goto abort_rowset;
+    // if (!internal_socket_write(connection, "OK", 2, true, true)) goto abort_rowset;
+    #endif
         
     // read next chunk
     return internal_socket_read (connection, true);
@@ -1231,10 +1282,10 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             // CMD_ROWSET:          *LEN 0:VERSION ROWS COLS DATA
             // CMD_ROWSET_CHUNK:    /LEN IDX:VERSION ROWS COLS DATA
             uint32_t cstart1 = 0, cstart2 = 0, cstart3 = 0, cstart4 = 0;
-            uint32_t flags = 0;
+            uint32_t version = 0;
             
             internal_parse_number(&buffer[1], blen-1, &cstart1); // parse len (already parsed in blen parameter)
-            uint32_t idx = internal_parse_number_extended(&buffer[cstart1 + 1], blen-(cstart1+1), &cstart2, &flags, NULL);
+            uint32_t idx = internal_parse_number_extended(&buffer[cstart1 + 1], blen-(cstart1+1), &cstart2, &version, NULL);
             uint32_t nrows = internal_parse_number(&buffer[cstart1 + cstart2 + 1], blen-(cstart1 + cstart2 + 1), &cstart3);
             uint32_t ncols = internal_parse_number(&buffer[cstart1 + cstart2 + + cstart3 + 1], blen-(cstart1 + cstart2 + + cstart3 + 1), &cstart4);
             
@@ -1244,8 +1295,8 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             SQCloudResult *res = NULL;
             // the externalbuffer flag can change in case of compressed rowset when the end chunk is received
             if (connection->_chunk) connection->_chunk->externalbuffer = externalbuffer;
-            if (buffer[0] == CMD_ROWSET) res = internal_parse_rowset(connection, buffer, blen, bstart, nrows, ncols, flags);
-            else res = internal_parse_rowset_chunck(connection, buffer, blen, bstart, idx, nrows, ncols, flags);
+            if (buffer[0] == CMD_ROWSET) res = internal_parse_rowset(connection, buffer, blen, bstart, nrows, ncols, version);
+            else res = internal_parse_rowset_chunck(connection, buffer, blen, bstart, idx, nrows, ncols, version);
             if (res) {
                 res->externalbuffer = externalbuffer;
                 if (res->ischunk && res->bcount == 1) res->bext[0] = externalbuffer;
@@ -1587,10 +1638,6 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
     if (config->database && strlen(config->database)) {
         if (config->db_create && !config->db_memory) len += snprintf(&buffer[len], sizeof(buffer) - len, "CREATE DATABASE %s IF NOT EXISTS;", config->database);
         len += snprintf(&buffer[len], sizeof(buffer) - len, "USE DATABASE %s;", config->database);
-    }
-    
-    if (config->sqlite_mode) {
-        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY SQLITE TO 1;");
     }
     
     if (config->compression) {
@@ -2450,10 +2497,6 @@ SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *pconf
             int compression = (int)strtol(value, NULL, 0);
             config->compression = (compression > 0) ? true : false;
         }
-        else if (strcasecmp(key, "sqlite") == 0) {
-            int sqlite_mode = (int)strtol(value, NULL, 0);
-            config->sqlite_mode = (sqlite_mode > 0) ? true : false;
-        }
         else if (strcasecmp(key, "zerotext") == 0) {
             int zero_text = (int)strtol(value, NULL, 0);
             config->zero_text = (zero_text > 0) ? true : false;
@@ -2505,7 +2548,6 @@ SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *pconf
     if (pconfig) {
         if (pconfig->timeout) config->timeout = pconfig->timeout;
         if (pconfig->compression) config->compression = pconfig->compression;
-        if (pconfig->sqlite_mode) config->sqlite_mode = pconfig->sqlite_mode;
         if (pconfig->zero_text) config->zero_text = pconfig->zero_text;
         if (pconfig->nonlinearizable) config->nonlinearizable = pconfig->nonlinearizable;
         if (pconfig->no_blob) config->no_blob = pconfig->no_blob;
@@ -2913,6 +2955,33 @@ char *SQCloudRowsetColumnTblName (SQCloudResult *result, uint32_t col, uint32_t 
 
 char *SQCloudRowsetColumnOrigName (SQCloudResult *result, uint32_t col, uint32_t *len) {
     return internal_get_rowset_header(result, result->origname, col, len);
+}
+
+uint32_t SQCloudRowSetColumnNotNULL (SQCloudResult *result, uint32_t col) {
+    return internal_get_rowset_header_int(result, result->notnull, col);
+}
+
+uint32_t SQCloudRowSetColumnPrimaryKey (SQCloudResult *result, uint32_t col) {
+    return internal_get_rowset_header_int(result, result->prikey, col);
+}
+
+uint32_t SQCloudRowSetColumnAutoIncrement (SQCloudResult *result, uint32_t col) {
+    return internal_get_rowset_header_int(result, result->autoinc, col);
+}
+
+bool SQCloudRowsetCanWrite (SQCloudResult *result) {
+    // check if the rowset is not a JOIN (must have the same table)
+    char *keytable = result->tblname[0];
+    for (int i=1; i<result->ncols; ++i) {
+        if (strcmp(keytable, result->tblname[i]) != 0) return false;
+    }
+    
+    // check if contains at least a primary key
+    for (int i=0; i<result->ncols; ++i) {
+        if (result->prikey[i] == 1) return true;
+    }
+    
+    return false;
 }
 
 uint32_t SQCloudRowsetRows (SQCloudResult *result) {

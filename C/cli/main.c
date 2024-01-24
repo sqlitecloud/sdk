@@ -26,7 +26,7 @@
 #endif
 
 #define CLI_HISTORY_FILENAME    ".sqlitecloud_history.txt"
-#define CLI_VERSION             "1.0"
+#define CLI_VERSION             "1.1"
 #define CLI_BUILD_DATE          __DATE__
 
 #ifndef MAXPATH
@@ -126,7 +126,6 @@ static void do_print_usage (void) {
     printf("  -i                    activate insecure mode (non TLS connection)\n");
     printf("  -j                    disable certificate verification\n");
     printf("  -q                    activate quite mode (disable output print)\n");
-    printf("  -x                    activate special sqlite mode\n");
     printf("  -z                    request zero-terminated strings in all replies\n");
     printf("  -w                    in case of -f file to execute, skip the line by line processing and send the whole file\n");
 }
@@ -492,7 +491,6 @@ int main(int argc, char * argv[]) {
     bool compression = false;
     bool insecure = false;
     bool noverifycert = false;
-    bool sqlite = false;
     bool zerotext = false;
     bool linebyline = true;
     
@@ -507,7 +505,6 @@ int main(int argc, char * argv[]) {
             case 'i': insecure = true; break;
             case 'j': noverifycert = true; break;
             case 'q': quiet = true; break;
-            case 'x': sqlite = true; break;
             case 'z': zerotext = true; break;
             case 'w': linebyline = false; break;
             case 'd': database = optarg; break;
@@ -552,7 +549,6 @@ int main(int argc, char * argv[]) {
         if (client_certificate_key_path) config.tls_certificate_key = client_certificate_key_path;
         #endif
         
-        if (sqlite) config.sqlite_mode = true;
         if (zerotext) config.zero_text = true;
         if (compression) config.compression = true;
         if (database) config.database = database;
@@ -566,7 +562,7 @@ int main(int argc, char * argv[]) {
         printf("ERROR connecting to %s: %s (%d)\n", hostname, SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
         return -1;
     } else {
-        printf("Connection to %s OK...\n\n", hostname);
+        printf("Connection to %s:%d OK...\n\n", hostname, port);
     }
     
     // load history file
