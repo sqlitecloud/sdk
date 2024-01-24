@@ -68,12 +68,14 @@ The format is `:VALUE `. Where `VALUE` is a string representation of the integer
 The format is `,VALUE `. Where `VALUE` is a string representation of the float/double value. In C, `VALUE` can be parsed using the `strtod` API. In this first implementation `VALUE` is guarantee to be a Double number.
 
 ### SCSP **Rowset**
-The format is `*LEN 0:VERS NROWS NCOLS DATA`. The whole command is built by eight parts:
+The format is `*LEN 0:VERS NROWS NCOLS DATA`. The whole command is built by ten parts:
 
 1. The single `*` character
 2. LEN is a string representation of Rowset length (theoretically the maximum supported value is UINT64_MAX but it is usually much lower. LEN does not include the length of the first `*LEN ` part.
 3. A single space is used to separate LEN from 0:VERS
-4. a single `0:` string followed by a VERS number (a string representation of the number) which specifies the version of the Rowset (`1` means that only column names is included in the header, `2` means that column names, declared types, database names, table names and origin names are included in the header) `MORE ABOUT THE VERSION MEANING`
+4. a single `0:` string followed by a VERS number (a string representation of the number) which specifies the version of the Rowset.
+   * `0`: means that only column names are included in the header
+   * `1`: means that column names, declared types, database names, table names, origin names, not null flags, primary key flags and autoincrement flags are included in the header (one value for each column)
 5. A single space is used to separate 0:VERS from NROWS
 6. NROWS  is a string representation of the number of rows contained in the Rowset (can be zero)
 7. A single space is used to separate NROWS from NCOLS 
@@ -140,5 +142,18 @@ The format is `=LEN N VALUE1 VALUE2 ... VALUEN`. The whole command is built by N
 3. N is the number of items in the array
 4. N values separated by a space ` ` character
 
+### SQLite Statements
+SQLite statements are usually sent from client to server as `SCSP Strings`.
+In case of bindings the whole statement can be sent as `SCSP Array`.
+
+The server replies to READ statements (like SELECT) with a `SCSP Rowset` or SCSP Rowset Chunk. In case of WRITE statements (like INSERT, UPDATE, DELETE) the SQLite Cloud server replies with a `SCSP Array` in the following format: `=LEN 6 TYPE INDEX ROWID CHANGES TOTAL_CHANGES FINALIZED`:
+
+1. TYPE is always 10 in this case
+2. INDEX is always 0 in this case
+3. ROWID is the result of the [sqlite3_last_insert_rowid](https://www.sqlite.org/c3ref/last_insert_rowid.html) function
+4. CHANGES is the result of the [sqlite3_changes64](https://www.sqlite.org/c3ref/changes.html) function
+5. TOTAL_CHANGES is the result of the [sqlite3_total_changes64](https://www.sqlite.org/c3ref/total_changes.html) function
+6. FINALIZED is always 1 in this case
+
 ---
-```Last revision: April 13th, 2022```
+```Last revision: January 24th, 2024```
