@@ -51,10 +51,10 @@ extern "C" {
 #define CMD_ASYNC_ARRAY             '<'
 
 typedef enum {
-    ROWSET_TYPE_BASIC               = 0,
-    ROWSET_TYPE_METADATA_v1         = 1,
-    ROWSET_TYPE_HEADER_ONLY         = 2,
-    ROWSET_TYPE_DATA_ONLY           = 3
+    ROWSET_TYPE_BASIC               = 1,
+    ROWSET_TYPE_METADATA_v1         = 2,
+    ROWSET_TYPE_HEADER_ONLY         = 3,
+    ROWSET_TYPE_DATA_ONLY           = 4
 } SQCLOUD_ROWSET_TYPE;
 
 // MARK: -
