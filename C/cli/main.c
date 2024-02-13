@@ -562,7 +562,7 @@ int main(int argc, char * argv[]) {
         printf("ERROR connecting to %s: %s (%d)\n", hostname, SQCloudErrorMsg(conn), SQCloudErrorCode(conn));
         return -1;
     } else {
-        printf("Connection to %s:%d OK...\n\n", hostname, port);
+        if (!quiet) printf("Connection to %s:%d OK...\n\n", hostname, port);
     }
     
     // load history file
