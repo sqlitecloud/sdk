@@ -74,8 +74,8 @@ The format is `*LEN 0:VERS NROWS NCOLS DATA`. The whole command is built by ten 
 2. LEN is a string representation of Rowset length (theoretically the maximum supported value is UINT64_MAX but it is usually much lower. LEN does not include the length of the first `*LEN ` part.
 3. A single space is used to separate LEN from 0:VERS
 4. a single `0:` string followed by a VERS number (a string representation of the number) which specifies the version of the Rowset.
-   * `0`: means that only column names are included in the header
-   * `1`: means that column names, declared types, database names, table names, origin names, not null flags, primary key flags and autoincrement flags are included in the header (one value for each column)
+   * `1`: means that only column names are included in the header
+   * `2`: means that column names, declared types, database names, table names, origin names, not null flags, primary key flags and autoincrement flags are included in the header (one value for each column)
 5. A single space is used to separate 0:VERS from NROWS
 6. NROWS  is a string representation of the number of rows contained in the Rowset (can be zero)
 7. A single space is used to separate NROWS from NCOLS 
@@ -95,7 +95,8 @@ The format is `/LEN IDX:VERS NROWS NCOLS DATA`. The command is equal to the SCSP
 3. NROWS represents the number of rows contained in the chunk. The total number of rows in the final Rowset will be the sum of each NROWS contained in each chunk
 4. NCOLS will be the same for all chunks, which means that it does not need to be computed (as a sum) in the final Rowset, and it means that a logical line is never break
 5. To mark the end of the Rowset, the special string `/LEN 0 0 0  ` is sent (LEN is always 6 in this case)
-6. After receiving a chuck the client must send an ACK message `+2 OK` to the server (to notify that it is ready to receive the next chunk). Any other ACK message is considered an ABORT and the Rowset processing is immediately aborted.
+
+When the Rowset is sent in chuck, it is guaranteed that the first chuck contains a complete header and that all the chunks contain complete rows (the individual fields are not truncated in any way).
 
 ### SCSP RAW JSON
 When the first character is `{` that means that the whole packet is guarantee to be a valid JSON value that can be parsed with a JSON parser.
