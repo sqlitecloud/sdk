@@ -75,6 +75,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          submodules: recursive
       
       - name: Set env var
         run: echo "ZIPFILE=sqlitecloud-go-${{ github.event.release.name }}-${{ env.OSNAME }}-${{ env.ARCHNAME }}.zip" >> $GITHUB_ENV
