@@ -2,7 +2,7 @@
 	/*
 		MIT License
 		
-		Copyright (c) 2022 SQLite Cloud, Inc.
+		Copyright (c) 2022-2024 SQLite Cloud, Inc.
 		
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,9 @@
 		OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 		SOFTWARE.
 	*/
+
+	// v1.1.0:	added new rowset metadata v2
+	//			removed ACK for rowset sent in chunk
 
 	// namespace SQCloud;
 	
@@ -54,6 +57,9 @@
 		public $dbname = NULL;
 		public $tblname = NULL;
 		public $origname = NULL;
+		public $notnull = NULL;
+		public $prikey = NULL;
+		public $autoinc = NULL;
 		
 		private function compute_index ($row, $col) {
 			if ($row < 0 || $row >= $this->nrows) return -1;
@@ -82,6 +88,10 @@
 			print("\n");
 			
 			if ($this->version == 2) {
+				print("decltype: ");
+				print_r($this->decltype);
+				print("\n");
+
 				print("dbname: ");
 				print_r($this->dbname);
 				print("\n");
@@ -92,6 +102,18 @@
 				
 				print("origname: ");
 				print_r($this->origname);
+				print("\n");
+
+				print("notnull: ");
+				print_r($this->notnull);
+				print("\n");
+
+				print("prikey: ");
+				print_r($this->prikey);
+				print("\n");
+
+				print("autoinc: ");
+				print_r($this->autoinc);
 				print("\n");
 			}
 			
@@ -104,7 +126,7 @@
 	}
 	
 	class SQLiteCloud {
-		public const SDKVersion = '1.0.0';
+		public const SDKVersion = '1.1.0';
 		
 		public $username = '';
 		public $password = '';
@@ -112,7 +134,6 @@
 		public $timeout = NULL;
 		public $connect_timeout = 20;
 		public $compression = false;
-		public $sqlitemode = false;
 		public $zerotext = false;	
 		public $insecure = false;
 		public $tls_root_certificate = NULL;
@@ -251,10 +272,6 @@
 			
 			if ($this->compression) {
 				$buffer .= "SET CLIENT KEY COMPRESSION TO 1;";
-			}
-			
-			if ($this->sqlitemode) {
-				$buffer .= "SET CLIENT KEY SQLITE TO 1;";
 			}
 			
 			if ($this->zerotext) {
@@ -613,7 +630,7 @@
 		function internal_parse_rowset_header ($rowset, $buffer, $start) {
 			$ncols = $rowset->ncols;
 			
-			// parse column names
+			// parse column names (header is guarantee to contain column names)
 			$rowset->colname = array();
 			for ($i = 0; $i < $ncols; $i++) {
 				$len = $this->internal_parse_number($buffer, $cstart, $unused, $start);
@@ -624,7 +641,7 @@
 			
 			if ($rowset->version == 1) return $start;
 			
-			// if version != 2 returns an error
+			// if version != 2 returns an error because rowset version is not supported
 			if ($rowset->version != 2) return -1;
 			
 			// parse declared types
@@ -661,6 +678,30 @@
 				$value = substr($buffer, $cstart, $len);
 				array_push($rowset->origname, $value);
 				$start = $cstart + $len;
+			}
+
+			// parse not null flags
+			$rowset->notnull = array();
+			for ($i = 0; $i < $ncols; $i++) {
+				$value = $this->internal_parse_number($buffer, $cstart, $unused, $start);
+				array_push($rowset->notnull, $value);
+				$start = $cstart;
+			}
+
+			// parse primary key flags
+			$rowset->prikey = array();
+			for ($i = 0; $i < $ncols; $i++) {
+				$value = $this->internal_parse_number($buffer, $cstart, $unused, $start);
+				array_push($rowset->prikey, $value);
+				$start = $cstart;
+			}
+
+			// parse autoincrement flags
+			$rowset->autoinc = array();
+			for ($i = 0; $i < $ncols; $i++) {
+				$value = $this->internal_parse_number($buffer, $cstart, $unused, $start);
+				array_push($rowset->autoinc, $value);
+				$start = $cstart;
 			}
 			
 			return $start;
@@ -703,10 +744,7 @@
 			$this->internal_parse_rowset_values($rowset, $buffer, $n, $nrows*$ncols);
 			
 			if ($ischunk) {
-				if ($this->internal_socket_write("OK") === false) {
-					$this->rowset = NULL;
-					return false;
-				}
+				// read next chunk
 				return $this->internal_socket_read();
 			}
 			
