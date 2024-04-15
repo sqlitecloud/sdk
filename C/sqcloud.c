@@ -436,6 +436,7 @@ static void *pubsub_thread (void *arg) {
         tread = 0;
     }
     
+    if (buffer) mem_free(buffer);
     return NULL;
 }
 
@@ -1635,6 +1636,10 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
         len += snprintf(&buffer[len], sizeof(buffer) - len, "AUTH USER %s %s %s;", config->username,  command, config->password);
     }
     
+    if (config->api_key && strlen(config->api_key)) {
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "AUTH APIKEY %s;", config->api_key);
+    }
+    
     if (config->database && strlen(config->database)) {
         if (config->db_create && !config->db_memory) len += snprintf(&buffer[len], sizeof(buffer) - len, "CREATE DATABASE %s IF NOT EXISTS;", config->database);
         len += snprintf(&buffer[len], sizeof(buffer) - len, "USE DATABASE %s;", config->database);
@@ -1648,7 +1653,7 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
         len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY ZEROTEXT TO 1;");
     }
     
-    if (config->nonlinearizable) {
+    if (config->non_linearizable) {
         len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY NONLINEARIZABLE TO 1;");
     }
     
@@ -2480,7 +2485,7 @@ SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *pconf
         
         if (rc > 0) {
             config->database = mem_string_dup(database);
-            config->db_memory = (strcmp(database, ":memory:") == 0 || strcmp(database, ":temp:") == 0);
+            config->db_memory = (strcasecmp(database, ":memory:") == 0 || strcasecmp(database, ":temp:") == 0);
         }
     }
     
@@ -2518,6 +2523,10 @@ SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *pconf
             int no_verify_certificate = (int)strtol(value, NULL, 0);
             config->no_verify_certificate = (no_verify_certificate > 0) ? true : false;
         }
+        else if (strcasecmp(key, "non_linearizable") == 0) {
+            int dvalue = (int)strtol(value, NULL, 0);
+            config->non_linearizable = (dvalue > 0) ? true : false;
+        }
         else if (strcasecmp(key, "root_certificate") == 0) {
             config->tls_root_certificate = mem_string_dup(value);
         }
@@ -2533,13 +2542,19 @@ SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *pconf
             config->no_blob = (no_blob > 0) ? true : false;
         }
         else if (strcasecmp(key, "maxdata") == 0) {
-            config->max_data = (int)strtol(value, NULL, 0);
+            int dvalue = (int)strtol(value, NULL, 0);
+            if (dvalue >= 0) config->max_data = dvalue;
         }
         else if (strcasecmp(key, "maxrows") == 0) {
-            config->max_rows = (int)strtol(value, NULL, 0);
+            int dvalue = (int)strtol(value, NULL, 0);
+            if (dvalue >= 0) config->max_rows = dvalue;
         }
         else if (strcasecmp(key, "maxrowset") == 0) {
-            config->max_rowset = (int)strtol(value, NULL, 0);
+            int dvalue = (int)strtol(value, NULL, 0);
+            if (dvalue >= 0) config->max_rowset = dvalue;
+        }
+        else if (strcasecmp(key, "apikey") == 0) {
+            config->api_key = mem_string_dup(value);
         }
         n += rc;
     }
@@ -2549,7 +2564,7 @@ SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *pconf
         if (pconfig->timeout) config->timeout = pconfig->timeout;
         if (pconfig->compression) config->compression = pconfig->compression;
         if (pconfig->zero_text) config->zero_text = pconfig->zero_text;
-        if (pconfig->nonlinearizable) config->nonlinearizable = pconfig->nonlinearizable;
+        if (pconfig->non_linearizable) config->non_linearizable = pconfig->non_linearizable;
         if (pconfig->no_blob) config->no_blob = pconfig->no_blob;
         if (pconfig->db_create) config->db_create = pconfig->db_create;
         if (pconfig->max_data) config->max_data = pconfig->max_data;
@@ -2559,6 +2574,10 @@ SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *pconf
         if (pconfig->db_memory) {
             if (config->database) mem_free((void *)config->database);
             config->database = mem_string_dup(":memory:");
+        }
+        if (pconfig->api_key) {
+            if (config->api_key) mem_free((void *)config->api_key);
+            config->api_key = mem_string_dup(pconfig->api_key);
         }
     }
     

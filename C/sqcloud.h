@@ -74,12 +74,13 @@ typedef struct SQCloudConfigStruct {
     const char      *username;              // connection username
     const char      *password;              // connection password
     const char      *database;              // database to use during connection
+    const char      *api_key;               // APIKEY
     int             timeout;                // connection timeout parameter
     int             family;                 // can be: SQCLOUD_IPv4, SQCLOUD_IPv6 or SQCLOUD_IPANY
     bool            compression;            // compression flag
     bool            zero_text;              // flag to tell the server to zero-terminate strings
     bool            password_hashed;        // private flag
-    bool            nonlinearizable;        // flag to request for immediate responses from the server node without waiting for linerizability guarantees
+    bool            non_linearizable;       // flag to request for immediate responses from the server node without waiting for linerizability guarantees
     bool            db_memory;              // flag to force the database to be in-memory
     bool            no_blob;                // flag to tell the server to not send BLOB columns
     bool            db_create;              // flag to force the creation of the database (if it does not exist)

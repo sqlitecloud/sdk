@@ -224,7 +224,7 @@ bool do_process_file (SQCloudConnection *conn, const char *filename, bool lineby
         if (nread != size) {printf("An error occurred while reading file %s (%ld - %zu).\n", filename, size, nread); free(buffer); goto cleanup;}
         buffer[size] = 0;
         
-        printf(">> Executing file: %s\n\n%s\n\n", filename, buffer);
+        printf(">> Executing file: %s (%ld bytes)\n\n", filename, size);
         
         do_command(conn, buffer);
         free(buffer);
@@ -370,6 +370,15 @@ bool do_internal_upload (SQCloudConnection *conn, char *command) {
     return result;
 }
 
+bool do_internal_file (SQCloudConnection *conn, char *command) {
+    // .file path_to_file
+    
+    // skip command name part
+    command += strlen(".file ");
+    
+    return do_process_file(conn, command, false);
+}
+
 bool do_internal_prepare (SQCloudConnection *conn, char *command) {
     // .prepare sql
     
@@ -451,6 +460,7 @@ bool do_internal_command (SQCloudConnection *conn, char *command) {
     
     if (strcmp(cname, ".download") == 0) return do_internal_download(conn, command);
     if (strcmp(cname, ".upload") == 0) return do_internal_upload(conn, command);
+    if (strcmp(cname, ".file") == 0) return do_internal_file(conn, command);
     
     if ((strcmp(cname, ".prepare") == 0) || (strcmp(cname, ".step") == 0) || (strcmp(cname, ".clear") == 0) ||
         (strcmp(cname, ".reset") == 0) || (strcmp(cname, ".finalize") == 0)) {
