@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/|version|/phpunit.xsd"
+         displayDetailsOnTestsThatTriggerWarnings="true">
+    <testsuites>
+        <testsuite name="Project Test Suite">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+
+    <php>
+        <env name="SQLITE_CONNECTION_STRING_CREDENTIALS" value="sqlitecloud://admin:u5RYdpTcDH@ctx9oc90sk.sqlite.cloud:8860/chinook.sqlite" />
+        <env name="SQLITE_CONNECTION_STRING_API_KEY" value="sqlitecloud://ctx9oc90sk.sqlite.cloud:8860/chinook.sqlite?apikey=2XWjzxQ0M0ganCmAoHp7bK79bfEFvEjNQQL9n8j8CKY" />
+        <env name="SQLITE_USER" value="admin" />
+        <env name="SQLITE_PASSWORD" value="u5RYdpTcDH" />
+        <env name="SQLITE_HOST" value="ctx9oc90sk.sqlite.cloud" />
+        <env name="SQLITE_DB" value="chinook.sqlite" />
+        <env name="SQLITE_PORT" value="8860" />
+    </php>
+</phpunit>

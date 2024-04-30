@@ -130,6 +130,7 @@
 		
 		public $username = '';
 		public $password = '';
+		public $apikey = '';
 		public $database = '';
 		public $timeout = NULL;
 		public $connect_timeout = 20;
@@ -180,6 +181,57 @@
 			if ($this->internal_config_apply() == false) return false;
 			
 			return true;
+		}
+
+		public function connectWithString ($connectionString) {
+			// URL STRING FORMAT
+    		// sqlitecloud://user:pass@host.com:port/dbname?timeout=10&key2=value2&key3=value3
+			// or sqlitecloud://host.sqlite.cloud:8860/dbname?apikey=zIiAARzKm9XBVllbAzkB1wqrgijJ3Gx0X5z1A4m4xBA
+
+			$params = parse_url($connectionString);
+			if (!is_array($params)) {
+				$this->errmsg = "Invalid connection string: {$connectionString}.";
+				$this->errcode = -1;
+				return false;
+			}
+
+			$options = [];
+			$query = isset($params['query']) ? $params['query'] : '';
+			parse_str($query, $options);
+			foreach ($options as $opt => $value) {
+				if (property_exists($this, strtolower($opt))) {
+					$v = urldecode($value);
+					if (filter_var($v, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) !== null) {
+						$this->{strtolower($opt)} = (bool) ($v);
+					} else if (is_numeric($v)) {
+						$this->{strtolower($opt)} = (int) ($v);
+					} else {
+						$this->{strtolower($opt)} = $v;
+					}
+				}
+			}
+			
+			// apikey or username/password is accepted
+			if (!$this->apikey) {
+				$this->username = isset($params['user']) ? urldecode($params['user']) : '';
+				$this->password = isset($params['pass']) ?  urldecode($params['pass']) : '';
+			}
+			
+			$path = isset($params['path']) ? $params['path'] : '';
+			$database = str_replace('/', '', $path);
+			if ($database) {
+				$this->database = $database;
+			}
+			
+			$hostname = $params['host'];
+			$port = isset($params['port']) ? (int)($params['port']) : null;
+
+			if ($port) {
+				return $this->connect($hostname, $port);
+			}
+
+			return $this->connect($hostname);
+			
 		}
 		
 		public function disconnect () {
@@ -262,6 +314,11 @@
 			if ($this->timeout > 0) stream_set_timeout($this->socket, $this->timeout);
 			
 			$buffer = '';
+			
+			if ($this->apikey) {
+				$buffer .= "AUTH APIKEY {$this->apikey};";
+			} 
+			
 			if ((strlen($this->username) > 0) && (strlen($this->password) > 0)) {
 				$buffer .= "AUTH USER {$this->username} PASSWORD {$this->password};";
 			}
