@@ -52,4 +52,79 @@ class SQLiteCloudTest extends TestCase
 
         $sqlite->disconnect();
     }
+
+    public function testRowsetData()
+    {
+        $sqlite = new SQLiteCloud();
+
+        $result = $sqlite->connectWithString(getenv('SQLITE_CONNECTION_STRING_API_KEY'));
+
+        $this->assertTrue($result);
+
+        /** @var SQLiteCloudRowset */
+        $rowset = $sqlite->execute('SELECT AlbumId FROM albums LIMIT 2');
+
+        $this->assertSame(2, $rowset->nrows);
+        $this->assertSame(1, $rowset->ncols);
+        $this->assertSame(2, $rowset->version);
+    }
+
+    public function testGetValue()
+    {
+        $sqlite = new SQLiteCloud();
+
+        $result = $sqlite->connectWithString(getenv('SQLITE_CONNECTION_STRING_API_KEY'));
+
+        $this->assertTrue($result);
+
+        /** @var SQLiteCloudRowset */
+        $rowset = $sqlite->execute('SELECT * FROM albums');
+
+        $this->assertSame('1', $rowset->value(0, 0));
+        $this->assertSame('For Those About To Rock We Salute You', $rowset->value(0, 1));
+        $this->assertSame('2', $rowset->value(1, 0));
+    }
+
+    public function testInvalidRowNumberForValue()
+    {
+        $sqlite = new SQLiteCloud();
+
+        $result = $sqlite->connectWithString(getenv('SQLITE_CONNECTION_STRING_API_KEY'));
+
+        $this->assertTrue($result);
+
+        /** @var SQLiteCloudRowset */
+        $rowset = $sqlite->execute('SELECT * FROM albums LIMIT 1');
+
+        $this->assertNull($rowset->value(1, 1));
+    }
+
+    public function testColumnName()
+    {
+        $sqlite = new SQLiteCloud();
+
+        $result = $sqlite->connectWithString(getenv('SQLITE_CONNECTION_STRING_API_KEY'));
+
+        $this->assertTrue($result);
+
+        /** @var SQLiteCloudRowset */
+        $rowset = $sqlite->execute('SELECT * FROM albums');
+
+        $this->assertSame('AlbumId', $rowset->name(0));
+        $this->assertSame('Title', $rowset->name(1));
+    }
+
+    public function testInvalidRowNumberForColumnName()
+    {
+        $sqlite = new SQLiteCloud();
+
+        $result = $sqlite->connectWithString(getenv('SQLITE_CONNECTION_STRING_API_KEY'));
+
+        $this->assertTrue($result);
+
+        /** @var SQLiteCloudRowset */
+        $rowset = $sqlite->execute('SELECT AlbumId FROM albums');
+
+        $this->assertNull($rowset->name(1));
+    }
 }
