@@ -8,8 +8,8 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 
-class SQLiteCloudTest extends TestCase {
-
+class SQLiteCloudTest extends TestCase 
+{
     public function testConnectWithStringWithPort()
     {
          /** @var MockObject|SQLiteCloud */

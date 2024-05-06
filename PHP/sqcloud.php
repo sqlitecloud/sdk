@@ -237,7 +237,7 @@
 			foreach ($options as $option => $value) {
 				$opt = strtolower($option);
 
-				// prepend `tsl` to options for certificate
+				// prefix for certificate options
 				if (strcmp($opt, "root_certificate") == 0 
 				|| strcmp($opt, "certificate") == 0 
 				|| strcmp($opt, "certificate_key") == 0) {
