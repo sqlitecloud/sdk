@@ -126,19 +126,52 @@
 	}
 	
 	class SQLiteCloud {
-		public const SDKVersion = '1.1.0';
+		const SDKVersion = '1.1.0';
 		
+		// User name is required unless connectionstring is provided
 		public $username = '';
+		// Password is required unless connection string is provided
 		public $password = '';
+		// Password is hashed
+		public $password_hashed = false;
+		// API key instead of username and password
+		public $apikey = '';
+
+		// Name of database to open
 		public $database = '';
+		// Optional query timeout passed directly to TLS socket
 		public $timeout = NULL;
+		// Socket connection timeout
 		public $connect_timeout = 20;
+
+		// Enable compression
 		public $compression = false;
-		public $zerotext = false;	
+		// Tell the server to zero-terminate strings
+		public $zerotext = false;
+		// Database will be created in memory	
+		public $memory = false;
+		// Create the database if it doesn't exist?
+		public $create = false;
+		// Request for immediate responses from the server node without waiting for linerizability guarantees
+		public $non_linearizable = false;
+		// Connect using plain TCP port, without TLS encryption, NOT RECOMMENDED 
 		public $insecure = false;
+		// Accept invalid TLS certificates
+		public $no_verify_certificate = false;
+		
+		// Certificates 
 		public $tls_root_certificate = NULL;
 		public $tls_certificate = NULL;
 		public $tls_certificate_key = NULL;
+		
+		// Server should send BLOB columns
+		public $noblob = false;
+		// Do not send columns with more than max_data bytes
+		public $maxdata = 0;
+		// Server should chunk responses with more than maxRows
+		public $maxrows = 0;
+		// Server should limit total number of rows in a set to maxRowset
+		public $maxrowset = 0;
 		
 		public $errmsg = NULL;
 		public $errcode = 0;
@@ -160,6 +193,10 @@
 				if ($this->tls_root_certificate) stream_context_set_option($context, 'ssl', 'cafile', $this->tls_root_certificate);
 				if ($this->tls_certificate) stream_context_set_option($context, 'ssl', 'local_cert', $this->tls_certificate);
 				if ($this->tls_certificate_key) stream_context_set_option($context, 'ssl', 'local_pk', $this->tls_certificate_key);
+				if ($this->no_verify_certificate) {
+					stream_context_set_option($context, 'ssl', 'verify_peer ', false);
+					stream_context_set_option($context, 'ssl', 'verify_peer_name ', false);
+				}
 			}
 			
 			// connect to remote socket
@@ -180,6 +217,65 @@
 			if ($this->internal_config_apply() == false) return false;
 			
 			return true;
+		}
+
+		public function connectWithString ($connectionString) {
+			// URL STRING FORMAT
+    		// sqlitecloud://user:pass@host.com:port/dbname?timeout=10&key2=value2&key3=value3
+			// or sqlitecloud://host.sqlite.cloud:8860/dbname?apikey=zIiAARzKm9XBVllbAzkB1wqrgijJ3Gx0X5z1A4m4xBA
+
+			$params = parse_url($connectionString);
+			if (!is_array($params)) {
+				$this->errmsg = "Invalid connection string: {$connectionString}.";
+				$this->errcode = -1;
+				return false;
+			}
+
+			$options = [];
+			$query = isset($params['query']) ? $params['query'] : '';
+			parse_str($query, $options);
+			foreach ($options as $option => $value) {
+				$opt = strtolower($option);
+
+				// prefix for certificate options
+				if (strcmp($opt, "root_certificate") == 0 
+				|| strcmp($opt, "certificate") == 0 
+				|| strcmp($opt, "certificate_key") == 0) {
+					$opt = "tls_" . $opt;
+				}
+
+				if (property_exists($this, $opt)) {
+					if (filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) !== null) {
+						$this->{$opt} = (bool) ($value);
+					} else if (is_numeric($value)) {
+						$this->{$opt} = (int) ($value);
+					} else {
+						$this->{$opt} = $value;
+					}
+				}
+			}
+			
+			// apikey or username/password is accepted
+			if (!$this->apikey) {
+				$this->username = isset($params['user']) ? urldecode($params['user']) : '';
+				$this->password = isset($params['pass']) ?  urldecode($params['pass']) : '';
+			}
+			
+			$path = isset($params['path']) ? $params['path'] : '';
+			$database = str_replace('/', '', $path);
+			if ($database) {
+				$this->database = $database;
+			}
+			
+			$hostname = $params['host'];
+			$port = isset($params['port']) ? (int)($params['port']) : null;
+
+			if ($port) {
+				return $this->connect($hostname, $port);
+			}
+
+			return $this->connect($hostname);
+			
 		}
 		
 		public function disconnect () {
@@ -262,11 +358,20 @@
 			if ($this->timeout > 0) stream_set_timeout($this->socket, $this->timeout);
 			
 			$buffer = '';
-			if ((strlen($this->username) > 0) && (strlen($this->password) > 0)) {
-				$buffer .= "AUTH USER {$this->username} PASSWORD {$this->password};";
+			
+			if ($this->apikey) {
+				$buffer .= "AUTH APIKEY {$this->apikey};";
+			} 
+			
+			if ($this->username && $this->password) {
+				$command = $this->password_hashed ? 'HASH' : 'PASSWORD';
+				$buffer .= "AUTH USER {$this->username} {$command} {$this->password};";
 			}
 			
-			if (strlen($this->database) > 0) {
+			if ($this->database) {
+				if ($this->create && !$this->memory) {
+					$buffer .= "CREATE DATABASE {$this->database} IF NOT EXISTS;";
+				}
 				$buffer .= "USE DATABASE {$this->database};";
 			}
 			
@@ -277,7 +382,27 @@
 			if ($this->zerotext) {
 				$buffer .= "SET CLIENT KEY ZEROTEXT TO 1;";
 			}
-			
+
+			if ($this->non_linearizable) {
+				$buffer .= "SET CLIENT KEY NONLINEARIZABLE TO 1;";
+			}
+		
+			if ($this->noblob) {
+				$buffer .= "SET CLIENT KEY NOBLOB TO 1;";
+			}
+
+			if ($this->maxdata) {
+				$buffer .= "SET CLIENT KEY MAXDATA TO {$this->maxdata};";
+			}
+
+			if ($this->maxrows) {
+				$buffer .= "SET CLIENT KEY MAXROWS TO {$this->maxrows};";
+			}
+
+			if ($this->maxrowset) {
+				$buffer .= "SET CLIENT KEY MAXROWSET TO {$this->maxrowset};";	
+			}
+
 			if (strlen($buffer) > 0) {
 				$result = $this->internal_run_command($buffer);
 				if ($result === false) return false;
