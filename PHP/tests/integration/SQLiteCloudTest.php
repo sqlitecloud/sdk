@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-include_once 'sqcloud.php';
+include_once 'src/sqcloud.php';
 
 use PHPUnit\Framework\TestCase;
 
@@ -300,7 +300,6 @@ class SQLiteCloudTest extends TestCase
         $this->assertTrue(is_array($rowset));
         $this->assertCount(5, $rowset);
         $this->assertSame('Hello World', $rowset[0]);
-        // TODO: è un errore?
         $this->assertSame('123456', $rowset[1]);
         $this->assertSame('3.1415', $rowset[2]);
         $this->assertNull($rowset[3]);
@@ -316,6 +315,57 @@ class SQLiteCloudTest extends TestCase
         $this->assertTrue(in_array($rowset->version, [1, 2]));
         $this->assertSame('key', $rowset->name(0));
         $this->assertSame('value', $rowset->name(1));
+    }
+
+    public function testMaxRowsOption()
+    {
+        $sqlite = new SQLiteCloud();
+        $sqlite->database = getenv('SQLITE_DB');
+        $sqlite->apikey = getenv('SQLITE_API_KEY');
+        $sqlite->maxrows = 1;
+        $result = $sqlite->connect(getenv('SQLITE_HOST'));
+
+        $this->assertTrue($result);
+
+        $rowset = $sqlite->execute('SELECT * FROM albums');
+        $this->assertNotFalse($rowset);
+        $this->assertGreaterThan(100, $rowset->nrows);
+
+        $sqlite->disconnect();
+    }
+
+    public function testMaxRowsetOptionToFailWhenRowsetIsBigger()
+    {
+        $sqlite = new SQLiteCloud();
+        $sqlite->database = getenv('SQLITE_DB');
+        $sqlite->apikey = getenv('SQLITE_API_KEY');
+        $sqlite->maxrowset = 1024;
+        $result = $sqlite->connect(getenv('SQLITE_HOST'));
+
+        $this->assertTrue($result);
+
+        $rowset = $sqlite->execute('SELECT * FROM albums');
+        $this->assertFalse($rowset);
+        $this->assertSame('RowSet too big to be sent (limit set to 1024 bytes).', $sqlite->errmsg);
+
+        $sqlite->disconnect();
+    }
+
+    public function testMaxRowsetOptionToSuccedWhenRowsetIsLighter()
+    {
+        $sqlite = new SQLiteCloud();
+        $sqlite->database = getenv('SQLITE_DB');
+        $sqlite->apikey = getenv('SQLITE_API_KEY');
+        $sqlite->maxrowset = 1024;
+        $result = $sqlite->connect(getenv('SQLITE_HOST'));
+
+        $this->assertTrue($result);
+
+        $rowset = $sqlite->execute("SELECT 'hello world'");
+        $this->assertNotFalse($rowset);
+        $this->assertSame(1, $rowset->nrows);
+
+        $sqlite->disconnect();
     }
 
     public function testChunckedRowset()
@@ -362,7 +412,6 @@ class SQLiteCloudTest extends TestCase
             $this->assertSame(2, $rowset->ncols);
             $this->assertSame('count', $rowset->name(0));
             $this->assertSame('string', $rowset->name(1));
-            // TODO: i valori vengono tipizzati o sono sempre stringhe?
             $this->assertSame("{$i}", $rowset->value(0, 0));
             $this->assertTrue(in_array($rowset->version, [1, 2]));
         }
@@ -378,8 +427,8 @@ class SQLiteCloudTest extends TestCase
         $result = $sqlite->connect(getenv('SQLITE_HOST'));
         $this->assertTrue($result);
 
-        // this operation sends 150 packets and don't complete in 1s
-        $rowset = $sqlite->execute('TEST ROWSET_CHUNK');
+        // this operation should take more then 1s
+        $rowset = $sqlite->execute('SELECT ' . str_repeat('a', 100000));
         $this->assertFalse($rowset);
 
         $sqlite->disconnect();
@@ -445,7 +494,7 @@ class SQLiteCloudTest extends TestCase
         $this->assertSame(2, $rowset->ncols);
         $this->assertSame('42', $rowset->name(0));
         $this->assertSame("'hello'", $rowset->name(1));
-        $this->assertSame(42, $rowset->value(0, 0));
+        $this->assertSame('42', $rowset->value(0, 0));
         $this->assertSame('hello', $rowset->value(0, 1));
     }
 
@@ -495,7 +544,7 @@ class SQLiteCloudTest extends TestCase
     /**
      * @large
      */
-    public function testConnectStressTest20xStringSelectIndividual()
+    public function testStressTest20xStringSelectIndividual()
     {
         $numQueries = 20;
         $completed = 0;
@@ -520,7 +569,7 @@ class SQLiteCloudTest extends TestCase
     /**
      * @large
      */
-    public function testConnectStressTest20xIndividualSelect()
+    public function testStressTest20xIndividualSelect()
     {
         $numQueries = 20;
         $completed = 0;
@@ -545,7 +594,7 @@ class SQLiteCloudTest extends TestCase
     /**
      * @long
      */
-    public function testConnectStressTest20xBatchedSelects()
+    public function testStressTest20xBatchedSelects()
     {
         $numQueries = 20;
         $completed = 0;

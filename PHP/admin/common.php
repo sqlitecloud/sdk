@@ -8,7 +8,7 @@
 		session_start();
 	}
 
-	include_once('../sqcloud.php');
+	include_once('../src/sqcloud.php');
 	
 	function do_real_connect($hostname, $port, $username, $password) {
 		global $sqlitecloud;

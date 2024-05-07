@@ -1,20 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/|version|/phpunit.xsd"
+         bootstrap="bootstrap.php"
          displayDetailsOnTestsThatTriggerWarnings="true">
     <testsuites>
         <testsuite name="Project Test Suite">
             <directory>tests</directory>
         </testsuite>
     </testsuites>
-
-    <php>
-        <env name="SQLITE_CONNECTION_STRING" value="" />
-        <env name="SQLITE_USER" value="" />
-        <env name="SQLITE_PASSWORD" value="" />
-        <env name="SQLITE_API_KEY" value="" />
-        <env name="SQLITE_HOST" value="" />
-        <env name="SQLITE_DB" value="chinook.sqlite" />
-        <env name="SQLITE_PORT" value="8860" />
-    </php>
 </phpunit>
