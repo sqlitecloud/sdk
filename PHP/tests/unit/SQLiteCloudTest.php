@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-include_once 'sqcloud.php';
+include_once 'src/sqcloud.php';
 
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;

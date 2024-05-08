@@ -44,7 +44,9 @@
 	const CMD_COMMAND		=	'^';
 	const CMD_RECONNECT		=	'@';
 	const CMD_ARRAY			=	'=';
-	
+
+	const ROWSET_CHUNKS_END = '/6 0 0 0 ';
+
 	class SQLiteCloudRowset {
 		public $nrows = 0;
 		public $ncols = 0;
@@ -485,6 +487,10 @@
 				if (($c == CMD_INT) || ($c == CMD_FLOAT) || ($c == CMD_NULL)) {
 					// command is terminated by a space character
 					if ($buffer[$nread-1] != ' ') continue;
+				} elseif ($c == CMD_ROWSET_CHUNK) {
+					// chunkes are completed when the buffer contains the end-of-chunk marker
+					$isEndOfChunk = substr($buffer, -strlen(ROWSET_CHUNKS_END)) == ROWSET_CHUNKS_END;
+					if (!$isEndOfChunk) continue;
 				} else {
 					$cstart = 0;
 					$n = $this->internal_parse_number($buffer, $cstart);
@@ -659,8 +665,15 @@
 						return $rowset;
 					}
         			
-					// continue parsing
-        			return $this->internal_parse_rowset($buffer, $start, $idx, $version, $nrows, $ncols);
+        			$rowset = $this->internal_parse_rowset($buffer, $start, $idx, $version, $nrows, $ncols);
+
+					// continue parsing next chunk in the buffer
+					$buffer = substr($buffer, $len + strlen("/{$len} "));
+					if ($buffer) {
+						return $this->internal_parse_buffer($buffer, strlen($buffer));
+					}
+
+					return $rowset;
         		}
         			
         		case CMD_NULL:
@@ -716,7 +729,7 @@
 			// ROWSET in CHUNK: /LEN IDX:VERS NROWS NCOLS DATA
 			
 			// check for end-of-chunk condition
-			if ($buffer == '/6 0 0 0 ') {
+			if ($buffer == ROWSET_CHUNKS_END) {
 				$version = 0;
 				return 0;
 			}
@@ -867,12 +880,7 @@
 			
 			// parse values
 			$this->internal_parse_rowset_values($rowset, $buffer, $n, $nrows*$ncols);
-			
-			if ($ischunk) {
-				// read next chunk
-				return $this->internal_socket_read();
-			}
-			
+
 			return $rowset;
 		}
 		

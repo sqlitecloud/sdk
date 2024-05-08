@@ -3,3 +3,5 @@ vendor
 
 # phpunit
 .phpunit.result.cache
+
+.env
