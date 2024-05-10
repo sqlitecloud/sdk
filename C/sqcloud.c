@@ -1721,8 +1721,12 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
         // set socket options
         int len = 1;
         setsockopt(sock_current, SOL_SOCKET, SO_KEEPALIVE, (const char *) &len, sizeof(len));
+        
+        // disable Nagle algorithm because we want our writes to be sent ASAP
+        // https://brooker.co.za/blog/2024/05/09/nagle.html
         len = 1;
         setsockopt(sock_current, IPPROTO_TCP, TCP_NODELAY, (const char *) &len, sizeof(len));
+        
         #ifdef SO_NOSIGPIPE
         len = 1;
         setsockopt(sock_current, SOL_SOCKET, SO_NOSIGPIPE, (const char *) &len, sizeof(len));
