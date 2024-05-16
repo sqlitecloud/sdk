@@ -508,54 +508,37 @@
 			return false;
 		}
 		
-		private function internal_uncompress_data ($buffer, $blen) {
+		private function internal_uncompress_data ($buffer) {
 			// %LEN COMPRESSED UNCOMPRESSED BUFFER
-			
-			$tlen = 0;	// total length
-			$clen = 0;	// compressed length
-			$ulen = 0;	// uncompressed length
-			$hlen = 0;	// raw header length
-			$seek1 = 0;
-			
-			$start = 1;
-			$counter = 0;
-			for ($i = 0; $i < $blen; $i++) {
-				if ($buffer[$i] != ' ') continue;
-				++$counter;
-				
-				$data = substr($buffer, $start, $i-$start);
-				$start = $i + 1;
-				
-				if ($counter == 1) {
-					$tlen = intval($data);
-					$seek1 = $start;
-				}
-				else if ($counter == 2) {
-					$clen = intval($data);
-				}
-				else if ($counter == 3) {
-					$ulen = intval($data);
-					break;
-				}
-			}
-			
-			// sanity check header values
-			if ($tlen == 0 || $clen == 0 || $ulen == 0 || $start == 1 || $seek1 == 0) return NULL;
-			
-			// copy raw header
-			$hlen = $start - $seek1;
-			$header = substr($buffer, $start, $hlen);
-			
-			// compute index of the first compressed byte
-			$start += $hlen;
-			
-			// perform real decompression in pure PHP code
-			$clone = $this->lz4decode($buffer, $start, $header);
-			
+						
+			// extract compressed size
+			$space_index = strpos($buffer, ' ');
+			$buffer = substr($buffer, $space_index + 1);
+
+			// extract compressed size
+			$space_index = strpos($buffer, ' ');
+			$compressed_size = intval(substr($buffer, 0, $space_index));
+			$buffer = substr($buffer, $space_index + 1);
+
+			// extract decompressed size
+			$space_index = strpos($buffer, ' ');
+			$uncompressed_size = intval(substr($buffer, 0, $space_index));
+			$buffer = substr($buffer, $space_index + 1);
+
+			// extract data header
+			$header = substr($buffer, 0, -$compressed_size);
+
+			// extract compressed data
+			$compressed_buffer = substr($buffer, -$compressed_size);
+
+			$decompressed_buffer = $header . $this->lz4decode($compressed_buffer, 0);
+
 			// sanity check result
-			if (strlen($clone) != $ulen + $hlen) return NULL;
-			
-			return $clone;
+			if (strlen($decompressed_buffer) != $uncompressed_size + strlen($header)) {
+				return NULL;
+			}
+
+			return $decompressed_buffer;
 		}
 		
 		private function internal_parse_value ($buffer, &$len, &$cellsize = NULL, $index = 0) {
@@ -601,12 +584,14 @@
 		
 			// check for compressed result
 			if ($buffer[0] == CMD_COMPRESSED) {
-				$buffer = $this->internal_uncompress_data ($buffer, $blen);
+				$buffer = $this->internal_uncompress_data ($buffer);
 				if ($buffer == NULL) {
 					$this->errcode = -1;
-					$this->errmsg = 'An error occurred while decompressing the input buffer of len {$len}.';
+					$this->errmsg = "An error occurred while decompressing the input buffer of len {$blen}.";
 					return false;
 				}
+				// after decompression length has changed
+				$blen = strlen($buffer);
 			}
 			
 			// first character contains command type
@@ -654,7 +639,10 @@
         		case CMD_ROWSET:
         		case CMD_ROWSET_CHUNK: {
         			// CMD_ROWSET:          *LEN 0:VERSION ROWS COLS DATA
+					// - When decompressed, LEN for ROWSET is *0
+					//
             		// CMD_ROWSET_CHUNK:    /LEN IDX:VERSION ROWS COLS DATA
+					//
         			$start = $this->internal_parse_rowset_signature($buffer, $len, $idx, $version, $nrows, $ncols);
 					if ($start < 0) return false;
 					
@@ -668,9 +656,11 @@
         			$rowset = $this->internal_parse_rowset($buffer, $start, $idx, $version, $nrows, $ncols);
 
 					// continue parsing next chunk in the buffer
-					$buffer = substr($buffer, $len + strlen("/{$len} "));
-					if ($buffer) {
-						return $this->internal_parse_buffer($buffer, strlen($buffer));
+					if ($buffer[0] == CMD_ROWSET_CHUNK) {
+						$buffer = substr($buffer, $len + strlen("/{$len} "));
+						if ($buffer) {
+							return $this->internal_parse_buffer($buffer, strlen($buffer));
+						}
 					}
 
 					return $rowset;
