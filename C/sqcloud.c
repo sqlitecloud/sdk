@@ -1350,7 +1350,9 @@ static bool internal_socket_forward_read (SQCloudConnection *connection, bool (*
     uint32_t cstart = 0;
     uint32_t tread = 0;
     uint32_t clen = 0;
+    char type = 0;
     
+    ssize_t nread = 0;
     char *buffer = sbuffer;
     char *original = buffer;
     int fd = connection->fd;
@@ -1361,56 +1363,62 @@ static bool internal_socket_forward_read (SQCloudConnection *connection, bool (*
     while (1) {
         // perform read operation
         #ifndef SQLITECLOUD_DISABLE_TLS
-        ssize_t nread = (tls) ? tls_read(tls, buffer, blen) : readsocket(fd, buffer, blen);
+        nread = (tls) ? tls_read(tls, buffer, blen) : readsocket(fd, buffer, blen);
         if ((tls) && (nread == TLS_WANT_POLLIN || nread == TLS_WANT_POLLOUT)) continue;
         #else
-        ssize_t nread = readsocket(fd, buffer, blen);
+        nread = readsocket(fd, buffer, blen);
         #endif
+        if (nread == -1 && errno == EINTR) continue;
         
         // sanity check read
-        if (nread < 0) {
-            const char *msg = "";
-            #ifndef SQLITECLOUD_DISABLE_TLS
-            if (tls) msg = tls_error(tls);
-            #endif
-            
-            internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while reading data: %s (%s).", strerror(errno), msg);
-            goto abort_read;
-        }
-        
-        if (nread == 0) {
-            const char *msg = "";
-            #ifndef SQLITECLOUD_DISABLE_TLS
-            if (tls) msg = tls_error(tls);
-            #endif
-            
-            internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "Unexpected EOF found while reading data: %s (%s).", strerror(errno), msg);
-            goto abort_read;
-        }
+        if (nread <= 0) goto abort_read;
         
         // forward read to callback
         bool result = forward_cb(buffer, nread, xdata, xdata2);
         if (!result) goto abort_read;
         
-        // update internal counter
-        tread += (uint32_t)nread;
+        // read original type
+        if (type == 0) type = buffer[0];
         
-        // determine command length
-        if (clen == 0) {
-            clen = internal_parse_number (&original[1], tread-1, &cstart);
+        if (type != CMD_ROWSET_CHUNK) {
+            // update internal counter
+            tread += (uint32_t)nread;
             
-            // handle special cases
-            if ((original[0] == CMD_INT) || (original[0] == CMD_FLOAT) || (original[0] == CMD_NULL)) clen = 0;
-            else if (clen == 0) continue;
+            // determine command length
+            if (clen == 0) {
+                clen = internal_parse_number (&original[1], tread-1, &cstart);
+                
+                // handle special cases
+                if ((original[0] == CMD_INT) || (original[0] == CMD_FLOAT) || (original[0] == CMD_NULL)) clen = 0;
+                else if (clen == 0) continue;
+            }
+            
+            // check if read is complete
+            if (clen + cstart + 1 == tread) break;
+        } else {
+            const char *end_of_chunk = "/6 0 0 0 ";
+            size_t end_of_chunk_len = 9;
+            
+            if (nread >= end_of_chunk_len) {
+                if (strncmp(buffer + nread - end_of_chunk_len, end_of_chunk, end_of_chunk_len) == 0) break;
+            } else {
+                // there is an extremely rare possibility that the end of chuck was split by the TCP driver
+                // in that case we would have no way to determine the end of the rowset chunk
+                ;
+            }
         }
-        
-        // check if read is complete
-        if (clen + cstart + 1 == tread) break;
     }
     
     return true;
     
-abort_read:
+abort_read: {
+        const char *msg = "";
+        const char *format = (nread == 0) ? "Unexpected EOF found while reading data: %s (%s)." : "An error occurred while reading data: %s (%s).";
+        #ifndef SQLITECLOUD_DISABLE_TLS
+        if (tls) msg = tls_error(tls);
+        #endif
+        internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, format, strerror(errno), msg);
+    }
     return false;
 }
 
