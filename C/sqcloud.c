@@ -1165,21 +1165,12 @@ abort_rowset:
 static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char *buffer, uint32_t blen, uint32_t cstart, bool isstatic, bool externalbuffer) {
     if (blen <= 1) return false;
     
+    bool buffer_canbe_freed = (!isstatic && !externalbuffer);
+    
     // try to check if it is a OK reply: +2 OK
     if ((blen == REPLY_OK_LEN) && (strncmp(buffer, REPLY_OK, REPLY_OK_LEN) == 0)) {
+        if (buffer_canbe_freed) mem_free(buffer);
         return &SQCloudResultOK;
-    }
-    
-    // if buffer is static (stack based allocation) then it must be duplicated
-    if (buffer[0] != CMD_ERROR && isstatic) {
-        char *clone = mem_alloc(blen);
-        if (!clone) {
-            internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory: %d.", blen);
-            return NULL;
-        }
-        memcpy(clone, buffer, blen);
-        buffer = clone;
-        isstatic = false;
     }
     
     // check for compressed reply before the parse step
@@ -1200,11 +1191,12 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         char *hstart = &buffer[cstart1 + cstart2 + cstart3 + 1];
         
         // try to allocate a buffer big enough to hold uncompressed data + raw header
-        uint32_t clonelen = ulen + (uint32_t)(hstart - buffer);
+        // 256 is an arbitrary memory cushion value
+        uint32_t clonelen = ulen + (uint32_t)(hstart - buffer) + 256;
         char *clone = mem_alloc (clonelen);
         if (!clone) {
             internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory to uncompress buffer: %d.", clonelen);
-            if (!isstatic && !externalbuffer) mem_free(buffer);
+            if (buffer_canbe_freed) mem_free(buffer);
             return NULL;
         }
         
@@ -1215,12 +1207,12 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         uint32_t rc = LZ4_decompress_safe(zdata, clone + (zdata - hstart), clen, ulen);
         if (rc <= 0 || rc != ulen) {
             internal_set_error(connection, INTERNAL_ERRCODE_GENERIC, "Unable to decompress buffer (err code: %d).", rc);
-            if (!isstatic && !externalbuffer) mem_free(buffer);
+            if (buffer_canbe_freed) mem_free(buffer);
             return NULL;
         }
         
         // decompression is OK so replace buffer
-        if (!isstatic && !externalbuffer) mem_free(buffer);
+        if (buffer_canbe_freed) mem_free(buffer);
         
         isstatic = false;
         buffer = clone;
@@ -1229,7 +1221,24 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         // at this point the buffer used in the SQCloudResult is a newly allocated one (clone)
         // so externalbuffer flag must be set to false
         externalbuffer = false;
+    } else {
+        // if buffer is static (stack based allocation) then it must be duplicated
+        bool buffer_should_be_duplicated = (buffer[0] != CMD_ERROR);
+        if (buffer_should_be_duplicated && isstatic) {
+            char *clone = mem_alloc(blen);
+            if (!clone) {
+                internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory: %d.", blen);
+                if (buffer_canbe_freed) mem_free(buffer);
+                return NULL;
+            }
+            memcpy(clone, buffer, blen);
+            buffer = clone;
+            isstatic = false;
+        }
     }
+    
+    // re-compute flag
+    buffer_canbe_freed = (!isstatic && !externalbuffer);
     
     // parse reply
     switch (buffer[0]) {
@@ -1274,7 +1283,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             connection->errmsg[len] = 0;
             
             // check free buffer
-            if (!isstatic && !externalbuffer) mem_free(buffer);
+            if (buffer_canbe_freed) mem_free(buffer);
             return NULL;
         }
         
@@ -1304,12 +1313,12 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             }
             
             // check free buffer
-            if (!res && !isstatic && !externalbuffer) mem_free(buffer);
+            if (!res && buffer_canbe_freed) mem_free(buffer);
             return res;
         }
         
         case CMD_NULL:
-            if (!isstatic && !externalbuffer) mem_free(buffer);
+            if (buffer_canbe_freed) mem_free(buffer);
             return &SQCloudResultNULL;
             
         case CMD_INT:
@@ -1319,7 +1328,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
             SQCloudResult *res = internal_rowset_type(connection, buffer, blen, 1, (buffer[0] == CMD_INT) ? RESULT_INTEGER : RESULT_FLOAT);
             if (res) res->externalbuffer = externalbuffer;
             
-            if (!res && !isstatic && !externalbuffer) mem_free(buffer);
+            if (!res && buffer_canbe_freed) mem_free(buffer);
             return res;
         }
             
@@ -1331,7 +1340,7 @@ static SQCloudResult *internal_parse_buffer (SQCloudConnection *connection, char
         }
     }
     
-    if (!isstatic && !externalbuffer) mem_free(buffer);
+    if (buffer_canbe_freed) mem_free(buffer);
     return NULL;
 }
 
@@ -1405,94 +1414,108 @@ abort_read:
     return false;
 }
 
-static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool mainfd) {
-    // most of the time one read will be sufficient
-    char header[4096];
-    char *buffer = (char *)&header;
-    uint32_t blen = sizeof(header);
-    uint32_t tread = 0;
+static ssize_t internal_socket_read_nbytes (int fd, void *tlsp, char *buffer, ssize_t len) {
+    ssize_t total_read = 0;
     
-    uint32_t cstart = 0;
-    uint32_t clen = 0;
+    while (1) {
+        #ifndef SQLITECLOUD_DISABLE_TLS
+        ssize_t nread = (tlsp) ? tls_read((struct tls *)tlsp, buffer + total_read, len - total_read) : readsocket(fd, buffer + total_read, len - total_read);
+        if ((tlsp) && (nread == TLS_WANT_POLLIN || nread == TLS_WANT_POLLOUT)) continue;
+        #else
+        nread = readsocket(fd, buffer + total_read, len - total_read);
+        #endif
+        total_read += nread;
+        
+        if (nread <= 0) return nread;
+        if (total_read == len) break;
+    };
+    
+    return total_read;
+}
 
+static SQCloudResult *internal_socket_read (SQCloudConnection *connection, bool mainfd) {
     int fd = (mainfd) ? connection->fd : connection->pubsubfd;
     #ifndef SQLITECLOUD_DISABLE_TLS
     struct tls *tls = (mainfd) ? connection->tls_context : connection->tls_pubsub_context;
+    #else
+    void *tls = NULL;
     #endif
     
-    char *original = buffer;
+    ssize_t nread = 0;
+    uint32_t clen = 0;
+    uint32_t cstart = 0;
+    char header[64];
+    int header_index = 0;
+    
+    char *buffer = NULL;
+    char static_buffer[4096];
+    
+    // read the buffer one character at a time until a space is encountered
+    // see https://github.com/sqlitecloud/sdk/blob/master/PROTOCOL.md for more details about the protocol
+    // after this loop we can know the buffer type and len
     while (1) {
-        #ifndef SQLITECLOUD_DISABLE_TLS
-        ssize_t nread = (tls) ? tls_read(tls, buffer, blen) : readsocket(fd, buffer, blen);
-        if ((tls) && (nread == TLS_WANT_POLLIN || nread == TLS_WANT_POLLOUT)) continue;
-        #else
-        ssize_t nread = readsocket(fd, buffer, blen);
-        #endif
+        nread = internal_socket_read_nbytes(fd, tls, &header[header_index], 1);
+        if (nread <= 0) goto abort_read;
+        if (header[header_index] == ' ') break;
+        ++header_index;
         
-        if (nread < 0) {
-            const char *msg = "";
-            #ifndef SQLITECLOUD_DISABLE_TLS
-            if (tls) msg = tls_error(tls);
-            #endif
-            
-            internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "An error occurred while reading data: %s (%s).", strerror(errno), msg);
-            goto abort_read;
+        // check for malformed header
+        if (header_index >= sizeof(header)) {
+            internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "Bad protocol reply from server: unable to find buffer size (type was %c).", header[0]);
+            return NULL;
         }
-        
-        if (nread == 0) {
-            const char *msg = "";
-            #ifndef SQLITECLOUD_DISABLE_TLS
-            if (tls) msg = tls_error(tls);
-            #endif
-            
-            internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "Unexpected EOF found while reading data: %s (%s).", strerror(errno), msg);
-            goto abort_read;
-        }
-        
-        tread += (uint32_t)nread;
-        blen -= (uint32_t)nread;
-        buffer += nread;
-        
-        if (internal_has_commandlen(original[0])) {
-            // parse buffer looking for command length
-            if (clen == 0) clen = internal_parse_number (&original[1], tread-1, &cstart);
-            
-            // check special zero-length value
-            if (clen == 0) {
-                if (!internal_canbe_zerolength(original[0])) continue;
-            }
-            
-            // check if read is complete
-            // clen is the lenght parsed in the buffer
-            // cstart is the index of the first space
-            // +1 because we skipped the first character in the internal_parse_number function
-            if (clen + cstart + 1 != tread) {
-                // check buffer allocation and continue reading
-                if (clen + cstart - tread > blen) {
-                    char *clone = mem_alloc(clen + cstart + 1);
-                    if (!clone) {
-                        internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory: %d.", clen + cstart + 1);
-                        goto abort_read;
-                    }
-                    memcpy(clone, original, tread);
-                    buffer = original = clone;
-                    blen = (clen + cstart + 1) - tread;
-                    buffer += tread;
-                }
-                continue;
-            }
-        } else {
-            // it is a command with no explicit len
-            // so make sure that the final character is a space
-            if (original[tread-1] != ' ') continue;
-        }
-        
-        // command is complete so parse it
-        return internal_parse_buffer(connection, original, tread, (clen) ? cstart : 0, (original == header), false);
     }
     
-abort_read:
-    if (original != (char *)&header) mem_free(original);
+    // parse len (if any)
+    int header_size = header_index + 1; // +1 because ++header_index; is after the break clause
+    if (internal_has_commandlen(header[0])) {
+        clen = internal_parse_number (&header[1], header_size-1, &cstart);
+        
+        // check special zero-length value
+        if (clen == 0) {
+            if (internal_canbe_zerolength(header[0])) {
+                // it is perfectly legit to have a zero-bytes string or blob
+                return internal_parse_buffer(connection, header, header_size, 0, true, false);
+            } else {
+                // we parsed a zero-length header but we command does not allow that value, so return an error
+                internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, "Bad protocol reply from server: the type %c cannot have a zero length buffer.", header[0]);
+                return NULL;
+            }
+        }
+    } else {
+        // command does not have an explicit len so the header can be safely processed
+        return internal_parse_buffer(connection, header, header_size, (clen) ? cstart : 0, true, false);
+    }
+    
+    // header correctly parsed and len is greater than zero, check if allocate a buffer or use a static one
+    // the static buffer optimization was added because of the +2 OK messages
+    size_t blen = clen + header_size;
+    buffer = (blen <= sizeof(static_buffer)) ? static_buffer : mem_alloc(blen);
+    if (!buffer) {
+        internal_set_error(connection, INTERNAL_ERRCODE_MEMORY, "Unable to allocate memory: %d.", blen);
+        return NULL;
+    }
+    
+    // copy header back to buffer
+    memcpy(buffer, header, header_size);
+    
+    // read the remaing part of the command
+    nread = internal_socket_read_nbytes(fd, tls, &buffer[header_size], clen);
+    if (nread <= 0) goto abort_read;
+    
+    // command is complete so parse it
+    return internal_parse_buffer(connection, buffer, (uint32_t)blen, (clen) ? cstart : 0, (buffer == static_buffer), false);
+    
+abort_read: {
+        const char *msg = "";
+        const char *format = (nread == 0) ? "Unexpected EOF found while reading data: %s (%s)." : "An error occurred while reading data: %s (%s).";
+        #ifndef SQLITECLOUD_DISABLE_TLS
+        if (tls) msg = tls_error(tls);
+        #endif
+        internal_set_error(connection, INTERNAL_ERRCODE_NETWORK, format, strerror(errno), msg);
+    }
+    
+    if (buffer && buffer != static_buffer) mem_free(buffer);
     return NULL;
 }
 
@@ -2297,10 +2320,6 @@ bool _reserved5 (SQCloudResult *res) {
 bool _reserved6 (SQCloudConnection *connection, const char *buffer) {
     internal_clear_error(connection);
     return internal_socket_raw_write(connection, buffer);
-}
-
-SQCloudResult *_reserved7 (SQCloudConnection *connection) {
-    return internal_socket_read(connection, true);
 }
 
 bool _reserved8 (SQCloudConnection *connection, const char *dbname, const char *key, uint64_t snapshotid, bool isinternaldb, void *xdata, int64_t dbsize, int (*xCallback)(void *xdata, void *buffer, uint32_t *blen, int64_t ntot, int64_t nprogress)) {
