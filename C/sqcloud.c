@@ -1424,6 +1424,7 @@ static ssize_t internal_socket_read_nbytes (int fd, void *tlsp, char *buffer, ss
         #else
         nread = readsocket(fd, buffer + total_read, len - total_read);
         #endif
+        if (nread == -1 && errno == EINTR) continue;
         total_read += nread;
         
         if (nread <= 0) return nread;
