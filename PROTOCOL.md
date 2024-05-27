@@ -18,7 +18,7 @@ A client connects to an SQLite Cloud server creating a TCP connection to port 88
 ### Request-Response model
 SQLite Cloud accepts strings representing the command to execute. These strings are parsed on the server-side and the command-specific reply is sent back to the client. A client is allowed to send to the server only **SCSP Strings**.
 
-Multiple commands can be sent to the SQLite Cloud server as a one **SCPS String** with commands separated by the `;` character. In that case, the client will receive one reply representing the response of the last executed command. In case of error, the execution is interrupted, and the proper error code is returned.
+Multiple commands can be sent to the SQLite Cloud server as a one **SCSP String** with commands separated by the `;` character. In that case, the client will receive one reply representing the response of the last executed command. In case of error, the execution is interrupted, and the proper error code is returned.
 
 In SCSP, the type of data depends on the first byte:
 * For **Strings** the first byte is `+`
