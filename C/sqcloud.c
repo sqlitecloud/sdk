@@ -1663,6 +1663,10 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
     char buffer[2048];
     int len = 0;
     
+    if (config->non_linearizable) {
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY NONLINEARIZABLE TO 1;");
+    }
+    
     if (config->username && config->password && strlen(config->username) && strlen(config->password)) {
         char *command = config->password_hashed ? "HASH" : "PASSWORD";
         len += snprintf(&buffer[len], sizeof(buffer) - len, "AUTH USER %s %s %s;", config->username,  command, config->password);
@@ -1683,10 +1687,6 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
     
     if (config->zero_text) {
         len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY ZEROTEXT TO 1;");
-    }
-    
-    if (config->non_linearizable) {
-        len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY NONLINEARIZABLE TO 1;");
     }
     
     if (config->no_blob) {
