@@ -1663,6 +1663,7 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
     char buffer[2048];
     int len = 0;
     
+    // non-linearizable option must be executed first
     if (config->non_linearizable) {
         len += snprintf(&buffer[len], sizeof(buffer) - len, "SET CLIENT KEY NONLINEARIZABLE TO 1;");
     }
