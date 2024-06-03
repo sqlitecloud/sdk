@@ -2556,7 +2556,7 @@ SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *pconf
             int no_verify_certificate = (int)strtol(value, NULL, 0);
             config->no_verify_certificate = (no_verify_certificate > 0) ? true : false;
         }
-        else if (strcasecmp(key, "non_linearizable") == 0) {
+        else if ((strcasecmp(key, "non_linearizable") == 0) || (strcasecmp(key, "nonlinearizable") == 0)) {
             int dvalue = (int)strtol(value, NULL, 0);
             config->non_linearizable = (dvalue > 0) ? true : false;
         }
