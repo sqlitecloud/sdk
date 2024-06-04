@@ -26,7 +26,7 @@
 #endif
 
 #define CLI_HISTORY_FILENAME    ".sqlitecloud_history.txt"
-#define CLI_VERSION             "1.1"
+#define CLI_VERSION             "1.2"
 #define CLI_BUILD_DATE          __DATE__
 
 #ifndef MAXPATH
