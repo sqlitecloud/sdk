@@ -769,7 +769,8 @@ static SQCloudResult *internal_parse_array (SQCloudConnection *connection, char 
     // loop from i to n to parse each data
     buffer += bstart + start1;
     for (uint32_t i=0; i<n; ++i) {
-        uint32_t len = blen - (bstart + start1), cellsize;
+        uint32_t cellsize = 0;
+        uint32_t len = blen - start1;
         char *value = internal_parse_value(buffer, &len, &cellsize);
         rowset->data[i] = (value) ? buffer : NULL;
         buffer += cellsize;
