@@ -3,7 +3,7 @@ on:
     types:
       - published
 
-name: Upload CLI Release Asset
+name: Upload C CLI Release Asset
 
 jobs:
   release-c-cli:
@@ -47,70 +47,3 @@ jobs:
           asset_path: ./C/${{ env.ZIPFILE }}
           asset_name: ${{ env.ZIPFILE }}
           asset_content_type: application/zip
-          
-  release-go-cli:
-    name: Upload Release GO CLI
-    if: github.event_name == 'release' && startsWith(github.event.release.name, 'cli-')
-    strategy:
-      matrix:
-        include: 
-          - goarch: amd64
-            goos:   linux
-            
-          - goarch: amd64
-            goos:   windows
-          
-          - goarch: arm64
-            goos:   darwin
-            
-          - goarch: amd64
-            goos:   darwin
-            
-    runs-on: ubuntu-latest
-    env:
-      OSNAME: ${{matrix.goos == 'darwin' && 'macos' || matrix.goos }}
-      GOARCH: ${{ matrix.goarch }}
-      GOOS:  ${{ matrix.goos }}
-      ARCHNAME: ${{ matrix.goarch == 'amd64' && 'x86-64' || matrix.goarch }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      
-      - name: Set env var
-        run: echo "ZIPFILE=sqlitecloud-go-${{ github.event.release.name }}-${{ env.OSNAME }}-${{ env.ARCHNAME }}.zip" >> $GITHUB_ENV
-      
-      - name: Build CLI
-        run: |
-          cd GO/cli
-          go build -o ../sqlc
-          cd ..
-          zip ${{ env.ZIPFILE }} sqlc
-
-      - name: Get release
-        id: release
-        uses: bruceadams/get-release@v1.2.3
-        if: matrix.goos != 'darwin'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Upload Release Asset
-        id: upload-release-asset 
-        uses: actions/upload-release-asset@v1
-        if: matrix.goos != 'darwin'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.release.outputs.upload_url }} 
-          asset_path: ./GO/${{ env.ZIPFILE }}
-          asset_name: ${{ env.ZIPFILE }}
-          asset_content_type: application/zip
-          
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v3
-        if: matrix.goos == 'darwin'
-        with:
-          name: ${{ env.ZIPFILE }}
-          path: ./GO/${{ env.ZIPFILE }}
-          if-no-files-found: error
