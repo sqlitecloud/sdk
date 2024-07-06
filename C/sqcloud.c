@@ -52,6 +52,7 @@ struct tls;
 struct tls_config;
 struct tls *tls_client(void);
 struct tls_config *tls_config_new(void);
+void tls_config_free(struct tls_config *config);
 int tls_init(void);
 int tls_configure(struct tls *_ctx, struct tls_config *_config);
 int tls_connect_socket(struct tls *_ctx, int _s, const char *_servername);
@@ -531,6 +532,7 @@ static bool internal_setup_tls (SQCloudConnection *connection, SQCloudConfig *co
     
     // apply configuration to context
     rc = tls_configure(tls_context, tls_conf);
+    tls_config_free(tls_conf);
     if (rc < 0) {
         return internal_set_error(connection, INTERNAL_ERRCODE_TLS, "Error in tls_configure: %s.", tls_error(tls_context));
     }
