@@ -119,7 +119,7 @@ Any value can be compressed and the format is `%LEN COMPRESSED UNCOMPRESSED BUFF
 3. A single space is used to separate LEN from COMPRESSED
 4. COMPRESSED is a string representation of the compressed BUFFER size
 5. UNCOMPRESSED is a string representation of the uncompressed BUFFER size
-6. BUFFER can be any SCSP value
+6. BUFFER can be any SCSP value, that means that it will contain an UNCOMPRESSED SCSP header followed by LZ4 compressed data
 
 ### SCSP Command
 The format is `^LEN COMMAND`. The whole command is built by four parts:
