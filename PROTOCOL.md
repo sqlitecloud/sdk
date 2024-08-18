@@ -50,9 +50,9 @@ The format is `+LEN STRING`. The whole command is built by four parts:
 For example to send the string "Hello World!" the command would be: `+12 Hello World!`
 
 ### SCSP Zero-Terminated Strings
-The format is `!LEN STRING0`. See **SCSP Strings** for details, the only difference is that `STRING` is sent with a 0 at the end (for better performance in C-like environment that requires Zero-Terminated strings). The LEN field includes the 0 at the end.
+The format is `!LEN STRING0`. See **SCSP Strings** for details. The only difference is that `STRING` is sent with a 0 at the end, represented in hexadecimal (`\x00`), for better performance in C-like environments that require zero-terminated strings. The LEN field includes the \x00 at the end.
 
-For example to send the string "Hello World!" the command would be: `!13 Hello World!0`
+For example, to send the string "Hello World!" the command would be: `!13 Hello World!\x00`.
 
 ### SCSP Errors
 The format is `-LEN ERRCODE[:EXTCODE[:OFFCODE]] STRING`. Error replies are only sent by the server when something wrong happens. The ERRCODE field in the numeric error code. The optional part, EXTCODE and OFFCODE are numeric values specific to SQLite. EXTCODE represents the extended error code (as specified in the documentation at https://www.sqlite.org/rescode.html), while OFFCODE indicates the offset index within the SQL token where the syntax error occurs (or -1 if none). TThe remaining part of the string corresponds to the error message itself. The error code proves valuable to clients as it enables them to differentiate between various error conditions without resorting to pattern matching within the error message, which may undergo changes. LEN does not include the length of the first `-LEN ` part.
