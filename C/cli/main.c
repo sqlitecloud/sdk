@@ -125,7 +125,7 @@ static void do_print_usage (void) {
     printf("  -c                    activate compression\n");
     printf("  -i                    activate insecure mode (non TLS connection)\n");
     printf("  -j                    disable certificate verification\n");
-    printf("  -q                    activate quite mode (disable output print)\n");
+    printf("  -q                    activate quiet mode (disable output print)\n");
     printf("  -z                    request zero-terminated strings in all replies\n");
     printf("  -w                    in case of -f file to execute, skip the line by line processing and send the whole file\n");
 }
