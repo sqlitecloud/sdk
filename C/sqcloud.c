@@ -2407,7 +2407,7 @@ bool _reserved13 (SQCloudConnection *connection, const char *dbname, void *xdata
     
     // prepare command to execute
     char buffer[512];
-    snprintf(buffer, sizeof(buffer), "DOWNLOAD DATABASE %s%s", dbname, (ifexists) ? " IF EXISTS" : "");
+    snprintf(buffer, sizeof(buffer), "DOWNLOAD DATABASE '%s' %s", dbname, (ifexists) ? "IF EXISTS" : "");
     
     // execute command on server side
     SQCloudResult *res = SQCloudExec(connection, buffer);
