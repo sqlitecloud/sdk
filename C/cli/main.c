@@ -310,7 +310,7 @@ int do_internal_read_cb (void *xdata, void *buffer, uint32_t *blen, int64_t ntot
     if (nread == -1) return -1;
     
     if (nread == 0) printf("UPLOAD COMPLETE\n\n");
-    else printf("%.2f%% ", ((double)(nprogress+nread) / (double)ntot) * 100.0);
+    else { printf("%.2f%% ", ((double)(nprogress+nread) / (double)ntot) * 100.0); fflush(stdout); }
     
     *blen = (uint32_t)nread;
     return 0;
