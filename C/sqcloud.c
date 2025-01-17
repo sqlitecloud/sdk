@@ -2890,6 +2890,10 @@ float SQCloudResultFloat (SQCloudResult *result) {
     return (float)strtof(buffer, NULL);
 }
 
+double SQCloudResultTime (SQCloudResult *result) {
+    return result->time;
+}
+
 void SQCloudResultFree (SQCloudResult *result) {
     if (!result || (result == &SQCloudResultOK) || (result == &SQCloudResultNULL)) return;
     

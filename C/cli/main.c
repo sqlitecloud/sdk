@@ -139,6 +139,7 @@ bool do_print (SQCloudConnection *conn, SQCloudResult *res) {
         case RESULT_OK:
             if (skip_ok) return true;
             printf("OK");
+            printf(" (Time: %f secs)", SQCloudResultTime(res));
             break;
             
         case RESULT_ERROR:

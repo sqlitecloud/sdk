@@ -199,6 +199,7 @@ int32_t SQCloudResultInt32 (SQCloudResult *result);
 int64_t SQCloudResultInt64 (SQCloudResult *result);
 double SQCloudResultDouble (SQCloudResult *result);
 float SQCloudResultFloat (SQCloudResult *result);
+double SQCloudResultTime (SQCloudResult *result);
 void SQCloudResultFree (SQCloudResult *result);
 bool SQCloudResultIsOK (SQCloudResult *result);
 bool SQCloudResultIsError (SQCloudResult *result);
