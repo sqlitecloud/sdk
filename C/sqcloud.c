@@ -1531,14 +1531,13 @@ abort_read: {
     return NULL;
 }
 
-static bool internal_socket_raw_write (SQCloudConnection *connection, const char *buffer) {
+static bool internal_socket_raw_write (SQCloudConnection *connection, const char *buffer, size_t len) {
     // this function is used only to debug possible security issues
     int fd = connection->fd;
     #ifndef SQLITECLOUD_DISABLE_TLS
     struct tls *tls = connection->tls_context;
     #endif
     
-    size_t len = strlen(buffer);
     size_t written = 0;
     while (len > 0) {
         #ifndef SQLITECLOUD_DISABLE_TLS
@@ -2332,7 +2331,7 @@ bool _reserved5 (SQCloudResult *res) {
 
 bool _reserved6 (SQCloudConnection *connection, const char *buffer) {
     internal_clear_error(connection);
-    return internal_socket_raw_write(connection, buffer);
+    return internal_socket_raw_write(connection, buffer, strlen(buffer));
 }
 
 bool _reserved8 (SQCloudConnection *connection, const char *dbname, const char *key, uint64_t snapshotid, bool isinternaldb, void *xdata, int64_t dbsize, int (*xCallback)(void *xdata, void *buffer, uint32_t *blen, int64_t ntot, int64_t nprogress)) {
@@ -2630,6 +2629,17 @@ abort_connect:
 
 SQCloudResult *SQCloudExec (SQCloudConnection *connection, const char *command) {
     return internal_run_command(connection, command, strlen(command), true);
+}
+
+SQCloudResult *SQCloudExecRaw (SQCloudConnection *connection, const char *command, size_t len) {
+    internal_clear_error(connection);
+    
+    TIME_GET(tstart);
+    if (!internal_socket_raw_write(connection, command, len)) return NULL;
+    SQCloudResult *result = internal_socket_read(connection, true);
+    TIME_GET(tend);
+    if (result) result->time = TIME_VAL(tstart, tend);
+    return result;
 }
 
 SQCloudResult *SQCloudExecArray (SQCloudConnection *connection, const char *command, const char **values, uint32_t len[], SQCLOUD_VALUE_TYPE types[], uint32_t n) {
