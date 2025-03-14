@@ -39,6 +39,27 @@
 #include <pthread.h>
 #include <inttypes.h>
 #endif
+#ifdef __MINGW32__
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#define ioctl ioctlsocket
+#define strndup(s,n) mem_string_ndup_win(s,n)
+
+static char* mem_string_ndup_win(const char* s, size_t n) {
+char* res = (char*)malloc(n + 1);
+if (res) {
+memcpy(res, s, n);
+res[n] = '\0';
+         }
+return res;
+         }
+#else
+#include <unistd.h>
+#include <sys/ioctl.h>
+#endif
+
+#include <inttypes.h>
 
 #ifndef SQLITECLOUD_DISABLE_TLS
 
@@ -1780,7 +1801,14 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
         
         // turn on non-blocking
         unsigned long ioctl_blocking = 1;    /* ~0; //TRUE; */
+        // ioctl(sock_current, FIONBIO, &ioctl_blocking);
+        #ifdef __MINGW32__
+        u_long mode = (u_long)ioctl_blocking;
+        ioctlsocket(sock_current, FIONBIO, &mode);
+        #else
         ioctl(sock_current, FIONBIO, &ioctl_blocking);
+        #endif
+
         
         // initiate non-blocking connect ignoring return code
         rc = connect(sock_current, addr->ai_addr, addr->ai_addrlen);
@@ -1877,8 +1905,13 @@ static bool internal_connect (SQCloudConnection *connection, const char *hostnam
     
     // turn off non-blocking
     int ioctl_blocking = 0;    /* ~0; //TRUE; */
+    // ioctl(sockfd, FIONBIO, &ioctl_blocking);
+    #ifdef _WIN32
+    u_long mode = ioctl_blocking ? 0 : 1;
+    ioctlsocket(sockfd, FIONBIO, &mode);
+    #else
     ioctl(sockfd, FIONBIO, &ioctl_blocking);
-    
+    #endif    
     // finalize connection
     if (mainfd) {
         connection->fd = sockfd;
