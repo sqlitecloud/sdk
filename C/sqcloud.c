@@ -2383,7 +2383,7 @@ char *_reserved11 (char *buffer, uint32_t blen, uint32_t index, uint32_t *len, u
             if (type && buffer) *type = buffer[0];
             if (len) *len = tlen;
             if (cellsize) *cellsize = tcellsize;
-            if (pos) *pos = (uint32_t)(value - p);
+            if (pos) *pos = (uint32_t)((value ? value : buffer) - p);
             return value;
         }
         
