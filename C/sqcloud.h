@@ -75,6 +75,7 @@ typedef struct SQCloudConfigStruct {
     const char      *password;              // connection password
     const char      *database;              // database to use during connection
     const char      *api_key;               // APIKEY
+    const char      *token;                 // token
     int             timeout;                // connection timeout parameter
     int             family;                 // can be: SQCLOUD_IPv4, SQCLOUD_IPv6 or SQCLOUD_IPANY
     bool            compression;            // compression flag

@@ -1679,6 +1679,10 @@ static bool internal_connect_apply_config (SQCloudConnection *connection, SQClou
         len += snprintf(&buffer[len], sizeof(buffer) - len, "AUTH APIKEY %s;", config->api_key);
     }
     
+    if (config->token && strlen(config->token)) {
+        len += snprintf(&buffer[len], sizeof(buffer) - len, "AUTH TOKEN %s;", config->token);
+    }
+    
     if (config->database && strlen(config->database)) {
         if (config->db_create && !config->db_memory) len += snprintf(&buffer[len], sizeof(buffer) - len, "CREATE DATABASE %s IF NOT EXISTS;", config->database);
         len += snprintf(&buffer[len], sizeof(buffer) - len, "USE DATABASE %s;", config->database);
@@ -2126,6 +2130,8 @@ void internal_free_config (SQCloudConfig *config) {
     if (config->username) mem_free((void *)config->username);
     if (config->password) mem_free((void *)config->password);
     if (config->database) mem_free((void *)config->database);
+    if (config->api_key) mem_free((void *)config->database);
+    if (config->token) mem_free((void *)config->token);
     #ifndef SQLITECLOUD_DISABLE_TLS
     if (config->tls_root_certificate) mem_free((void *)config->tls_root_certificate);
     if (config->tls_certificate) mem_free((void *)config->tls_certificate);
@@ -2591,6 +2597,9 @@ SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *pconf
         else if (strcasecmp(key, "apikey") == 0) {
             config->api_key = mem_string_dup(value);
         }
+        else if (strcasecmp(key, "token") == 0) {
+            config->token = mem_string_dup(value);
+        }
         n += rc;
     }
     
@@ -2613,6 +2622,10 @@ SQCloudConnection *SQCloudConnectWithString (const char *s, SQCloudConfig *pconf
         if (pconfig->api_key) {
             if (config->api_key) mem_free((void *)config->api_key);
             config->api_key = mem_string_dup(pconfig->api_key);
+        }
+        if (pconfig->token) {
+            if (config->token) mem_free((void *)config->token);
+            config->token = mem_string_dup(pconfig->token);
         }
     }
     
